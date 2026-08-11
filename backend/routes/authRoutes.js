@@ -55,6 +55,7 @@ const mapUserToStudentCohort = async (user) => {
     await student.save();
   }
 
+  let changed = false;
   if (!user.batchId || String(user.batchId) !== String(student.batchId?._id || student.batchId)) {
     user.batchId = student.batchId?._id || student.batchId;
     changed = true;
@@ -102,8 +103,7 @@ const mapUserToStudentCohort = async (user) => {
 const formatAuthUser = (user, student = null, batch = null, schedule = null) => {
   const isProfileComplete = Boolean(
     user.onboardingCompleted ||
-    student?.onboardingCompleted ||
-    (user.targetRole && (user.collegeName || user.degree))
+    student?.onboardingCompleted
   );
 
   return {

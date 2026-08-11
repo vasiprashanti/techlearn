@@ -410,8 +410,7 @@ export const loginUser = async (req, res) => {
 
     const isProfileComplete = Boolean(
       user.onboardingCompleted ||
-      student?.onboardingCompleted ||
-      (user.targetRole && (user.collegeName || user.degree))
+      student?.onboardingCompleted
     );
 
     res.status(200).json({

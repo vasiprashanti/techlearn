@@ -70,12 +70,24 @@ const buildDashboardUserPayload = (user, linkedStudent) => {
     avatar: user?.avatar || user?.photoUrl || "",
     photoUrl: user?.photoUrl || user?.avatar || "",
     role: user?.role || "student",
+    collegeName: user?.collegeName || linkedStudent?.collegeId?.name || linkedStudent?.collegeName || "",
+    degree: user?.degree || linkedStudent?.degree || "",
+    branch: user?.branch || linkedStudent?.branch || "",
+    graduationYear: user?.graduationYear || linkedStudent?.graduationYear || null,
     programSelection: linkedStudent?.programSelection || user?.programSelection || "Placement Sprint",
     programId: user?.programId || linkedStudent?.programId || null,
+    batchId: user?.batchId || linkedStudent?.batchId || null,
     streak: linkedStudent?.streak || 0,
     learningGoal: user?.learningGoal || linkedStudent?.learningGoal || "",
     targetRole: user?.targetRole || linkedStudent?.targetRole || "",
-    skills: user?.skills || linkedStudent?.skills || [],
+    otherTargetRole: user?.otherTargetRole || linkedStudent?.otherTargetRole || "",
+    placementCategory: user?.placementCategory || linkedStudent?.placementCategory || "",
+    targetCompanies: user?.targetCompanies?.length ? user.targetCompanies : (linkedStudent?.targetCompanies || []),
+    placementTimeline: user?.placementTimeline || linkedStudent?.placementTimeline || "",
+    learningPath: user?.learningPath || linkedStudent?.learningPath || "",
+    skills: user?.skills?.length ? user.skills : (linkedStudent?.skills || []),
+    onboardingCompleted: user?.onboardingCompleted || linkedStudent?.onboardingCompleted || false,
+    onboardingCompletedAt: user?.onboardingCompletedAt || linkedStudent?.onboardingCompletedAt || null,
   };
 };
 
@@ -93,7 +105,7 @@ export const getDashboardData = async (req, res) => {
     }
 
     const [user, progress, totalExercises, notesMcqCounts] = await Promise.all([
-      User.findById(userId).select("avatar photoUrl email firstName lastName name role programSelection programId learningGoal targetRole skills").lean(),
+      User.findById(userId).select("avatar photoUrl email firstName lastName name role collegeName degree branch graduationYear programSelection programId batchId learningGoal targetRole otherTargetRole placementCategory targetCompanies placementTimeline learningPath skills onboardingCompleted onboardingCompletedAt").lean(),
       UserProgress.findOne({ userId })
         .select("courseXP exerciseXP projectXP completedExercises answeredCheckpointMcqs createdAt")
         .populate({
@@ -134,7 +146,7 @@ export const getDashboardData = async (req, res) => {
     }
 
     const linkedStudent = normalizedEmail
-      ? await Student.findOne({ email: normalizedEmail }).select("_id name streak programSelection programId batchId").lean()
+      ? await Student.findOne({ email: normalizedEmail }).populate("collegeId", "name").select("_id name streak programSelection programId batchId collegeId degree branch graduationYear learningGoal targetRole otherTargetRole placementCategory targetCompanies placementTimeline learningPath skills onboardingCompleted onboardingCompletedAt").lean()
       : null;
 
     const selectedProgram = linkedStudent?.programSelection || user?.programSelection;
