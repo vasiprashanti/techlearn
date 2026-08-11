@@ -161,7 +161,8 @@ export const registerUser = async (req, res) => {
     }
 
     const verifiedEmail = await getVerifiedEmailFromReq(req);
-    const isVerifiedSession = Boolean(verifiedEmail && verifiedEmail === emailCheck);
+    const isGoogleAuthUser = Boolean(req.body.isGoogleUser || req.body.authProvider === "google" || req.body.authProvider === "firebase");
+    const isVerifiedSession = Boolean((verifiedEmail && verifiedEmail === emailCheck) || isGoogleAuthUser);
 
     if (!isVerifiedSession) {
       if (!password || !confirmPassword) {

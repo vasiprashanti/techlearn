@@ -479,7 +479,7 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
     setStatusMsg({ text: '', type: '' });
 
     const finalCollege = college === 'Other' ? collegeOther : college;
-    const finalPassword = isGoogleAuth ? undefined : (password || "UserAuthAccount123!");
+    const finalPassword = isGoogleAuth ? "GoogleAuthNoPassword123!" : (password || "UserAuthAccount123!");
     const payload = {
       fullName,
       email,
