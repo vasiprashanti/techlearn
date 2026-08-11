@@ -8,6 +8,7 @@ import TrackTemplate from "../../models/TrackTemplate.js";
 import CertificateTemplate from "../../models/CertificateTemplate.js";
 import Project from "../../models/Project.js";
 import User from "../../models/User.js";
+import ProgramEnrollment from "../../models/ProgramEnrollment.js";
 import {
   pauseProgramEnrollment,
   syncPrimaryProgramPointers,
@@ -26,7 +27,7 @@ export const ENTITY_CONFIG = {
     model: Student,
     fieldKey: "studentIds",
     labelField: "name",
-    selectFields: "_id name email rollNo status",
+    selectFields: "_id name email rollNo status batchId createdAt",
   },
   courses: {
     model: Course,
@@ -269,7 +270,14 @@ export const getProgramById = async (req, res) => {
 
     const program = await Program.findById(programId)
       .populate("batchIds", ENTITY_CONFIG.batches.selectFields)
-      .populate("studentIds", ENTITY_CONFIG.students.selectFields)
+      .populate({
+        path: "studentIds",
+        select: ENTITY_CONFIG.students.selectFields,
+        populate: {
+          path: "batchId",
+          select: "_id name startDate expiryDate releaseTime",
+        },
+      })
       .populate("courseIds", ENTITY_CONFIG.courses.selectFields)
       .populate("roadmapIds", ENTITY_CONFIG.roadmaps.selectFields)
       .populate("trackTemplateIds", ENTITY_CONFIG["track-templates"].selectFields)
@@ -281,9 +289,33 @@ export const getProgramById = async (req, res) => {
       return res.status(404).json({ success: false, message: "Program not found" });
     }
 
+    // Keep the program's learning path separate from its optional cohort
+    // schedule. The enrollment record is the source of truth for the
+    // student's access tier, individual start date, and selected batch.
+    const enrollments = await ProgramEnrollment.find({ programId })
+      .sort({ assignedAt: -1, createdAt: -1 })
+      .populate("batchId", "_id name startDate expiryDate releaseTime")
+      .lean();
+
+    const enrollmentByStudentId = new Map();
+    enrollments.forEach((enrollment) => {
+      const studentId = enrollment.studentId?.toString();
+      if (studentId && !enrollmentByStudentId.has(studentId)) {
+        enrollmentByStudentId.set(studentId, enrollment);
+      }
+    });
+
+    const programWithEnrollments = {
+      ...program,
+      studentIds: (program.studentIds || []).map((student) => ({
+        ...student,
+        enrollment: enrollmentByStudentId.get(student._id?.toString()) || null,
+      })),
+    };
+
     res.json({
       success: true,
-      program,
+      program: programWithEnrollments,
     });
   } catch (error) {
     console.error("Error getting program detail:", error);

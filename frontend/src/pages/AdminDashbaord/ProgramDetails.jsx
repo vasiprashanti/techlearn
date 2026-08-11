@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
+import StudentReportModal from '../../components/AdminDashbaord/StudentReportModal';
 import { adminAPI } from '../../services/adminApi';
 import {
   FiArrowLeft,
@@ -44,6 +45,201 @@ const getProgramType = (value) => {
   return normalized === 'placement' || normalized.includes('placement') ? 'Placement' : 'Skill';
 };
 
+const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
+
+const toValidDate = (value) => {
+  if (!value) return null;
+  const date = value instanceof Date ? new Date(value) : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const startOfDay = (value) => {
+  const date = toValidDate(value);
+  if (!date) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const formatCompactDate = (value) => {
+  const date = toValidDate(value);
+  return date
+    ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '—';
+};
+
+const parseDurationDays = (duration) => {
+  if (typeof duration === 'number' && Number.isFinite(duration)) return Math.max(1, Math.round(duration));
+
+  const match = String(duration || '').match(/(\d+(?:\.\d+)?)\s*-?\s*(day|days|week|weeks|month|months|year|years)/i);
+  if (!match) return null;
+
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount)) return null;
+
+  const unit = match[2].toLowerCase();
+  const multiplier = unit.startsWith('year')
+    ? 365
+    : unit.startsWith('month')
+    ? 30
+    : unit.startsWith('week')
+    ? 7
+    : 1;
+
+  return Math.max(1, Math.round(amount * multiplier));
+};
+
+const findStudentBatch = (student, enrollment, program) => {
+  const enrollmentBatch = enrollment?.batchId;
+  if (enrollmentBatch && typeof enrollmentBatch === 'object') return enrollmentBatch;
+
+  const batchId = enrollmentBatch || student?.batchId?._id || student?.batchId;
+  return (program?.batchIds || []).find((batch) => String(batch?._id || batch) === String(batchId)) || null;
+};
+
+const buildStudentTableRow = (student, program) => {
+  const enrollment = student?.enrollment || null;
+  const batch = findStudentBatch(student, enrollment, program);
+  const started = toValidDate(
+    batch?.startDate
+      || enrollment?.individualStartDate
+      || enrollment?.assignedAt
+      || student?.createdAt
+  );
+  const totalDays = parseDurationDays(program?.duration);
+  const startDay = startOfDay(started);
+  const today = startOfDay(new Date());
+  const rawDayNumber = startDay && today
+    ? Math.floor((today.getTime() - startDay.getTime()) / DAY_IN_MILLISECONDS) + 1
+    : null;
+  const dayNumber = rawDayNumber && totalDays
+    ? Math.min(totalDays, Math.max(1, rawDayNumber))
+    : rawDayNumber;
+  const expires = toValidDate(batch?.expiryDate)
+    || (started && totalDays
+      ? new Date(startOfDay(started).getTime() + ((totalDays - 1) * DAY_IN_MILLISECONDS))
+      : null);
+  const isPaid = enrollment?.accessTier === 'Member' || program?.pricingType === 'Paid';
+  const fee = Number(program?.programFee);
+  const feeLabel = Number.isFinite(fee) && fee > 0 ? ` ₹${fee.toLocaleString('en-IN')}` : '';
+
+  return {
+    access: isPaid ? 'Paid' : 'Trial',
+    plan: isPaid
+      ? `${program?.accessTier === 'Member' ? 'Member' : 'Paid'}${feeLabel}`
+      : (totalDays ? `${totalDays}-Day Trial` : 'Free Access'),
+    started,
+    expires,
+    progress: dayNumber
+      ? (totalDays ? `Day ${dayNumber} / ${totalDays}` : `Day ${dayNumber}`)
+      : '—',
+    status: student?.status || enrollment?.status || 'Active',
+  };
+};
+
+const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach }) => (
+  <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] overflow-hidden">
+    <div className="overflow-x-auto">
+      <table className="min-w-[920px] w-full text-left">
+        <caption className="sr-only">Students enrolled in this program</caption>
+        <thead className="bg-black/[0.03] dark:bg-white/[0.04]">
+          <tr className="border-b border-black/10 dark:border-white/10">
+            {['#', 'Student', 'Access', 'Plan', 'Started', 'Expires', 'Progress', 'Status'].map((heading) => (
+              <th
+                key={heading}
+                scope="col"
+                className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45 whitespace-nowrap"
+              >
+                {heading}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {students.map((student, index) => {
+            const row = buildStudentTableRow(student, program);
+            const isActive = row.status === 'Active';
+
+            return (
+              <tr
+                key={student._id}
+                onClick={() => onOpenStudent(student)}
+                className="group border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-[#3C83F6]/[0.04] dark:hover:bg-white/[0.04] cursor-pointer transition-colors"
+              >
+                <td className="px-4 py-3.5 text-xs font-semibold tabular-nums text-black/45 dark:text-white/45">
+                  {String(index + 1).padStart(3, '0')}
+                </td>
+                <td className="px-4 py-3.5">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpenStudent(student);
+                    }}
+                    className="text-left group/student"
+                  >
+                    <span className="block text-sm font-bold text-slate-800 dark:text-white group-hover/student:text-[#3C83F6] dark:group-hover/student:text-[#bceaff] transition-colors whitespace-nowrap">
+                      {student.name || student.email || 'Unnamed Student'}
+                    </span>
+                    {student.email && (
+                      <span className="block max-w-[190px] truncate text-[11px] text-black/40 dark:text-white/40 mt-0.5">
+                        {student.email}
+                      </span>
+                    )}
+                  </button>
+                </td>
+                <td className="px-4 py-3.5">
+                  <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                    row.access === 'Paid'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                      : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'
+                  }`}>
+                    {row.access}
+                  </span>
+                </td>
+                <td className="px-4 py-3.5 text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">
+                  {row.plan}
+                </td>
+                <td className="px-4 py-3.5 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                  {formatCompactDate(row.started)}
+                </td>
+                <td className="px-4 py-3.5 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                  {formatCompactDate(row.expires)}
+                </td>
+                <td className="px-4 py-3.5 text-xs font-semibold tabular-nums text-slate-700 dark:text-slate-200 whitespace-nowrap">
+                  {row.progress}
+                </td>
+                <td className="px-4 py-3.5">
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                      isActive
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300'
+                    }`}>
+                      {row.status}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onDetach(student);
+                      }}
+                      title="Detach from Program"
+                      aria-label={`Detach ${student.name || 'student'} from Program`}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    >
+                      <FiTrash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
 const statusBadgeClass = (status) => {
   if (status === 'Active' || status === 'Published')
     return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
@@ -77,6 +273,7 @@ export default function ProgramDetails() {
 
   const [detachItem, setDetachItem] = useState(null);
   const [detaching, setDetaching] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
 
   const [toastMessage, setToastMessage] = useState(searchParams.get('msg') || '');
 
@@ -286,6 +483,18 @@ export default function ProgramDetails() {
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
 
       <Sidebar />
+
+      <StudentReportModal
+        studentId={selectedStudent?._id || selectedStudent?.id}
+        batchId={selectedStudent?.enrollment?.batchId?._id
+          || selectedStudent?.enrollment?.batchId
+          || selectedStudent?.batchId?._id
+          || selectedStudent?.batchId}
+        studentBasic={selectedStudent}
+        onClose={() => setSelectedStudent(null)}
+        isOpen={Boolean(selectedStudent)}
+        context="program"
+      />
 
       {/* ── Attach Existing Modal ───────────────────────────────────────────── */}
       {attachModalType && (
@@ -628,6 +837,13 @@ export default function ProgramDetails() {
                   Attach {currentSection.label}
                 </button>
               </div>
+            ) : currentSection.key === 'students' ? (
+              <StudentDatabaseTable
+                students={attachedItems}
+                program={program}
+                onOpenStudent={setSelectedStudent}
+                onDetach={(student) => setDetachItem({ typeKey: currentSection.key, item: student })}
+              />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {attachedItems.map((item) => {
