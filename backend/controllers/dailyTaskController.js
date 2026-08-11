@@ -5,11 +5,11 @@ import Question from "../models/Questions.js";
 import DailyTaskAttempt from "../models/DailyTaskAttempt.js";
 import UserProgress from "../models/UserProgress.js";
 import Program from "../models/Program.js";
-import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import { calculateTaskXP, TASK_XP } from "../services/xpService.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
-import { getTrackAssignmentDate, calculateCurrentDayNumber } from "../utils/trackAssignmentSchedule.js";
+import { calculateCurrentDayNumber } from "../utils/trackAssignmentSchedule.js";
+import { resolveProgramSchedule } from "../utils/programSchedule.js";
 
 const getISTDateParts = (date) => {
   const d = new Date(date);
@@ -21,28 +21,13 @@ const getISTDateParts = (date) => {
   };
 };
 
-const startOfDay = (date = new Date()) => {
-  const { year, month, date: day } = getISTDateParts(date);
-  const utcTime = Date.UTC(year, month, day, 0, 0, 0, 0);
-  return new Date(utcTime - 5.5 * 60 * 60 * 1000);
-};
-
 const endOfDay = (date = new Date()) => {
   const { year, month, date: day } = getISTDateParts(date);
   const utcTime = Date.UTC(year, month, day, 23, 59, 59, 999);
   return new Date(utcTime - 5.5 * 60 * 60 * 1000);
 };
 
-const combineDateAndTime = (date, timeString = "00:00") => {
-  const { year, month, date: day } = getISTDateParts(date);
-  const [hours, minutes] = String(timeString || "00:00")
-    .split(":")
-    .map((val) => Number(val || 0));
-  const utcTime = Date.UTC(year, month, day, hours, minutes, 0, 0);
-  return new Date(utcTime - 5.5 * 60 * 60 * 1000);
-};
-
-const resolveTrackTemplateForStudent = async (student, batch) => {
+const resolveTrackTemplateForStudent = async (student, batch, programId) => {
   if (batch?.assignedDailyTaskTrack) {
     const trackTemplate = await TrackTemplate.findById(batch.assignedDailyTaskTrack);
     if (trackTemplate && trackTemplate.trackType === "Daily Task") return trackTemplate;
@@ -56,8 +41,8 @@ const resolveTrackTemplateForStudent = async (student, batch) => {
     if (trackTemplate) return trackTemplate;
   }
   let program = null;
-  if (student.programId) {
-    program = await Program.findById(student.programId).lean();
+  if (programId) {
+    program = await Program.findById(programId).lean();
   }
   if (!program && student.programSelection) {
     program = await Program.findOne({ programType: student.programSelection, status: "Active" }).sort({ createdAt: -1 }).lean();
@@ -70,15 +55,13 @@ const resolveTrackTemplateForStudent = async (student, batch) => {
     });
     if (trackTemplate) return trackTemplate;
   }
-  return TrackTemplate.findOne({ trackType: "Daily Task", status: "Active" }).sort({ createdAt: -1 });
-};
 
-const getIndividualStartDate = async (student, userId) => {
-  if (userId) {
-    const enrollment = await ProgramEnrollment.findOne({ userId, status: "Active" }).lean();
-    if (enrollment?.assignedAt) return enrollment.assignedAt;
-  }
-  return student.createdAt || new Date();
+  // A concrete program enrollment must not silently consume an unrelated
+  // global Daily Task template. Batch-less learners only receive the
+  // template attached to their own program.
+  if (programId) return null;
+
+  return TrackTemplate.findOne({ trackType: "Daily Task", status: "Active" }).sort({ createdAt: -1 });
 };
 
 export const getTodayDailyTasks = async (req, res) => {
@@ -92,13 +75,17 @@ export const getTodayDailyTasks = async (req, res) => {
       return res.status(404).json({ success: false, message: "Student record not found." });
     }
 
-    const batch = student.batchId ? await Batch.findById(student.batchId) : null;
+    const schedule = await resolveProgramSchedule({ user: req.user, student });
+    const batch = schedule.batchId ? await Batch.findById(schedule.batchId) : null;
+    if (schedule.batchId && !batch) {
+      return res.status(403).json({ success: false, message: "The assigned batch could not be found." });
+    }
     if (batch && batch.status !== BATCH_STATUS.ACTIVE) {
       return res.status(403).json({ success: false, message: "This batch is currently not active." });
     }
 
     // 2. Resolve Daily Task template track
-    const trackTemplate = await resolveTrackTemplateForStudent(student, batch);
+    const trackTemplate = await resolveTrackTemplateForStudent(student, batch, schedule.programId);
     if (!trackTemplate || trackTemplate.trackType !== "Daily Task") {
       return res.status(200).json({
         success: true,
@@ -112,7 +99,7 @@ export const getTodayDailyTasks = async (req, res) => {
     }
 
     // 3. Resolve active day number
-    const individualStartDate = batch ? null : await getIndividualStartDate(student, userId);
+    const individualStartDate = batch ? null : schedule.individualStartDate;
     const dayNumber = calculateCurrentDayNumber(batch, trackTemplate, "Daily Task", individualStartDate);
     const now = new Date();
 
@@ -128,7 +115,7 @@ export const getTodayDailyTasks = async (req, res) => {
       });
     }
 
-    const dayAssignment = trackTemplate.dayAssignments.find((d) => d.dayNumber === dayNumber);
+    const dayAssignment = (trackTemplate.dayAssignments || []).find((d) => Number(d.dayNumber) === Number(dayNumber));
 
     if (!dayAssignment || (!dayAssignment.tasks && !dayAssignment.questionId)) {
       return res.status(200).json({
@@ -145,14 +132,15 @@ export const getTodayDailyTasks = async (req, res) => {
     // Populate day assignment tasks
     const tasksAssigned = (dayAssignment.tasks || []).filter((task) =>
       (task.status || "Published") === "Published" &&
-      (!batch || !task.batchId || String(task.batchId) === String(batch._id))
+      (!task.batchId || (batch && String(task.batchId) === String(batch._id)))
     );
     const populatedTasks = [];
 
     // 4. Resolve daily attempt state or initialize
     let attempt = await DailyTaskAttempt.findOne({
       userId,
-      batchId: batch._id,
+      programId: schedule.programId || null,
+      batchId: batch?._id || null,
       trackId: trackTemplate._id,
       dayNumber,
     });
@@ -169,7 +157,8 @@ export const getTodayDailyTasks = async (req, res) => {
 
       attempt = new DailyTaskAttempt({
         userId,
-        batchId: batch._id,
+        programId: schedule.programId || null,
+        batchId: batch?._id || null,
         trackId: trackTemplate._id,
         dayNumber,
         tasksProgress: defaultProgress,
@@ -201,7 +190,8 @@ export const getTodayDailyTasks = async (req, res) => {
 
         attempt = new DailyTaskAttempt({
           userId,
-          batchId: batch._id,
+          programId: schedule.programId || null,
+          batchId: batch?._id || null,
           trackId: trackTemplate._id,
           dayNumber,
           tasksProgress: defaultProgress,
@@ -286,6 +276,8 @@ export const getTodayDailyTasks = async (req, res) => {
         tasks: populatedTasks,
         isFullyCompleted: attempt.isFullyCompleted,
         progressPercent,
+        programId: schedule.programId || null,
+        scheduleType: schedule.scheduleType,
       },
     });
   } catch (error) {
@@ -309,19 +301,24 @@ export const submitDailyTask = async (req, res) => {
       return res.status(404).json({ success: false, message: "Student record not found." });
     }
 
-    const batch = student.batchId ? await Batch.findById(student.batchId) : null;
+    const schedule = await resolveProgramSchedule({ user: req.user, student });
+    const batch = schedule.batchId ? await Batch.findById(schedule.batchId) : null;
+    if (schedule.batchId && !batch) {
+      return res.status(403).json({ success: false, message: "The assigned batch could not be found." });
+    }
 
-    const trackTemplate = await resolveTrackTemplateForStudent(student, batch);
+    const trackTemplate = await resolveTrackTemplateForStudent(student, batch, schedule.programId);
     if (!trackTemplate) {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
-    const individualStartDate = batch ? null : await getIndividualStartDate(student, userId);
+    const individualStartDate = batch ? null : schedule.individualStartDate;
     const dayNumber = calculateCurrentDayNumber(batch, trackTemplate, "Daily Task", individualStartDate);
 
     let attempt = await DailyTaskAttempt.findOne({
       userId,
-      ...(batch ? { batchId: batch._id } : {}),
+      programId: schedule.programId || null,
+      batchId: batch?._id || null,
       trackId: trackTemplate._id,
       dayNumber,
     });
@@ -342,7 +339,7 @@ export const submitDailyTask = async (req, res) => {
         const dayAssignment = (trackTemplate.dayAssignments || []).find((assignment) => Number(assignment.dayNumber) === Number(dayNumber));
         const tasksAssigned = dayAssignment ? (dayAssignment.tasks || []).filter((task) =>
           (task.status || "Published") === "Published" &&
-          (!task.batchId || String(task.batchId) === String(batch._id))
+          (!task.batchId || (batch && String(task.batchId) === String(batch._id)))
         ) : [];
 
         const defaultProgress = tasksAssigned.map((t) => ({
@@ -356,7 +353,8 @@ export const submitDailyTask = async (req, res) => {
 
         attempt = new DailyTaskAttempt({
           userId,
-          batchId: batch._id,
+          programId: schedule.programId || null,
+          batchId: batch?._id || null,
           trackId: trackTemplate._id,
           dayNumber,
           tasksProgress: defaultProgress,

@@ -1,9 +1,11 @@
 import mongoose from "mongoose";
 import Roadmap from "../models/Roadmap.js";
 import Batch from "../models/Batch.js";
+import Program from "../models/Program.js";
 import Student from "../models/Student.js";
 import StudentTrackAssignment from "../models/StudentTrackAssignment.js";
 import { writeAuditLog } from "../utils/auditLogger.js";
+import { resolveProgramSchedule } from "../utils/programSchedule.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -255,38 +257,33 @@ export const deleteRoadmapAdmin = async (req, res) => {
 
 export const getCurrentUserRoadmap = async (req, res) => {
   try {
-    let batchId = req.user?.batchId || null;
-    let student = null;
+    const student = await Student.findOne({
+      $or: [
+        ...(req.user?.email ? [{ email: String(req.user.email).trim().toLowerCase() }] : []),
+        ...(req.user?._id ? [{ userId: req.user._id }] : []),
+      ],
+    })
+      .select("_id batchId programId programSelection")
+      .lean();
+    const schedule = await resolveProgramSchedule({ user: req.user, student });
 
-    if (req.user?.email) {
-      student = await Student.findOne({ email: String(req.user.email).trim().toLowerCase() })
-        .select("_id batchId programSelection")
-        .lean();
-      if (student?.batchId) {
-        batchId = student.batchId;
-      }
-    }
-
-    if (!student && req.user?._id) {
-      student = await Student.findOne({ userId: req.user._id })
-        .select("_id batchId programSelection")
-        .lean();
-      if (student?.batchId) {
-        batchId = student.batchId;
-      }
-    }
-
-    let batch = null;
-    if (batchId) {
-      batch = await Batch.findById(batchId)
+    const batch = schedule.batchId
+      ? await Batch.findById(schedule.batchId)
         .select("_id name startDate releaseTime assignedTrackTemplateAt programSelection")
-        .lean();
-    }
+        .lean()
+      : null;
+    const program = schedule.programId
+      ? await Program.findById(schedule.programId)
+        .select("_id name programType roadmapIds")
+        .populate("roadmapIds")
+        .lean()
+      : null;
 
-    // 1. If the student has an assigned roadmap, show that roadmap.
-    if (batchId) {
+    // A batch roadmap applies only when this program enrollment is explicitly
+    // on that batch schedule.
+    if (schedule.batchId) {
       const roadmap = await Roadmap.findOne({
-        assignedBatchIds: batchId,
+        assignedBatchIds: schedule.batchId,
         status: "Active",
       })
         .sort({ updatedAt: -1 })
@@ -294,30 +291,43 @@ export const getCurrentUserRoadmap = async (req, res) => {
         .lean();
 
       if (roadmap) {
-        return res.status(200).json({ success: true, data: formatRoadmap(roadmap) });
+        return res.status(200).json({
+          success: true,
+          data: { ...formatRoadmap(roadmap), scheduleType: "batch", programId: schedule.programId || null },
+        });
       }
     }
 
-    // 2. If no roadmap is assigned, detect the student’s batch/program.
-    let program = "Placement Sprint";
-    if (student?.programSelection) {
-      program = student.programSelection;
-    } else if (batch?.programSelection) {
-      program = batch.programSelection;
-    } else if (req.user?.programSelection) {
-      program = req.user.programSelection;
+    // Program-owned roadmaps work for both individual and batch learners.
+    const programRoadmaps = (program?.roadmapIds || [])
+      .filter((roadmap) => roadmap && (roadmap.status || "Active") === "Active")
+      .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+    if (programRoadmaps[0]) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          ...formatRoadmap(programRoadmaps[0]),
+          scheduleType: schedule.scheduleType,
+          programId: schedule.programId || null,
+        },
+      });
     }
 
-    // 3. Use the default roadmap for that program, such as Placement Sprint or Project Sprint.
+    // Legacy fallback for programs created before roadmapIds were attached.
+    const programSelection = program?.programType
+      || student?.programSelection
+      || batch?.programSelection
+      || req.user?.programSelection
+      || "Placement Sprint";
     let searchTitles = [];
-    if (program === "Placement Sprint") {
+    if (programSelection === "Placement Sprint") {
       searchTitles = ["Placement Sprint"];
-    } else if (program === "Full Stack Project Program") {
+    } else if (programSelection === "Full Stack Project Program") {
       searchTitles = ["Full Stack Project Program", "Project Sprint"];
-    } else if (program === "Both") {
+    } else if (programSelection === "Both") {
       searchTitles = ["Placement Sprint", "Project Sprint", "Full Stack Project Program"];
     } else {
-      searchTitles = [program];
+      searchTitles = [programSelection];
     }
 
     let defaultRoadmap = null;
@@ -334,7 +344,14 @@ export const getCurrentUserRoadmap = async (req, res) => {
     }
 
     if (defaultRoadmap) {
-      return res.status(200).json({ success: true, data: formatRoadmap(defaultRoadmap) });
+      return res.status(200).json({
+        success: true,
+        data: {
+          ...formatRoadmap(defaultRoadmap),
+          scheduleType: schedule.scheduleType,
+          programId: schedule.programId || null,
+        },
+      });
     }
 
     // 4. If no default roadmap exists for that program yet, show a clean empty state.

@@ -10,6 +10,7 @@ import User from "../models/User.js";
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import { syncProgramEnrollment } from "../utils/programEnrollment.js";
+import { resolveProgramSchedule } from "../utils/programSchedule.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { isAdminIdentity } from "../utils/adminAccess.js";
 import { registerUser } from "../controllers/userController.js";
@@ -26,13 +27,13 @@ function generateToken(id) {
 const normalizeEmail = (email = "") => String(email).trim().toLowerCase();
 
 const mapUserToStudentCohort = async (user) => {
-  if (!user?.email) return { user, student: null, batch: null };
+  if (!user?.email) return { user, student: null, batch: null, schedule: null };
 
   const student = await Student.findOne({ email: normalizeEmail(user.email) }).populate("collegeId", "name").populate("batchId", "name");
-  if (!student) return { user, student: null, batch: null };
+  if (!student) return { user, student: null, batch: null, schedule: null };
 
-  const batch = student.batchId || (await Batch.findById(student.batchId).lean());
-  if (!batch) {
+  const batch = (student.batchId && typeof student.batchId === "object" && student.batchId._id) ? student.batchId : (await Batch.findById(student.batchId).lean());
+  if (student.batchId && !batch) {
     console.warn(`Warning: Batch ID ${student.batchId} not found for student ${student.email}`);
   }
 
@@ -47,8 +48,17 @@ const mapUserToStudentCohort = async (user) => {
     changed = true;
   }
 
-  if (batch && batch.startDate && (!user.startDate || new Date(user.startDate).getTime() !== new Date(batch.startDate).getTime())) {
-    user.startDate = batch.startDate;
+  const schedule = await resolveProgramSchedule({
+    user,
+    student,
+    programId: student.programId || user.programId,
+  });
+
+  const scheduleStartDate = schedule.scheduleType === "batch" && batch
+    ? batch.startDate
+    : schedule.individualStartDate;
+  if (scheduleStartDate && (!user.startDate || new Date(user.startDate).getTime() !== new Date(scheduleStartDate).getTime())) {
+    user.startDate = scheduleStartDate;
     changed = true;
   }
 
@@ -69,14 +79,15 @@ const mapUserToStudentCohort = async (user) => {
   await syncProgramEnrollment({
     user,
     student,
-    batchId: student.batchId?._id || student.batchId,
+    batchId: schedule?.scheduleType === "batch" ? (schedule.batchId || student.batchId?._id || student.batchId) : null,
+    programId: student.programId || user.programId,
     programSelection: student.programSelection || user.programSelection,
   });
 
-  return { user, student, batch };
+  return { user, student, batch, schedule };
 };
 
-const formatAuthUser = (user, student = null, batch = null) => {
+const formatAuthUser = (user, student = null, batch = null, schedule = null) => {
   const isProfileComplete = Boolean(
     user.onboardingCompleted ||
     student?.onboardingCompleted ||
@@ -91,11 +102,14 @@ const formatAuthUser = (user, student = null, batch = null) => {
     photoUrl: user.photoUrl || "",
     role: user.role,
     isClub: user.isClub,
-    batchId: user.batchId || student?.batchId?._id || student?.batchId || null,
-    startDate: user.startDate || batch?.startDate || null,
+    batchId: schedule ? schedule.batchId || null : (user.batchId || student?.batchId?._id || student?.batchId || null),
+    startDate: schedule?.scheduleType === "batch"
+      ? batch?.startDate || user.startDate || null
+      : schedule?.individualStartDate || user.startDate || null,
     programSelection: user.programSelection,
     programId: user.programId || student?.programId || null,
-    isEnrolledStudent: !!student || user.isClub || Boolean(user.batchId),
+    scheduleType: schedule?.scheduleType || ((user.batchId || student?.batchId || batch?._id) ? "batch" : "individual"),
+    isEnrolledStudent: !!student || user.isClub || Boolean(user.batchId) || Boolean(schedule?.programId),
     targetRole: user.targetRole || student?.targetRole || "",
     otherTargetRole: user.otherTargetRole || student?.otherTargetRole || "",
     learningGoal: user.learningGoal || student?.learningGoal || "",
@@ -149,7 +163,7 @@ router.post("/login", async function login(req, res) {
     const token = generateToken(mapped.user._id);
     return res.status(200).json({
       message: "Login successful",
-      user: formatAuthUser(mapped.user, mapped.student, mapped.batch),
+      user: formatAuthUser(mapped.user, mapped.student, mapped.batch, mapped.schedule),
       token,
     });
   } catch (err) {
@@ -180,7 +194,7 @@ router.post("/google-check", async function checkGoogleUser(req, res) {
       return res.status(200).json({
         isExisting: true,
         token: jwtToken,
-        user: formatAuthUser(mapped.user, mapped.student, mapped.batch),
+        user: formatAuthUser(mapped.user, mapped.student, mapped.batch, mapped.schedule),
       });
     }
 
@@ -288,7 +302,7 @@ router.post("/google", async function googleLogin(req, res) {
     return res.status(200).json({
       message: "Google login successful",
       token: jwtToken,
-      user: formatAuthUser(mapped.user, mapped.student, mapped.batch),
+      user: formatAuthUser(mapped.user, mapped.student, mapped.batch, mapped.schedule),
     });
   } catch (err) {
     console.error("Google login error:", err);
@@ -355,7 +369,7 @@ router.post("/firebase", async (req, res) => {
     return res.status(200).json({
       message: "Firebase login successful",
       token,
-      user: formatAuthUser(mapped.user, mapped.student, mapped.batch),
+      user: formatAuthUser(mapped.user, mapped.student, mapped.batch, mapped.schedule),
     });
   } catch (err) {
     console.error("Firebase login error: ", err);

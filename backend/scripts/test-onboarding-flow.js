@@ -19,7 +19,7 @@ async function runUnitAndResolverTests() {
     {
       _id: new mongoose.Types.ObjectId(),
       name: "30-Day Campus Placement Sprint",
-      programType: "Placement Sprint",
+      programType: "Placement",
       duration: "30 Days",
       status: "Active",
       visibility: "Public",
@@ -34,7 +34,7 @@ async function runUnitAndResolverTests() {
     {
       _id: new mongoose.Types.ObjectId(),
       name: "FAANG Mastery Paid Program",
-      programType: "Placement Sprint",
+      programType: "Placement",
       duration: "60 Days",
       status: "Active",
       visibility: "Public",
@@ -49,7 +49,7 @@ async function runUnitAndResolverTests() {
     {
       _id: new mongoose.Types.ObjectId(),
       name: "Full Stack Java & React Skill Track",
-      programType: "Full Stack Project Program",
+      programType: "Skill",
       duration: "90 Days",
       status: "Active",
       visibility: "Public",
@@ -61,7 +61,7 @@ async function runUnitAndResolverTests() {
     {
       _id: new mongoose.Types.ObjectId(),
       name: "TechLearn Foundation Track",
-      programType: "General Track",
+      programType: "Skill",
       duration: "15 Days",
       status: "Active",
       visibility: "Public",
@@ -72,7 +72,7 @@ async function runUnitAndResolverTests() {
     {
       _id: new mongoose.Types.ObjectId(),
       name: "Draft Unapproved Program",
-      programType: "General Track",
+      programType: "Skill",
       duration: "10 Days",
       status: "Draft",
       visibility: "Private",
@@ -157,7 +157,7 @@ async function runUnitAndResolverTests() {
       learningPath: "Free",
     });
     if (!exploreMatch || exploreMatch.length !== 1 || exploreMatch[0].name !== "TechLearn Foundation Track") {
-      throw new Error("Explore matching failed: Should return only intentionally configured General Track");
+      throw new Error("Explore matching failed: Should return only intentionally configured exploration program");
     }
     console.log("  ✅ Explore matching correctly returned ONLY intentional general program:", exploreMatch[0].name);
 

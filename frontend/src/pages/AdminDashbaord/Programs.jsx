@@ -20,14 +20,12 @@ import {
   FiMoreHorizontal,
 } from 'react-icons/fi';
 
-const PREDEFINED_PROGRAM_TYPES = [
-  'Placement Sprint',
-  'Full Stack Project Program',
-  'Java Full Stack Skill Program',
-  'AI & Machine Learning Program',
-  'Data Science & Analytics',
-  'Cybersecurity Bootcamp',
-];
+const PROGRAM_TYPES = ['Placement', 'Skill'];
+
+const getProgramType = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'placement' || normalized.includes('placement') ? 'Placement' : 'Skill';
+};
 
 const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
 
@@ -69,8 +67,7 @@ export default function Programs() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    programType: 'Placement Sprint',
-    customType: '',
+    programType: 'Placement',
     duration: '',
     status: 'Draft',
     visibility: 'Public',
@@ -155,8 +152,7 @@ export default function Programs() {
     setFormData({
       name: '',
       description: '',
-      programType: 'Placement Sprint',
-      customType: '',
+      programType: 'Placement',
       duration: '30 Days',
       status: 'Draft',
       visibility: 'Public',
@@ -176,12 +172,10 @@ export default function Programs() {
   const handleOpenEditModal = (program, e) => {
     if (e) e.stopPropagation();
     setEditingProgram(program);
-    const isCustom = !PREDEFINED_PROGRAM_TYPES.includes(program.programType);
     setFormData({
       name: program.name || '',
       description: program.description || '',
-      programType: isCustom ? 'Other' : program.programType,
-      customType: isCustom ? program.programType : '',
+      programType: getProgramType(program.programType),
       duration: program.duration || '',
       status: program.status || 'Draft',
       visibility: program.visibility || 'Public',
@@ -202,10 +196,7 @@ export default function Programs() {
     e.preventDefault();
     setModalError('');
 
-    const finalType =
-      formData.programType === 'Other'
-        ? formData.customType.trim()
-        : formData.programType.trim();
+    const finalType = formData.programType.trim();
 
     if (!formData.name.trim()) { setModalError('Program name is required'); return; }
     if (!finalType) { setModalError('Program type is required'); return; }
@@ -408,32 +399,14 @@ export default function Programs() {
                         onChange={handleFormChange}
                         className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                       >
-                        {PREDEFINED_PROGRAM_TYPES.map((t) => (
+                        {PROGRAM_TYPES.map((t) => (
                           <option key={t} className={dropdownOptionClass} value={t}>{t}</option>
                         ))}
-                        <option className={dropdownOptionClass} value="Other">Other / Custom</option>
                       </select>
                       <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="admin-micro-label text-black/45 dark:text-white/45">
-                      {formData.programType === 'Other' ? 'Custom Type*' : 'Duration*'}
-                    </label>
-                    <input
-                      type="text"
-                      name={formData.programType === 'Other' ? 'customType' : 'duration'}
-                      required
-                      placeholder={formData.programType === 'Other' ? 'Specify program type' : 'e.g. 30 Days, 6 Months'}
-                      value={formData.programType === 'Other' ? formData.customType : formData.duration}
-                      onChange={handleFormChange}
-                      className={programFormInputClass}
-                    />
-                  </div>
-                </div>
-
-                {formData.programType === 'Other' && (
                   <div>
                     <label className="admin-micro-label text-black/45 dark:text-white/45">Duration*</label>
                     <input
@@ -446,7 +419,7 @@ export default function Programs() {
                       className={programFormInputClass}
                     />
                   </div>
-                )}
+                </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -715,7 +688,7 @@ export default function Programs() {
                     className="appearance-none h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-2.5 pr-7 text-[11px] font-bold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 cursor-pointer max-w-[130px] text-ellipsis overflow-hidden whitespace-nowrap"
                   >
                     <option className={dropdownOptionClass} value="">All Types</option>
-                    {PREDEFINED_PROGRAM_TYPES.map((t) => (
+                    {PROGRAM_TYPES.map((t) => (
                       <option key={t} className={dropdownOptionClass} value={t}>{t}</option>
                     ))}
                   </select>
@@ -926,16 +899,18 @@ function ProgramCard({ program, selected, onSelectToggle, onEdit, onDelete, onVi
 
       {/* Tinted Top Panel — Fixed height for 100% uniform card grid layout */}
       <div
-        className="px-4 pt-3 pb-2.5 min-h-[112px] border-b border-black/10 dark:border-white/15 bg-[#dbe7f3]/90 dark:bg-[#1a2d48] pl-10 pr-9 flex flex-col justify-between cursor-pointer"
+        className="px-4 pt-2.5 pb-2 min-h-[92px] border-b border-black/10 dark:border-white/15 bg-[#dbe7f3]/90 dark:bg-[#1a2d48] pl-10 pr-9 flex flex-col justify-between cursor-pointer"
         onClick={onView}
       >
         <span className={`inline-flex self-start px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${statusColor}`}>
           {program.status}
         </span>
-        <div className="min-h-[38px] flex items-center py-0.5">
+        <div className="min-h-[30px] flex items-center py-0.5">
           <h3 className="text-xs md:text-sm leading-tight font-bold text-slate-900 dark:text-white line-clamp-2">{program.name}</h3>
         </div>
-        <p className="text-[10px] md:text-[11px] leading-snug text-slate-500 dark:text-slate-400 truncate pb-0.5">{program.programType}</p>
+        <p className="text-[10px] md:text-[11px] leading-snug text-slate-500 dark:text-slate-400 truncate pb-0.5">
+          {getProgramType(program.programType)}
+        </p>
       </div>
 
       {/* Bottom Panel */}

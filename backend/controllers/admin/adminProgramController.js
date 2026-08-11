@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import Program from "../../models/Program.js";
+import Program, { PROGRAM_TYPES } from "../../models/Program.js";
 import Batch from "../../models/Batch.js";
 import Student from "../../models/Student.js";
 import Course from "../../models/Course.js";
@@ -7,6 +7,13 @@ import Roadmap from "../../models/Roadmap.js";
 import TrackTemplate from "../../models/TrackTemplate.js";
 import CertificateTemplate from "../../models/CertificateTemplate.js";
 import Project from "../../models/Project.js";
+import User from "../../models/User.js";
+import ProgramEnrollment from "../../models/ProgramEnrollment.js";
+import {
+  pauseProgramEnrollment,
+  syncPrimaryProgramPointers,
+  upsertProgramEnrollment,
+} from "../../utils/programEnrollment.js";
 
 // Whitelist mapping for attachment entity types
 export const ENTITY_CONFIG = {
@@ -20,7 +27,7 @@ export const ENTITY_CONFIG = {
     model: Student,
     fieldKey: "studentIds",
     labelField: "name",
-    selectFields: "_id name email rollNo status",
+    selectFields: "_id name email rollNo status batchId createdAt",
   },
   courses: {
     model: Course,
@@ -198,6 +205,14 @@ export const createProgram = async (req, res) => {
       });
     }
 
+    const normalizedProgramType = String(programType).trim();
+    if (!PROGRAM_TYPES.includes(normalizedProgramType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Program type must be Placement or Skill",
+      });
+    }
+
     let parsedFee = 0;
     if (pricingType === "Paid") {
       parsedFee = Number(programFee);
@@ -212,7 +227,7 @@ export const createProgram = async (req, res) => {
     const program = new Program({
       name: name.trim(),
       description: (description || "").trim(),
-      programType: programType.trim(),
+      programType: normalizedProgramType,
       duration: duration.trim(),
       status: status || "Draft",
       visibility: visibility || "Public",
@@ -255,7 +270,14 @@ export const getProgramById = async (req, res) => {
 
     const program = await Program.findById(programId)
       .populate("batchIds", ENTITY_CONFIG.batches.selectFields)
-      .populate("studentIds", ENTITY_CONFIG.students.selectFields)
+      .populate({
+        path: "studentIds",
+        select: ENTITY_CONFIG.students.selectFields,
+        populate: {
+          path: "batchId",
+          select: "_id name startDate expiryDate releaseTime",
+        },
+      })
       .populate("courseIds", ENTITY_CONFIG.courses.selectFields)
       .populate("roadmapIds", ENTITY_CONFIG.roadmaps.selectFields)
       .populate("trackTemplateIds", ENTITY_CONFIG["track-templates"].selectFields)
@@ -267,9 +289,33 @@ export const getProgramById = async (req, res) => {
       return res.status(404).json({ success: false, message: "Program not found" });
     }
 
+    // Keep the program's learning path separate from its optional cohort
+    // schedule. The enrollment record is the source of truth for the
+    // student's access tier, individual start date, and selected batch.
+    const enrollments = await ProgramEnrollment.find({ programId })
+      .sort({ assignedAt: -1, createdAt: -1 })
+      .populate("batchId", "_id name startDate expiryDate releaseTime")
+      .lean();
+
+    const enrollmentByStudentId = new Map();
+    enrollments.forEach((enrollment) => {
+      const studentId = enrollment.studentId?.toString();
+      if (studentId && !enrollmentByStudentId.has(studentId)) {
+        enrollmentByStudentId.set(studentId, enrollment);
+      }
+    });
+
+    const programWithEnrollments = {
+      ...program,
+      studentIds: (program.studentIds || []).map((student) => ({
+        ...student,
+        enrollment: enrollmentByStudentId.get(student._id?.toString()) || null,
+      })),
+    };
+
     res.json({
       success: true,
-      program,
+      program: programWithEnrollments,
     });
   } catch (error) {
     console.error("Error getting program detail:", error);
@@ -311,10 +357,19 @@ export const updateProgram = async (req, res) => {
       accessTier,
     } = req.body;
 
-    if (name !== undefined) program.name = name.trim();
-    if (description !== undefined) program.description = description.trim();
-    if (programType !== undefined) program.programType = programType.trim();
-    if (duration !== undefined) program.duration = duration.trim();
+    if (name !== undefined) program.name = String(name).trim();
+    if (description !== undefined) program.description = String(description).trim();
+    if (programType !== undefined) {
+      const normalizedProgramType = String(programType).trim();
+      if (!PROGRAM_TYPES.includes(normalizedProgramType)) {
+        return res.status(400).json({
+          success: false,
+          message: "Program type must be Placement or Skill",
+        });
+      }
+      program.programType = normalizedProgramType;
+    }
+    if (duration !== undefined) program.duration = String(duration).trim();
     if (status !== undefined) program.status = status;
     if (visibility !== undefined) program.visibility = visibility;
     if (learningGoals !== undefined) program.learningGoals = Array.isArray(learningGoals) ? learningGoals : [];
@@ -500,12 +555,100 @@ export const attachEntities = async (req, res) => {
 
     const config = ENTITY_CONFIG[entityType];
 
+    const program = await Program.findById(programId).lean();
+    if (!program) {
+      return res.status(404).json({ success: false, message: "Program not found" });
+    }
+
     // Verify target entities exist
     const existingEntities = await config.model.find({ _id: { $in: validIds } }).select("_id").lean();
     const existingEntityIds = existingEntities.map((e) => e._id);
 
     if (existingEntityIds.length === 0) {
       return res.status(404).json({ success: false, message: "None of the specified target entities were found" });
+    }
+
+    if (entityType === "students") {
+      const rawBatchId = req.body?.batchId;
+      let selectedBatch = null;
+      if (rawBatchId && rawBatchId !== "null") {
+        if (!mongoose.Types.ObjectId.isValid(rawBatchId)) {
+          return res.status(400).json({ success: false, message: "Invalid batch ID format" });
+        }
+        selectedBatch = await Batch.findById(rawBatchId).lean();
+        if (!selectedBatch) {
+          return res.status(404).json({ success: false, message: "Batch not found" });
+        }
+      }
+
+      const students = await Student.find({ _id: { $in: existingEntityIds } }).lean();
+      for (const student of students) {
+        if (selectedBatch && student.collegeId && selectedBatch.collegeId && String(student.collegeId) !== String(selectedBatch.collegeId)) {
+          return res.status(400).json({
+            success: false,
+            message: `Selected batch does not belong to ${student.name || "one of the selected students"}.`,
+          });
+        }
+
+        // Keep the legacy Student.batchId only as a compatibility pointer.
+        // The enrollment created below is the authoritative program schedule.
+        await Student.updateOne(
+          { _id: student._id },
+          {
+            $set: {
+              programId,
+              ...(selectedBatch ? { batchId: selectedBatch._id } : {}),
+            },
+          }
+        );
+
+        const user = await User.findOne({
+          $or: [
+            ...(student.userId ? [{ _id: student.userId }] : []),
+            ...(student.email ? [{ email: String(student.email).trim().toLowerCase() }] : []),
+          ],
+        }).select("_id").lean();
+
+        if (user) {
+          await User.updateOne(
+            { _id: user._id },
+            {
+              $set: {
+                programId,
+                ...(selectedBatch ? { batchId: selectedBatch._id, startDate: selectedBatch.startDate } : {}),
+              },
+            }
+          );
+          await upsertProgramEnrollment({
+            user,
+            student,
+            program,
+            batchId: selectedBatch?._id || null,
+            source: "admin",
+          });
+        }
+      }
+
+      const updatedProgram = await Program.findByIdAndUpdate(
+        programId,
+        {
+          $addToSet: {
+            studentIds: { $each: existingEntityIds },
+            ...(selectedBatch ? { batchIds: selectedBatch._id } : {}),
+          },
+          $set: { updatedBy: req.user?._id || null },
+        },
+        { new: true, runValidators: true }
+      )
+        .populate(config.fieldKey, config.selectFields)
+        .lean();
+
+      return res.json({
+        success: true,
+        message: `Successfully enrolled ${existingEntityIds.length} student${existingEntityIds.length === 1 ? "" : "s"} ${selectedBatch ? "on the selected batch schedule" : "on individual program schedules"}.`,
+        program: updatedProgram,
+        attachedEntities: updatedProgram[config.fieldKey],
+      });
     }
 
     const updateQuery = {};
@@ -558,6 +701,20 @@ export const detachEntity = async (req, res) => {
     }
 
     const config = ENTITY_CONFIG[entityType];
+
+    if (entityType === "students") {
+      const student = await Student.findById(entityId).lean();
+      if (student) {
+        const user = await User.findOne({
+          $or: [
+            ...(student.userId ? [{ _id: student.userId }] : []),
+            ...(student.email ? [{ email: String(student.email).trim().toLowerCase() }] : []),
+          ],
+        }).select("_id").lean();
+        await pauseProgramEnrollment({ student, user, programId });
+        await syncPrimaryProgramPointers({ student, user });
+      }
+    }
 
     const updateQuery = {};
     updateQuery[config.fieldKey] = entityId;

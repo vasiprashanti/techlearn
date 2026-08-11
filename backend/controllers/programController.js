@@ -29,6 +29,11 @@ export const getAssignedPrograms = async (req, res) => {
     let assignedPrograms = enrollments
       .map((e) => e.programId)
       .filter((p) => p && p.status === "Active" && p.visibility === "Public");
+    const enrollmentByProgramId = new Map(
+      enrollments
+        .filter((enrollment) => enrollment.programId)
+        .map((enrollment) => [String(enrollment.programId?._id || enrollment.programId), enrollment])
+    );
 
     // Legacy fallback: if no ProgramEnrollment records, check user's direct programId
     if (assignedPrograms.length === 0 && req.user.programId) {
@@ -66,6 +71,11 @@ export const getAssignedPrograms = async (req, res) => {
       courses: p.courseIds || [],
       roadmaps: p.roadmapIds || [],
       projects: p.projectIds || [],
+      batchId: enrollmentByProgramId.get(String(p._id))?.batchId || null,
+      scheduleType: enrollmentByProgramId.get(String(p._id))?.batchId ? "batch" : "individual",
+      individualStartDate: enrollmentByProgramId.get(String(p._id))?.individualStartDate
+        || enrollmentByProgramId.get(String(p._id))?.assignedAt
+        || null,
       isActive: String(p._id) === activeProgramId,
     }));
 

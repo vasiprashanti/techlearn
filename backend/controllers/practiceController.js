@@ -2,7 +2,8 @@ import Question from "../models/Questions.js";
 import PracticeSubmission from "../models/PracticeSubmission.js";
 import Student from "../models/Student.js";
 import mongoose from "mongoose";
-import { getTrackAssignmentDate } from "../utils/trackAssignmentSchedule.js";
+import { getTrackAssignmentDate, calculateCurrentDayNumber } from "../utils/trackAssignmentSchedule.js";
+import { resolveProgramSchedule } from "../utils/programSchedule.js";
 import { normalizeCategoryType } from "../utils/questionBank.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
 
@@ -142,7 +143,10 @@ export const listPracticeQuestions = async (req, res) => {
     if (!student && req.user?._id) {
       student = await Student.findOne({ userId: req.user._id });
     }
-    const studentBatchId = student?.batchId;
+    const schedule = student
+      ? await resolveProgramSchedule({ user: req.user, student })
+      : null;
+    const studentBatchId = schedule?.batchId || null;
 
     // 1. Fetch categories marked "Practice" or "Both" matching batch or global
     const Category = mongoose.model("Category");
@@ -438,11 +442,25 @@ export const recordPracticeSubmission = async (req, res) => {
     try {
       const email = req.user.email.toLowerCase().trim();
       const student = await mongoose.model("Student").findOne({ email });
-      if (student && student.batchId) {
-        const batch = await mongoose.model("Batch").findById(student.batchId);
-        if (batch && batch.assignedDailyTaskTrack) {
-          const trackTemplate = await mongoose.model("TrackTemplate").findById(batch.assignedDailyTaskTrack);
-          if (trackTemplate) {
+      if (student) {
+        const schedule = await resolveProgramSchedule({ user: req.user, student });
+        const batch = schedule.batchId
+          ? await mongoose.model("Batch").findById(schedule.batchId)
+          : null;
+        let trackTemplate = batch?.assignedDailyTaskTrack
+          ? await mongoose.model("TrackTemplate").findById(batch.assignedDailyTaskTrack)
+          : null;
+        if (!trackTemplate && schedule.programId) {
+          const program = await mongoose.model("Program").findById(schedule.programId).select("trackTemplateIds").lean();
+          if (program?.trackTemplateIds?.length) {
+            trackTemplate = await mongoose.model("TrackTemplate").findOne({
+              _id: { $in: program.trackTemplateIds },
+              trackType: "Daily Task",
+              status: "Active",
+            });
+          }
+        }
+        if (trackTemplate) {
             const getISTDateParts = (date) => {
               const d = new Date(date);
               const istDate = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
@@ -460,12 +478,17 @@ export const recordPracticeSubmission = async (req, res) => {
               const utcTime = Date.UTC(year, month, day, hours, minutes, 0, 0);
               return new Date(utcTime - 5.5 * 60 * 60 * 1000);
             };
-            const releaseStart = combineDateAndTime(getTrackAssignmentDate(batch, "Daily Task"), batch.releaseTime || "00:00");
-            const dayNumber = Math.floor((new Date().getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+            const dayNumber = calculateCurrentDayNumber(
+              batch,
+              trackTemplate,
+              "Daily Task",
+              batch ? null : schedule.individualStartDate
+            );
             
             let attempt = await mongoose.model("DailyTaskAttempt").findOne({
               userId: req.user._id,
-              batchId: batch._id,
+              programId: schedule.programId || null,
+              batchId: batch?._id || null,
               trackId: trackTemplate._id,
               dayNumber,
             });
@@ -486,7 +509,7 @@ export const recordPracticeSubmission = async (req, res) => {
                 const dayAssignment = (trackTemplate.dayAssignments || []).find((assignment) => Number(assignment.dayNumber) === Number(dayNumber));
                 const tasksAssigned = dayAssignment ? (dayAssignment.tasks || []).filter((task) =>
                   (task.status || "Published") === "Published" &&
-                  (!task.batchId || String(task.batchId) === String(batch._id))
+                  (!task.batchId || (batch && String(task.batchId) === String(batch._id)))
                 ) : [];
 
                 const defaultProgress = tasksAssigned.map((t) => ({
@@ -500,7 +523,8 @@ export const recordPracticeSubmission = async (req, res) => {
 
                 attempt = new (mongoose.model("DailyTaskAttempt"))({
                   userId: req.user._id,
-                  batchId: batch._id,
+                  programId: schedule.programId || null,
+                  batchId: batch?._id || null,
                   trackId: trackTemplate._id,
                   dayNumber,
                   tasksProgress: defaultProgress,
@@ -657,7 +681,6 @@ export const recordPracticeSubmission = async (req, res) => {
             }
           }
         }
-      }
     } catch (dtError) {
       console.error("Daily task automatic submission completion failed:", dtError);
     }
@@ -691,7 +714,10 @@ export const getPracticeStats = async (req, res) => {
     if (!student && req.user?._id) {
       student = await Student.findOne({ userId: req.user._id });
     }
-    const studentBatchId = student?.batchId;
+    const schedule = student
+      ? await resolveProgramSchedule({ user: req.user, student })
+      : null;
+    const studentBatchId = schedule?.batchId || null;
 
     const Category = mongoose.model("Category");
     const activeCategories = await Category.find({
@@ -782,7 +808,10 @@ export const listPracticeCategoriesForStudent = async (req, res) => {
     if (!student && req.user?._id) {
       student = await Student.findOne({ userId: req.user._id });
     }
-    const studentBatchId = student?.batchId;
+    const schedule = student
+      ? await resolveProgramSchedule({ user: req.user, student })
+      : null;
+    const studentBatchId = schedule?.batchId || null;
 
     const Category = mongoose.model("Category");
     const categories = await Category.find({

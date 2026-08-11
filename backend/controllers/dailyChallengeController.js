@@ -18,6 +18,8 @@ const buildChallengeResponse = ({ codingRound, batch, question, dayNumber, attem
   dayNumber,
   batchId: batch?._id || codingRound.batchId,
   batchName: batch?.name || codingRound.college || "",
+  programId: codingRound.programId || null,
+  scheduleType: batch?._id || codingRound.batchId ? "batch" : "individual",
   durationMinutes: codingRound.duration,
   questionId: question?._id || codingRound.questionId,
   questionTitle: question?.title || codingRound.problems?.[0]?.problemTitle || "",

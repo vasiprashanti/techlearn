@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+export const PROGRAM_TYPES = Object.freeze(["Placement", "Skill"]);
+
 const programSchema = new mongoose.Schema(
   {
     name: {
@@ -14,6 +16,10 @@ const programSchema = new mongoose.Schema(
     },
     programType: {
       type: String,
+      enum: {
+        values: PROGRAM_TYPES,
+        message: "Program type must be Placement or Skill",
+      },
       required: [true, "Program type is required"],
       trim: true,
     },
