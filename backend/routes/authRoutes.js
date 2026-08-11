@@ -37,9 +37,21 @@ const mapUserToStudentCohort = async (user) => {
     console.warn(`Warning: Batch ID ${student.batchId} not found for student ${student.email}`);
   }
 
-  let changed = false;
+  let studentChanged = false;
   if (!student.userId || String(student.userId) !== String(user._id)) {
     student.userId = user._id;
+    studentChanged = true;
+  }
+  if (user.batchId && String(student.batchId?._id || student.batchId) !== String(user.batchId)) {
+    student.batchId = user.batchId;
+    studentChanged = true;
+  }
+  if (user.onboardingCompleted && !student.onboardingCompleted) {
+    student.onboardingCompleted = true;
+    student.onboardingCompletedAt = user.onboardingCompletedAt || new Date();
+    studentChanged = true;
+  }
+  if (studentChanged) {
     await student.save();
   }
 
