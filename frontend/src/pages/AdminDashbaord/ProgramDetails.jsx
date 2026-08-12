@@ -30,8 +30,8 @@ import {
 } from 'react-icons/fi';
 
 const SECTIONS = [
-  { key: 'batches', label: 'Batches', icon: FiLayers, field: 'batchIds', route: '/batches' },
   { key: 'students', label: 'Students', icon: FiUsers, field: 'studentIds', route: '/students' },
+  { key: 'batches', label: 'Batches', icon: FiLayers, field: 'batchIds', route: '/batches' },
   { key: 'courses', label: 'Courses', icon: FiBookOpen, field: 'courseIds', route: '/admin/courses' },
   { key: 'roadmaps', label: 'Roadmaps', icon: FiFileText, field: 'roadmapIds', route: '/admin/roadmaps' },
   { key: 'track-templates', label: 'Track Templates', icon: FiGitCommit, field: 'trackTemplateIds', route: '/track-templates' },
