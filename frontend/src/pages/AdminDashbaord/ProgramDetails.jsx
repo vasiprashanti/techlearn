@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, createElement } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
@@ -18,6 +18,8 @@ import {
   FiAward,
   FiClipboard,
   FiCheckCircle,
+  FiActivity,
+  FiBarChart2,
   FiSearch,
   FiX,
   FiExternalLink,
@@ -91,6 +93,7 @@ const parseDurationDays = (duration) => {
 const findStudentBatch = (student, enrollment, program) => {
   const enrollmentBatch = enrollment?.batchId;
   if (enrollmentBatch && typeof enrollmentBatch === 'object') return enrollmentBatch;
+  if (enrollment && !enrollmentBatch) return null;
 
   const batchId = enrollmentBatch || student?.batchId?._id || student?.batchId;
   return (program?.batchIds || []).find((batch) => String(batch?._id || batch) === String(batchId)) || null;
@@ -100,7 +103,9 @@ const buildStudentTableRow = (student, program) => {
   const enrollment = student?.enrollment || null;
   const batch = findStudentBatch(student, enrollment, program);
   const started = toValidDate(
-    batch?.startDate
+    student?.scheduleStartDate
+      || student?.programStartDate
+      || batch?.startDate
       || enrollment?.individualStartDate
       || enrollment?.assignedAt
       || student?.createdAt
@@ -111,28 +116,36 @@ const buildStudentTableRow = (student, program) => {
   const rawDayNumber = startDay && today
     ? Math.floor((today.getTime() - startDay.getTime()) / DAY_IN_MILLISECONDS) + 1
     : null;
-  const dayNumber = rawDayNumber && totalDays
-    ? Math.min(totalDays, Math.max(1, rawDayNumber))
-    : rawDayNumber;
+  const dayNumber = Number.isFinite(student?.programDayNumber)
+    ? (totalDays ? Math.min(totalDays, Math.max(0, student.programDayNumber)) : student.programDayNumber)
+    : (rawDayNumber && totalDays
+      ? Math.min(totalDays, Math.max(1, rawDayNumber))
+      : rawDayNumber);
   const expires = toValidDate(batch?.expiryDate)
+    || toValidDate(student?.scheduleExpiryDate)
+    || toValidDate(student?.programExpiryDate)
     || (started && totalDays
       ? new Date(startOfDay(started).getTime() + ((totalDays - 1) * DAY_IN_MILLISECONDS))
       : null);
-  const isPaid = enrollment?.accessTier === 'Member' || program?.pricingType === 'Paid';
+  const isPaid = student?.programAccess
+    ? student.programAccess === 'Paid'
+    : enrollment?.accessTier === 'Member' || program?.pricingType === 'Paid';
   const fee = Number(program?.programFee);
   const feeLabel = Number.isFinite(fee) && fee > 0 ? ` ₹${fee.toLocaleString('en-IN')}` : '';
+  const configuredPlan = String(student?.programPlan || '').trim();
+  const planBase = configuredPlan || (isPaid
+    ? (program?.accessTier === 'Member' ? 'Member' : 'Paid')
+    : (totalDays ? `${totalDays}-Day Trial` : 'Free Access'));
 
   return {
     access: isPaid ? 'Paid' : 'Trial',
-    plan: isPaid
-      ? `${program?.accessTier === 'Member' ? 'Member' : 'Paid'}${feeLabel}`
-      : (totalDays ? `${totalDays}-Day Trial` : 'Free Access'),
+    plan: isPaid && feeLabel && !planBase.includes('₹') ? `${planBase}${feeLabel}` : planBase,
     started,
     expires,
     progress: dayNumber
       ? (totalDays ? `Day ${dayNumber} / ${totalDays}` : `Day ${dayNumber}`)
       : '—',
-    status: student?.status || enrollment?.status || 'Active',
+    status: student?.programStatus || student?.status || enrollment?.status || 'Active',
   };
 };
 
@@ -155,7 +168,13 @@ const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach }) =>
           </tr>
         </thead>
         <tbody>
-          {students.map((student, index) => {
+          {students.length === 0 ? (
+            <tr>
+              <td colSpan={8} className="px-6 py-12 text-center text-sm text-black/45 dark:text-white/45">
+                No students match the current search and filters.
+              </td>
+            </tr>
+          ) : students.map((student, index) => {
             const row = buildStudentTableRow(student, program);
             const isActive = row.status === 'Active';
 
@@ -240,6 +259,96 @@ const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach }) =>
   </div>
 );
 
+const ReportActivity = ({ label, activity, tone }) => (
+  <div className="flex items-center justify-between gap-2 text-[10px] leading-tight">
+    <span className={`font-bold ${tone}`}>{label}</span>
+    <span className={`text-right ${activity?.attempted ? 'text-slate-700 dark:text-slate-200' : 'text-black/35 dark:text-white/35'}`}>
+      {activity?.attempted ? `${activity.status} · ${activity.result}` : 'Not attempted'}
+    </span>
+  </div>
+);
+
+const ProgramReportsTable = ({ students, program, onOpenStudent }) => {
+  const reportDays = Math.max(1, Number(program?.programReports?.days) || 30);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3 px-1">
+        <p className="text-xs text-black/45 dark:text-white/45">
+          Program Day is anchored to each learner&apos;s original enrollment date. Each day shows Daily Task and Daily Challenge activity.
+        </p>
+        <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-black/40 dark:text-white/40">
+          Day 1–{reportDays}
+        </span>
+      </div>
+      <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-[3400px] w-full text-left">
+            <caption className="sr-only">Day-wise program reports for enrolled students</caption>
+            <thead className="bg-black/[0.03] dark:bg-white/[0.04]">
+              <tr className="border-b border-black/10 dark:border-white/10">
+                <th scope="col" className="sticky left-0 z-20 w-14 min-w-14 px-3 py-3 bg-[#f9fbfd] dark:bg-[#12244a] text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45">#</th>
+                <th scope="col" className="sticky left-14 z-20 w-56 min-w-56 px-3 py-3 bg-[#f9fbfd] dark:bg-[#12244a] text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45">Student</th>
+                {Array.from({ length: reportDays }, (_, index) => (
+                  <th key={index + 1} scope="col" className="w-28 min-w-28 px-2 py-3 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45">
+                    Day {index + 1}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((student, index) => {
+                const report = student.programReport || {};
+                const days = report.days || [];
+                return (
+                  <tr
+                    key={student._id}
+                    className="group border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-[#3C83F6]/[0.04] dark:hover:bg-white/[0.04] transition-colors"
+                  >
+                    <td className="sticky left-0 z-10 px-3 py-3.5 bg-white/95 dark:bg-[#0f1f43]/95 text-xs font-semibold tabular-nums text-black/45 dark:text-white/45">
+                      {String(index + 1).padStart(3, '0')}
+                    </td>
+                    <td className="sticky left-14 z-10 px-3 py-3.5 bg-white/95 dark:bg-[#0f1f43]/95">
+                      <button
+                        type="button"
+                        onClick={() => onOpenStudent(student)}
+                        className="text-left group/student"
+                      >
+                        <span className="block max-w-[210px] truncate text-sm font-bold text-slate-800 dark:text-white group-hover/student:text-[#3C83F6] dark:group-hover/student:text-[#bceaff] transition-colors">
+                          {student.name || student.email || 'Unnamed Student'}
+                        </span>
+                        <span className="block max-w-[210px] truncate text-[11px] text-black/40 dark:text-white/40 mt-0.5">
+                          {student.email || student.rollNo || '—'}
+                        </span>
+                      </button>
+                    </td>
+                    {Array.from({ length: reportDays }, (_, index) => {
+                      const day = days[index] || {};
+                      return (
+                        <td key={index + 1} className="w-28 min-w-28 px-2 py-2.5 align-top border-l border-black/5 dark:border-white/5">
+                          <div className="space-y-1.5">
+                            <ReportActivity label="Task" activity={day.dailyTask} tone="text-emerald-600 dark:text-emerald-300" />
+                            <ReportActivity label="Challenge" activity={day.dailyChallenge} tone="text-blue-600 dark:text-blue-300" />
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {students.length === 0 && (
+          <div className="px-6 py-12 text-center text-sm text-black/45 dark:text-white/45">
+            No students match the current search and filters.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const statusBadgeClass = (status) => {
   if (status === 'Active' || status === 'Published')
     return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
@@ -260,7 +369,17 @@ export default function ProgramDetails() {
   const [program, setProgram] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState(searchParams.get('attachType') || 'batches');
+  const [activeTab, setActiveTab] = useState(() => {
+    const requestedSection = searchParams.get('attachType');
+    return SECTIONS.some((section) => section.key === requestedSection) ? requestedSection : 'students';
+  });
+  const [studentsSubTab, setStudentsSubTab] = useState('students');
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentPeriodFilter, setStudentPeriodFilter] = useState('current');
+  const [studentStatusFilter, setStudentStatusFilter] = useState('active-completed');
+  const [studentAccessFilter, setStudentAccessFilter] = useState('all');
+  const [studentPlanFilter, setStudentPlanFilter] = useState('all');
+  const [studentSort, setStudentSort] = useState('latest');
 
   const [attachModalType, setAttachModalType] = useState(null);
   const [availableItems, setAvailableItems] = useState([]);
@@ -325,6 +444,74 @@ export default function ProgramDetails() {
       return () => clearTimeout(t);
     }
   }, [toastMessage]);
+
+  const visibleStudentItems = useMemo(() => {
+    const students = Array.isArray(program?.studentIds) ? program.studentIds : [];
+    const search = studentSearch.trim().toLowerCase();
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const getStartedTime = (student) => {
+      const row = buildStudentTableRow(student, program);
+      return row.started ? row.started.getTime() : 0;
+    };
+    const getStatusPriority = (status) => ({ Active: 0, Completed: 1, Expired: 2 }[status] ?? 3);
+    const getProgressValue = (student) => {
+      if (Number.isFinite(student?.programDayNumber)) return Number(student.programDayNumber);
+      const match = String(buildStudentTableRow(student, program).progress || '').match(/Day\s+(\d+)/i);
+      return match ? Number(match[1]) : 0;
+    };
+
+    const filtered = students.filter((student) => {
+      const row = buildStudentTableRow(student, program);
+      const searchable = [student.name, student.email, student.rollNo, student._id, student.userId]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      if (search && !searchable.includes(search)) return false;
+
+      if (studentPeriodFilter === 'current') {
+        const started = toValidDate(student.programStartDate) || row.started;
+        if (!started || started.getFullYear() !== currentYear || started.getMonth() !== currentMonth) return false;
+      }
+
+      if (studentStatusFilter === 'active-completed' && !['Active', 'Completed'].includes(row.status)) return false;
+      if (studentStatusFilter !== 'active-completed' && studentStatusFilter !== 'all' && row.status !== studentStatusFilter) return false;
+      if (studentAccessFilter !== 'all' && row.access !== studentAccessFilter) return false;
+
+      if (studentPlanFilter !== 'all') {
+        const plan = String(row.plan || '').toLowerCase();
+        const matchesPlan = studentPlanFilter === 'trial'
+          ? row.access === 'Trial' || plan.includes('trial')
+          : plan.includes(studentPlanFilter);
+        if (!matchesPlan) return false;
+      }
+
+      return true;
+    });
+
+    return filtered.sort((first, second) => {
+      const firstRow = buildStudentTableRow(first, program);
+      const secondRow = buildStudentTableRow(second, program);
+      if (studentSort === 'name-asc' || studentSort === 'name-desc') {
+        const comparison = String(first.name || first.email || '').localeCompare(String(second.name || second.email || ''), undefined, { sensitivity: 'base' });
+        return studentSort === 'name-asc' ? comparison : -comparison;
+      }
+      if (studentSort === 'progress-high' || studentSort === 'progress-low') {
+        const comparison = getProgressValue(first) - getProgressValue(second);
+        return studentSort === 'progress-high' ? -comparison : comparison;
+      }
+
+      const firstTime = getStartedTime(first);
+      const secondTime = getStartedTime(second);
+      if (studentSort === 'oldest') return firstTime - secondTime;
+
+      const statusComparison = getStatusPriority(firstRow.status) - getStatusPriority(secondRow.status);
+      if (statusComparison !== 0) return statusComparison;
+      return secondTime - firstTime;
+    });
+  }, [program, studentSearch, studentPeriodFilter, studentStatusFilter, studentAccessFilter, studentPlanFilter, studentSort]);
 
   const fetchAvailableEntities = async (entityType, search = '') => {
     try {
@@ -476,6 +663,13 @@ export default function ProgramDetails() {
   const currentSection = SECTIONS.find((s) => s.key === activeTab) || SECTIONS[0];
   const CurrentSectionIcon = currentSection.icon;
   const attachedItems = program[currentSection.field] || [];
+  const programStats = program.programStats || {};
+  const totalEnrolled = Number.isFinite(Number(programStats.totalEnrolled))
+    ? Number(programStats.totalEnrolled)
+    : attachedItems.length;
+  const programPrice = program.pricingType === 'Paid'
+    ? `₹${Number(program.programFee || 0).toLocaleString('en-IN')}`
+    : 'Free';
 
   return (
     <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
@@ -696,61 +890,59 @@ export default function ProgramDetails() {
             Back to Programs
           </button>
 
-          {/* ── Hero Card ─────────────────────────────────────────────────────── */}
-          <div className="rounded-2xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] overflow-hidden">
-            {/* Tinted Header strip */}
-            <div className="px-6 py-3.5 bg-[#d8e6ef] dark:bg-[#24384e] border-b border-black/10 dark:border-white/10">
-              <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                  program.status === 'Active'
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
-                    : program.status === 'Draft'
-                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
-                    : 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300'
-                }`}>
-                  {program.status}
+          {/* ── Compact Program Header ─────────────────────────────────────── */}
+          <div className="rounded-2xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl px-5 py-4 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${statusBadgeClass(program.status)}`}>
+                    {program.status}
+                  </span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black/40 dark:text-white/40">
+                    Program
+                  </span>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-snug truncate">
+                  {program.name}
+                </h1>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
+                  <FiTag className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
+                  {getProgramType(program.programType)}
                 </span>
-                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                  program.visibility === 'Public'
-                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'
-                    : 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300'
-                }`}>
-                  {program.visibility === 'Public' ? <FiGlobe className="w-2.5 h-2.5" /> : <FiLock className="w-2.5 h-2.5" />}
-                  {program.visibility}
+                <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
+                  <FiClock className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
+                  {program.duration || '—'}
+                </span>
+                <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-emerald-300/60 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                  {programPrice}
+                </span>
+                <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
+                  <FiUsers className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
+                  {totalEnrolled} Students
                 </span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-snug">
-                {program.name}
-              </h1>
-              {program.description && (
-                <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 max-w-3xl leading-relaxed">
-                  {program.description}
-                </p>
-              )}
             </div>
+          </div>
 
-            {/* Quick-info chips */}
-            <div className="px-6 py-2.5 flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
-                <FiTag className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
-                {getProgramType(program.programType)}
-              </span>
-              <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
-                <FiClock className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
-                {program.duration || '—'}
-              </span>
-              <span className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border ${
-                program.pricingType === 'Paid'
-                  ? 'border-emerald-300/60 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                  : 'border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200'
-              }`}>
-                {program.pricingType === 'Paid' ? `₹${program.programFee}` : 'Free'}
-              </span>
-              <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
-                <FiUsers className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
-                {program.studentCount || 0} Students
-              </span>
-            </div>
+          {/* ── Program Monitoring Stats ───────────────────────────────────── */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            {[
+              { label: 'Total Enrolled', value: totalEnrolled, icon: FiUsers },
+              { label: 'Current Enrolled', value: programStats.currentEnrolled ?? 0, icon: FiClock },
+              { label: 'Active Today', value: programStats.activeToday ?? 0, icon: FiActivity },
+              { label: 'Completed', value: programStats.completed ?? 0, icon: FiCheckCircle },
+              { label: 'Accuracy', value: programStats.accuracy === null || programStats.accuracy === undefined ? '—' : `${programStats.accuracy}%`, icon: FiBarChart2 },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/75 dark:bg-[#0f1f43] px-4 py-3 shadow-[0_3px_10px_rgba(15,23,42,0.03)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.12)]">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">{stat.label}</span>
+                  {createElement(stat.icon, { className: 'w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]' })}
+                </div>
+                <p className="mt-1 text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{stat.value}</p>
+              </div>
+            ))}
           </div>
 
           {/* ── Section Navigation Tabs ──────────────────────────────────────── */}
@@ -789,13 +981,15 @@ export default function ProgramDetails() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 dark:border-white/5 pb-3">
               <div>
                 <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                  Attached {currentSection.label}
+                  {currentSection.key === 'students' ? 'Students' : `Attached ${currentSection.label}`}
                   <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[#3C83F6]/10 dark:bg-[#bceaff]/15 text-[#3C83F6] dark:text-[#bceaff]">
                     {attachedItems.length}
                   </span>
                 </h2>
                 <p className="text-xs text-black/45 dark:text-white/45 mt-0.5">
-                  Manage attached {currentSection.label.toLowerCase()} or add new resources
+                  {currentSection.key === 'students'
+                    ? 'Operational enrollment database for this program'
+                    : `Manage attached ${currentSection.label.toLowerCase()} or add new resources`}
                 </p>
               </div>
 
@@ -818,7 +1012,115 @@ export default function ProgramDetails() {
             </div>
 
             {/* Attached Items */}
-            {attachedItems.length === 0 ? (
+            {currentSection.key === 'students' ? (
+              <>
+                <div className="flex items-center gap-1 border-b border-black/5 dark:border-white/5">
+                  {[
+                    { key: 'students', label: 'Students' },
+                    { key: 'reports', label: 'Reports' },
+                  ].map((subTab) => (
+                    <button
+                      key={subTab.key}
+                      type="button"
+                      onClick={() => setStudentsSubTab(subTab.key)}
+                      className={`px-3 py-2 text-xs font-bold border-b-2 transition-colors ${
+                        studentsSubTab === subTab.key
+                          ? 'border-[#3C83F6] text-[#3C83F6] dark:border-[#bceaff] dark:text-[#bceaff]'
+                          : 'border-transparent text-black/45 dark:text-white/45 hover:text-black/70 dark:hover:text-white/70'
+                      }`}
+                    >
+                      {subTab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/80 p-3 shadow-[0_3px_10px_rgba(15,23,42,0.03)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.1)]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative min-w-[220px] flex-1">
+                      <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/40 dark:text-white/40 pointer-events-none" />
+                      <input
+                        type="search"
+                        value={studentSearch}
+                        onChange={(event) => setStudentSearch(event.target.value)}
+                        placeholder="Search students..."
+                        aria-label="Search students"
+                        className="w-full h-9 pl-9 pr-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                      />
+                    </div>
+                    <select
+                      value={studentSort}
+                      onChange={(event) => setStudentSort(event.target.value)}
+                      aria-label="Sort students"
+                      className="h-9 min-w-[155px] px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    >
+                      <option value="latest">Latest Joined</option>
+                      <option value="oldest">Oldest Joined</option>
+                      <option value="name-asc">Name A–Z</option>
+                      <option value="name-desc">Name Z–A</option>
+                      <option value="progress-high">Progress Highest</option>
+                      <option value="progress-low">Progress Lowest</option>
+                    </select>
+                    <select
+                      value={studentPeriodFilter}
+                      onChange={(event) => setStudentPeriodFilter(event.target.value)}
+                      aria-label="Student period filter"
+                      className="h-9 min-w-[125px] px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    >
+                      <option value="current">Current Month</option>
+                      <option value="all">All Time</option>
+                    </select>
+                    <select
+                      value={studentStatusFilter}
+                      onChange={(event) => setStudentStatusFilter(event.target.value)}
+                      aria-label="Student status filter"
+                      className="h-9 min-w-[145px] px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    >
+                      <option value="active-completed">Status: Active + Completed</option>
+                      <option value="all">Status: All</option>
+                      <option value="Active">Status: Active</option>
+                      <option value="Completed">Status: Completed</option>
+                      <option value="Expired">Status: Expired</option>
+                    </select>
+                    <select
+                      value={studentAccessFilter}
+                      onChange={(event) => setStudentAccessFilter(event.target.value)}
+                      aria-label="Student access filter"
+                      className="h-9 min-w-[105px] px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    >
+                      <option value="all">Access: All</option>
+                      <option value="Trial">Access: Trial</option>
+                      <option value="Paid">Access: Paid</option>
+                    </select>
+                    <select
+                      value={studentPlanFilter}
+                      onChange={(event) => setStudentPlanFilter(event.target.value)}
+                      aria-label="Student plan filter"
+                      className="h-9 min-w-[105px] px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    >
+                      <option value="all">Plan: All</option>
+                      <option value="trial">Plan: Trial</option>
+                      <option value="basic">Plan: Basic</option>
+                      <option value="pro">Plan: Pro</option>
+                    </select>
+                  </div>
+                </div>
+
+                {studentsSubTab === 'reports' ? (
+                  <ProgramReportsTable
+                    students={visibleStudentItems}
+                    program={program}
+                    onOpenStudent={setSelectedStudent}
+                  />
+                ) : (
+                  <StudentDatabaseTable
+                    students={visibleStudentItems}
+                    program={program}
+                    onOpenStudent={setSelectedStudent}
+                    onDetach={(student) => setDetachItem({ typeKey: currentSection.key, item: student })}
+                  />
+                )}
+              </>
+            ) : attachedItems.length === 0 ? (
               <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl p-16 text-center shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
                 <div className="w-14 h-14 rounded-2xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center mx-auto mb-4">
                   <CurrentSectionIcon className="w-7 h-7" />
@@ -837,13 +1139,6 @@ export default function ProgramDetails() {
                   Attach {currentSection.label}
                 </button>
               </div>
-            ) : currentSection.key === 'students' ? (
-              <StudentDatabaseTable
-                students={attachedItems}
-                program={program}
-                onOpenStudent={setSelectedStudent}
-                onDetach={(student) => setDetachItem({ typeKey: currentSection.key, item: student })}
-              />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {attachedItems.map((item) => {
