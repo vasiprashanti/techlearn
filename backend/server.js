@@ -104,6 +104,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/programs", programRoutes);
 app.use("/api/user-progress", userProgressRoutes);
 app.use("/api/certificate", paymentRoutes);
+app.use("/api/payments", paymentRoutes);
 app.use("/api/certification", certificationRoutes);
 app.use("/api/compiler", compilerRoutes);
 app.use("/api/xp", xpRoutes);
