@@ -47,6 +47,7 @@ import analyticsRoutes from "./routes/analyticsRoutes.js";
 import resourceRoutes from "./routes/resourceRoutes.js";
 import leaderboardRoutes from "./routes/leaderboardRoutes.js";
 import practiceRoutes from "./routes/practiceRoutes.js";
+import testimonialRoutes from "./routes/testimonialRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -118,7 +119,7 @@ app.use("/api/student/project", studentProjectRoutes);
 app.use("/api/resources", resourceRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/practice", practiceRoutes);
-
+app.use("/api/testimonials", testimonialRoutes);
 // ✅ BUILD PAGE Routes
 app.use("/api/mini-projects", miniRouter);
 app.use("/api/major-projects", majorRouter);
