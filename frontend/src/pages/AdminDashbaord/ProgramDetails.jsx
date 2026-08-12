@@ -9,7 +9,6 @@ import {
   FiArrowLeft,
   FiPlus,
   FiTrash2,
-  FiFolder,
   FiUsers,
   FiLayers,
   FiBookOpen,
@@ -21,15 +20,13 @@ import {
   FiActivity,
   FiBarChart2,
   FiSearch,
+  FiFilter,
   FiX,
   FiExternalLink,
-  FiChevronRight,
   FiAlertCircle,
   FiTag,
   FiClock,
   FiEye,
-  FiGlobe,
-  FiLock,
 } from 'react-icons/fi';
 
 const SECTIONS = [
@@ -40,6 +37,7 @@ const SECTIONS = [
   { key: 'track-templates', label: 'Track Templates', icon: FiGitCommit, field: 'trackTemplateIds', route: '/track-templates' },
   { key: 'certificates', label: 'Certificates', icon: FiAward, field: 'certificateTemplateIds', route: '/certificates' },
   { key: 'projects', label: 'Projects', icon: FiClipboard, field: 'projectIds', route: '/admin/projects' },
+  { key: 'analytics', label: 'Analytics', icon: FiBarChart2, field: null, route: null },
 ];
 
 const getProgramType = (value) => {
@@ -150,19 +148,28 @@ const buildStudentTableRow = (student, program) => {
 };
 
 const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach }) => (
-  <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] overflow-hidden">
+  <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] overflow-hidden">
     <div className="overflow-x-auto">
-      <table className="min-w-[920px] w-full text-left">
+      <table className="min-w-[860px] w-full text-left">
         <caption className="sr-only">Students enrolled in this program</caption>
         <thead className="bg-black/[0.03] dark:bg-white/[0.04]">
           <tr className="border-b border-black/10 dark:border-white/10">
-            {['#', 'Student', 'Access', 'Plan', 'Started', 'Expires', 'Progress', 'Status'].map((heading) => (
+            {[
+              { label: '#', width: 'w-12 min-w-12' },
+              { label: 'Student', width: 'w-44 min-w-44' },
+              { label: 'Access', width: 'w-20 min-w-20' },
+              { label: 'Plan', width: 'w-28 min-w-28' },
+              { label: 'Started', width: 'w-24 min-w-24' },
+              { label: 'Expires', width: 'w-24 min-w-24' },
+              { label: 'Progress', width: 'w-28 min-w-28' },
+              { label: 'Status', width: 'w-28 min-w-28' },
+            ].map(({ label, width }) => (
               <th
-                key={heading}
+                key={label}
                 scope="col"
-                className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45 whitespace-nowrap"
+                className={`${width} px-3 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45 whitespace-nowrap`}
               >
-                {heading}
+                {label}
               </th>
             ))}
           </tr>
@@ -184,10 +191,10 @@ const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach }) =>
                 onClick={() => onOpenStudent(student)}
                 className="group border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-[#3C83F6]/[0.04] dark:hover:bg-white/[0.04] cursor-pointer transition-colors"
               >
-                <td className="px-4 py-3.5 text-xs font-semibold tabular-nums text-black/45 dark:text-white/45">
+                <td className="w-12 min-w-12 px-3 py-3.5 text-xs font-semibold tabular-nums text-black/45 dark:text-white/45">
                   {String(index + 1).padStart(3, '0')}
                 </td>
-                <td className="px-4 py-3.5">
+                <td className="w-44 min-w-44 px-3 py-3.5">
                   <button
                     type="button"
                     onClick={(event) => {
@@ -196,11 +203,11 @@ const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach }) =>
                     }}
                     className="text-left group/student"
                   >
-                    <span className="block text-sm font-bold text-slate-800 dark:text-white group-hover/student:text-[#3C83F6] dark:group-hover/student:text-[#bceaff] transition-colors whitespace-nowrap">
+                    <span className="block max-w-[150px] truncate text-sm font-bold text-slate-800 dark:text-white group-hover/student:text-[#3C83F6] dark:group-hover/student:text-[#bceaff] transition-colors whitespace-nowrap">
                       {student.name || student.email || 'Unnamed Student'}
                     </span>
                     {student.email && (
-                      <span className="block max-w-[190px] truncate text-[11px] text-black/40 dark:text-white/40 mt-0.5">
+                      <span className="block max-w-[150px] truncate text-[11px] text-black/40 dark:text-white/40 mt-0.5">
                         {student.email}
                       </span>
                     )}
@@ -263,7 +270,7 @@ const ReportActivity = ({ label, activity, tone }) => (
   <div className="flex items-center justify-between gap-2 text-[10px] leading-tight">
     <span className={`font-bold ${tone}`}>{label}</span>
     <span className={`text-right ${activity?.attempted ? 'text-slate-700 dark:text-slate-200' : 'text-black/35 dark:text-white/35'}`}>
-      {activity?.attempted ? `${activity.status} · ${activity.result}` : 'Not attempted'}
+      {activity?.attempted ? `${activity.status} · ${activity.result}` : 'N/A'}
     </span>
   </div>
 );
@@ -281,14 +288,14 @@ const ProgramReportsTable = ({ students, program, onOpenStudent }) => {
           Day 1–{reportDays}
         </span>
       </div>
-      <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] overflow-hidden">
+      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-[3400px] w-full text-left">
+          <table className="min-w-[3300px] w-full text-left">
             <caption className="sr-only">Day-wise program reports for enrolled students</caption>
             <thead className="bg-black/[0.03] dark:bg-white/[0.04]">
               <tr className="border-b border-black/10 dark:border-white/10">
-                <th scope="col" className="sticky left-0 z-20 w-14 min-w-14 px-3 py-3 bg-[#f9fbfd] dark:bg-[#12244a] text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45">#</th>
-                <th scope="col" className="sticky left-14 z-20 w-56 min-w-56 px-3 py-3 bg-[#f9fbfd] dark:bg-[#12244a] text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45">Student</th>
+                <th scope="col" className="sticky left-0 z-20 w-12 min-w-12 px-2.5 py-3 bg-[#f9fbfd] dark:bg-[#12244a] text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45">#</th>
+                <th scope="col" className="sticky left-12 z-20 w-44 min-w-44 px-2.5 py-3 bg-[#f9fbfd] dark:bg-[#12244a] text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45">Student</th>
                 {Array.from({ length: reportDays }, (_, index) => (
                   <th key={index + 1} scope="col" className="w-28 min-w-28 px-2 py-3 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45">
                     Day {index + 1}
@@ -305,19 +312,19 @@ const ProgramReportsTable = ({ students, program, onOpenStudent }) => {
                     key={student._id}
                     className="group border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-[#3C83F6]/[0.04] dark:hover:bg-white/[0.04] transition-colors"
                   >
-                    <td className="sticky left-0 z-10 px-3 py-3.5 bg-white/95 dark:bg-[#0f1f43]/95 text-xs font-semibold tabular-nums text-black/45 dark:text-white/45">
+                    <td className="sticky left-0 z-10 w-12 min-w-12 px-2.5 py-3.5 bg-white/95 dark:bg-[#0f1f43]/95 text-xs font-semibold tabular-nums text-black/45 dark:text-white/45">
                       {String(index + 1).padStart(3, '0')}
                     </td>
-                    <td className="sticky left-14 z-10 px-3 py-3.5 bg-white/95 dark:bg-[#0f1f43]/95">
+                    <td className="sticky left-12 z-10 w-44 min-w-44 px-2.5 py-3.5 bg-white/95 dark:bg-[#0f1f43]/95">
                       <button
                         type="button"
                         onClick={() => onOpenStudent(student)}
                         className="text-left group/student"
                       >
-                        <span className="block max-w-[210px] truncate text-sm font-bold text-slate-800 dark:text-white group-hover/student:text-[#3C83F6] dark:group-hover/student:text-[#bceaff] transition-colors">
+                        <span className="block max-w-[150px] truncate text-sm font-bold text-slate-800 dark:text-white group-hover/student:text-[#3C83F6] dark:group-hover/student:text-[#bceaff] transition-colors">
                           {student.name || student.email || 'Unnamed Student'}
                         </span>
-                        <span className="block max-w-[210px] truncate text-[11px] text-black/40 dark:text-white/40 mt-0.5">
+                        <span className="block max-w-[150px] truncate text-[11px] text-black/40 dark:text-white/40 mt-0.5">
                           {student.email || student.rollNo || '—'}
                         </span>
                       </button>
@@ -344,6 +351,37 @@ const ProgramReportsTable = ({ students, program, onOpenStudent }) => {
             No students match the current search and filters.
           </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+const ProgramAnalyticsPanel = ({ program }) => {
+  const stats = program?.programStats || {};
+  const enrolledStudents = Array.isArray(program?.studentIds) ? program.studentIds : [];
+  const metrics = [
+    { label: 'Total Enrolled', value: stats.totalEnrolled ?? enrolledStudents.length },
+    { label: 'Current Enrolled', value: stats.currentEnrolled ?? 0 },
+    { label: 'Active Today', value: stats.activeToday ?? 0 },
+    { label: 'Completed', value: stats.completed ?? 0 },
+    { label: 'Accuracy', value: stats.accuracy === null || stats.accuracy === undefined ? '—' : `${stats.accuracy}%` },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        {metrics.map((metric) => (
+          <div key={metric.label} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] px-4 py-3">
+            <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{metric.value}</p>
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">{metric.label}</p>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] px-4 py-4">
+        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Program performance</h3>
+        <p className="mt-1 text-xs text-black/45 dark:text-white/45">
+          Analytics are calculated from the learners enrolled in this program and their day-wise activity.
+        </p>
       </div>
     </div>
   );
@@ -376,10 +414,11 @@ export default function ProgramDetails() {
   const [studentsSubTab, setStudentsSubTab] = useState('students');
   const [studentSearch, setStudentSearch] = useState('');
   const [studentPeriodFilter, setStudentPeriodFilter] = useState('current');
-  const [studentStatusFilter, setStudentStatusFilter] = useState('active-completed');
+  const [studentStatusFilter, setStudentStatusFilter] = useState('Active');
   const [studentAccessFilter, setStudentAccessFilter] = useState('all');
   const [studentPlanFilter, setStudentPlanFilter] = useState('all');
   const [studentSort, setStudentSort] = useState('latest');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [attachModalType, setAttachModalType] = useState(null);
   const [availableItems, setAvailableItems] = useState([]);
@@ -387,7 +426,18 @@ export default function ProgramDetails() {
   const [availableSearch, setAvailableSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
   const [batches, setBatches] = useState([]);
+  const [colleges, setColleges] = useState([]);
   const [selectedBatchId, setSelectedBatchId] = useState('');
+  const [studentAddMode, setStudentAddMode] = useState('existing');
+  const [newStudentForm, setNewStudentForm] = useState({
+    name: '',
+    email: '',
+    collegeId: '',
+    primaryTrack: 'General Track',
+    status: 'Active',
+  });
+  const [studentFormError, setStudentFormError] = useState('');
+  const [savingNewStudent, setSavingNewStudent] = useState(false);
   const [attaching, setAttaching] = useState(false);
 
   const [detachItem, setDetachItem] = useState(null);
@@ -476,8 +526,7 @@ export default function ProgramDetails() {
         if (!started || started.getFullYear() !== currentYear || started.getMonth() !== currentMonth) return false;
       }
 
-      if (studentStatusFilter === 'active-completed' && !['Active', 'Completed'].includes(row.status)) return false;
-      if (studentStatusFilter !== 'active-completed' && studentStatusFilter !== 'all' && row.status !== studentStatusFilter) return false;
+      if (studentStatusFilter !== 'all' && row.status !== studentStatusFilter) return false;
       if (studentAccessFilter !== 'all' && row.access !== studentAccessFilter) return false;
 
       if (studentPlanFilter !== 'all') {
@@ -532,19 +581,32 @@ export default function ProgramDetails() {
     setSelectedIds([]);
     setSelectedBatchId('');
     setAvailableSearch('');
+    setStudentAddMode('existing');
+    setStudentFormError('');
+    setNewStudentForm({ name: '', email: '', collegeId: '', primaryTrack: 'General Track', status: 'Active' });
     fetchAvailableEntities(entityType, '');
     if (entityType === 'students') {
-      adminAPI.getBatches()
-        .then((res) => {
-          const items = Array.isArray(res) ? res : (res?.batches || res?.items || res?.data || []);
-          setBatches(items.map((batch) => ({
+      Promise.all([adminAPI.getBatches(), adminAPI.getColleges()])
+        .then(([batchResponse, collegeResponse]) => {
+          const batchItems = Array.isArray(batchResponse)
+            ? batchResponse
+            : (batchResponse?.batches || batchResponse?.items || batchResponse?.data || []);
+          const collegeItems = Array.isArray(collegeResponse)
+            ? collegeResponse
+            : (collegeResponse?.colleges || collegeResponse?.items || collegeResponse?.data || []);
+          setBatches(batchItems.map((batch) => ({
             id: batch.id || batch._id,
             name: batch.name || batch.id || 'Untitled Batch',
           })).filter((batch) => batch.id));
+          setColleges(collegeItems.map((college) => ({
+            id: college.id || college._id,
+            name: college.name || 'Untitled College',
+          })).filter((college) => college.id));
         })
         .catch((err) => {
-          console.error('Error fetching batches for program enrollment:', err);
+          console.error('Error fetching student metadata for program enrollment:', err);
           setBatches([]);
+          setColleges([]);
         });
     }
   };
@@ -554,7 +616,46 @@ export default function ProgramDetails() {
   };
 
   const handleConfirmAttach = async () => {
-    if (selectedIds.length === 0 || !attachModalType) return;
+    if (!attachModalType) return;
+
+    if (attachModalType === 'students' && studentAddMode === 'new') {
+      if (!newStudentForm.name.trim()) {
+        setStudentFormError('Name is required.');
+        return;
+      }
+      if (!newStudentForm.email.trim()) {
+        setStudentFormError('Email is required.');
+        return;
+      }
+      if (!newStudentForm.collegeId) {
+        setStudentFormError('College is required.');
+        return;
+      }
+
+      try {
+        setSavingNewStudent(true);
+        setStudentFormError('');
+        await adminAPI.createStudent({
+          name: newStudentForm.name.trim(),
+          email: newStudentForm.email.trim().toLowerCase(),
+          collegeId: newStudentForm.collegeId,
+          batchId: selectedBatchId || null,
+          programId,
+          primaryTrack: newStudentForm.primaryTrack.trim() || 'General Track',
+          status: newStudentForm.status,
+        });
+        setAttachModalType(null);
+        setToastMessage('Student added to Program successfully.');
+        fetchProgramDetail();
+      } catch (err) {
+        setStudentFormError(err.message || 'Failed to add student.');
+      } finally {
+        setSavingNewStudent(false);
+      }
+      return;
+    }
+
+    if (selectedIds.length === 0) return;
     try {
       setAttaching(true);
       await adminAPI.attachProgramEntities(
@@ -670,6 +771,42 @@ export default function ProgramDetails() {
   const programPrice = program.pricingType === 'Paid'
     ? `₹${Number(program.programFee || 0).toLocaleString('en-IN')}`
     : 'Free';
+  const activeStudentFilterCount = [studentStatusFilter, studentAccessFilter, studentPlanFilter]
+    .filter((value) => value !== 'all').length;
+  const studentFilterGroups = [
+    {
+      label: 'Status',
+      value: studentStatusFilter,
+      onChange: setStudentStatusFilter,
+      options: [
+        { label: 'All', value: 'all' },
+        { label: 'Active', value: 'Active' },
+        { label: 'Completed', value: 'Completed' },
+        { label: 'Expired', value: 'Expired' },
+      ],
+    },
+    {
+      label: 'Access',
+      value: studentAccessFilter,
+      onChange: setStudentAccessFilter,
+      options: [
+        { label: 'All', value: 'all' },
+        { label: 'Trial', value: 'Trial' },
+        { label: 'Paid', value: 'Paid' },
+      ],
+    },
+    {
+      label: 'Plan',
+      value: studentPlanFilter,
+      onChange: setStudentPlanFilter,
+      options: [
+        { label: 'All', value: 'all' },
+        { label: 'Trial', value: 'trial' },
+        { label: 'Basic', value: 'basic' },
+        { label: 'Pro', value: 'pro' },
+      ],
+    },
+  ];
 
   return (
     <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
@@ -694,15 +831,17 @@ export default function ProgramDetails() {
       {attachModalType && (
         <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setAttachModalType(null)} />
-          <div className="relative w-full max-w-2xl rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+          <div className="relative w-full max-w-2xl rounded-xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
             {/* Header */}
             <div className="px-5 py-3.5 border-b border-black/10 dark:border-white/10 flex items-center justify-between shrink-0">
               <div>
                 <h3 className="text-base font-semibold text-[#3C83F6] dark:text-[#bceaff]">
-                  Attach Existing {currentSection.label}
+                  {attachModalType === 'students' ? 'Add Student' : `Attach Existing ${currentSection.label}`}
                 </h3>
                 <p className="text-[11px] text-black/45 dark:text-white/45 mt-0.5">
-                  Select items to attach to this program
+                  {attachModalType === 'students'
+                    ? 'Add an existing learner or create a new learner for this program'
+                    : 'Select items to attach to this program'}
                 </p>
               </div>
               <button
@@ -713,22 +852,102 @@ export default function ProgramDetails() {
               </button>
             </div>
 
-            {/* Search */}
-            <div className="px-5 pt-4 pb-2 shrink-0">
-              <div className="relative">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/40 dark:text-white/40 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder={`Search available ${currentSection.label.toLowerCase()}...`}
-                  value={availableSearch}
-                  onChange={(e) => {
-                    setAvailableSearch(e.target.value);
-                    fetchAvailableEntities(attachModalType, e.target.value);
-                  }}
-                  className="w-full h-9 pl-9 pr-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-sm text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35"
-                />
+            {attachModalType === 'students' && (
+              <div className="px-5 pt-4 pb-2 shrink-0">
+                <div className="inline-flex rounded-lg border border-black/10 dark:border-white/10 p-1 bg-black/[0.03] dark:bg-white/5">
+                  {[
+                    { key: 'existing', label: 'Existing student' },
+                    { key: 'new', label: 'New student' },
+                  ].map((mode) => (
+                    <button
+                      key={mode.key}
+                      type="button"
+                      onClick={() => {
+                        setStudentAddMode(mode.key);
+                        setStudentFormError('');
+                        setSelectedIds([]);
+                      }}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${studentAddMode === mode.key
+                        ? 'bg-white dark:bg-[#18365f] text-[#3C83F6] dark:text-white shadow-sm'
+                        : 'text-black/55 dark:text-white/60'}`}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Search */}
+            {studentAddMode === 'existing' && (
+              <div className="px-5 pt-4 pb-2 shrink-0">
+                <div className="relative">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/40 dark:text-white/40 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder={`Search available ${currentSection.label.toLowerCase()}...`}
+                    value={availableSearch}
+                    onChange={(e) => {
+                      setAvailableSearch(e.target.value);
+                      fetchAvailableEntities(attachModalType, e.target.value);
+                    }}
+                    className="w-full h-9 pl-9 pr-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-sm text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35"
+                  />
+                </div>
+              </div>
+            )}
+
+            {attachModalType === 'students' && studentAddMode === 'new' && (
+              <div className="px-5 pt-2 pb-3 shrink-0 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-black/50 dark:text-white/50 mb-1.5">Name*</span>
+                    <input
+                      value={newStudentForm.name}
+                      onChange={(event) => setNewStudentForm((current) => ({ ...current, name: event.target.value }))}
+                      placeholder="Student name"
+                      className="w-full h-10 px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-sm text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-black/50 dark:text-white/50 mb-1.5">Email*</span>
+                    <input
+                      type="email"
+                      value={newStudentForm.email}
+                      onChange={(event) => setNewStudentForm((current) => ({ ...current, email: event.target.value }))}
+                      placeholder="student@example.com"
+                      className="w-full h-10 px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-sm text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    />
+                  </label>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-black/50 dark:text-white/50 mb-1.5">College*</span>
+                    <select
+                      value={newStudentForm.collegeId}
+                      onChange={(event) => setNewStudentForm((current) => ({ ...current, collegeId: event.target.value }))}
+                      className="w-full h-10 px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-sm text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    >
+                      <option value="">Select college</option>
+                      {colleges.map((college) => <option key={college.id} value={college.id}>{college.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-black/50 dark:text-white/50 mb-1.5">Status</span>
+                    <select
+                      value={newStudentForm.status}
+                      onChange={(event) => setNewStudentForm((current) => ({ ...current, status: event.target.value }))}
+                      className="w-full h-10 px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-sm text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                      <option value="Suspended">Suspended</option>
+                    </select>
+                  </label>
+                </div>
+                {studentFormError && <p className="text-xs text-red-500">{studentFormError}</p>}
+              </div>
+            )}
 
             {attachModalType === 'students' && (
               <div className="px-5 pb-2 shrink-0">
@@ -752,7 +971,8 @@ export default function ProgramDetails() {
             )}
 
             {/* Item List */}
-            <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2 min-h-0">
+            {studentAddMode === 'existing' && (
+              <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2 min-h-0">
               {availableLoading ? (
                 <div className="py-12 flex justify-center">
                   <div className="w-6 h-6 border-2 border-[#3C83F6] border-t-transparent rounded-full animate-spin" />
@@ -800,12 +1020,13 @@ export default function ProgramDetails() {
                   );
                 })
               )}
-            </div>
+              </div>
+            )}
 
             {/* Footer */}
             <div className="px-5 py-3.5 border-t border-black/10 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/50 dark:bg-[#0a1737]/50">
               <span className="text-xs text-black/45 dark:text-white/45">
-                {selectedIds.length} item(s) selected
+                {studentAddMode === 'new' ? 'New student' : `${selectedIds.length} item(s) selected`}
               </span>
               <div className="flex items-center gap-3">
                 <button
@@ -815,11 +1036,13 @@ export default function ProgramDetails() {
                   Cancel
                 </button>
                 <button
-                  disabled={selectedIds.length === 0 || attaching}
+                  disabled={studentAddMode === 'new' ? savingNewStudent : selectedIds.length === 0 || attaching}
                   onClick={handleConfirmAttach}
-                  className="px-5 py-2.5 rounded-xl text-sm font-medium bg-[#3C83F6] hover:bg-[#2f73e0] text-white transition-colors disabled:opacity-50 shadow-sm"
+                  className="px-5 py-2.5 rounded-lg text-sm font-medium bg-[#3C83F6] hover:bg-[#2f73e0] text-white transition-colors disabled:opacity-50 shadow-sm"
                 >
-                  {attaching ? 'Attaching...' : `Attach (${selectedIds.length})`}
+                  {studentAddMode === 'new'
+                    ? (savingNewStudent ? 'Adding...' : 'Add Student')
+                    : (attaching ? 'Attaching...' : `Add (${selectedIds.length})`)}
                 </button>
               </div>
             </div>
@@ -831,7 +1054,7 @@ export default function ProgramDetails() {
       {detachItem && (
         <div className="fixed inset-0 z-[145] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setDetachItem(null)} />
-          <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 p-6 shadow-2xl">
+          <div className="relative w-full max-w-md rounded-xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 p-6 shadow-2xl">
             <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">Detach Item?</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
               Remove{' '}
@@ -891,7 +1114,7 @@ export default function ProgramDetails() {
           </button>
 
           {/* ── Compact Program Header ─────────────────────────────────────── */}
-          <div className="rounded-2xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl px-5 py-4 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
+          <div className="rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl px-5 py-4 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -936,11 +1159,11 @@ export default function ProgramDetails() {
               { label: 'Accuracy', value: programStats.accuracy === null || programStats.accuracy === undefined ? '—' : `${programStats.accuracy}%`, icon: FiBarChart2 },
             ].map((stat) => (
               <div key={stat.label} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/75 dark:bg-[#0f1f43] px-4 py-3 shadow-[0_3px_10px_rgba(15,23,42,0.03)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.12)]">
-                <div className="flex items-center justify-between gap-2">
+                <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{stat.value}</p>
+                <div className="mt-1 flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">{stat.label}</span>
                   {createElement(stat.icon, { className: 'w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]' })}
                 </div>
-                <p className="mt-1 text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{stat.value}</p>
               </div>
             ))}
           </div>
@@ -949,7 +1172,7 @@ export default function ProgramDetails() {
           <div className="-mt-1 flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
             {SECTIONS.map((sec) => {
               const Icon = sec.icon;
-              const count = (program[sec.field] || []).length;
+              const count = sec.field ? (program[sec.field] || []).length : null;
               const isActive = activeTab === sec.key;
               return (
                 <button
@@ -963,13 +1186,15 @@ export default function ProgramDetails() {
                 >
                   <Icon className="w-3 h-3" />
                   <span>{sec.label}</span>
+                  {count !== null && (
                     <span className={`px-1.5 py-0 rounded-full text-[10px] font-bold ${
-                    isActive
-                      ? 'bg-white/25 dark:bg-black/20 text-white dark:text-[#06224d]'
-                      : 'bg-black/8 dark:bg-white/10 text-slate-600 dark:text-slate-300'
-                  }`}>
-                    {count}
-                  </span>
+                      isActive
+                        ? 'bg-white/25 dark:bg-black/20 text-white dark:text-[#06224d]'
+                        : 'bg-black/8 dark:bg-white/10 text-slate-600 dark:text-slate-300'
+                    }`}>
+                      {count}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -981,38 +1206,58 @@ export default function ProgramDetails() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 dark:border-white/5 pb-3">
               <div>
                 <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                  {currentSection.key === 'students' ? 'Students' : `Attached ${currentSection.label}`}
-                  <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[#3C83F6]/10 dark:bg-[#bceaff]/15 text-[#3C83F6] dark:text-[#bceaff]">
-                    {attachedItems.length}
-                  </span>
-                </h2>
-                <p className="text-xs text-black/45 dark:text-white/45 mt-0.5">
                   {currentSection.key === 'students'
-                    ? 'Operational enrollment database for this program'
-                    : `Manage attached ${currentSection.label.toLowerCase()} or add new resources`}
-                </p>
+                    ? 'Students'
+                    : currentSection.key === 'analytics'
+                    ? 'Analytics'
+                    : `Attached ${currentSection.label}`}
+                  {currentSection.key !== 'analytics' && (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[#3C83F6]/10 dark:bg-[#bceaff]/15 text-[#3C83F6] dark:text-[#bceaff]">
+                      {attachedItems.length}
+                    </span>
+                  )}
+                </h2>
+                {currentSection.key !== 'students' && (
+                  <p className="text-xs text-black/45 dark:text-white/45 mt-0.5">
+                    {currentSection.key === 'analytics'
+                      ? 'Program performance overview'
+                      : `Manage attached ${currentSection.label.toLowerCase()} or add new resources`}
+                  </p>
+                )}
               </div>
 
-              <div className="flex items-center gap-2">
+              {currentSection.key === 'students' ? (
                 <button
-                  onClick={() => handleCreateNewResource(currentSection)}
-                  className="h-9 px-3.5 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 hover:bg-white/90 dark:hover:bg-white/10 transition-colors"
-                >
-                  <FiExternalLink className="w-3.5 h-3.5" />
-                  Create New
-                </button>
-                <button
-                  onClick={() => handleOpenAttachModal(currentSection.key)}
-                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white px-4 text-xs font-bold transition-colors shadow-sm"
+                  onClick={() => handleOpenAttachModal('students')}
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white px-4 text-xs font-bold transition-colors shadow-sm"
                 >
                   <FiPlus className="w-3.5 h-3.5" />
-                  Attach Existing
+                  Add Student
                 </button>
-              </div>
+              ) : currentSection.key !== 'analytics' ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleCreateNewResource(currentSection)}
+                    className="h-9 px-3.5 rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 hover:bg-white/90 dark:hover:bg-white/10 transition-colors"
+                  >
+                    <FiExternalLink className="w-3.5 h-3.5" />
+                    Create New
+                  </button>
+                  <button
+                    onClick={() => handleOpenAttachModal(currentSection.key)}
+                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white px-4 text-xs font-bold transition-colors shadow-sm"
+                  >
+                    <FiPlus className="w-3.5 h-3.5" />
+                    Attach Existing
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             {/* Attached Items */}
-            {currentSection.key === 'students' ? (
+            {currentSection.key === 'analytics' ? (
+              <ProgramAnalyticsPanel program={program} />
+            ) : currentSection.key === 'students' ? (
               <>
                 <div className="flex items-center gap-1 border-b border-black/5 dark:border-white/5">
                   {[
@@ -1034,7 +1279,7 @@ export default function ProgramDetails() {
                   ))}
                 </div>
 
-                <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/80 p-3 shadow-[0_3px_10px_rgba(15,23,42,0.03)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.1)]">
+                <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/80 p-3 shadow-[0_3px_10px_rgba(15,23,42,0.03)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.1)]">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="relative min-w-[220px] flex-1">
                       <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/40 dark:text-white/40 pointer-events-none" />
@@ -1044,14 +1289,14 @@ export default function ProgramDetails() {
                         onChange={(event) => setStudentSearch(event.target.value)}
                         placeholder="Search students..."
                         aria-label="Search students"
-                        className="w-full h-9 pl-9 pr-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                        className="w-full h-9 pl-9 pr-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
                       />
                     </div>
                     <select
                       value={studentSort}
                       onChange={(event) => setStudentSort(event.target.value)}
                       aria-label="Sort students"
-                      className="h-9 min-w-[155px] px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                      className="h-9 min-w-[155px] px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
                     >
                       <option value="latest">Latest Joined</option>
                       <option value="oldest">Oldest Joined</option>
@@ -1064,44 +1309,73 @@ export default function ProgramDetails() {
                       value={studentPeriodFilter}
                       onChange={(event) => setStudentPeriodFilter(event.target.value)}
                       aria-label="Student period filter"
-                      className="h-9 min-w-[125px] px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                      className="h-9 min-w-[125px] px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
                     >
                       <option value="current">Current Month</option>
                       <option value="all">All Time</option>
                     </select>
-                    <select
-                      value={studentStatusFilter}
-                      onChange={(event) => setStudentStatusFilter(event.target.value)}
-                      aria-label="Student status filter"
-                      className="h-9 min-w-[145px] px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
-                    >
-                      <option value="active-completed">Status: Active + Completed</option>
-                      <option value="all">Status: All</option>
-                      <option value="Active">Status: Active</option>
-                      <option value="Completed">Status: Completed</option>
-                      <option value="Expired">Status: Expired</option>
-                    </select>
-                    <select
-                      value={studentAccessFilter}
-                      onChange={(event) => setStudentAccessFilter(event.target.value)}
-                      aria-label="Student access filter"
-                      className="h-9 min-w-[105px] px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
-                    >
-                      <option value="all">Access: All</option>
-                      <option value="Trial">Access: Trial</option>
-                      <option value="Paid">Access: Paid</option>
-                    </select>
-                    <select
-                      value={studentPlanFilter}
-                      onChange={(event) => setStudentPlanFilter(event.target.value)}
-                      aria-label="Student plan filter"
-                      className="h-9 min-w-[105px] px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
-                    >
-                      <option value="all">Plan: All</option>
-                      <option value="trial">Plan: Trial</option>
-                      <option value="basic">Plan: Basic</option>
-                      <option value="pro">Plan: Pro</option>
-                    </select>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        aria-expanded={filtersOpen}
+                        aria-haspopup="true"
+                        onClick={() => setFiltersOpen((open) => !open)}
+                        className="inline-flex h-9 min-w-[105px] items-center justify-center gap-1.5 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none hover:bg-white dark:hover:bg-white/10 focus:ring-2 focus:ring-[#3C83F6]/30"
+                      >
+                        <FiFilter className="w-3.5 h-3.5" />
+                        Filter
+                        {activeStudentFilterCount > 0 && (
+                          <span className="inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-[#3C83F6] px-1 text-[10px] font-bold text-white dark:bg-[#bceaff] dark:text-[#06224d]">
+                            {activeStudentFilterCount}
+                          </span>
+                        )}
+                      </button>
+
+                      {filtersOpen && (
+                        <div className="absolute right-0 z-40 mt-2 w-[min(92vw,360px)] rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] p-3 shadow-2xl">
+                          <div className="flex items-center justify-between gap-3 border-b border-black/5 dark:border-white/10 pb-2">
+                            <p className="text-xs font-bold text-slate-800 dark:text-white">Filter students</p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStudentStatusFilter('all');
+                                setStudentAccessFilter('all');
+                                setStudentPlanFilter('all');
+                              }}
+                              className="text-[11px] font-semibold text-[#3C83F6] dark:text-[#bceaff] hover:underline"
+                            >
+                              Clear all
+                            </button>
+                          </div>
+                          <div className="space-y-3 pt-3">
+                            {studentFilterGroups.map((group) => (
+                              <div key={group.label}>
+                                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">
+                                  {group.label}
+                                </p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {group.options.map((option) => (
+                                    <button
+                                      key={option.value}
+                                      type="button"
+                                      aria-pressed={group.value === option.value}
+                                      onClick={() => group.onChange(option.value)}
+                                      className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
+                                        group.value === option.value
+                                          ? 'border-[#3C83F6] bg-[#3C83F6]/10 text-[#3C83F6] dark:border-[#bceaff] dark:bg-[#bceaff]/10 dark:text-[#bceaff]'
+                                          : 'border-black/10 bg-black/[0.02] text-slate-600 hover:bg-black/[0.05] dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.08]'
+                                      }`}
+                                    >
+                                      {option.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1121,8 +1395,8 @@ export default function ProgramDetails() {
                 )}
               </>
             ) : attachedItems.length === 0 ? (
-              <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl p-16 text-center shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
-                <div className="w-14 h-14 rounded-2xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center mx-auto mb-4">
+              <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl p-16 text-center shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
+                <div className="w-14 h-14 rounded-xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center mx-auto mb-4">
                   <CurrentSectionIcon className="w-7 h-7" />
                 </div>
                 <h3 className="text-base font-bold text-slate-800 dark:text-white mb-1">

@@ -479,6 +479,9 @@ export const getAllCourses = async (req, res) => {
         }).lean();
 
         const schedule = await resolveProgramSchedule({ user: req.user, student });
+        if (schedule.batchExpired) {
+          return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+        }
         const batch = schedule.batchId
           ? await Batch.findById(schedule.batchId).select("attachedCourse supportingCourses status").lean()
           : null;
@@ -557,6 +560,9 @@ export const getCourseById = async (req, res) => {
         }).lean();
         if (student) {
           schedule = await resolveProgramSchedule({ user: req.user, student });
+          if (schedule.batchExpired) {
+            return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+          }
           batch = schedule.batchId ? await Batch.findById(schedule.batchId).lean() : null;
           program = schedule.programId ? await Program.findById(schedule.programId).lean() : null;
         }

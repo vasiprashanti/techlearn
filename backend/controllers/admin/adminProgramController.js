@@ -17,6 +17,7 @@ import {
   syncPrimaryProgramPointers,
   upsertProgramEnrollment,
 } from "../../utils/programEnrollment.js";
+import { expireAllActiveBatches } from "../../utils/batchLifecycle.js";
 
 // Whitelist mapping for attachment entity types
 export const ENTITY_CONFIG = {
@@ -370,12 +371,12 @@ const buildProgramMonitoringData = async ({ program, enrollments, students }) =>
           dayNumber: reportDay,
           dailyTask: {
             attempted: Boolean(task?.attempted),
-            status: task?.attempted ? "Attempted" : "Not attempted",
+            status: task?.attempted ? "Attempted" : "N/A",
             result: formatActivityResult(task),
           },
           dailyChallenge: {
             attempted: Boolean(challenge?.attempted),
-            status: challenge?.attempted ? "Attempted" : "Not attempted",
+            status: challenge?.attempted ? "Attempted" : "N/A",
             result: formatActivityResult(challenge),
           },
         };
@@ -632,6 +633,8 @@ export const createProgram = async (req, res) => {
 export const getProgramById = async (req, res) => {
   try {
     const { programId } = req.params;
+
+    await expireAllActiveBatches();
 
     if (!mongoose.Types.ObjectId.isValid(programId)) {
       return res.status(400).json({ success: false, message: "Invalid program ID format" });

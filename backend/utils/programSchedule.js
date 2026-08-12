@@ -1,5 +1,6 @@
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import { combineDateAndTime, getTrackAssignmentDate } from "./trackAssignmentSchedule.js";
+import { expireBatchIfNeeded } from "./batchLifecycle.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -46,6 +47,7 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
     // touched by the new enrollment flow.
     const hasEnrollmentBatch = Object.prototype.hasOwnProperty.call(enrollment, "batchId");
     const batchId = hasEnrollmentBatch ? getId(enrollment.batchId) : legacyBatchId;
+    const lifecycle = batchId ? await expireBatchIfNeeded(batchId) : { expired: false };
     const individualStartDate = getValidDate(
       enrollment.individualStartDate,
       enrollment.assignedAt,
@@ -59,8 +61,13 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
       batchId,
       scheduleType: batchId ? "batch" : "individual",
       individualStartDate,
+      batchExpired: Boolean(lifecycle.expired),
     };
   }
+
+  const lifecycle = legacyBatchId
+    ? await expireBatchIfNeeded(legacyBatchId)
+    : { expired: false };
 
   return {
     programId,
@@ -68,6 +75,7 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
     batchId: legacyBatchId,
     scheduleType: legacyBatchId ? "batch" : "individual",
     individualStartDate: getValidDate(student?.createdAt, user?.createdAt),
+    batchExpired: Boolean(lifecycle.expired),
   };
 };
 

@@ -28,6 +28,7 @@ import {
   syncPrimaryProgramPointers,
   upsertProgramEnrollment,
 } from "../../utils/programEnrollment.js";
+import { expireAllActiveBatches, expireBatchIfNeeded, isBatchExpired } from "../../utils/batchLifecycle.js";
 
 const LEGACY_PROGRAM_SELECTIONS = ["Placement Sprint", "Full Stack Project Program", "Both"];
 
@@ -618,6 +619,7 @@ export const bulkDeleteCollegesAdmin = async (req, res) => {
 
 export const listBatches = async (req, res) => {
   try {
+    await expireAllActiveBatches();
     const batches = await Batch.find()
       .sort({ createdAt: -1 })
       .populate("collegeId", "name")
@@ -820,6 +822,8 @@ export const getBatchDetail = async (req, res) => {
   try {
     const { batchId } = req.params;
     if (!assertObjectId(batchId, "batchId", res)) return;
+
+    await expireBatchIfNeeded(batchId);
 
     const batch = await Batch.findById(batchId)
       .populate("collegeId", "name")
@@ -2951,6 +2955,14 @@ export const activateBatchAdmin = async (req, res) => {
     const batch = await Batch.findById(batchId);
     if (!batch) {
       return res.status(404).json({ success: false, message: "Batch not found." });
+    }
+
+    if (isBatchExpired(batch)) {
+      await expireBatchIfNeeded(batch);
+      return res.status(400).json({
+        success: false,
+        message: "This batch has already ended and cannot be activated.",
+      });
     }
 
     batch.status = BATCH_STATUS.ACTIVE;

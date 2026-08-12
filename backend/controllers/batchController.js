@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Batch, { BATCH_STATUS } from "../models/Batch.js";
+import { isBatchExpired } from "../utils/batchLifecycle.js";
 import Track from "../models/Track.js";
 import College from "../models/College.js";
 import Question from "../models/Questions.js";
@@ -110,6 +111,13 @@ export const activateBatch = async (req, res) => {
         const batch = await Batch.findById(batchId).session(session);
         if (!batch) {
             return res.status(404).json({ success: false, message: "Batch not found." });
+        }
+
+        if (isBatchExpired(batch)) {
+            return res.status(400).json({
+                success: false,
+                message: "This batch has already ended and cannot be activated.",
+            });
         }
 
         // Check if the status allows activation (must be Draft)

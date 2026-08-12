@@ -266,6 +266,12 @@ export const getCurrentUserRoadmap = async (req, res) => {
       .select("_id batchId programId programSelection")
       .lean();
     const schedule = await resolveProgramSchedule({ user: req.user, student });
+    if (schedule.batchExpired) {
+      return res.status(403).json({
+        success: false,
+        message: "This batch has ended and program access has been revoked.",
+      });
+    }
 
     const batch = schedule.batchId
       ? await Batch.findById(schedule.batchId)
