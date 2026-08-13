@@ -136,13 +136,15 @@ app.use("/api/admin/projects", projectRoutes);
 app.use("/api/admin/batch", batchRoutes);
 app.use("/api/admin/students", studentRoutes);
 app.use("/api/admin/testing", adminTestingRoutes);
+
+// Hiring routes should come before the generic admin routes
+app.use("/api", hiringRoutes);
+
 app.use("/api/admin", adminPortalRoutes);
 app.use("/api/question-bank", questionBankRoutes);
 app.use("/api/admin", adminRouter);
 app.use("/api/admin/analytics", analyticsRoutes);
 app.use("/api/admin/submission", submissionRoutes);
-app.use("/api", hiringRoutes);
-
 // 🧪 Health Check
 app.get("/health", (req, res) => {
   res.json({
