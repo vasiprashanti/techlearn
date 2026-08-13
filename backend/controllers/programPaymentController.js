@@ -1,8 +1,10 @@
 import crypto from "crypto";
+import mongoose from "mongoose";
 import Razorpay from "razorpay";
 import Payment from "../models/Payment.js";
 import Program from "../models/Program.js";
 import Student from "../models/Student.js";
+import College from "../models/College.js";
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import PricingExitFeedback from "../models/PricingExitFeedback.js";
 import { upsertProgramEnrollment, syncPrimaryProgramPointers } from "../utils/programEnrollment.js";
@@ -49,11 +51,20 @@ const getOrCreateStudentForUser = async (user) => {
   }
 
   if (!student) {
+    let collegeId = user.collegeId || user.college;
+    if (!collegeId || !mongoose.Types.ObjectId.isValid(collegeId)) {
+      let defaultCollege = await College.findOne();
+      if (!defaultCollege) {
+        defaultCollege = await College.create({ name: "Default College" });
+      }
+      collegeId = defaultCollege._id;
+    }
+
     student = await Student.create({
       userId: user._id,
       name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.username || "Student",
       email: user.email || `user_${user._id}@techlearn.com`,
-      collegeId: user.collegeId || user.college || new mongoose.Types.ObjectId(),
+      collegeId,
       status: "Active",
     });
   }
@@ -127,15 +138,15 @@ export const createPaymentOrder = async (req, res) => {
     const student = await getOrCreateStudentForUser(user);
 
     let program = null;
-    if (programId) {
+    if (programId && mongoose.Types.ObjectId.isValid(programId)) {
       program = await Program.findById(programId);
     }
 
     // Fallback program lookup by type if specific ID not provided
-    let programType = program?.programType;
-    if (!programType) {
-      const isSkill = String(planId || "").toLowerCase().includes("skill");
-      programType = isSkill ? "Skill" : "Placement";
+    let rawType = program?.programType || "";
+    let programType = rawType.toLowerCase().includes("skill") ? "Skill" : "Placement";
+
+    if (!program) {
       program = await Program.findOne({ programType, status: "Active" });
     }
 
@@ -205,8 +216,8 @@ export const createPaymentOrder = async (req, res) => {
       planName,
     });
   } catch (error) {
-    console.error("createPaymentOrder error:", error);
-    res.status(500).json({ success: false, message: "Order creation failed", error: error.message });
+    console.error("createPaymentOrder error stack:", error.stack || error);
+    res.status(500).json({ success: false, message: "Order creation failed", error: error.message, stack: error.stack });
   }
 };
 
@@ -270,7 +281,7 @@ export const verifyPayment = async (req, res) => {
     const student = await getOrCreateStudentForUser(user);
 
     let program = null;
-    if (payment.programId) {
+    if (payment.programId && mongoose.Types.ObjectId.isValid(payment.programId)) {
       program = await Program.findById(payment.programId);
     }
     if (!program && payment.programType) {
