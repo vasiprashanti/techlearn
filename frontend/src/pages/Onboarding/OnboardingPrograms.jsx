@@ -214,7 +214,20 @@ export default function OnboardingPrograms() {
       />
 
       {/* HERO SECTION */}
-      <section className="relative w-full min-h-[calc(100vh-64px)] flex flex-col justify-center items-center px-4 py-6">
+      <section className="relative w-full min-h-[calc(100vh-64px)] flex flex-col items-center px-4 pt-24 pb-12">
+        <div className="w-full max-w-5xl mx-auto mb-6 flex items-center justify-start px-2">
+          <button
+            type="button"
+            onClick={() => setShowExitModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/90 dark:bg-[#0e1a30]/90 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs font-extrabold shadow-md cursor-pointer z-20"
+          >
+            <svg className="w-4 h-4 text-[#3c83f6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span>Back</span>
+          </button>
+        </div>
+
         <div className="mx-auto flex max-w-3xl flex-col items-center px-6 text-center">
           
           <motion.div
