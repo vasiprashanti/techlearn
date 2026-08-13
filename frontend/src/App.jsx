@@ -11,6 +11,7 @@ import { UserProvider } from './context/UserContext'
 import PrivateRoute from './Routes/PrivateRoute'
 import AdminPrivateRoute from './Routes/AdminPrivateRoute'
 import FloatingCodeWords from './components/FloatingCodeWords'
+import Hiring from "./pages/AdminDashbaord/Hiring.jsx";
 
 const HomePage = lazy(() => import('./pages/HomePage'))
 const Signup = lazy(() => import('./pages/Auth/Signup'))
@@ -74,32 +75,34 @@ const ProjectPayment = lazy(() => import('./pages/Build/ProjectPayment'))
 const PaymentGateway = lazy(() => import('./pages/Build/PaymentGateway'))
 const UILibrary = lazy(() => import('./pages/Build/UILibrary'))
 
-const AdminDashboard = lazy(() => import('./pages/AdminDashbaord/AdminDashboard'))
-const Courses_Admin = lazy(() => import('./pages/AdminDashbaord/Courses'))
-const ProjectsList = lazy(() => import('./pages/AdminDashbaord/ProjectsList'))
-const EditProject = lazy(() => import('./pages/AdminDashbaord/EditProject'))
-const AdminTopicsList = lazy(() => import('./pages/AdminDashbaord/AdminTopicsList'))
-const EditTopicForm = lazy(() => import('./pages/AdminDashbaord/EditTopicForm'))
-const McqUpload = lazy(() => import('./pages/AdminDashbaord/McqUpload'))
-const UploadExercisesPage = lazy(() => import('./pages/AdminDashbaord/UploadExercisesPage'))
-const CodingRoundUpload = lazy(() => import('./pages/AdminDashbaord/CodingRoundUpload'))
-const Analytics = lazy(() => import('./pages/AdminDashbaord/Analytics'))
-const SystemHealth = lazy(() => import('./pages/AdminDashbaord/SystemHealth'))
-const Colleges = lazy(() => import('./pages/AdminDashbaord/Colleges'))
-const CollegeDetails = lazy(() => import('./pages/AdminDashbaord/CollegeDetails'))
-const Batches = lazy(() => import('./pages/AdminDashbaord/Batches'))
-const BatchDetails = lazy(() => import('./pages/AdminDashbaord/BatchDetails'))
-const Students = lazy(() => import('./pages/AdminDashbaord/Students'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashbaord/AdminDashboard.jsx'))
+const Courses_Admin = lazy(() => import('./pages/AdminDashbaord/Courses.jsx'))
+const ProjectsList = lazy(() => import('./pages/AdminDashbaord/ProjectsList.jsx'))
+const EditProject = lazy(() => import('./pages/AdminDashbaord/EditProject.jsx'))
+const AdminTopicsList = lazy(() => import('./pages/AdminDashbaord/AdminTopicsList.jsx'))
+const EditTopicForm = lazy(() => import('./pages/AdminDashbaord/EditTopicForm.jsx'))
+const McqUpload = lazy(() => import('./pages/AdminDashbaord/McqUpload.jsx'))
+const UploadExercisesPage = lazy(() => import('./pages/AdminDashbaord/UploadExercisesPage.jsx'))
+const CodingRoundUpload = lazy(() => import('./pages/AdminDashbaord/CodingRoundUpload.jsx'))
+const Analytics = lazy(() => import('./pages/AdminDashbaord/Analytics.jsx'))
+const SystemHealth = lazy(() => import('./pages/AdminDashbaord/SystemHealth.jsx'))
+const Colleges = lazy(() => import('./pages/AdminDashbaord/Colleges.jsx'))
+const CollegeDetails = lazy(() => import('./pages/AdminDashbaord/CollegeDetails.jsx'))
+const Batches = lazy(() => import('./pages/AdminDashbaord/Batches.jsx'))
+const BatchDetails = lazy(() => import('./pages/AdminDashbaord/BatchDetails.jsx'))
+const Students = lazy(() => import('./pages/AdminDashbaord/Students.jsx'))
 const QuestionBankAdminPage = lazy(() => import('./pages/Admin/QuestionBankAdminPage'))
 const QuestionBankCategoryDetailPage = lazy(() => import('./pages/Admin/QuestionBankCategoryDetailPage'))
-const Resources = lazy(() => import('./pages/AdminDashbaord/Resources'))
-const Certificates = lazy(() => import('./pages/AdminDashbaord/Certificates'))
-const SubmissionMonitor = lazy(() => import('./pages/AdminDashbaord/SubmissionMonitor'))
-const AuditLogs = lazy(() => import('./pages/AdminDashbaord/AuditLogs'))
-const Reports = lazy(() => import('./pages/AdminDashbaord/Reports'))
-const Settings = lazy(() => import('./pages/AdminDashbaord/Settings'))
-const Programs = lazy(() => import('./pages/AdminDashbaord/Programs'))
-const ProgramDetails = lazy(() => import('./pages/AdminDashbaord/ProgramDetails'))
+const Resources = lazy(() => import('./pages/AdminDashbaord/Resources.jsx'))
+const Certificates = lazy(() => import('./pages/AdminDashbaord/Certificates.jsx'))
+const SubmissionMonitor = lazy(() => import('./pages/AdminDashbaord/SubmissionMonitor.jsx'))
+const AuditLogs = lazy(() => import('./pages/AdminDashbaord/AuditLogs.jsx'))
+const Reports = lazy(() => import('./pages/AdminDashbaord/Reports.jsx'))
+const Settings = lazy(() => import('./pages/AdminDashbaord/Settings.jsx'))
+const Programs = lazy(() => import('./pages/AdminDashbaord/Programs.jsx'))
+const ProgramDetails = lazy(() => import('./pages/AdminDashbaord/ProgramDetails.jsx'))
+const HiringRoleJobs = lazy(() => import("./pages/AdminDashbaord/HiringRoleJobs.jsx"));
+const CreateHiringJob = lazy(() => import("./pages/AdminDashbaord/CreateHiringJob.jsx"));
 
 const Contact = lazy(() => import('./pages/Contact/Contact'))
 const About = lazy(() => import('./pages/About/About'))
@@ -335,6 +338,9 @@ function LayoutWrapper() {
           <Route element={<AdminPrivateRoute />}>
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/courses" element={<Courses_Admin />} />
+            <Route path="/admin/hiring" element={<Hiring />} />
+            <Route path="/admin/hiring/:roleId" element={<HiringRoleJobs />} />
+            <Route path="/admin/hiring/:roleId/jobs/create" element={<CreateHiringJob />}/>
             <Route path="/admin/projects" element={<ProjectsList />} />
             <Route path="/admin/projects/edit/:projectId" element={<EditProject />} />
             <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />
