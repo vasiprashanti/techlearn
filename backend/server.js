@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { connectDB } from "./config/db.js";
 
 // Route imports
+import hiringRoutes from "./routes/hiringRoutes.js";
 import exerciseRoutes from "./routes/exerciseRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -140,6 +141,7 @@ app.use("/api/question-bank", questionBankRoutes);
 app.use("/api/admin", adminRouter);
 app.use("/api/admin/analytics", analyticsRoutes);
 app.use("/api/admin/submission", submissionRoutes);
+app.use("/api", hiringRoutes);
 
 // 🧪 Health Check
 app.get("/health", (req, res) => {

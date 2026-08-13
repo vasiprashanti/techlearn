@@ -2,6 +2,13 @@ import express from "express";
 import multer from "multer";
 import { protect, isAdmin } from "../middleware/authMiddleware.js";
 import {
+  createJob,
+  listJobs,
+  getJobById,
+  updateJob,
+  deleteJob,
+} from "../controllers/admin/adminHiringController.js";
+import {
   getAnalyticsPage,
   getDashboardPage,
   getSubmissionDetailPage,
@@ -89,6 +96,12 @@ const upload = multer({
 });
 
 router.use(protect, isAdmin);
+// Hiring / Jobs
+router.get("/jobs", listJobs);
+router.post("/jobs", createJob);
+router.get("/jobs/:jobId", getJobById);
+router.put("/jobs/:jobId", updateJob);
+router.delete("/jobs/:jobId", deleteJob);
 
 router.get("/dashboard/overview", getDashboardPage);
 router.get("/dashboard/analytics", getAnalyticsPage);
