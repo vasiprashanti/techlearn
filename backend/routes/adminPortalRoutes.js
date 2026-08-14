@@ -20,6 +20,7 @@ import {
   deleteStudentAdmin,
   getBatchDetail,
   getCollegeDetail,
+  getGlobalStudentsAdmin,
   getStudentDetailAdmin,
   listBatches,
   listColleges,
@@ -31,6 +32,7 @@ import {
   updateStudentAdmin,
   resetStudentXpAdmin,
   bulkDeleteBatchesAdmin,
+  bulkUploadStudentsAdmin,
 } from "../controllers/admin/adminEntityController.js";
 import {
   assignTrackTemplateDay,
@@ -111,7 +113,9 @@ router.post("/batches/bulk-delete", bulkDeleteBatchesAdmin);
 router.put("/batches/:batchId/activate", activateBatchAdmin);
 
 router.get("/students", listStudentsAdmin);
+router.get("/students/global", getGlobalStudentsAdmin);
 router.post("/students", createStudentAdmin);
+router.post("/students/bulk-upload", bulkUploadStudentsAdmin);
 router.get("/students/search", searchExistingStudentsAdmin);
 router.get("/students/:studentId", getStudentDetailAdmin);
 router.put("/students/:studentId", updateStudentAdmin);

@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MessageSquare, Send, CheckCircle2 } from 'lucide-react';
+import { X, Send, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react';
 import API from '../api/client';
 
 const FEEDBACK_OPTIONS = [
-  "Too expensive",
-  "Not ready yet",
-  "Need more time",
-  "Not sure which plan is right for me",
-  "I want to explore first",
-  "Other",
+  "Feels Expensive",
+  "Trying Free Content",
+  "Payment / UPI failed",
+  "Just exploring",
+  "Need more information",
+  "Something else",
 ];
 
 export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted, programId, selectedPlan }) {
@@ -24,13 +24,18 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
     e?.preventDefault();
     if (!selectedReason) return;
 
+    // If user clicked "Need more information", open WhatsApp with pre-filled message
+    if (selectedReason === "Need more information") {
+      window.open('https://api.whatsapp.com/send/?phone=919000663666&text=Hey%2C+I+need+more+information+before+joining+the+program.+Can+you+help+me%3F&type=phone_number&app_absent=0', '_blank');
+    }
+
     setLoading(true);
     try {
       await API.post('/api/payments/exit-feedback', {
         programId,
         selectedPlan,
         reason: selectedReason,
-        customReason: selectedReason === "Other" ? customReason : "",
+        customReason: selectedReason === "Something else" ? customReason : "",
       });
       setSubmitted(true);
       setTimeout(() => {
@@ -39,64 +44,173 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
       }, 1200);
     } catch (err) {
       console.error('Failed to submit pricing exit feedback:', err);
-      onClose();
+      onSubmitted ? onSubmitted() : onClose();
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTalkToUs = () => {
-    // Open support or contact channel
-    window.open('mailto:support@techlearn.com?subject=Inquiry%20About%20TechLearn%20Programs', '_blank');
-  };
-
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 9999,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '16px',
+        }}
+      >
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Press+Start+2P&display=swap');
+
+          .pe-modal-card {
+            background: #ffffff !important;
+            width: 100% !important;
+            max-width: 480px !important;
+            border-radius: 24px !important;
+            padding: 24px !important;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.3) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            position: relative !important;
+            overflow: hidden !important;
+            color: #111111 !important;
+            font-family: 'Poppins', sans-serif !important;
+          }
+
+          .pe-pixel-heading {
+            font-family: 'Press Start 2P', cursive !important;
+            font-size: 13px !important;
+            font-weight: 400 !important;
+            line-height: 1.5 !important;
+            color: #000000 !important;
+            text-align: center !important;
+            letter-spacing: 0.5px !important;
+            margin-bottom: 6px !important;
+          }
+
+          .pe-description {
+            font-size: 12px !important;
+            color: #666666 !important;
+            text-align: center !important;
+            margin-bottom: 16px !important;
+          }
+
+          .pe-option-card {
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            padding: 9px 12px !important;
+            border-radius: 12px !important;
+            border: 1.5px solid #e5e5ea !important;
+            background: #ffffff !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
+            color: #1c1c1e !important;
+          }
+
+          .pe-option-card:hover {
+            border-color: #1c1c1e !important;
+            transform: translateY(-1px) !important;
+          }
+
+          .pe-option-card.selected {
+            border-color: #a3e635 !important;
+            background-color: #f7fee7 !important;
+            box-shadow: 0 0 0 1px #a3e635 !important;
+            font-weight: 600 !important;
+          }
+
+          .pe-btn-primary {
+            width: 100% !important;
+            height: 44px !important;
+            border-radius: 12px !important;
+            border: none !important;
+            background-color: #a3e635 !important;
+            color: #000000 !important;
+            font-family: 'Press Start 2P', cursive !important;
+            font-size: 9px !important;
+            font-weight: 400 !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            text-transform: uppercase !important;
+            transition: opacity 0.2s !important;
+          }
+
+          .pe-btn-primary:hover {
+            opacity: 0.92 !important;
+          }
+
+          .pe-btn-secondary {
+            width: 100% !important;
+            height: 44px !important;
+            border-radius: 12px !important;
+            border: none !important;
+            background-color: #f2f2f7 !important;
+            color: #1c1c1e !important;
+            font-family: 'Press Start 2P', cursive !important;
+            font-size: 9px !important;
+            font-weight: 400 !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            text-transform: uppercase !important;
+            transition: opacity 0.2s !important;
+          }
+
+          .pe-btn-secondary:hover {
+            opacity: 0.9 !important;
+          }
+        `}</style>
+
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0e1a30] p-6 shadow-2xl"
+          className="pe-modal-card"
         >
-          {/* Close button */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
 
           {submitted ? (
             <div className="py-8 text-center space-y-3">
-              <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto animate-bounce" />
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Thank you for your feedback!</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">We appreciate your input.</p>
+              <CheckCircle2 className="w-12 h-12 text-[#a3e635] mx-auto" />
+              <h3 className="pe-pixel-heading">Thank you!</h3>
+              <p className="pe-description">Your feedback helps us make TechLearn better.</p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
-                  What's holding you back?
+                <h3 className="pe-pixel-heading">
+                  WHAT'S HOLDING YOU BACK?
                 </h3>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Help us understand how we can better assist your learning journey.
+                <p className="pe-description">
+                  Your feedback helps us make TechLearn better.
                 </p>
               </div>
 
-              <div className="space-y-2">
+              {/* Feedback Radio Options */}
+              <div className="space-y-1.5">
                 {FEEDBACK_OPTIONS.map((option) => {
                   const isSelected = selectedReason === option;
                   return (
                     <label
                       key={option}
                       onClick={() => setSelectedReason(option)}
-                      className={`flex items-center gap-3 p-3 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
-                        isSelected
-                          ? 'border-[#3c83f6] bg-blue-50/70 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 shadow-sm'
-                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300'
-                      }`}
+                      className={`pe-option-card ${isSelected ? 'selected' : ''}`}
                     >
                       <input
                         type="radio"
@@ -104,7 +218,7 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
                         value={option}
                         checked={isSelected}
                         onChange={() => setSelectedReason(option)}
-                        className="text-[#3c83f6] focus:ring-[#3c83f6]"
+                        className="accent-[#a3e635]"
                       />
                       <span>{option}</span>
                     </label>
@@ -112,35 +226,35 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
                 })}
               </div>
 
-              {selectedReason === "Other" && (
+              {selectedReason === "Something else" && (
                 <div>
                   <textarea
                     rows={2}
                     placeholder="Tell us more..."
                     value={customReason}
                     onChange={(e) => setCustomReason(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#060d1a] p-3 text-xs text-slate-900 dark:text-slate-100 focus:border-[#3c83f6] focus:outline-none"
+                    className="w-full rounded-xl border border-[#e5e5ea] bg-white p-3 text-xs text-[#1c1c1e] outline-none focus:border-[#1c1c1e]"
                   />
                 </div>
               )}
 
-              <div className="pt-2 flex flex-col sm:flex-row items-center gap-2">
+              {/* Action Buttons styled matching Signup/Login */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center gap-2.5">
                 <button
                   type="button"
-                  onClick={handleTalkToUs}
-                  className="w-full sm:w-1/2 py-2.5 px-4 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-extrabold uppercase tracking-wider flex items-center justify-center gap-2 transition"
+                  onClick={onClose}
+                  className="pe-btn-secondary"
                 >
-                  <MessageSquare className="w-4 h-4 text-[#3c83f6]" />
-                  <span>Talk to Us</span>
+                  <span>Back to Enroll</span>
                 </button>
 
                 <button
                   type="submit"
                   disabled={!selectedReason || loading}
-                  className="w-full sm:w-1/2 py-2.5 px-4 rounded-xl bg-[#3c83f6] hover:bg-blue-600 disabled:opacity-50 text-white text-xs font-extrabold uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md shadow-blue-500/20"
+                  className="pe-btn-primary disabled:opacity-50"
                 >
-                  <Send className="w-4 h-4" />
-                  <span>{loading ? 'Submitting...' : 'Submit'}</span>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{loading ? 'Submitting...' : 'Submit & Continue'}</span>
                 </button>
               </div>
             </form>
