@@ -214,3 +214,4 @@ if (process.env.NODE_ENV !== "production") {
     console.log(`🔒 cors: Dynamic origin matching enabled`);
   });
 }
+app.use("/uploads/temp", express.static(uploadsServePath));

@@ -7,9 +7,9 @@ import Job from "../models/Job.js";
  */
 export const listActiveJobs = async (req, res) => {
   try {
-    const jobs = await Job.find({ status: "Active" })
+   const jobs = await Job.find({ status: "Published" })
       .select(
-        "title description location jobType experience salary requirements applyLink createdAt"
+        "title description location jobType experience salary requirements applicationUrl createdAt"
       )
       .sort({ createdAt: -1 })
       .lean();
@@ -46,10 +46,10 @@ export const getActiveJobById = async (req, res) => {
 
     const job = await Job.findOne({
       _id: jobId,
-      status: "Active",
+      status: "Published",
     })
       .select(
-        "title description location jobType experience salary requirements applyLink createdAt"
+        "title description location jobType experience salary requirements applicationUrl createdAt"
       )
       .lean();
 

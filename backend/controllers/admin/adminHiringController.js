@@ -2,7 +2,9 @@ import mongoose from "mongoose";
 import { parseJobMarkdownFile } from "../../config/jobMarkdownParser.js";
 import Job from "../../models/Job.js";
 import Role from "../../models/Role.js";
-
+import fs from "fs";
+import sharp from "sharp";
+import path from "path";
 const ALLOWED_STATUS = ["Draft", "Published", "Closed"];
 const ALLOWED_ROLE_STATUS = ["Active", "Archived"];
 /**
@@ -1223,6 +1225,78 @@ export const parseJobMarkdown = async (req, res) => {
       message:
         error.message ||
         "Failed to parse Job Markdown",
+    });
+  }
+};
+export const uploadJobLogoFile = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No logo file uploaded",
+      });
+    }
+
+    const allowedImageTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ];
+
+    if (!allowedImageTypes.includes(req.file.mimetype)) {
+      if (req.file.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: "Company logo must be a valid image file",
+      });
+    }
+
+    const outputFilename = `logo-${Date.now()}.webp`;
+    const outputPath = path.join("uploads/temp", outputFilename);
+
+    await sharp(req.file.path)
+      .resize(500, 500, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({
+        quality: 80,
+      })
+      .toFile(outputPath);
+
+    // Delete original uploaded file
+    if (req.file.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    const logoUrl = `/uploads/temp/${outputFilename}`;
+
+    return res.status(200).json({
+      success: true,
+      message: "Company logo uploaded and optimized successfully",
+      data: {
+        logoUrl,
+        filename: outputFilename,
+      },
+    });
+  } catch (error) {
+    console.error("Error uploading job logo:", error);
+
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (cleanupError) {
+        console.error("Failed to clean up logo:", cleanupError);
+      }
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to upload company logo",
     });
   }
 };
