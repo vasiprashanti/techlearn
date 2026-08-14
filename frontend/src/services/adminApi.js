@@ -306,6 +306,10 @@ export const adminAPI = {
   bulkDeleteBatches: (batchIds) => request('/admin/batches/bulk-delete', { method: 'POST', body: JSON.stringify({ batchIds }) }),
 
   getStudents: () => request('/admin/students'),
+  getGlobalStudents: (params = {}) => {
+    const query = new URLSearchParams(params);
+    return request(`/admin/students/global?${query.toString()}`, { noCache: true });
+  },
   searchExistingStudents: (params = {}) => {
     const query = new URLSearchParams(params);
     return request(`/admin/students/search?${query.toString()}`);
@@ -316,28 +320,18 @@ export const adminAPI = {
   resetStudentXp: (studentId) => request(`/admin/students/${studentId}/reset-xp`, { method: 'POST' }),
   removeStudentFromBatch: (studentId, batchId) => request(`/admin/students/${studentId}/remove-batch`, { method: 'PATCH', body: JSON.stringify({ batchId }) }),
   deleteStudent: (studentId) => request(`/admin/students/${studentId}`, { method: 'DELETE' }),
-  bulkUploadStudents: async ({ file, collegeId, batchId, primaryTrack, status = 'Active' }) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('collegeId', collegeId);
-    formData.append('batchId', batchId);
-    formData.append('primaryTrack', primaryTrack || 'General Track');
-    formData.append('status', status);
-
-    const response = await adminFetch(`${API_BASE}/admin/students/bulk-upload`, {
-      method: 'POST',
-      headers: buildAuthHeaders(),
-      body: formData,
-    });
-
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(getErrorMessage(payload, 'Bulk student import failed.'));
+  bulkUploadStudents: async (payload) => {
+    if (payload instanceof FormData) {
+      const response = await adminFetch(`${API_BASE}/admin/students/bulk-upload`, {
+        method: 'POST',
+        headers: buildAuthHeaders(),
+        body: payload,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(getErrorMessage(data, 'Bulk student import failed.'));
+      return unwrapData(data);
     }
-
-    invalidateCacheForPath('/admin/students');
-    invalidateAdminSessionCacheForPath('/admin/students');
-    return unwrapData(payload);
+    return request('/admin/students/bulk-upload', { method: 'POST', body: JSON.stringify(payload) });
   },
 
   getQuestionCategories: (params = {}) => {
