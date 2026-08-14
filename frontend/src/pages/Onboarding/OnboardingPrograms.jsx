@@ -214,8 +214,9 @@ export default function OnboardingPrograms() {
       />
 
       {/* HERO SECTION */}
-      <section className="relative w-full min-h-[calc(100vh-64px)] flex flex-col items-center px-4 pt-24 pb-12">
-        <div className="w-full max-w-5xl mx-auto mb-6 flex items-center justify-start px-2">
+      <section className="relative w-full min-h-[calc(100vh-64px)] flex flex-col items-center px-4 sm:px-6 pt-16 sm:pt-20 pb-12">
+        {/* Top-Anchored Back Button Container */}
+        <div className="w-full max-w-6xl mx-auto mt-3 sm:mt-4 mb-2 sm:mb-4 flex items-center justify-start">
           <button
             type="button"
             onClick={() => setShowExitModal(true)}
