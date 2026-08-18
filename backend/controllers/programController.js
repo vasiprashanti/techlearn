@@ -19,7 +19,7 @@ export const getAssignedPrograms = async (req, res) => {
     const enrollments = await ProgramEnrollment.find({ userId, status: "Active" })
       .populate({
         path: "programId",
-        select: "_id name description programType duration status visibility pricingType programFee courseIds roadmapIds projectIds certificateTemplateIds",
+         select: "_id name description programType duration durationDays phases status visibility pricingType programFee courseIds roadmapIds projectIds certificateTemplateIds",
         populate: [
           { path: "courseIds", select: "_id title level courseType numTopics" },
           { path: "roadmapIds", select: "_id title status" },
@@ -62,6 +62,8 @@ export const getAssignedPrograms = async (req, res) => {
       description: p.description,
       programType: p.programType,
       duration: p.duration,
+      durationDays: p.durationDays,
+      phases: p.phases || [],
       status: p.status,
       visibility: p.visibility,
       pricingType: p.pricingType,

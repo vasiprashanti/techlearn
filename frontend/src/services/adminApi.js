@@ -515,6 +515,30 @@ export const adminAPI = {
   getProgramById: (id) => request(`/admin/programs/${id}`),
   updateProgram: (id, body) => request(`/admin/programs/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteProgram: (id) => request(`/admin/programs/${id}`, { method: 'DELETE' }),
+  getProgramBlueprints: (programId) => request(`/admin/programs/${programId}/blueprints`),
+  createProgramBlueprint: (programId, body) => request(`/admin/programs/${programId}/blueprints`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  }),
+  updateProgramBlueprint: (programId, blueprintId, body) => request(`/admin/programs/${programId}/blueprints/${blueprintId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  }),
+  deleteProgramBlueprint: (programId, blueprintId) => request(`/admin/programs/${programId}/blueprints/${blueprintId}`, {
+    method: 'DELETE',
+  }),
+  getProgramPerformance: (programId, options = {}) => {
+    const query = new URLSearchParams();
+    if (options.includeRecords) query.set('includeRecords', 'true');
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return request(`/admin/programs/${programId}/performance${suffix}`, { noCache: true });
+  },
+  syncProgramPerformance: (programId, options = {}) => {
+    const query = new URLSearchParams();
+    if (options.includeRecords) query.set('includeRecords', 'true');
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return request(`/admin/programs/${programId}/performance/sync${suffix}`, { method: 'POST' });
+  },
   getAvailableProgramEntities: (programId, entityType, params = {}) => {
     const query = new URLSearchParams();
     if (params.search) query.set('search', params.search);
