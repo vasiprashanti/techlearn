@@ -23,11 +23,10 @@ function runValidation() {
       visibility: "Public",
       pricingType: "Free",
       learningGoals: ["Get Placed"],
-      placementCategories: ["Product Based"],
+      placementCategories: ["On-Campus"],
       targetCompanies: ["Google", "Amazon"],
       skillTags: ["Java", "DSA"],
       targetRoles: ["Software Engineer"],
-      accessTier: "Both",
     });
 
     const freeErr = freeProgram.validateSync();
@@ -78,7 +77,6 @@ function runValidation() {
       studentId: dummyStudentId,
       programId: dummyProgramId,
       status: "Active",
-      accessTier: "Free",
       source: "onboarding",
     });
 

@@ -16,7 +16,7 @@ const normalizeArray = (arr = []) =>
  * 
  * @param {Object} onboardingData 
  * @param {string} onboardingData.learningGoal - "Get Placed" | "Learn New Skills" | "Exploring TechLearn"
- * @param {string} onboardingData.placementCategory - e.g. "Product Based", "Service Based", etc.
+ * @param {string} onboardingData.placementCategory - e.g. "On-Campus", "Off-Campus", or "Both".
  * @param {Array<string>} onboardingData.targetCompanies - e.g. ["Google", "Amazon"]
  * @param {Array<string>} onboardingData.skills - e.g. ["Java", "Python"]
  * @param {string} onboardingData.targetRole - e.g. "Software Engineer"
@@ -59,7 +59,7 @@ export const matchProgramsForUser = async (onboardingData = {}) => {
   for (const program of activePrograms) {
     // Access Tier Rule: Free tier users must not receive Paid / Member-only programs
     if (isFreeTier) {
-      if (program.pricingType === "Paid" || program.accessTier === "Member") {
+      if (program.pricingType === "Paid") {
         continue; // Exclude paid programs for Free tier users
       }
     }

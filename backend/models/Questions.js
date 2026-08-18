@@ -139,6 +139,21 @@ const questionSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    subject: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    topic: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    subtopic: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     tags: [
       {
         type: String,

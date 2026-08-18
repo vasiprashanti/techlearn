@@ -12,7 +12,7 @@ const normalizeSelection = (selection) => String(selection || "").trim();
 const getId = (value) => value?._id || value || null;
 
 const getAccessTier = (program, fallback) =>
-  fallback || (program?.pricingType === "Paid" || program?.accessTier === "Member" ? "Member" : "Free");
+  fallback || (program?.pricingType === "Paid" ? "Member" : "Free");
 
 export const resolveProgramForSelection = async (programSelection) => {
   const selection = normalizeSelection(programSelection);
@@ -208,7 +208,7 @@ export const syncProgramEnrollment = async ({
   const isFreeTier = String(fullOnboardingData.learningPath || "").toLowerCase() === "free";
   if (isFreeTier) {
     const paidProgramIds = await Program.find({
-      $or: [{ pricingType: "Paid" }, { accessTier: "Member" }],
+      pricingType: "Paid",
     }).distinct("_id");
 
     if (paidProgramIds.length > 0) {

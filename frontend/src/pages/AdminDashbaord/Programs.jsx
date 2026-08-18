@@ -22,6 +22,84 @@ import {
 
 const PROGRAM_TYPES = ['Placement', 'Skill'];
 
+const PHASE_TYPES_BY_PROGRAM_TYPE = {
+  Placement: ['learning', 'revision', 'company_preparation', 'mock_interview', 'final_assessment'],
+  Skill: ['learning', 'final_assessment'],
+};
+
+const PHASE_LABELS = {
+  learning: 'Learning',
+  revision: 'Revision',
+  company_preparation: 'Company Preparation',
+  mock_interview: 'Mock Interview',
+  final_assessment: 'Final Assessment',
+};
+
+const PLACEMENT_CATEGORIES = ['On-Campus', 'Off-Campus', 'Both'];
+const LEARNING_GOALS = ['Get Placed', 'Learn New Skills', 'Exploring TechLearn'];
+
+const SKILL_TAG_OPTIONS = [
+  'Java',
+  'Python',
+  'JavaScript',
+  'TypeScript',
+  'React',
+  'Node.js',
+  'HTML/CSS',
+  'SQL',
+  'DSA',
+  'Aptitude',
+  'System Design',
+  'Cloud',
+];
+
+const parseDurationDays = (value) => {
+  const match = String(value || '').match(/(\d+(?:\.\d+)?)\s*-?\s*(day|days|week|weeks|month|months|year|years)/i);
+  if (!match) return null;
+  const amount = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  const multiplier = unit.startsWith('year')
+    ? 365
+    : unit.startsWith('month')
+      ? 30
+      : unit.startsWith('week')
+        ? 7
+        : 1;
+  return Math.round(amount * multiplier);
+};
+
+const getMinimumDurationDays = (programType) => (programType === 'Placement' ? 5 : 2);
+
+const getDefaultPhases = (programType, value) => {
+  const durationDays = Number(value);
+  if (!Number.isInteger(durationDays) || durationDays < getMinimumDurationDays(programType)) return [];
+
+  const lengths = programType === 'Placement'
+    ? durationDays >= 9
+      ? [durationDays - 8, 2, 4, 1, 1]
+      : [1 + (durationDays - 5), 1, 1, 1, 1]
+    : [durationDays - 1, 1];
+  let nextStartDay = 1;
+
+  return PHASE_TYPES_BY_PROGRAM_TYPE[programType].map((phase, index) => {
+    const startDay = nextStartDay;
+    const endDay = startDay + lengths[index] - 1;
+    nextStartDay = endDay + 1;
+    return { phase, startDay: String(startDay), endDay: String(endDay) };
+  });
+};
+
+const normalizePhases = (phases, programType, durationDays) => {
+  const defaults = getDefaultPhases(programType, durationDays);
+  if (!Array.isArray(phases) || phases.length !== defaults.length) return defaults;
+
+  return defaults.map((fallback, index) => ({
+    phase: fallback.phase,
+    startDay: String(phases[index]?.startDay ?? fallback.startDay),
+    endDay: String(phases[index]?.endDay ?? fallback.endDay),
+  }));
+};
+
 const getProgramType = (value) => {
   const normalized = String(value || '').trim().toLowerCase();
   return normalized === 'placement' || normalized.includes('placement') ? 'Placement' : 'Skill';
@@ -63,22 +141,24 @@ export default function Programs() {
   const [editingProgram, setEditingProgram] = useState(null);
   const [modalError, setModalError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [skillTagsOpen, setSkillTagsOpen] = useState(false);
+  const [targetCompanyDraft, setTargetCompanyDraft] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     programType: 'Placement',
-    duration: '',
+    durationDays: '30',
+    phases: getDefaultPhases('Placement', 30),
     status: 'Draft',
     visibility: 'Public',
     pricingType: 'Free',
     programFee: '0',
     learningGoalsText: '',
-    placementCategoriesText: '',
-    targetCompaniesText: '',
-    skillTagsText: '',
+    placementCategory: 'Both',
+    targetCompanies: [],
+    skillTags: [],
     targetRolesText: '',
-    accessTier: 'Both',
   });
 
   const [programToDelete, setProgramToDelete] = useState(null);
@@ -144,7 +224,69 @@ export default function Programs() {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'programType') {
+      setFormData((prev) => ({
+        ...prev,
+        programType: value,
+        phases: getDefaultPhases(value, prev.durationDays),
+        placementCategory: value === 'Placement' ? prev.placementCategory : 'Both',
+        learningGoalsText: prev.learningGoalsText === 'Get Placed' && value === 'Skill'
+          ? 'Learn New Skills'
+          : prev.learningGoalsText === 'Learn New Skills' && value === 'Placement'
+            ? 'Get Placed'
+            : prev.learningGoalsText,
+      }));
+      return;
+    }
+    if (name === 'durationDays') {
+      setFormData((prev) => ({ ...prev, durationDays: value, phases: getDefaultPhases(prev.programType, value) }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePhaseChange = (index, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      phases: prev.phases.map((phase, phaseIndex) => (
+        phaseIndex === index ? { ...phase, [field]: value } : phase
+      )),
+    }));
+  };
+
+  const handleToggleSkillTag = (tag) => {
+    setFormData((prev) => ({
+      ...prev,
+      skillTags: prev.skillTags.includes(tag)
+        ? prev.skillTags.filter((item) => item !== tag)
+        : [...prev.skillTags, tag],
+    }));
+  };
+
+  const handleAddTargetCompany = () => {
+    const company = targetCompanyDraft.trim().replace(/,$/, '');
+    if (!company) return;
+    setFormData((prev) => ({
+      ...prev,
+      targetCompanies: prev.targetCompanies.includes(company)
+        ? prev.targetCompanies
+        : [...prev.targetCompanies, company],
+    }));
+    setTargetCompanyDraft('');
+  };
+
+  const handleTargetCompanyKeyDown = (event) => {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      handleAddTargetCompany();
+    }
+  };
+
+  const handleRemoveTargetCompany = (company) => {
+    setFormData((prev) => ({
+      ...prev,
+      targetCompanies: prev.targetCompanies.filter((item) => item !== company),
+    }));
   };
 
   const handleOpenCreateModal = () => {
@@ -153,18 +295,20 @@ export default function Programs() {
       name: '',
       description: '',
       programType: 'Placement',
-      duration: '30 Days',
+      durationDays: '30',
+      phases: getDefaultPhases('Placement', 30),
       status: 'Draft',
       visibility: 'Public',
       pricingType: 'Free',
       programFee: '0',
       learningGoalsText: 'Get Placed',
-      placementCategoriesText: 'Product Based, Service Based',
-      targetCompaniesText: '',
-      skillTagsText: '',
+      placementCategory: 'Both',
+      targetCompanies: [],
+      skillTags: [],
       targetRolesText: '',
-      accessTier: 'Both',
     });
+    setTargetCompanyDraft('');
+    setSkillTagsOpen(false);
     setModalError('');
     setIsModalOpen(true);
   };
@@ -176,18 +320,24 @@ export default function Programs() {
       name: program.name || '',
       description: program.description || '',
       programType: getProgramType(program.programType),
-      duration: program.duration || '',
+      durationDays: String(program.durationDays || parseDurationDays(program.duration) || 30),
+      phases: normalizePhases(program.phases, getProgramType(program.programType), program.durationDays || parseDurationDays(program.duration) || 30),
       status: program.status || 'Draft',
       visibility: program.visibility || 'Public',
       pricingType: program.pricingType || 'Free',
       programFee: String(program.programFee || 0),
-      learningGoalsText: Array.isArray(program.learningGoals) ? program.learningGoals.join(', ') : '',
-      placementCategoriesText: Array.isArray(program.placementCategories) ? program.placementCategories.join(', ') : '',
-      targetCompaniesText: Array.isArray(program.targetCompanies) ? program.targetCompanies.join(', ') : '',
-      skillTagsText: Array.isArray(program.skillTags) ? program.skillTags.join(', ') : '',
+      learningGoalsText: Array.isArray(program.learningGoals) && program.learningGoals[0]
+        ? program.learningGoals[0]
+        : getProgramType(program.programType) === 'Skill' ? 'Learn New Skills' : 'Get Placed',
+      placementCategory: Array.isArray(program.placementCategories) && ['On-Campus', 'Off-Campus', 'Both'].includes(program.placementCategories[0])
+        ? program.placementCategories[0]
+        : 'Both',
+      targetCompanies: Array.isArray(program.targetCompanies) ? program.targetCompanies : [],
+      skillTags: Array.isArray(program.skillTags) ? program.skillTags : [],
       targetRolesText: Array.isArray(program.targetRoles) ? program.targetRoles.join(', ') : '',
-      accessTier: program.accessTier || 'Both',
     });
+    setTargetCompanyDraft('');
+    setSkillTagsOpen(false);
     setModalError('');
     setIsModalOpen(true);
   };
@@ -197,10 +347,35 @@ export default function Programs() {
     setModalError('');
 
     const finalType = formData.programType.trim();
+    const durationDays = Number(formData.durationDays);
 
     if (!formData.name.trim()) { setModalError('Program name is required'); return; }
     if (!finalType) { setModalError('Program type is required'); return; }
-    if (!formData.duration.trim()) { setModalError('Duration is required'); return; }
+    if (!Number.isInteger(durationDays) || durationDays < getMinimumDurationDays(finalType)) {
+      setModalError(`${finalType} programs must be at least ${getMinimumDurationDays(finalType)} days long.`);
+      return;
+    }
+    if (!formData.phases.length || formData.phases.length !== PHASE_TYPES_BY_PROGRAM_TYPE[finalType].length) {
+      setModalError('Configure every phase before saving the program.');
+      return;
+    }
+    let expectedStartDay = 1;
+    const phases = formData.phases.map((phase) => ({
+      phase: phase.phase,
+      startDay: Number(phase.startDay),
+      endDay: Number(phase.endDay),
+    }));
+    for (const phase of phases) {
+      if (!Number.isInteger(phase.startDay) || !Number.isInteger(phase.endDay) || phase.startDay !== expectedStartDay || phase.endDay < phase.startDay) {
+        setModalError('Phases must be ordered and have no gaps or overlaps.');
+        return;
+      }
+      expectedStartDay = phase.endDay + 1;
+    }
+    if (expectedStartDay - 1 !== durationDays) {
+      setModalError(`Phases must cover exactly days 1 through ${durationDays}.`);
+      return;
+    }
     if (formData.pricingType === 'Paid') {
       const feeNum = Number(formData.programFee);
       if (isNaN(feeNum) || feeNum < 0) { setModalError('Valid non-negative fee is required for Paid programs'); return; }
@@ -215,17 +390,18 @@ export default function Programs() {
         name: formData.name.trim(),
         description: formData.description.trim(),
         programType: finalType,
-        duration: formData.duration.trim(),
+        duration: `${durationDays} Days`,
+        durationDays,
+        phases,
         status: formData.status,
         visibility: formData.visibility,
         pricingType: formData.pricingType,
         programFee: formData.pricingType === 'Paid' ? Number(formData.programFee) : 0,
         learningGoals: parseCommaString(formData.learningGoalsText),
-        placementCategories: parseCommaString(formData.placementCategoriesText),
-        targetCompanies: parseCommaString(formData.targetCompaniesText),
-        skillTags: parseCommaString(formData.skillTagsText),
+        placementCategories: finalType === 'Placement' ? [formData.placementCategory] : [],
+        targetCompanies: formData.targetCompanies,
+        skillTags: formData.skillTags,
         targetRoles: parseCommaString(formData.targetRolesText),
-        accessTier: formData.accessTier || 'Both',
       };
 
       if (editingProgram) {
@@ -408,16 +584,45 @@ export default function Programs() {
                   </div>
 
                   <div>
-                    <label className="admin-micro-label text-black/45 dark:text-white/45">Duration*</label>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Duration (days)*</label>
                     <input
-                      type="text"
-                      name="duration"
+                      type="number"
+                      name="durationDays"
+                      min={getMinimumDurationDays(formData.programType)}
+                      step="1"
                       required
-                      placeholder="e.g. 30 Days, 6 Months"
-                      value={formData.duration}
+                      placeholder="e.g. 30"
+                      value={formData.durationDays}
                       onChange={handleFormChange}
                       className={programFormInputClass}
                     />
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-black/10 bg-black/[0.02] p-3 dark:border-white/10 dark:bg-white/[0.03]">
+                  <div className="mb-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff]">Learning Phases</p>
+                    <p className="mt-1 text-[11px] text-black/45 dark:text-white/45">Phases must cover every day exactly once. Changing the duration regenerates the default ranges, which you can then adjust.</p>
+                  </div>
+                  <div className="space-y-2">
+                    {formData.phases.map((phase, index) => (
+                      <div key={phase.phase} className="grid grid-cols-[minmax(0,1fr)_90px_90px] items-end gap-2">
+                        <div className="min-w-0">
+                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Phase</span>
+                          <div className="flex h-10 items-center rounded-lg border border-black/10 bg-white/70 px-3 text-sm font-semibold text-slate-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-white">
+                            {PHASE_LABELS[phase.phase]}
+                          </div>
+                        </div>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Start</span>
+                          <input type="number" min="1" step="1" value={phase.startDay} onChange={(event) => handlePhaseChange(index, 'startDay', event.target.value)} className={programFormInputClass} />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">End</span>
+                          <input type="number" min="1" step="1" value={phase.endDay} onChange={(event) => handlePhaseChange(index, 'endDay', event.target.value)} className={programFormInputClass} />
+                        </label>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -494,58 +699,81 @@ export default function Programs() {
                 <div className="pt-1 border-t border-black/5 dark:border-white/5 space-y-3.5">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff] pt-1">Student Matching Metadata</p>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3">
                     <div>
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Learning Goal</label>
+                      <div className="relative mt-1 rounded-xl border border-black/10 bg-white/85 shadow-[0_4px_14px_rgba(15,23,42,0.06)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:border-white/15 dark:bg-[#0f1f43] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)]">
+                        <select name="learningGoalsText" value={formData.learningGoalsText} onChange={handleFormChange} className="appearance-none w-full rounded-xl border-0 bg-transparent px-3 py-2.5 pr-10 text-sm font-medium text-slate-800 outline-none dark:text-white">
+                          {LEARNING_GOALS.map((goal) => <option key={goal} className={dropdownOptionClass} value={goal}>{goal}</option>)}
+                        </select>
+                        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
+                      </div>
+                    </div>
+
+                    <div className="relative">
                       <label className="admin-micro-label text-black/45 dark:text-white/45">Skill Tags</label>
-                      <input
-                        type="text"
-                        name="skillTagsText"
-                        placeholder="Java, Python, React"
-                        value={formData.skillTagsText}
-                        onChange={handleFormChange}
-                        className={programFormInputClass}
-                      />
+                      <button
+                        type="button"
+                        onClick={() => setSkillTagsOpen((open) => !open)}
+                        className="relative mt-1 flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border border-black/10 bg-white/85 px-3 py-2 text-left text-sm font-medium text-slate-800 shadow-[0_4px_14px_rgba(15,23,42,0.06)] outline-none transition-all hover:bg-white dark:border-white/15 dark:bg-[#0f1f43] dark:text-white dark:hover:bg-[#162a52]"
+                      >
+                        <span className={formData.skillTags.length ? 'text-slate-800 dark:text-white' : 'text-black/35 dark:text-white/40'}>
+                          {formData.skillTags.length ? formData.skillTags.join(', ') : 'Select skills'}
+                        </span>
+                        <FiChevronDown className="h-4 w-4 shrink-0 text-black/45 dark:text-white/60" />
+                      </button>
+                      {skillTagsOpen && (
+                        <div className="absolute left-0 right-0 z-20 mt-2 max-h-52 overflow-y-auto rounded-xl border border-black/10 bg-white p-2 shadow-xl dark:border-white/15 dark:bg-[#0f1f43]">
+                          {SKILL_TAG_OPTIONS.map((tag) => (
+                            <label key={tag} className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-slate-700 hover:bg-black/5 dark:text-slate-200 dark:hover:bg-white/10">
+                              <input type="checkbox" checked={formData.skillTags.includes(tag)} onChange={() => handleToggleSkillTag(tag)} className="h-3.5 w-3.5 rounded border-black/20 text-[#3C83F6] focus:ring-[#3C83F6]" />
+                              {tag}
+                            </label>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div>
                       <label className="admin-micro-label text-black/45 dark:text-white/45">Target Companies</label>
-                      <input
-                        type="text"
-                        name="targetCompaniesText"
-                        placeholder="Google, Amazon, TCS"
-                        value={formData.targetCompaniesText}
-                        onChange={handleFormChange}
-                        className={programFormInputClass}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="admin-micro-label text-black/45 dark:text-white/45">Placement Categories</label>
-                      <input
-                        type="text"
-                        name="placementCategoriesText"
-                        placeholder="Product Based, Service Based"
-                        value={formData.placementCategoriesText}
-                        onChange={handleFormChange}
-                        className={programFormInputClass}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="admin-micro-label text-black/45 dark:text-white/45">Access Tier</label>
-                      <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                        <select
-                          name="accessTier"
-                          value={formData.accessTier}
-                          onChange={handleFormChange}
-                          className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-                        >
-                          <option className={dropdownOptionClass} value="Both">Both (Free &amp; Member)</option>
-                          <option className={dropdownOptionClass} value="Free">Free Tier Only</option>
-                          <option className={dropdownOptionClass} value="Member">Member Tier Only</option>
-                        </select>
-                        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                      <div className="mt-1 rounded-xl border border-black/10 bg-white/85 px-3 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.06)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:border-white/15 dark:bg-[#0f1f43] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)]">
+                        <div className="flex flex-wrap gap-1.5">
+                          {formData.targetCompanies.map((company) => (
+                            <span key={company} className="inline-flex items-center gap-1 rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-[11px] font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]">
+                              {company}
+                              <button type="button" onClick={() => handleRemoveTargetCompany(company)} className="rounded-full hover:bg-black/10 dark:hover:bg-white/10" title={`Remove ${company}`}>
+                                <FiX className="h-3 w-3" />
+                              </button>
+                            </span>
+                          ))}
+                          <input
+                            type="text"
+                            value={targetCompanyDraft}
+                            onChange={(event) => setTargetCompanyDraft(event.target.value)}
+                            onKeyDown={handleTargetCompanyKeyDown}
+                            onBlur={handleAddTargetCompany}
+                            placeholder="Type a company and press Enter"
+                            className="min-w-[220px] flex-1 border-0 bg-transparent py-1 text-sm text-slate-800 outline-none placeholder:text-black/35 dark:text-white dark:placeholder:text-white/40"
+                          />
+                        </div>
                       </div>
+                    </div>
+
+                    {formData.programType === 'Placement' && (
+                      <div>
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Placement Category</label>
+                        <div className="relative mt-1 rounded-xl border border-black/10 bg-white/85 shadow-[0_4px_14px_rgba(15,23,42,0.06)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:border-white/15 dark:bg-[#0f1f43] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)]">
+                          <select name="placementCategory" value={formData.placementCategory} onChange={handleFormChange} className="appearance-none w-full rounded-xl border-0 bg-transparent px-3 py-2.5 pr-10 text-sm font-medium text-slate-800 outline-none dark:text-white">
+                            {PLACEMENT_CATEGORIES.map((category) => <option key={category} className={dropdownOptionClass} value={category}>{category}</option>)}
+                          </select>
+                          <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Target Roles</label>
+                      <input type="text" name="targetRolesText" placeholder="Frontend Developer, Java Developer" value={formData.targetRolesText} onChange={handleFormChange} className={programFormInputClass} />
                     </div>
                   </div>
                 </div>

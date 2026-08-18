@@ -24,9 +24,8 @@ async function runUnitAndResolverTests() {
       status: "Active",
       visibility: "Public",
       pricingType: "Free",
-      accessTier: "Both",
       learningGoals: ["Get Placed"],
-      placementCategories: ["Product Based"],
+      placementCategories: ["On-Campus"],
       targetCompanies: ["Google", "Amazon"],
       targetRoles: ["SDE / Software Engineer"],
       skillTags: ["Java", "DSA"],
@@ -40,9 +39,8 @@ async function runUnitAndResolverTests() {
       visibility: "Public",
       pricingType: "Paid",
       programFee: 4999,
-      accessTier: "Member",
       learningGoals: ["Get Placed"],
-      placementCategories: ["FAANG / Tier 1"],
+      placementCategories: ["Both"],
       targetCompanies: ["Google"],
       targetRoles: ["Software Engineer"],
     },
@@ -54,7 +52,6 @@ async function runUnitAndResolverTests() {
       status: "Active",
       visibility: "Public",
       pricingType: "Free",
-      accessTier: "Both",
       learningGoals: ["Learn New Skills"],
       skillTags: ["Java", "React", "Spring Boot"],
     },
@@ -66,7 +63,6 @@ async function runUnitAndResolverTests() {
       status: "Active",
       visibility: "Public",
       pricingType: "Free",
-      accessTier: "Both",
       learningGoals: ["Exploring TechLearn"],
     },
     {
@@ -77,7 +73,6 @@ async function runUnitAndResolverTests() {
       status: "Draft",
       visibility: "Private",
       pricingType: "Free",
-      accessTier: "Both",
       learningGoals: ["Exploring TechLearn"],
     },
   ];
@@ -115,9 +110,9 @@ async function runUnitAndResolverTests() {
     }
     console.log("  ✅ Placement matching correctly returned:", placementMatch[0].name);
 
-    // Test B: Access Tier Exclusion
-    console.log("Testing Access Tier Exclusion (Free user cannot receive Paid program)...");
-    const hasPaidProgram = placementMatch.some((p) => p.pricingType === "Paid" || p.accessTier === "Member");
+    // Test B: Pricing Exclusion
+    console.log("Testing Pricing Exclusion (Free user cannot receive Paid program)...");
+    const hasPaidProgram = placementMatch.some((p) => p.pricingType === "Paid");
     if (hasPaidProgram) {
       throw new Error("Free tier user unexpectedly received Paid / Member-only program!");
     }
