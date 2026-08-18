@@ -358,7 +358,7 @@ const ProgramReportsTable = ({ students, program, onOpenStudent }) => {
   );
 };
 
-const ProgramAnalyticsPanel = ({ program }) => {
+const ProgramAnalyticsPanel = ({ program, readinessLeads = [], readinessLoading = false }) => {
   const stats = program?.programStats || {};
   const enrolledStudents = Array.isArray(program?.studentIds) ? program.studentIds : [];
   const metrics = [
@@ -384,6 +384,50 @@ const ProgramAnalyticsPanel = ({ program }) => {
         <p className="mt-1 text-xs text-black/45 dark:text-white/45">
           Analytics are calculated from the learners enrolled in this program and their day-wise activity.
         </p>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-black/10 bg-white/80 dark:border-white/10 dark:bg-[#0f1f43]">
+        <div className="flex items-center justify-between gap-3 border-b border-black/5 px-4 py-3 dark:border-white/5">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Readiness leads</h3>
+            <p className="mt-1 text-xs text-black/45 dark:text-white/45">Learners who started Day 0 before enrolling in this program.</p>
+          </div>
+          <span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-700 dark:text-violet-300">{readinessLeads.length}</span>
+        </div>
+        {readinessLoading ? (
+          <div className="px-4 py-6 text-center text-xs text-black/45 dark:text-white/45">Loading readiness leads…</div>
+        ) : readinessLeads.length === 0 ? (
+          <div className="px-4 py-6 text-center text-xs text-black/45 dark:text-white/45">No readiness leads yet.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-[680px] w-full text-left">
+              <thead className="bg-black/[0.03] dark:bg-white/[0.04]">
+                <tr className="border-b border-black/10 dark:border-white/10">
+                  {['Learner', 'Role', 'Companies', 'Status', 'Score'].map((label) => (
+                    <th key={label} className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">{label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {readinessLeads.map((lead) => {
+                  const user = lead.userId || {};
+                  const name = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.name || user.email || 'Learner';
+                  return (
+                    <tr key={lead._id} className="border-b border-black/5 last:border-b-0 dark:border-white/5">
+                      <td className="px-4 py-3 text-xs font-semibold text-slate-800 dark:text-white">
+                        {name}<span className="mt-0.5 block text-[11px] font-normal text-black/40 dark:text-white/40">{user.email || '—'}</span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">{lead.targetRole || user.targetRole || '—'}</td>
+                      <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">{(lead.targetCompanies || user.targetCompanies || []).join(', ') || '—'}</td>
+                      <td className="px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-200">{lead.status}</td>
+                      <td className="px-4 py-3 text-xs font-semibold tabular-nums text-slate-700 dark:text-slate-200">{lead.accuracy === null || lead.accuracy === undefined ? '—' : `${Math.round(Number(lead.accuracy))}%`}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -536,6 +580,8 @@ export default function ProgramDetails() {
   const [performance, setPerformance] = useState(null);
   const [performanceLoading, setPerformanceLoading] = useState(false);
   const [performanceError, setPerformanceError] = useState('');
+  const [readinessLeads, setReadinessLeads] = useState([]);
+  const [readinessLeadsLoading, setReadinessLeadsLoading] = useState(false);
 
   const [attachModalType, setAttachModalType] = useState(null);
   const [availableItems, setAvailableItems] = useState([]);
@@ -612,6 +658,23 @@ export default function ProgramDetails() {
       cancelled = true;
     };
   }, [activeTab, studentsSubTab, programId]);
+
+  useEffect(() => {
+    if (activeTab !== 'analytics') return undefined;
+    let cancelled = false;
+    setReadinessLeadsLoading(true);
+    adminAPI.getProgramReadinessLeads(programId)
+      .then((response) => {
+        if (!cancelled) setReadinessLeads(response?.leads || []);
+      })
+      .catch((err) => {
+        if (!cancelled) console.error('Error fetching readiness leads:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setReadinessLeadsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [activeTab, programId]);
 
   const handleBlueprintCountChange = useCallback((count) => {
     setProgram((current) => (current ? { ...current, blueprintCount: count } : current));
@@ -1422,7 +1485,7 @@ export default function ProgramDetails() {
                 onCountChange={handleBlueprintCountChange}
               />
             ) : currentSection.key === 'analytics' ? (
-              <ProgramAnalyticsPanel program={program} />
+              <ProgramAnalyticsPanel program={program} readinessLeads={readinessLeads} readinessLoading={readinessLeadsLoading} />
             ) : currentSection.key === 'students' ? (
               <>
                 <div className="flex items-center gap-1 border-b border-black/5 dark:border-white/5">

@@ -5,6 +5,7 @@ import Submission from "../models/Submission.js";
 import Question from "../models/Questions.js";
 import { LANGUAGE_IDS, testCodeWithJudge0 } from "../utils/judgeUtil.js";
 import { recordProgramPerformanceAttempt } from "./programPerformanceService.js";
+import { syncProgramEnrollmentCompletion } from "./programCompletionService.js";
 import { getProgramAssignmentQuestion } from "./programQuestionEngineService.js";
 
 const MCQ_LABELS = ["A", "B", "C", "D"];
@@ -323,6 +324,15 @@ export const submitProgramAssignmentAnswer = async ({
   await assignment.save();
   const summary = assignmentSummary(assignment);
   await updateReadinessLead(assignment, summary);
+
+  if (assignment.phase === "final_assessment" && summary.completed) {
+    await syncProgramEnrollmentCompletion({
+      programId: assignment.programId,
+      userId: assignment.userId,
+      studentId: assignment.studentId,
+      now,
+    });
+  }
 
   if (assignment.studentId && Number(assignment.programDay) > 0) {
     try {

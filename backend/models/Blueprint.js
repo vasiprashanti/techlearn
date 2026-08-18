@@ -24,6 +24,18 @@ const blueprintConfigurationSchema = new mongoose.Schema(
         message: "Question count must be a whole number",
       },
     },
+    // Optional matching hints. Category and quantity remain the required
+    // blueprint contract; the engine can use these hints when present.
+    difficulty: {
+      type: String,
+      enum: ["Any", "Easy", "Medium", "Hard"],
+      default: "Any",
+    },
+    pattern: {
+      type: String,
+      default: "",
+      trim: true,
+    },
   },
   { _id: false }
 );

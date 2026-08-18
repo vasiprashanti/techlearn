@@ -21,6 +21,7 @@ import {
 import { expireAllActiveBatches } from "../../utils/batchLifecycle.js";
 import { validateAndNormalizeProgramPhases } from "../../utils/programPhases.js";
 import { deleteProgramPerformance } from "../../services/programPerformanceService.js";
+import { syncProgramEnrollmentsForProgram } from "../../services/programCompletionService.js";
 
 // Whitelist mapping for attachment entity types
 export const ENTITY_CONFIG = {
@@ -249,8 +250,8 @@ const getProgramStatus = ({ enrollment, expiryDate, now = new Date() }) => {
   return "Active";
 };
 
-const getStoredAccuracy = (student, enrollment) => {
-  const candidates = [student?.overallAccuracy, student?.accuracy, enrollment?.overallAccuracy, enrollment?.accuracy];
+const getStoredAccuracy = (enrollment) => {
+  const candidates = [enrollment?.completionAccuracy];
   const value = candidates.map(Number).find((candidate) => Number.isFinite(candidate));
   return value === undefined ? null : value;
 };
@@ -264,6 +265,7 @@ const averageScores = (...activities) => {
 const buildProgramMonitoringData = async ({ program, enrollments, students }) => {
   const now = new Date();
   const durationDays = Number(program.durationDays) || parseProgramDurationDays(program.duration) || PROGRAM_REPORT_DAYS;
+  const reportDays = durationDays;
   const programBatchIds = (program.batchIds || []).map(getIdString).filter(Boolean);
   const currentStudentIds = students.map((student) => getIdString(student)).filter(Boolean);
   const studentEmails = students.map((student) => String(student.email || "").trim().toLowerCase()).filter(Boolean);
@@ -383,13 +385,13 @@ const buildProgramMonitoringData = async ({ program, enrollments, students }) =>
       .map(([, activity]) => activity);
     const status = getProgramStatus({ enrollment, expiryDate: scheduleExpiryDate, now });
     const completionAccuracy = status === "Completed"
-      ? (getStoredAccuracy(student, enrollment) ?? averageScores(...taskActivities, ...challengeActivities))
+      ? (getStoredAccuracy(enrollment) ?? averageScores(...taskActivities, ...challengeActivities))
       : null;
     const programReport = {
       studentId,
       dayNumber,
       status,
-      days: Array.from({ length: PROGRAM_REPORT_DAYS }, (_, index) => {
+      days: Array.from({ length: reportDays }, (_, index) => {
         const reportDay = index + 1;
         const task = taskActivityByUserDay.get(`${userId}:${reportDay}`);
         const challenge = challengeActivityByStudentDay.get(`${studentId}:${reportDay}`)
@@ -453,7 +455,7 @@ const buildProgramMonitoringData = async ({ program, enrollments, students }) =>
         : null,
     },
     reports: {
-      days: PROGRAM_REPORT_DAYS,
+      days: reportDays,
     },
   };
 };
@@ -687,6 +689,7 @@ export const getProgramById = async (req, res) => {
     const { programId } = req.params;
 
     await expireAllActiveBatches();
+    await syncProgramEnrollmentsForProgram({ programId });
 
     if (!mongoose.Types.ObjectId.isValid(programId)) {
       return res.status(400).json({ success: false, message: "Invalid program ID format" });

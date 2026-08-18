@@ -24,6 +24,7 @@ const request = async (path, options = {}) => {
 };
 
 export const programLearningAPI = {
+  getReadinessOptions: () => request('/programs/readiness-options'),
   getExperience: (programId) => request('/programs/' + programId + '/experience'),
   getFinalReport: (programId) => request('/programs/' + programId + '/final-report'),
   getAssignment: (programId, assignmentId) => request(

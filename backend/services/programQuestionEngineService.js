@@ -241,7 +241,7 @@ const getPerformanceMatch = (question, summaries = []) => {
   return topicMatch || null;
 };
 
-export const scoreQuestion = ({ question, profile, summaries, phase }) => {
+export const scoreQuestion = ({ question, profile, summaries, phase, configuration = {} }) => {
   const performance = getPerformanceMatch(question, summaries);
   const questionDimensions = normalizeQuestionList(question);
   const roleMatch = hasTokenMatch(questionDimensions, profile.targetRole);
@@ -263,6 +263,11 @@ export const scoreQuestion = ({ question, profile, summaries, phase }) => {
   if (performance) score += performancePriority[performance.classification] || 0;
   if (question.usage === "Assessment") score += 30;
   if (question.usage === "Both") score += 20;
+
+  const configuredDifficulty = String(configuration.difficulty || "Any");
+  if (configuredDifficulty !== "Any" && question.difficulty === configuredDifficulty) score += 35;
+  const configuredPattern = normalizeText(configuration.pattern);
+  if (configuredPattern && normalizeText(question.pattern).includes(configuredPattern)) score += 35;
 
   return {
     score,
@@ -317,11 +322,33 @@ const questionProjection = [
 ].join(" ");
 
 const loadCandidates = async (configuration) => {
+  const categoryQuery = buildCategoryQuery(configuration);
   const query = {
     status: "Active",
     isActive: { $ne: false },
-    ...buildCategoryQuery(configuration),
+    ...categoryQuery,
   };
+
+  // Dynamic assignments are assessments. Practice-only questions stay in the
+  // regular practice flow and cannot leak into readiness/revision/company/
+  // final assignments. Missing usage on legacy records is treated as Both.
+  query.$and = [
+    {
+      $or: [
+        { usage: { $in: ["Assessment", "Both"] } },
+        { usage: { $exists: false } },
+      ],
+    },
+    ...(Array.isArray(categoryQuery.$or) ? [{ $or: categoryQuery.$or }] : []),
+  ];
+  delete query.$or;
+
+  if (configuration?.difficulty && configuration.difficulty !== "Any") {
+    query.difficulty = configuration.difficulty;
+  }
+  if (configuration?.pattern) {
+    query.pattern = new RegExp(escapeRegex(configuration.pattern), "i");
+  }
 
   return Question.find(query)
     .select(questionProjection)
@@ -397,7 +424,7 @@ export const selectQuestionsForBlueprint = async ({
     const candidates = (await loadCandidates(configuration))
       .map((question) => ({
         question,
-        ...scoreQuestion({ question, profile, summaries, phase }),
+        ...scoreQuestion({ question, profile, summaries, phase, configuration }),
       }))
       .sort((left, right) => right.score - left.score || String(left.question._id).localeCompare(String(right.question._id)));
 

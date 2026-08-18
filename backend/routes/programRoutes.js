@@ -1,6 +1,7 @@
 import express from "express";
 import {
   getAssignedPrograms,
+  getReadinessOptions,
   selectActiveProgram,
   getProgramDetailForStudent,
 } from "../controllers/programController.js";
@@ -19,6 +20,7 @@ const router = express.Router();
 
 // Protected student-facing endpoints
 router.get("/assigned", protect, getAssignedPrograms);
+router.get("/readiness-options", protect, getReadinessOptions);
 router.post("/select-active", protect, selectActiveProgram);
 router.get("/:programId/experience", protect, getProgramExperience);
 router.get("/:programId/final-report", protect, getFinalProgramReport);

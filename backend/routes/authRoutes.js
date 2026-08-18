@@ -113,6 +113,7 @@ const formatAuthUser = (user, student = null, batch = null, schedule = null) => 
     email: user.email,
     photoUrl: user.photoUrl || "",
     role: user.role,
+    permissions: user.permissions || [],
     isClub: user.isClub,
     batchId: schedule ? schedule.batchId || null : (user.batchId || student?.batchId?._id || student?.batchId || null),
     startDate: schedule?.scheduleType === "batch"
@@ -400,6 +401,8 @@ router.get("/me", protect, async function getMe(req, res) {
       firstName: req.user.firstName,
       lastName: req.user.lastName,
       email: req.user.email,
+      role: req.user.role,
+      permissions: req.user.permissions || [],
     });
   } catch (err) {
     console.error("Fetch user error:", err);

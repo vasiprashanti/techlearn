@@ -12,6 +12,7 @@ import {
   ensureReadinessLead,
   submitProgramAssignmentAnswer,
 } from "../services/programAssignmentService.js";
+import { syncProgramEnrollmentCompletion } from "../services/programCompletionService.js";
 
 const includeDrafts = (req) => req.user?.role === "admin" && ["1", "true", "yes"].includes(String(req.query?.includeDrafts || "").toLowerCase());
 
@@ -90,6 +91,10 @@ const buildFinalReport = async (context) => {
 
 export const getProgramExperience = async (req, res) => {
   try {
+    await syncProgramEnrollmentCompletion({
+      programId: req.params.programId,
+      userId: req.user?._id,
+    });
     const context = await getProgramLearningContext({
       user: req.user,
       programId: req.params.programId,
@@ -122,6 +127,10 @@ export const getProgramExperience = async (req, res) => {
 
 export const getFinalProgramReport = async (req, res) => {
   try {
+    await syncProgramEnrollmentCompletion({
+      programId: req.params.programId,
+      userId: req.user?._id,
+    });
     const context = await getProgramLearningContext({
       user: req.user,
       programId: req.params.programId,

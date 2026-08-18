@@ -39,7 +39,7 @@ const createEmptyForm = (blueprintType) => ({
   name: BLUEPRINT_TYPE_LABELS[blueprintType] || 'New Blueprint',
   blueprintType,
   status: 'Draft',
-  configurations: [{ categoryId: '', questionCount: '1' }],
+  configurations: [{ categoryId: '', questionCount: '1', difficulty: 'Any', pattern: '' }],
 });
 
 const cloneBlueprintForm = (blueprint) => ({
@@ -49,6 +49,8 @@ const cloneBlueprintForm = (blueprint) => ({
   configurations: (blueprint.configurations || []).map((configuration) => ({
     categoryId: String(configuration.categoryId?._id || configuration.categoryId || ''),
     questionCount: String(configuration.questionCount || 1),
+    difficulty: configuration.difficulty || 'Any',
+    pattern: configuration.pattern || '',
   })),
 });
 
@@ -129,7 +131,7 @@ export default function ProgramBlueprintsPanel({ programId, programType, onCount
   const handleAddConfiguration = () => {
     setForm((current) => ({
       ...current,
-      configurations: [...current.configurations, { categoryId: '', questionCount: '1' }],
+      configurations: [...current.configurations, { categoryId: '', questionCount: '1', difficulty: 'Any', pattern: '' }],
     }));
   };
 
@@ -160,6 +162,8 @@ export default function ProgramBlueprintsPanel({ programId, programType, onCount
     const configurations = form.configurations.map((configuration) => ({
       categoryId: configuration.categoryId,
       questionCount: Number(configuration.questionCount),
+      difficulty: configuration.difficulty || 'Any',
+      pattern: configuration.pattern || '',
     }));
     if (configurations.some((configuration) => !configuration.categoryId)) {
       setFormError('Select a question-bank category for every row.');
@@ -289,8 +293,15 @@ export default function ProgramBlueprintsPanel({ programId, programType, onCount
                   <span>Count</span>
                 </div>
                 {(blueprint.configurations || []).map((configuration) => (
-                  <div key={`${blueprint._id}-${configuration.categoryId}`} className="grid grid-cols-[1fr_auto] gap-3 border-t border-black/5 px-3 py-2 text-xs dark:border-white/5">
-                    <span className="text-slate-700 dark:text-slate-200">{configuration.category || 'Untitled category'}</span>
+                    <div key={`${blueprint._id}-${configuration.categoryId}`} className="grid grid-cols-[1fr_auto] gap-3 border-t border-black/5 px-3 py-2 text-xs dark:border-white/5">
+                    <span className="text-slate-700 dark:text-slate-200">
+                      {configuration.category || 'Untitled category'}
+                      {(configuration.difficulty && configuration.difficulty !== 'Any') || configuration.pattern ? (
+                        <span className="ml-2 text-[10px] font-medium text-black/45 dark:text-white/45">
+                          {[configuration.difficulty !== 'Any' ? configuration.difficulty : '', configuration.pattern].filter(Boolean).join(' · ')}
+                        </span>
+                      ) : null}
+                    </span>
                     <span className="font-bold text-slate-900 dark:text-white">{formatQuestionCount(configuration.questionCount)}</span>
                   </div>
                 ))}
@@ -365,7 +376,7 @@ export default function ProgramBlueprintsPanel({ programId, programType, onCount
 
                   <div className="space-y-2">
                     {form.configurations.map((configuration, index) => (
-                      <div key={`configuration-${index}`} className="grid grid-cols-[minmax(0,1fr)_100px_32px] items-end gap-2">
+                      <div key={`configuration-${index}`} className="grid grid-cols-1 items-end gap-2 sm:grid-cols-[minmax(0,1fr)_100px_120px_minmax(0,1fr)_32px]">
                         <label className="block min-w-0">
                           <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Category</span>
                           <div className="relative">
@@ -383,6 +394,19 @@ export default function ProgramBlueprintsPanel({ programId, programType, onCount
                         <label className="block">
                           <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Count</span>
                           <input type="number" min="1" step="1" value={configuration.questionCount} onChange={(event) => handleConfigurationChange(index, 'questionCount', event.target.value)} className={inputClass} />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Difficulty</span>
+                          <select value={configuration.difficulty || 'Any'} onChange={(event) => handleConfigurationChange(index, 'difficulty', event.target.value)} className={selectClass}>
+                            <option className={dropdownOptionClass} value="Any">Any</option>
+                            <option className={dropdownOptionClass} value="Easy">Easy</option>
+                            <option className={dropdownOptionClass} value="Medium">Medium</option>
+                            <option className={dropdownOptionClass} value="Hard">Hard</option>
+                          </select>
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Pattern (optional)</span>
+                          <input value={configuration.pattern || ''} onChange={(event) => handleConfigurationChange(index, 'pattern', event.target.value)} placeholder="e.g. arrays" className={inputClass} />
                         </label>
                         <button type="button" onClick={() => handleRemoveConfiguration(index)} disabled={form.configurations.length === 1} className="mb-0.5 flex h-10 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30 dark:text-red-400 dark:hover:bg-red-500/10" title="Remove row">
                           <FiTrash2 className="h-3.5 w-3.5" />

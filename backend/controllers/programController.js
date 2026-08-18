@@ -3,6 +3,7 @@ import Program from "../models/Program.js";
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import User from "../models/User.js";
 import Student from "../models/Student.js";
+import Blueprint from "../models/Blueprint.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
 import { expireAllActiveBatches } from "../utils/batchLifecycle.js";
 
@@ -91,6 +92,42 @@ export const getAssignedPrograms = async (req, res) => {
   } catch (error) {
     console.error("Error fetching assigned programs:", error);
     res.status(500).json({ success: false, message: error.message || "Failed to fetch assigned programs" });
+  }
+};
+
+/**
+ * GET /api/programs/readiness-options
+ * Return public Placement programs that have an active Day 0 Blueprint.
+ */
+export const getReadinessOptions = async (req, res) => {
+  try {
+    const programs = await Program.find({
+      programType: "Placement",
+      status: "Active",
+      visibility: "Public",
+    })
+      .select("_id name description programType duration durationDays phases targetRoles targetCompanies")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (!programs.length) return res.json({ success: true, programs: [] });
+
+    const configuredIds = await Blueprint.find({
+      programId: { $in: programs.map((program) => program._id) },
+      blueprintType: "day_0_readiness",
+      status: "Active",
+    }).distinct("programId");
+    const configured = new Set(configuredIds.map((id) => String(id)));
+
+    return res.json({
+      success: true,
+      programs: programs
+        .filter((program) => configured.has(String(program._id)))
+        .map((program) => ({ ...program, readinessAvailable: true })),
+    });
+  } catch (error) {
+    console.error("Error fetching readiness options:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch readiness options." });
   }
 };
 

@@ -41,6 +41,10 @@ const resolveConfigurations = async (rawConfigurations) => {
   const normalized = rawConfigurations.map((configuration) => ({
     categoryId: configuration?.categoryId,
     questionCount: Number(configuration?.questionCount),
+    difficulty: ["Any", "Easy", "Medium", "Hard"].includes(configuration?.difficulty)
+      ? configuration.difficulty
+      : "Any",
+    pattern: String(configuration?.pattern || "").trim(),
   }));
 
   if (normalized.some((configuration) => !isValidObjectId(configuration.categoryId))) {
@@ -74,6 +78,8 @@ const resolveConfigurations = async (rawConfigurations) => {
       categoryId: configuration.categoryId,
       category: categoryById.get(String(configuration.categoryId)).title,
       questionCount: configuration.questionCount,
+      difficulty: configuration.difficulty,
+      pattern: configuration.pattern,
     })),
   };
 };
