@@ -12,6 +12,7 @@ import TrackTemplate from "../../models/TrackTemplate.js";
 import Resource from "../../models/Resource.js";
 import AdminNotification from "../../models/AdminNotification.js";
 import IssuedCertificate from "../../models/IssuedCertificate.js";
+import { expireAllActiveBatches } from "../../utils/batchLifecycle.js";
 
 export const QUESTION_CATEGORY_META = {
   "data-structures-algorithms": {
@@ -214,6 +215,7 @@ export const getActorName = (user) => {
 };
 
 export const computeAdminMetrics = async () => {
+  await expireAllActiveBatches();
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);

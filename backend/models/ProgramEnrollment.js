@@ -12,7 +12,6 @@ const programEnrollmentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Student",
       required: true,
-      index: true,
     },
     programId: {
       type: mongoose.Schema.Types.ObjectId,

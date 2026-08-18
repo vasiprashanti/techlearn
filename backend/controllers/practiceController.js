@@ -146,6 +146,9 @@ export const listPracticeQuestions = async (req, res) => {
     const schedule = student
       ? await resolveProgramSchedule({ user: req.user, student })
       : null;
+    if (schedule?.batchExpired) {
+      return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+    }
     const studentBatchId = schedule?.batchId || null;
 
     // 1. Fetch categories marked "Practice" or "Both" matching batch or global
@@ -203,6 +206,19 @@ export const recordPracticeSubmission = async (req, res) => {
 
     if (!TRACKS.includes(track)) {
       return res.status(400).json({ success: false, message: "track must be one of DSA, Core CS, SQL, Aptitude, or Company Based." });
+    }
+
+    const practiceStudent = await Student.findOne({
+      $or: [
+        ...(req.user?.email ? [{ email: String(req.user.email).trim().toLowerCase() }] : []),
+        ...(req.user?._id ? [{ userId: req.user._id }] : []),
+      ],
+    }).lean();
+    if (practiceStudent) {
+      const schedule = await resolveProgramSchedule({ user: req.user, student: practiceStudent });
+      if (schedule.batchExpired) {
+        return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+      }
     }
 
     const source = ["track_template", "daily_challenge"].includes(req.body.source)
@@ -444,6 +460,9 @@ export const recordPracticeSubmission = async (req, res) => {
       const student = await mongoose.model("Student").findOne({ email });
       if (student) {
         const schedule = await resolveProgramSchedule({ user: req.user, student });
+        if (schedule.batchExpired) {
+          return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+        }
         const batch = schedule.batchId
           ? await mongoose.model("Batch").findById(schedule.batchId)
           : null;
@@ -717,6 +736,9 @@ export const getPracticeStats = async (req, res) => {
     const schedule = student
       ? await resolveProgramSchedule({ user: req.user, student })
       : null;
+    if (schedule?.batchExpired) {
+      return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+    }
     const studentBatchId = schedule?.batchId || null;
 
     const Category = mongoose.model("Category");
@@ -811,6 +833,9 @@ export const listPracticeCategoriesForStudent = async (req, res) => {
     const schedule = student
       ? await resolveProgramSchedule({ user: req.user, student })
       : null;
+    if (schedule?.batchExpired) {
+      return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+    }
     const studentBatchId = schedule?.batchId || null;
 
     const Category = mongoose.model("Category");

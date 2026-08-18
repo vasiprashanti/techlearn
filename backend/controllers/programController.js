@@ -4,6 +4,7 @@ import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import User from "../models/User.js";
 import Student from "../models/Student.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
+import { expireAllActiveBatches } from "../utils/batchLifecycle.js";
 
 /**
  * GET /api/programs/assigned
@@ -11,6 +12,7 @@ import { invalidateDashboardCache } from "./dashboardController.js";
  */
 export const getAssignedPrograms = async (req, res) => {
   try {
+    await expireAllActiveBatches();
     const userId = req.user._id;
 
     // Find all active enrollment records for this user
@@ -97,6 +99,7 @@ export const getAssignedPrograms = async (req, res) => {
  */
 export const selectActiveProgram = async (req, res) => {
   try {
+    await expireAllActiveBatches();
     const userId = req.user._id;
     const { programId } = req.body;
 
@@ -151,6 +154,8 @@ export const getProgramDetailForStudent = async (req, res) => {
   try {
     const userId = req.user._id;
     const { programId } = req.params;
+
+    await expireAllActiveBatches();
 
     if (!mongoose.Types.ObjectId.isValid(programId)) {
       return res.status(400).json({ success: false, message: "Invalid program ID" });

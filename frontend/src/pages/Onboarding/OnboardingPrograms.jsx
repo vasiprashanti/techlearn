@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Target, ArrowDown, ShieldCheck, Check } from 'lucide-react';
+import { Sparkles, Target, ArrowDown, ShieldCheck, Check, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
+import { useTheme } from '../../context/ThemeContext';
 import API from '../../api/client';
+import { initiateRazorpayPayment } from '../../utils/razorpayCheckout';
+import PricingExitFeedbackModal from '../../components/PricingExitFeedbackModal';
 
 export default function OnboardingPrograms() {
   const navigate = useNavigate();
@@ -13,9 +16,13 @@ export default function OnboardingPrograms() {
 
   const { user: authUser } = useAuth();
   const { user: contextUser, refetchUserData } = useUser();
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
 
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isSkillReturningUser, setIsSkillReturningUser] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
 
   const storedUserData = (() => {
     try {
@@ -43,50 +50,66 @@ export default function OnboardingPrograms() {
   const selectedSkill = userSkills[0];
   const displaySkills = userSkills.join(', ');
 
-  const handleSelectPlan = async (planId) => {
+  // Fetch Skill eligibility from backend on mount
+  useEffect(() => {
+    let isMounted = true;
+    const checkEligibility = async () => {
+      try {
+        const res = await API.get('/api/payments/eligibility?programType=Skill');
+        if (isMounted && res.data?.success) {
+          setIsSkillReturningUser(!!res.data.isReturningUser);
+        }
+      } catch (err) {
+        console.error('Error fetching payment eligibility:', err);
+      }
+    };
+    checkEligibility();
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleEnrollNow = async (planId) => {
+    if (loading) return;
     setSelectedPlanId(planId);
     setLoading(true);
 
-    try {
-      await API.post('/api/users/update-program-tier', {
-        planId,
-        learningGoal: goal,
-        targetRole,
-        selectedSkill,
-      }).catch(() => {});
+    initiateRazorpayPayment({
+      planId,
+      programId: currentUser?.programId || null,
+      user: currentUser,
+      onSuccess: async (resData) => {
+        console.log('Payment successful & verified:', resData);
+        try {
+          await API.post('/api/users/update-program-tier', {
+            planId,
+            learningGoal: goal,
+            targetRole,
+            selectedSkill,
+          }).catch(() => {});
 
-      if (typeof refetchUserData === 'function') {
-        await refetchUserData();
-      }
-
-      navigate('/dashboard');
-    } catch (err) {
-      console.error('Error updating program tier:', err);
-      navigate('/dashboard');
-    } finally {
-      setLoading(false);
-    }
+          if (typeof refetchUserData === 'function') {
+            await refetchUserData();
+          }
+        } catch (err) {
+          console.error('Post-payment sync error:', err);
+        } finally {
+          setLoading(false);
+          navigate('/dashboard');
+        }
+      },
+      onFailure: (error) => {
+        console.error('Payment failed or error:', error);
+        alert(error.message || 'Payment processing failed. Please try again.');
+        setLoading(false);
+      },
+      onCancel: () => {
+        console.log('User cancelled checkout modal');
+        setLoading(false);
+      },
+    });
   };
 
+  // Placement Plans: ONLY ₹799 and ₹999 cards (No Free/₹0 card)
   const placementPlans = [
-    {
-      id: 'placement_free_trial',
-      title: 'Free Trial',
-      price: '₹0',
-      subtitle: '5 Days Free Access',
-      badge: 'EXPLORE PLATFORM',
-      highlight: false,
-      icon: Sparkles,
-      color: 'border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-[#0e1a30]/80 shadow-md',
-      btnStyle: 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700',
-      features: [
-        '5 days free access',
-        'Limited access to placement experience',
-        'Preview learning roadmap & curriculum',
-        'Explore daily learning platform content',
-        `Personalized for ${targetRole}`
-      ],
-    },
     {
       id: 'placement_season_pass',
       title: 'Placement Season Pass',
@@ -105,6 +128,7 @@ export default function OnboardingPrograms() {
         'Company-wise interview preparation',
         'Placement readiness & mock prep'
       ],
+      refundNotice: 'Cancel anytime. Get refunded if you cancel within 5 days.',
     },
     {
       id: 'placement_season_pass_pro',
@@ -124,65 +148,30 @@ export default function OnboardingPrograms() {
         'Company-wise preparation & assessments',
         'Longer period to prepare post-program'
       ],
+      refundNotice: 'Cancel anytime. Get refunded if you cancel within 5 days.',
     }
   ];
 
+  // Skill Plans: Server eligibility determines whether user pays ₹499 or ₹199
   const skillPlans = [
     {
-      id: 'skill_free',
-      title: 'Free',
-      price: '₹0',
-      subtitle: 'Basic Skill Learning',
-      badge: 'STARTER',
-      highlight: false,
-      icon: Sparkles,
-      color: 'border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-[#0e1a30]/80 shadow-md',
-      btnStyle: 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700',
-      features: [
-        `Access to selected ${displaySkills} course(s)`,
-        'Day-wise learning materials',
-        'Notes released progressively',
-        'Practice questions available directly on dashboard',
-        'No tasks or challenges'
-      ],
-    },
-    {
-      id: 'skill_program',
-      title: 'Skill Program',
-      price: '₹499',
-      subtitle: 'Full 30-Day Program',
-      badge: 'RECOMMENDED',
+      id: isSkillReturningUser ? 'skill_membership' : 'skill_program',
+      title: isSkillReturningUser ? 'Returning Paid User' : 'First-Time Paid User',
+      price: isSkillReturningUser ? '₹199' : '₹499',
+      subtitle: '30 Days Access',
+      badge: isSkillReturningUser ? 'RETURNING OFFER' : '30-DAY ACCESS',
       highlight: true,
       icon: Sparkles,
       color: 'border-[#a3e635] bg-[#f7fee7]/60 dark:bg-[#1a2e05]/40 shadow-xl shadow-[#a3e635]/15 ring-2 ring-[#a3e635]',
       btnStyle: 'bg-[#a3e635] text-black font-extrabold hover:bg-[#86efac] shadow-lg shadow-[#a3e635]/25',
       features: [
         `Full 30-Day ${displaySkills} Program`,
-        'Complete learning roadmap',
-        'Day-wise notes & course content',
-        'Comprehensive practice questions',
+        'Complete learning roadmap & course content',
         'Daily tasks & coding challenges',
-        'Structured progression through program'
+        'Practice questions & notes',
+        isSkillReturningUser ? 'Discounted returning learner price (₹199)' : 'First-time paid learner access (₹499)',
       ],
-    },
-    {
-      id: 'skill_membership',
-      title: 'Membership',
-      price: '₹199',
-      billing: '/month',
-      subtitle: 'Recurring Access',
-      badge: 'ADDITIONAL SKILLS',
-      highlight: false,
-      icon: Sparkles,
-      color: 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/30 shadow-xl shadow-blue-500/10',
-      btnStyle: 'bg-[#3c83f6] text-white font-extrabold hover:bg-blue-600 shadow-lg shadow-blue-500/25',
-      features: [
-        'Available after purchasing a ₹499 Skill Program',
-        `Access multiple skill programs (${displaySkills}, and more)`,
-        'Monthly recurring subscription',
-        'Full access to tasks, challenges & notes',
-        'Continuous skill expansion'
-      ],
+      refundNotice: null,
     }
   ];
 
@@ -197,7 +186,11 @@ export default function OnboardingPrograms() {
   };
 
   return (
-    <div className="relative isolate min-h-screen bg-[#f8fafc] dark:bg-[#060d1a] text-[#0f172a] dark:text-[#f1f5f9] font-sans selection:bg-[#3c83f6]/20">
+    <div className={`relative isolate min-h-screen overflow-x-clip font-sans antialiased text-[#00113b] dark:text-[#8fd9ff] selection:bg-[#3c83f6]/20 ${
+      isDarkMode 
+        ? "dark bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" 
+        : "light bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"
+    }`}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         .ob-pixel-heading {
@@ -205,22 +198,44 @@ export default function OnboardingPrograms() {
         }
       `}</style>
 
-      {/* Global Ambient Background Glow spanning whole page uniformly */}
+      {/* Global Ambient Background Glow */}
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent dark:from-blue-600/15"
       />
 
-      {/* VIEWPORT 1: HERO SECTION - TAKES EXACT FULL VIEWPORT HEIGHT */}
-      <section className="relative w-full min-h-[calc(100vh-64px)] flex flex-col justify-center items-center px-4 py-6">
+      {/* Exit Feedback Modal */}
+      <PricingExitFeedbackModal
+        isOpen={showExitModal}
+        onClose={() => setShowExitModal(false)}
+        onSubmitted={() => navigate(-1)}
+        programId={currentUser?.programId}
+        selectedPlan={selectedPlanId}
+      />
+
+      {/* HERO SECTION */}
+      <section className="relative w-full min-h-[calc(100vh-64px)] flex flex-col items-center px-4 sm:px-6 pt-16 sm:pt-20 pb-12">
+        {/* Top-Anchored Back Button Container */}
+        <div className="w-full max-w-6xl mx-auto mt-3 sm:mt-4 mb-2 sm:mb-4 flex items-center justify-start">
+          <button
+            type="button"
+            onClick={() => setShowExitModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/90 dark:bg-[#0e1a30]/90 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs font-extrabold shadow-md cursor-pointer z-20"
+          >
+            <svg className="w-4 h-4 text-[#3c83f6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span>Back</span>
+          </button>
+        </div>
+
         <div className="mx-auto flex max-w-3xl flex-col items-center px-6 text-center">
           
-          {/* Target Role / Selected Skill Tag Badge */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="inline-flex items-center gap-2 rounded-full border border-blue-500/15 bg-white dark:bg-[#0e1a30] px-4 py-2 text-sm shadow-sm"
+            className="inline-flex items-center gap-2 rounded-full border border-blue-500/15 bg-white/80 dark:bg-[#0e1a30]/80 backdrop-blur-sm px-4 py-2 text-sm shadow-sm"
           >
             <Target className="h-4 w-4 text-[#3c83f6]" aria-hidden />
             <span className="text-slate-500 dark:text-slate-400">
@@ -231,7 +246,6 @@ export default function OnboardingPrograms() {
             </span>
           </motion.div>
 
-          {/* Two-Line Title */}
           <motion.h1
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
@@ -239,29 +253,27 @@ export default function OnboardingPrograms() {
             className="ob-pixel-heading mt-8 flex flex-col items-center gap-2.5 text-[clamp(1.15rem,4.2vw,2.2rem)] leading-[1.4] bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] bg-clip-text text-transparent uppercase tracking-wider"
           >
             <span>{isPlacement ? 'PLACEMENT PROGRAM' : 'SKILL PROGRAM'}</span>
-            <span>TIERS</span>
+            <span>PRICING</span>
           </motion.h1>
 
-          {/* Subtitle */}
           <motion.p
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-6 max-w-xl text-base leading-relaxed text-slate-600 dark:text-slate-300 sm:text-lg"
+            className="mt-6 max-w-xl text-base leading-relaxed text-slate-700 dark:text-slate-300 sm:text-lg"
           >
             Based on your onboarding preferences, we matched you with the following learning
-            programs. Choose a program to start your journey.
+            programs. Choose your plan to complete enrollment.
           </motion.p>
 
-          {/* Personalization Info Card */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="mt-8 flex w-full max-w-xl items-start gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0e1a30] p-5 text-left shadow-md backdrop-blur-sm"
+            className="mt-8 flex w-full max-w-xl items-start gap-3 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-[#0e1a30]/80 p-5 text-left shadow-md backdrop-blur-sm"
           >
             <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" aria-hidden />
-            <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
               {isPlacement ? (
                 <>
                   Your selected target role (
@@ -278,7 +290,6 @@ export default function OnboardingPrograms() {
             </p>
           </motion.div>
 
-          {/* Check Pricing Button (Green Neon Style with Press Start 2P Font) */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
@@ -298,35 +309,31 @@ export default function OnboardingPrograms() {
         </div>
       </section>
 
-
-      {/* VIEWPORT 2: PRICING PLANS SECTION (100% SEAMLESS BACKGROUND) */}
+      {/* PRICING PLANS SECTION */}
       <section id="pricing" className="min-h-screen w-full flex flex-col justify-center items-center px-4 py-12 sm:py-16">
-        <div className="max-w-6xl mx-auto w-full space-y-6">
+        <div className="max-w-5xl mx-auto w-full space-y-6">
           
           <div className="text-center space-y-1.5">
-            <span className="inline-block text-[11px] font-extrabold uppercase tracking-widest text-[#3c83f6]">
-              Flexible Options
-            </span>
             <h2 className="ob-pixel-heading text-base sm:text-lg uppercase tracking-wider text-slate-900 dark:text-white">
-              Choose Your Access Pass
+              Choose Your Plan
             </h2>
             <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xl mx-auto">
-              Select the plan duration that fits your schedule. Upgrades and extensions are always available.
+              Select the plan that fits your preparation goals. Upgrades are available anytime.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-1">
+          <div className={`grid grid-cols-1 ${plans.length > 1 ? 'md:grid-cols-2 max-w-4xl mx-auto' : 'max-w-md mx-auto'} gap-6 pt-2`}>
             {plans.map((plan) => {
               const isSelected = selectedPlanId === plan.id;
 
               return (
                 <div
                   key={plan.id}
-                  className={`relative flex flex-col justify-between rounded-3xl p-5 sm:p-6 border transition-all duration-300 ${plan.color}`}
+                  className={`relative flex flex-col justify-between rounded-3xl p-6 sm:p-7 border transition-all duration-300 ${plan.color}`}
                 >
                   {plan.badge && (
-                    <div className="absolute -top-3 right-5">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-widest shadow-sm ${
+                    <div className="absolute -top-3.5 right-6">
+                      <span className={`px-3 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-widest shadow-sm ${
                         plan.highlight
                           ? 'bg-[#a3e635] text-black'
                           : 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
@@ -336,9 +343,9 @@ export default function OnboardingPrograms() {
                     </div>
                   )}
 
-                  <div className="space-y-3">
-                    <div className="space-y-0.5">
-                      <h3 className="font-extrabold text-slate-900 dark:text-white text-base">
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <h3 className="font-extrabold text-slate-900 dark:text-white text-lg">
                         {plan.title}
                       </h3>
                       <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -346,18 +353,13 @@ export default function OnboardingPrograms() {
                       </p>
                     </div>
 
-                    <div className="py-1.5 border-y border-slate-200/80 dark:border-slate-800 flex items-baseline gap-1">
-                      <span className="text-3xl font-black text-slate-900 dark:text-white">
+                    <div className="py-2 border-y border-slate-200/80 dark:border-slate-800 flex items-baseline gap-1">
+                      <span className="text-4xl font-black text-slate-900 dark:text-white">
                         {plan.price}
                       </span>
-                      {plan.billing && (
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                          {plan.billing}
-                        </span>
-                      )}
                     </div>
 
-                    <ul className="space-y-2 pt-1">
+                    <ul className="space-y-2.5 pt-1">
                       {plan.features.map((feat, i) => (
                         <li key={i} className="flex items-start gap-2.5 text-xs text-slate-600 dark:text-slate-300">
                           <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
@@ -367,15 +369,28 @@ export default function OnboardingPrograms() {
                     </ul>
                   </div>
 
-                  <div className="pt-5">
+                  <div className="pt-6 space-y-3 text-center">
                     <button
                       type="button"
                       disabled={loading}
-                      onClick={() => handleSelectPlan(plan.id)}
-                      className={`w-full py-3 px-4 rounded-xl text-xs uppercase font-extrabold tracking-wider transition-all duration-200 ${plan.btnStyle} disabled:opacity-50 cursor-pointer`}
+                      onClick={() => handleEnrollNow(plan.id)}
+                      className={`w-full py-3.5 px-4 rounded-xl text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-200 ${plan.btnStyle} disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 ob-pixel-heading font-normal`}
                     >
-                      {loading && isSelected ? 'Processing...' : isSelected ? 'Current Plan' : 'Select Plan'}
+                      {loading && isSelected ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>PROCESSING...</span>
+                        </>
+                      ) : (
+                        <span>ENROLL NOW</span>
+                      )}
                     </button>
+
+                    {plan.refundNotice && (
+                      <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-snug">
+                        {plan.refundNotice}
+                      </p>
+                    )}
                   </div>
                 </div>
               );

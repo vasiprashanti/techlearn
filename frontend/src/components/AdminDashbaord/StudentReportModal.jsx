@@ -334,7 +334,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
 
               {/* Sub-tabs selection row */}
               <div className="flex -mb-3 pt-1 overflow-x-auto minimal-scrollbar gap-1">
-                {['Overview', 'Day-wise Report', 'Coding Submissions', 'MCQ Summary', 'Day-wise Performance'].map(tab => (
+                {['Overview', 'Profile', 'Day-wise Report', 'Coding Submissions', 'MCQ Summary', 'Day-wise Performance'].map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -401,6 +401,115 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                           </div>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB: PROFILE */}
+              {activeTab === 'Profile' && (
+                <div className="space-y-6 text-xs">
+                  {/* Account Section */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">Account Profile</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Full Name</span>
+                        <span className="font-semibold text-sm mt-0.5 block truncate">{studentDetails?.userProfile?.name || name}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Email Address</span>
+                        <span className="font-semibold text-sm mt-0.5 block truncate">{studentDetails?.userProfile?.email || email}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Account Role</span>
+                        <span className="font-semibold text-sm mt-0.5 block capitalize">{studentDetails?.userProfile?.role || 'user'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Education Section */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">Education Details</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">College</span>
+                        <span className="font-semibold mt-0.5 block truncate">{studentDetails?.userProfile?.college || college}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Degree</span>
+                        <span className="font-semibold mt-0.5 block truncate">{studentDetails?.userProfile?.degree || 'Not specified'}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Branch / Stream</span>
+                        <span className="font-semibold mt-0.5 block truncate">{studentDetails?.userProfile?.branch || 'Not specified'}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Graduation Year</span>
+                        <span className="font-semibold mt-0.5 block">{studentDetails?.userProfile?.graduationYear || 'Not specified'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Enrollment Section */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">Enrollment Info</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Batch</span>
+                        <span className="font-semibold mt-0.5 block">{studentDetails?.userProfile?.batch || batch}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Program</span>
+                        <span className="font-bold text-blue-600 dark:text-blue-400 mt-0.5 block">{studentDetails?.userProfile?.program || track}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Placement Goals Section */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">Goals & Preferences</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Learning Goal</span>
+                        <span className="font-semibold mt-0.5 block">{studentDetails?.userProfile?.learningGoal || 'Not specified'}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Target Role</span>
+                        <span className="font-semibold mt-0.5 block">{studentDetails?.userProfile?.targetRole || studentDetails?.userProfile?.otherTargetRole || 'Not specified'}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Opportunity Type</span>
+                        <span className="font-semibold mt-0.5 block">{studentDetails?.userProfile?.placementCategory || 'Not specified'}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Placement Timeline</span>
+                        <span className="font-semibold mt-0.5 block">{studentDetails?.userProfile?.placementTimeline || 'Not specified'}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5 sm:col-span-2">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Selected Companies</span>
+                        <span className="font-semibold mt-0.5 block">
+                          {Array.isArray(studentDetails?.userProfile?.targetCompanies) && studentDetails.userProfile.targetCompanies.length > 0
+                            ? studentDetails.userProfile.targetCompanies.join(', ')
+                            : 'None selected'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Skills & Interests Section */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">Skills & Interests</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {Array.isArray(studentDetails?.userProfile?.skills) && studentDetails.userProfile.skills.length > 0 ? (
+                        studentDetails.userProfile.skills.map((s, i) => (
+                          <span key={i} className="inline-flex rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs px-3 py-1 font-semibold">
+                            {s}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs italic text-slate-400">No skills selected</span>
+                      )}
                     </div>
                   </div>
                 </div>

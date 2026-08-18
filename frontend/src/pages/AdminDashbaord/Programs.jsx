@@ -592,45 +592,37 @@ export default function Programs() {
             <h1 className="admin-page-title">Programs</h1>
           </div>
 
-          {/* Stat Cards — identical to Question Bank */}
+          {/* Stat Cards — match the Program Details layout */}
           <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 w-full">
-            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-3.5 sm:px-4 py-3 flex items-center gap-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
-              <div className="w-9 h-9 rounded-xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center shrink-0">
-                <FiFolder className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-black/40 dark:text-white/40">Total Programs</p>
-                <p className="mt-0.5 text-lg sm:text-2xl font-semibold tracking-tight leading-none text-[#3C83F6] dark:text-[#bceaff]">{pagination.total || programs.length}</p>
+            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-4 py-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
+              <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{pagination.total || programs.length}</p>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">Total Programs</span>
+                <FiFolder className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
               </div>
             </article>
 
-            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-3.5 sm:px-4 py-3 flex items-center gap-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <FiCheckSquare className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-black/40 dark:text-white/40">Active Programs</p>
-                <p className="mt-0.5 text-lg sm:text-2xl font-semibold tracking-tight leading-none text-[#3C83F6] dark:text-[#bceaff]">{activeCount}</p>
+            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-4 py-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
+              <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{activeCount}</p>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">Active Programs</span>
+                <FiCheckSquare className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
               </div>
             </article>
 
-            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-3.5 sm:px-4 py-3 flex items-center gap-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0">
-                <FiGrid className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-black/40 dark:text-white/40">Draft Programs</p>
-                <p className="mt-0.5 text-lg sm:text-2xl font-semibold tracking-tight leading-none text-[#3C83F6] dark:text-[#bceaff]">{draftCount}</p>
+            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-4 py-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
+              <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{draftCount}</p>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">Draft Programs</span>
+                <FiGrid className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
               </div>
             </article>
 
-            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-3.5 sm:px-4 py-3 flex items-center gap-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
-              <div className="w-9 h-9 rounded-xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center shrink-0">
-                <FiUsers className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-black/40 dark:text-white/40">Total Students</p>
-                <p className="mt-0.5 text-lg sm:text-2xl font-semibold tracking-tight leading-none text-[#3C83F6] dark:text-[#bceaff]">{totalStudents}</p>
+            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-4 py-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
+              <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{totalStudents}</p>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">Total Students</span>
+                <FiUsers className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
               </div>
             </article>
           </section>

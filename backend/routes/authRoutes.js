@@ -13,6 +13,7 @@ import { syncProgramEnrollment } from "../utils/programEnrollment.js";
 import { resolveProgramSchedule } from "../utils/programSchedule.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { isAdminIdentity } from "../utils/adminAccess.js";
+import { registerUser } from "../controllers/userController.js";
 
 const router = express.Router();
 const client = new OAuth2Client();
@@ -28,22 +29,35 @@ const normalizeEmail = (email = "") => String(email).trim().toLowerCase();
 const mapUserToStudentCohort = async (user) => {
   if (!user?.email) return { user, student: null, batch: null, schedule: null };
 
-  const student = await Student.findOne({ email: normalizeEmail(user.email) });
+  const student = await Student.findOne({ email: normalizeEmail(user.email) }).populate("collegeId", "name").populate("batchId", "name");
   if (!student) return { user, student: null, batch: null, schedule: null };
 
-  const batch = await Batch.findById(student.batchId).lean();
+  const batch = (student.batchId && typeof student.batchId === "object" && student.batchId._id) ? student.batchId : (await Batch.findById(student.batchId).lean());
   if (student.batchId && !batch) {
     console.warn(`Warning: Batch ID ${student.batchId} not found for student ${student.email}`);
   }
 
-  let changed = false;
+  let studentChanged = false;
   if (!student.userId || String(student.userId) !== String(user._id)) {
     student.userId = user._id;
+    studentChanged = true;
+  }
+  if (user.batchId && String(student.batchId?._id || student.batchId) !== String(user.batchId)) {
+    student.batchId = user.batchId;
+    studentChanged = true;
+  }
+  if (user.onboardingCompleted && !student.onboardingCompleted) {
+    student.onboardingCompleted = true;
+    student.onboardingCompletedAt = user.onboardingCompletedAt || new Date();
+    studentChanged = true;
+  }
+  if (studentChanged) {
     await student.save();
   }
 
-  if (!user.batchId || String(user.batchId) !== String(student.batchId)) {
-    user.batchId = student.batchId;
+  let changed = false;
+  if (!user.batchId || String(user.batchId) !== String(student.batchId?._id || student.batchId)) {
+    user.batchId = student.batchId?._id || student.batchId;
     changed = true;
   }
 
@@ -61,6 +75,16 @@ const mapUserToStudentCohort = async (user) => {
     changed = true;
   }
 
+  // Pre-fill user college and degree from imported student if missing on user
+  if (!user.collegeName && student.collegeId?.name) {
+    user.collegeName = student.collegeId.name;
+    changed = true;
+  }
+  if (!user.degree && student.degree) {
+    user.degree = student.degree;
+    changed = true;
+  }
+
   if (changed) {
     await user.save();
   }
@@ -68,7 +92,7 @@ const mapUserToStudentCohort = async (user) => {
   await syncProgramEnrollment({
     user,
     student,
-    batchId: schedule?.scheduleType === "batch" ? schedule.batchId : null,
+    batchId: schedule?.scheduleType === "batch" ? (schedule.batchId || student.batchId?._id || student.batchId) : null,
     programId: student.programId || user.programId,
     programSelection: student.programSelection || user.programSelection,
   });
@@ -76,31 +100,43 @@ const mapUserToStudentCohort = async (user) => {
   return { user, student, batch, schedule };
 };
 
-const formatAuthUser = (user, student = null, batch = null, schedule = null) => ({
-  id: user._id,
-  firstName: user.firstName,
-  lastName: user.lastName,
-  email: user.email,
-  photoUrl: user.photoUrl || "",
-  role: user.role,
-  isClub: user.isClub,
-  // When a schedule was resolved, its nullable batchId is authoritative.
-  // Do not leak a legacy Student/User batch pointer for an explicit
-  // individual enrollment.
-  batchId: schedule ? schedule.batchId || null : (user.batchId || student?.batchId || null),
-  startDate: schedule?.scheduleType === "batch"
-    ? batch?.startDate || user.startDate || null
-    : schedule?.individualStartDate || user.startDate || null,
-  programSelection: user.programSelection,
-  programId: user.programId || student?.programId || null,
-  scheduleType: schedule?.scheduleType || ((user.batchId || student?.batchId || batch?._id) ? "batch" : "individual"),
-  isEnrolledStudent: !!student || user.isClub || Boolean(user.batchId) || Boolean(schedule?.programId),
-  targetRole: user.targetRole || student?.targetRole || "",
-  learningGoal: user.learningGoal || student?.learningGoal || "",
-});
+const formatAuthUser = (user, student = null, batch = null, schedule = null) => {
+  const isProfileComplete = Boolean(
+    user.onboardingCompleted ||
+    student?.onboardingCompleted
+  );
 
-
-import { registerUser } from "../controllers/userController.js";
+  return {
+    id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    photoUrl: user.photoUrl || "",
+    role: user.role,
+    isClub: user.isClub,
+    batchId: schedule ? schedule.batchId || null : (user.batchId || student?.batchId?._id || student?.batchId || null),
+    startDate: schedule?.scheduleType === "batch"
+      ? batch?.startDate || user.startDate || null
+      : schedule?.individualStartDate || user.startDate || null,
+    programSelection: user.programSelection,
+    programId: user.programId || student?.programId || null,
+    scheduleType: schedule?.scheduleType || ((user.batchId || student?.batchId || batch?._id) ? "batch" : "individual"),
+    isEnrolledStudent: !!student || user.isClub || Boolean(user.batchId) || Boolean(schedule?.programId),
+    targetRole: user.targetRole || student?.targetRole || "",
+    otherTargetRole: user.otherTargetRole || student?.otherTargetRole || "",
+    learningGoal: user.learningGoal || student?.learningGoal || "",
+    collegeName: user.collegeName || (student?.collegeId && typeof student.collegeId === 'object' ? student.collegeId.name : "") || "",
+    degree: user.degree || student?.degree || "",
+    branch: user.branch || student?.branch || "",
+    graduationYear: user.graduationYear || student?.graduationYear || null,
+    placementCategory: user.placementCategory || student?.placementCategory || "",
+    targetCompanies: user.targetCompanies?.length ? user.targetCompanies : (student?.targetCompanies || []),
+    placementTimeline: user.placementTimeline || student?.placementTimeline || "",
+    skills: user.skills?.length ? user.skills : (student?.skills || []),
+    onboardingCompleted: isProfileComplete,
+    onboardingCompletedAt: user.onboardingCompletedAt || student?.onboardingCompletedAt || (isProfileComplete ? user.updatedAt : null),
+  };
+};
 
 /* ========== REGISTER ========== */
 router.post("/register", registerUser);
@@ -116,7 +152,7 @@ router.post("/login", async function login(req, res) {
     }
 
     const formattedEmail = normalizeEmail(email);
-    const emailRegex = /^[\w.-]+@(gmail|outlook|yahoo)\.com$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formattedEmail)) {
       return res.status(400).json({ message: "Invalid email format" });
     }
@@ -164,7 +200,7 @@ router.post("/google-check", async function checkGoogleUser(req, res) {
     const formattedEmail = normalizeEmail(email);
     const user = await User.findOne({ email: formattedEmail });
 
-    if (user && user.collegeName) {
+    if (user) {
       const mapped = await mapUserToStudentCohort(user);
       const jwtToken = generateToken(mapped.user._id);
       return res.status(200).json({

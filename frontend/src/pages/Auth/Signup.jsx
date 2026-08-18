@@ -114,35 +114,106 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
         setEmail(userEmail);
         setFullName(userName);
 
+        let authPayload = null;
+        const rawBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const cleanBase = rawBase.replace(/\/+$/, '');
+        const apiBase = cleanBase.endsWith('/api') ? cleanBase : `${cleanBase}/api`;
+
         try {
           const idToken = await user.getIdToken();
-          const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/auth/firebase`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken })
-          });
-          const data = await response.json();
 
-          // Existing User Check -> Direct login to dashboard
-          if (response.ok && data.token && (data.isExisting || data.user?.isExisting)) {
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('userData', JSON.stringify(data.user));
-            if (setSession) setSession(data.user, data.token);
+          // Stage 1: Try /auth/firebase
+          try {
+            const resFirebase = await fetch(`${apiBase}/auth/firebase`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ idToken, email: userEmail })
+            });
+            if (resFirebase.ok) {
+              const resData = await resFirebase.json();
+              if (resData?.token && resData?.user) {
+                authPayload = resData;
+              }
+            }
+          } catch (e) {
+            console.warn('Firebase endpoint note:', e);
+          }
+
+          // Stage 2: Fallback to /auth/google-check if stage 1 did not return payload
+          if (!authPayload) {
+            try {
+              const resCheck = await fetch(`${apiBase}/auth/google-check`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: idToken, email: userEmail })
+              });
+              if (resCheck.ok) {
+                const checkData = await resCheck.json();
+                if (checkData?.token && checkData?.user) {
+                  authPayload = checkData;
+                }
+              }
+            } catch (e) {
+              console.warn('Google check note:', e);
+            }
+          }
+
+          // Stage 3: Fallback to /auth/google if stage 1 & 2 did not return payload
+          if (!authPayload) {
+            try {
+              const resGoogle = await fetch(`${apiBase}/auth/google`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: idToken, email: userEmail })
+              });
+              if (resGoogle.ok) {
+                const gData = await resGoogle.json();
+                if (gData?.token && gData?.user) {
+                  authPayload = gData;
+                }
+              }
+            } catch (e) {
+              console.warn('Google route note:', e);
+            }
+          }
+
+          // Handle returned authentication payload
+          if (authPayload && authPayload.user && authPayload.token) {
+            localStorage.setItem('token', authPayload.token);
+            localStorage.setItem('userData', JSON.stringify(authPayload.user));
+            if (setSession) setSession(authPayload.user, authPayload.token);
             if (refetchUserData) await refetchUserData();
-            handleClose();
-            navigateUserByProgram(data.user, navigate);
-            return;
-          } else if (response.ok && data.token) {
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('userData', JSON.stringify(data.user));
-            if (setSession) setSession(data.user, data.token);
-            if (refetchUserData) await refetchUserData();
+
+            if (authPayload.user?.onboardingCompleted) {
+              setLoading(false);
+              handleClose();
+              navigateUserByProgram(authPayload.user, navigate);
+              return;
+            } else {
+              // Pre-fill existing imported student or user information
+              if (authPayload.user?.collegeName) setCollege(authPayload.user.collegeName);
+              if (authPayload.user?.degree) setDegree(authPayload.user.degree);
+              if (authPayload.user?.branch) setBranch(authPayload.user.branch);
+              if (authPayload.user?.graduationYear) setGraduationYear(authPayload.user.graduationYear);
+              if (authPayload.user?.learningGoal) setGoal(authPayload.user.learningGoal);
+              if (authPayload.user?.targetRole) setTargetRole(authPayload.user.targetRole);
+              if (authPayload.user?.otherTargetRole) setTargetRoleOther(authPayload.user.otherTargetRole);
+              if (authPayload.user?.placementCategory) setPlacementCategory(authPayload.user.placementCategory);
+              if (authPayload.user?.targetCompanies?.length) setTargetCompanies(authPayload.user.targetCompanies);
+              if (authPayload.user?.placementTimeline) setPlacementTimeline(authPayload.user.placementTimeline);
+              if (authPayload.user?.skills?.length) setSkills(authPayload.user.skills);
+
+              setLoading(false);
+              triggerWelcomeScreen(fname);
+              return;
+            }
           }
         } catch (e) {
-          console.warn('Firebase backend note:', e);
+          console.warn('Google login verification note:', e);
         }
 
-        // New Google User -> Direct to welcome text card (skips password & email verification)
+        // Truly new user -> Direct to welcome text card
+        setLoading(false);
         triggerWelcomeScreen(fname);
       } catch (err) {
         console.error('Google Sign In Error:', err);
@@ -212,23 +283,29 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
           if (setSession) setSession(data.user, data.token);
           if (refetchUserData) refetchUserData();
 
-          // Only trigger onboarding if the user has NOT completed onboarding (missing targetRole and missing programId)
-          const hasCompletedOnboarding = Boolean(data.user?.targetRole || data.user?.programId);
-          if (!hasCompletedOnboarding && data.user?.isEnrolledStudent) {
-            setFullName(data.user.firstName || 'Student');
-            setEmail(data.user.email || '');
-            setIsEnrolledShortOnboarding(true);
-            setGoal('Get Placed');
-            setActiveStep(3);
-            setScreen('step-followup');
-            setLoading(false);
+          // Check persistent onboardingCompleted state
+          if (data.user?.onboardingCompleted) {
+            handleClose();
+            navigateUserByProgram(data.user, navigate);
+            return;
+          } else {
+            // Pre-fill existing user/imported student details into onboarding UI state
+            if (data.user?.collegeName) setCollege(data.user.collegeName);
+            if (data.user?.degree) setDegree(data.user.degree);
+            if (data.user?.branch) setBranch(data.user.branch);
+            if (data.user?.graduationYear) setGraduationYear(data.user.graduationYear);
+            if (data.user?.learningGoal) setGoal(data.user.learningGoal);
+            if (data.user?.targetRole) setTargetRole(data.user.targetRole);
+            if (data.user?.otherTargetRole) setTargetRoleOther(data.user.otherTargetRole);
+            if (data.user?.placementCategory) setPlacementCategory(data.user.placementCategory);
+            if (data.user?.targetCompanies?.length) setTargetCompanies(data.user.targetCompanies);
+            if (data.user?.placementTimeline) setPlacementTimeline(data.user.placementTimeline);
+            if (data.user?.skills?.length) setSkills(data.user.skills);
+
+            const fname = getFirstName(data.user?.firstName || fullName, data.user?.email || email);
+            triggerWelcomeScreen(fname);
             return;
           }
-
-          handleClose();
-          navigateUserByProgram(data.user, navigate);
-
-
         } else {
           setStatusMsg({ text: data.message || 'Invalid email or password.', type: 'error' });
         }
@@ -459,7 +536,7 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
     setStatusMsg({ text: '', type: '' });
 
     const finalCollege = college === 'Other' ? collegeOther : college;
-    const finalPassword = isGoogleAuth ? undefined : (password || "UserAuthAccount123!");
+    const finalPassword = isGoogleAuth ? "GoogleAuthNoPassword123!" : (password || "UserAuthAccount123!");
     const payload = {
       fullName,
       email,

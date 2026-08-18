@@ -127,6 +127,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    otherTargetRole: {
+      type: String,
+      default: "",
+    },
     placementCategory: {
       type: String,
       default: "",
@@ -143,12 +147,19 @@ const userSchema = new mongoose.Schema(
     },
     learningPath: {
       type: String,
-      enum: ["Free", "Member", ""],
       default: "",
     },
     personalizedDetail: {
       type: String,
       default: "",
+    },
+    onboardingCompleted: {
+      type: Boolean,
+      default: false,
+    },
+    onboardingCompletedAt: {
+      type: Date,
+      default: null,
     },
 
     resetPasswordToken: String,
@@ -161,6 +172,7 @@ const userSchema = new mongoose.Schema(
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   if (!this.password) return next();
+  if (this.password.startsWith("$2a$") || this.password.startsWith("$2b$") || this.password.startsWith("$2y$")) return next();
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });

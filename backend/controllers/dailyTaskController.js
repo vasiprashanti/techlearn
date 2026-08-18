@@ -76,6 +76,9 @@ export const getTodayDailyTasks = async (req, res) => {
     }
 
     const schedule = await resolveProgramSchedule({ user: req.user, student });
+    if (schedule.batchExpired) {
+      return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+    }
     const batch = schedule.batchId ? await Batch.findById(schedule.batchId) : null;
     if (schedule.batchId && !batch) {
       return res.status(403).json({ success: false, message: "The assigned batch could not be found." });
@@ -302,9 +305,15 @@ export const submitDailyTask = async (req, res) => {
     }
 
     const schedule = await resolveProgramSchedule({ user: req.user, student });
+    if (schedule.batchExpired) {
+      return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+    }
     const batch = schedule.batchId ? await Batch.findById(schedule.batchId) : null;
     if (schedule.batchId && !batch) {
       return res.status(403).json({ success: false, message: "The assigned batch could not be found." });
+    }
+    if (batch && batch.status !== BATCH_STATUS.ACTIVE) {
+      return res.status(403).json({ success: false, message: "This batch is currently not active." });
     }
 
     const trackTemplate = await resolveTrackTemplateForStudent(student, batch, schedule.programId);

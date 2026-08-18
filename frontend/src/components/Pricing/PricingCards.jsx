@@ -1,29 +1,57 @@
-import React from 'react';
-import { Check, Sparkles, Zap, Crown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Check, Sparkles, Zap, Crown, RefreshCw } from 'lucide-react';
+import API from '../../api/client';
+import { initiateRazorpayPayment } from '../../utils/razorpayCheckout';
 
-export default function PricingCards({ goal, selectedSkill, onSelectPlan, currentPlan, isBusy }) {
+export default function PricingCards({ goal, selectedSkill, onSelectPlan, currentPlan, isBusy, user }) {
   const isPlacement = goal === 'Get Placed' || !goal;
+  const [isSkillReturningUser, setIsSkillReturningUser] = useState(false);
+  const [loadingPlanId, setLoadingPlanId] = useState('');
 
-  // Placement Learners Cards
+  useEffect(() => {
+    let isMounted = true;
+    const checkEligibility = async () => {
+      try {
+        const res = await API.get('/api/payments/eligibility?programType=Skill');
+        if (isMounted && res.data?.success) {
+          setIsSkillReturningUser(!!res.data.isReturningUser);
+        }
+      } catch (err) {
+        console.error('Error fetching payment eligibility:', err);
+      }
+    };
+    checkEligibility();
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleEnroll = async (planId) => {
+    if (isBusy || loadingPlanId) return;
+    setLoadingPlanId(planId);
+
+    initiateRazorpayPayment({
+      planId,
+      programId: user?.programId || null,
+      user,
+      onSuccess: async (resData) => {
+        setLoadingPlanId('');
+        if (onSelectPlan) {
+          await onSelectPlan(planId, resData);
+        } else {
+          window.location.href = '/dashboard';
+        }
+      },
+      onFailure: (err) => {
+        setLoadingPlanId('');
+        alert(err.message || 'Payment failed. Please try again.');
+      },
+      onCancel: () => {
+        setLoadingPlanId('');
+      },
+    });
+  };
+
+  // Placement Learners Cards (Only ₹799 and ₹999)
   const placementPlans = [
-    {
-      id: 'placement_free_trial',
-      title: 'Free Trial',
-      price: '₹0',
-      subtitle: '5 Days Free Access',
-      badge: 'EXPLORE PLATFORM',
-      highlight: false,
-      icon: Sparkles,
-      color: 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0e1a30]',
-      btnStyle: 'bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-900',
-      features: [
-        '5 days free access',
-        'Limited access to placement experience',
-        'Preview learning roadmap & curriculum',
-        'Explore daily learning platform content',
-        'Personalized for your target role'
-      ],
-    },
     {
       id: 'placement_season_pass',
       title: 'Placement Season Pass',
@@ -42,6 +70,7 @@ export default function PricingCards({ goal, selectedSkill, onSelectPlan, curren
         'Company-wise interview preparation',
         'Placement readiness & mock prep'
       ],
+      refundNotice: 'Cancel anytime. Get refunded if you cancel within 5 days.',
     },
     {
       id: 'placement_season_pass_pro',
@@ -61,66 +90,30 @@ export default function PricingCards({ goal, selectedSkill, onSelectPlan, curren
         'Company-wise preparation & assessments',
         'Longer period to prepare post-program'
       ],
+      refundNotice: 'Cancel anytime. Get refunded if you cancel within 5 days.',
     }
   ];
 
   // Skill Learners Cards
   const skillPlans = [
     {
-      id: 'skill_free',
-      title: 'Free',
-      price: '₹0',
-      subtitle: 'Basic Skill Learning',
-      badge: 'STARTER',
-      highlight: false,
-      icon: Sparkles,
-      color: 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0e1a30]',
-      btnStyle: 'bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-900',
-      features: [
-        `Access to selected ${selectedSkill || 'skill'} course`,
-        'Day-wise learning materials',
-        'Notes released progressively',
-        'Practice questions available directly on dashboard',
-        'No tasks or challenges'
-      ],
-    },
-    {
-      id: 'skill_program',
-      title: 'Skill Program',
-      price: '₹499',
-      subtitle: 'Full 30-Day Program',
-      badge: 'RECOMMENDED',
+      id: isSkillReturningUser ? 'skill_membership' : 'skill_program',
+      title: isSkillReturningUser ? 'Returning Paid User' : 'First-Time Paid User',
+      price: isSkillReturningUser ? '₹199' : '₹499',
+      subtitle: '30 Days Access',
+      badge: isSkillReturningUser ? 'RETURNING OFFER' : '30-DAY ACCESS',
       highlight: true,
-      icon: Zap,
+      icon: Sparkles,
       color: 'border-[#a3e635] bg-[#f7fee7]/40 dark:bg-[#1a2e05]/30 shadow-xl shadow-[#a3e635]/15 ring-2 ring-[#a3e635]',
       btnStyle: 'bg-[#a3e635] text-black font-extrabold hover:bg-[#86efac]',
       features: [
         `Full 30-Day ${selectedSkill || 'Skill'} Program`,
-        'Complete learning roadmap',
-        'Day-wise notes & course content',
-        'Comprehensive practice questions',
+        'Complete learning roadmap & course content',
         'Daily tasks & coding challenges',
-        'Structured progression through program'
+        'Practice questions & notes',
+        isSkillReturningUser ? 'Discounted returning learner price (₹199)' : 'First-time paid learner access (₹499)',
       ],
-    },
-    {
-      id: 'skill_membership',
-      title: 'Membership',
-      price: '₹199',
-      billing: '/month',
-      subtitle: 'Recurring Access',
-      badge: 'ADDITIONAL SKILLS',
-      highlight: false,
-      icon: Crown,
-      color: 'border-purple-500 bg-purple-50/50 dark:bg-purple-950/20 shadow-lg',
-      btnStyle: 'bg-purple-600 text-white font-extrabold hover:bg-purple-700',
-      features: [
-        'Available after purchasing a ₹499 Skill Program',
-        'Access multiple skill programs (Java, Python, Full Stack, AI/ML)',
-        'Monthly recurring subscription',
-        'Full access to tasks, challenges & notes',
-        'Continuous skill expansion'
-      ],
+      refundNotice: null,
     }
   ];
 
@@ -128,17 +121,23 @@ export default function PricingCards({ goal, selectedSkill, onSelectPlan, curren
 
   return (
     <div className="w-full space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        .ob-pixel-heading {
+          font-family: 'Press Start 2P', cursive !important;
+        }
+      `}</style>
+      <div className={`grid grid-cols-1 ${plans.length > 1 ? 'md:grid-cols-2 max-w-4xl mx-auto' : 'max-w-md mx-auto'} gap-6`}>
         {plans.map((plan) => {
           const isSelected = currentPlan === plan.id;
+          const isLoading = loadingPlanId === plan.id;
           const Icon = plan.icon;
 
           return (
             <div
               key={plan.id}
-              className={`relative flex flex-col justify-between rounded-3xl p-5 sm:p-6 border transition-all duration-300 ${plan.color}`}
+              className={`relative flex flex-col justify-between rounded-3xl p-6 sm:p-7 border transition-all duration-300 ${plan.color}`}
             >
-
               {plan.badge && (
                 <div className="absolute -top-3.5 right-6">
                   <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest shadow-sm ${
@@ -170,11 +169,6 @@ export default function PricingCards({ goal, selectedSkill, onSelectPlan, curren
                   <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
                     {plan.price}
                   </span>
-                  {plan.billing && (
-                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                      {plan.billing}
-                    </span>
-                  )}
                 </div>
 
                 <ul className="space-y-2 pt-1">
@@ -187,15 +181,30 @@ export default function PricingCards({ goal, selectedSkill, onSelectPlan, curren
                 </ul>
               </div>
 
-              <div className="pt-6">
+              <div className="pt-6 space-y-2 text-center">
                 <button
                   type="button"
-                  disabled={isBusy}
-                  onClick={() => onSelectPlan(plan.id)}
-                  className={`w-full py-3 px-4 rounded-xl text-xs uppercase font-extrabold tracking-wider transition-all shadow-md ${plan.btnStyle} disabled:opacity-50`}
+                  disabled={isBusy || !!loadingPlanId}
+                  onClick={() => handleEnroll(plan.id)}
+                  className={`w-full py-3 px-4 rounded-xl text-[10px] sm:text-xs uppercase tracking-wider transition-all shadow-md ${plan.btnStyle} disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 ob-pixel-heading font-normal`}
                 >
-                  {isBusy && isSelected ? 'Processing...' : isSelected ? 'Current Plan' : 'Select Plan'}
+                  {isLoading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>PROCESSING...</span>
+                    </>
+                  ) : isSelected ? (
+                    <span>CURRENT PLAN</span>
+                  ) : (
+                    <span>ENROLL NOW</span>
+                  )}
                 </button>
+
+                {plan.refundNotice && (
+                  <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-snug">
+                    {plan.refundNotice}
+                  </p>
+                )}
               </div>
             </div>
           );
@@ -204,5 +213,3 @@ export default function PricingCards({ goal, selectedSkill, onSelectPlan, curren
     </div>
   );
 }
-
-

@@ -217,6 +217,12 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     ? await Batch.findById(schedule.batchId)
     : (studentContext.student ? null : await ensureDemoBatch());
 
+  if (schedule.batchExpired) {
+    const error = new Error("This batch has ended and program access has been revoked.");
+    error.statusCode = 403;
+    throw error;
+  }
+
   if (schedule.batchId && !batch) {
     const error = new Error("The assigned batch could not be found.");
     error.statusCode = 403;
@@ -472,6 +478,12 @@ export const resolveDailyChallengeParticipant = async ({ codingRound, user, emai
     student,
     programId: codingRound.programId || null,
   });
+
+  if (schedule.batchExpired) {
+    const error = new Error("This batch has ended and program access has been revoked.");
+    error.statusCode = 403;
+    throw error;
+  }
 
   if (codingRound.batchId) {
     if (!schedule.batchId || String(schedule.batchId) !== String(codingRound.batchId)) {

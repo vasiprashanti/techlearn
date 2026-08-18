@@ -9,11 +9,15 @@ import CertificateTemplate from "../../models/CertificateTemplate.js";
 import Project from "../../models/Project.js";
 import User from "../../models/User.js";
 import ProgramEnrollment from "../../models/ProgramEnrollment.js";
+import DailyTaskAttempt from "../../models/DailyTaskAttempt.js";
+import DailyChallengeAttempt from "../../models/DailyChallengeAttempt.js";
+import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import {
   pauseProgramEnrollment,
   syncPrimaryProgramPointers,
   upsertProgramEnrollment,
 } from "../../utils/programEnrollment.js";
+import { expireAllActiveBatches } from "../../utils/batchLifecycle.js";
 
 // Whitelist mapping for attachment entity types
 export const ENTITY_CONFIG = {
@@ -27,7 +31,7 @@ export const ENTITY_CONFIG = {
     model: Student,
     fieldKey: "studentIds",
     labelField: "name",
-    selectFields: "_id name email rollNo status batchId createdAt",
+    selectFields: "_id name email rollNo status batchId userId accuracy overallAccuracy createdAt",
   },
   courses: {
     model: Course,
@@ -59,6 +63,372 @@ export const ENTITY_CONFIG = {
     labelField: "title",
     selectFields: "_id title category duration_days status",
   },
+};
+
+const PROGRAM_REPORT_DAYS = 30;
+const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
+const IST_OFFSET_MILLISECONDS = (5 * 60 + 30) * 60 * 1000;
+
+const getIdString = (value) => {
+  const id = value && typeof value === "object" && value._id ? value._id : value;
+  return id ? id.toString() : "";
+};
+
+const toDate = (value) => {
+  if (!value) return null;
+  const date = value instanceof Date ? new Date(value) : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const parseProgramDurationDays = (duration) => {
+  if (typeof duration === "number" && Number.isFinite(duration)) {
+    return Math.max(1, Math.round(duration));
+  }
+
+  const match = String(duration || "").match(/(\d+(?:\.\d+)?)\s*-?\s*(day|days|week|weeks|month|months|year|years)/i);
+  if (!match) return null;
+
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount)) return null;
+
+  const unit = match[2].toLowerCase();
+  const multiplier = unit.startsWith("year")
+    ? 365
+    : unit.startsWith("month")
+      ? 30
+      : unit.startsWith("week")
+        ? 7
+        : 1;
+
+  return Math.max(1, Math.round(amount * multiplier));
+};
+
+// Reports and enrollment stats use the product's India-facing calendar day,
+// rather than the server's UTC day. This keeps "today" and current-month
+// counts stable when the API is deployed outside India.
+const getIstDateSerial = (value) => {
+  const date = toDate(value);
+  if (!date) return null;
+
+  const shifted = new Date(date.getTime() + IST_OFFSET_MILLISECONDS);
+  return Date.UTC(
+    shifted.getUTCFullYear(),
+    shifted.getUTCMonth(),
+    shifted.getUTCDate()
+  ) / DAY_IN_MILLISECONDS;
+};
+
+const isTodayInIndia = (value, now = new Date()) => {
+  const valueSerial = getIstDateSerial(value);
+  return valueSerial !== null && valueSerial === getIstDateSerial(now);
+};
+
+const isCurrentMonthInIndia = (value, now = new Date()) => {
+  const date = toDate(value);
+  const current = toDate(now);
+  if (!date || !current) return false;
+
+  const shiftedDate = new Date(date.getTime() + IST_OFFSET_MILLISECONDS);
+  const shiftedCurrent = new Date(current.getTime() + IST_OFFSET_MILLISECONDS);
+  return shiftedDate.getUTCFullYear() === shiftedCurrent.getUTCFullYear()
+    && shiftedDate.getUTCMonth() === shiftedCurrent.getUTCMonth();
+};
+
+const getProgramDayNumber = (startDate, now = new Date()) => {
+  const startSerial = getIstDateSerial(startDate);
+  const todaySerial = getIstDateSerial(now);
+  if (startSerial === null || todaySerial === null) return null;
+  return Math.max(0, Math.floor(todaySerial - startSerial) + 1);
+};
+
+const getProgramExpiryDate = (startDate, durationDays) => {
+  const start = toDate(startDate);
+  if (!start || !durationDays) return null;
+  return new Date(start.getTime() + ((durationDays - 1) * DAY_IN_MILLISECONDS));
+};
+
+const getOriginalProgramStartDate = (student, enrollment) =>
+  toDate(
+    enrollment?.individualStartDate
+      || enrollment?.assignedAt
+      || student?.createdAt
+  );
+
+const getEffectiveScheduleStartDate = (student, enrollment) =>
+  toDate(enrollment?.batchId?.startDate) || getOriginalProgramStartDate(student, enrollment);
+
+const hasAttemptedTask = (attempt) =>
+  (attempt?.tasksProgress || []).some((task) =>
+    task?.attempted === true
+      || ["In Progress", "Completed"].includes(task?.status)
+      || Boolean(task?.completedAt)
+      || Boolean(task?.selectedOption)
+      || Boolean(task?.code)
+  );
+
+const getTaskScores = (attempt) => (attempt?.tasksProgress || [])
+  .filter((task) => task?.attempted === true || ["In Progress", "Completed"].includes(task?.status) || task?.completedAt)
+  .map((task) => {
+    const accuracy = Number(task?.accuracy);
+    if (Number.isFinite(accuracy)) return accuracy;
+    if (task?.isCorrect === true) return 100;
+    if (task?.isCorrect === false) return 0;
+    return null;
+  })
+  .filter((score) => score !== null);
+
+const getMapValues = (value) => {
+  if (!value) return [];
+  if (value instanceof Map) return [...value.values()];
+  if (typeof value === "object") return Object.values(value);
+  return [];
+};
+
+const hasSubmittedChallenge = (attempt, submission) =>
+  ["submitted", "ended", "auto_submitted"].includes(attempt?.status)
+    || Boolean(attempt?.codingSubmissionId || attempt?.finalSubmissionId)
+    || getMapValues(submission?.problemSubmitted).some(Boolean);
+
+const getChallengeScores = (submission) => {
+  const totalScore = Number(submission?.totalScore);
+  return Number.isFinite(totalScore) ? [totalScore] : [];
+};
+
+const addActivityState = (map, key, scores, timestamp) => {
+  if (!key) return;
+  const current = map.get(key) || { attempted: false, scores: [], latestAt: null };
+  current.attempted = true;
+  current.scores.push(...scores);
+  const nextTimestamp = toDate(timestamp);
+  if (nextTimestamp && (!current.latestAt || nextTimestamp > current.latestAt)) {
+    current.latestAt = nextTimestamp;
+  }
+  map.set(key, current);
+};
+
+const formatActivityResult = (activity) => {
+  if (!activity?.attempted) return "—";
+  if (!activity.scores?.length) return "Attempted";
+  const average = activity.scores.reduce((sum, score) => sum + score, 0) / activity.scores.length;
+  return `${Math.round(average)}%`;
+};
+
+const getProgramStatus = ({ enrollment, expiryDate, now = new Date() }) => {
+  if (enrollment?.status === "Completed") return "Completed";
+  if (enrollment?.status === "Paused") return "Expired";
+  const todaySerial = getIstDateSerial(now);
+  const expirySerial = getIstDateSerial(expiryDate);
+  if (todaySerial !== null && expirySerial !== null && expirySerial < todaySerial) return "Expired";
+  return "Active";
+};
+
+const getStoredAccuracy = (student, enrollment) => {
+  const candidates = [student?.overallAccuracy, student?.accuracy, enrollment?.overallAccuracy, enrollment?.accuracy];
+  const value = candidates.map(Number).find((candidate) => Number.isFinite(candidate));
+  return value === undefined ? null : value;
+};
+
+const averageScores = (...activities) => {
+  const scores = activities.flatMap((activity) => activity?.scores || []);
+  if (!scores.length) return null;
+  return scores.reduce((sum, score) => sum + score, 0) / scores.length;
+};
+
+const buildProgramMonitoringData = async ({ program, enrollments, students }) => {
+  const now = new Date();
+  const durationDays = parseProgramDurationDays(program.duration) || PROGRAM_REPORT_DAYS;
+  const programBatchIds = (program.batchIds || []).map(getIdString).filter(Boolean);
+  const currentStudentIds = students.map((student) => getIdString(student)).filter(Boolean);
+  const studentEmails = students.map((student) => String(student.email || "").trim().toLowerCase()).filter(Boolean);
+  const userIds = [
+    ...enrollments.map((enrollment) => getIdString(enrollment.userId)),
+    ...students.map((student) => getIdString(student.userId)),
+  ].filter(Boolean);
+  const uniqueUserIds = [...new Set(userIds)];
+  const scopeQuery = [
+    { programId: program._id },
+    ...(programBatchIds.length ? [{ batchId: { $in: programBatchIds } }] : []),
+  ];
+
+  const taskQuery = uniqueUserIds.length
+    ? { userId: { $in: uniqueUserIds }, $or: scopeQuery }
+    : null;
+  const challengeIdentityQuery = currentStudentIds.length || studentEmails.length
+    ? {
+      $or: [
+        ...(currentStudentIds.length ? [{ studentId: { $in: currentStudentIds } }] : []),
+        ...(studentEmails.length ? [{ studentEmail: { $in: studentEmails } }] : []),
+      ],
+    }
+    : null;
+  const challengeQuery = challengeIdentityQuery
+    ? { $and: [challengeIdentityQuery, { $or: scopeQuery }] }
+    : null;
+
+  const [taskAttempts, challengeAttempts, codingSubmissions] = await Promise.all([
+    taskQuery
+      ? DailyTaskAttempt.find(taskQuery).select("userId dayNumber tasksProgress updatedAt createdAt").lean()
+      : [],
+    challengeQuery
+      ? DailyChallengeAttempt.find(challengeQuery)
+        .select("codingRoundId studentId studentEmail status submittedAt endedAt lastActiveAt updatedAt createdAt codingSubmissionId finalSubmissionId")
+        .populate("codingRoundId", "_id dayNumber")
+        .lean()
+      : [],
+    challengeQuery
+      ? StudentCodingSubmission.find(challengeQuery)
+        .select("codingRoundId studentId studentEmail attemptId totalScore problemSubmitted submittedAt updatedAt createdAt")
+        .populate("codingRoundId", "_id dayNumber")
+        .lean()
+      : [],
+  ]);
+
+  const taskActivityByUserDay = new Map();
+  const taskActivityToday = new Set();
+  for (const attempt of taskAttempts) {
+    if (!hasAttemptedTask(attempt)) continue;
+    const userId = getIdString(attempt.userId);
+    const dayNumber = Number(attempt.dayNumber);
+    if (!userId || !Number.isFinite(dayNumber)) continue;
+    addActivityState(
+      taskActivityByUserDay,
+      `${userId}:${dayNumber}`,
+      getTaskScores(attempt),
+      attempt.updatedAt || attempt.createdAt
+    );
+    if (isTodayInIndia(attempt.updatedAt || attempt.createdAt, now)) taskActivityToday.add(userId);
+  }
+
+  const submissionByAttemptKey = new Map();
+  const submissionByRoundStudentKey = new Map();
+  for (const submission of codingSubmissions) {
+    const attemptId = getIdString(submission.attemptId);
+    const roundId = getIdString(submission.codingRoundId);
+    const studentKey = getIdString(submission.studentId) || String(submission.studentEmail || "").toLowerCase();
+    if (attemptId) submissionByAttemptKey.set(attemptId, submission);
+    if (roundId && studentKey) submissionByRoundStudentKey.set(`${roundId}:${studentKey}`, submission);
+  }
+
+  const challengeActivityByStudentDay = new Map();
+  const challengeActivityToday = new Set();
+  for (const attempt of challengeAttempts) {
+    const studentKey = getIdString(attempt.studentId) || String(attempt.studentEmail || "").toLowerCase();
+    const roundId = getIdString(attempt.codingRoundId);
+    const submission = submissionByAttemptKey.get(getIdString(attempt._id))
+      || submissionByRoundStudentKey.get(`${roundId}:${studentKey}`);
+    if (!studentKey || !hasSubmittedChallenge(attempt, submission)) continue;
+
+    const dayNumber = Number(attempt.codingRoundId?.dayNumber || attempt.dayNumber);
+    if (!Number.isFinite(dayNumber)) continue;
+    const activityDate = attempt.submittedAt || attempt.endedAt || attempt.lastActiveAt || attempt.updatedAt || attempt.createdAt;
+    addActivityState(
+      challengeActivityByStudentDay,
+      `${studentKey}:${dayNumber}`,
+      getChallengeScores(submission),
+      activityDate
+    );
+    if (isTodayInIndia(activityDate, now)) challengeActivityToday.add(studentKey);
+  }
+
+  const enrollmentByStudentId = new Map();
+  enrollments.forEach((enrollment) => {
+    const studentId = getIdString(enrollment.studentId);
+    if (studentId && !enrollmentByStudentId.has(studentId)) enrollmentByStudentId.set(studentId, enrollment);
+  });
+
+  const studentMonitoringRows = students.map((student) => {
+    const studentId = getIdString(student);
+    const enrollment = enrollmentByStudentId.get(studentId) || null;
+    const programStartDate = getOriginalProgramStartDate(student, enrollment);
+    const scheduleStartDate = getEffectiveScheduleStartDate(student, enrollment);
+    const programExpiryDate = getProgramExpiryDate(programStartDate, durationDays);
+    const scheduleExpiryDate = getProgramExpiryDate(scheduleStartDate, durationDays);
+    const dayNumber = getProgramDayNumber(scheduleStartDate, now);
+    const userId = getIdString(enrollment?.userId) || getIdString(student.userId);
+    const emailKey = String(student.email || "").trim().toLowerCase();
+    const taskToday = userId && taskActivityToday.has(userId);
+    const challengeToday = (studentId && challengeActivityToday.has(studentId)) || (emailKey && challengeActivityToday.has(emailKey));
+    const taskActivities = Array.from(taskActivityByUserDay.entries())
+      .filter(([key]) => key.startsWith(`${userId}:`))
+      .map(([, activity]) => activity);
+    const challengeActivities = Array.from(challengeActivityByStudentDay.entries())
+      .filter(([key]) => key.startsWith(`${studentId}:`) || key.startsWith(`${emailKey}:`))
+      .map(([, activity]) => activity);
+    const status = getProgramStatus({ enrollment, expiryDate: scheduleExpiryDate, now });
+    const completionAccuracy = status === "Completed"
+      ? (getStoredAccuracy(student, enrollment) ?? averageScores(...taskActivities, ...challengeActivities))
+      : null;
+    const programReport = {
+      studentId,
+      dayNumber,
+      status,
+      days: Array.from({ length: PROGRAM_REPORT_DAYS }, (_, index) => {
+        const reportDay = index + 1;
+        const task = taskActivityByUserDay.get(`${userId}:${reportDay}`);
+        const challenge = challengeActivityByStudentDay.get(`${studentId}:${reportDay}`)
+          || challengeActivityByStudentDay.get(`${emailKey}:${reportDay}`);
+        return {
+          dayNumber: reportDay,
+          dailyTask: {
+            attempted: Boolean(task?.attempted),
+            status: task?.attempted ? "Attempted" : "N/A",
+            result: formatActivityResult(task),
+          },
+          dailyChallenge: {
+            attempted: Boolean(challenge?.attempted),
+            status: challenge?.attempted ? "Attempted" : "N/A",
+            result: formatActivityResult(challenge),
+          },
+        };
+      }),
+    };
+
+    return {
+      ...student,
+      enrollment,
+      programStartDate,
+      programExpiryDate,
+      scheduleStartDate,
+      scheduleExpiryDate,
+      programDayNumber: dayNumber,
+      programStatus: status,
+      programAccess: enrollment?.accessTier === "Member" || program.pricingType === "Paid" ? "Paid" : "Trial",
+      programPlan: program.planName || program.plan || null,
+      completionAccuracy,
+      activeToday: Boolean(taskToday || challengeToday),
+      programReport,
+    };
+  });
+
+  const everEnrolledStudentIds = new Set([
+    ...currentStudentIds,
+    ...enrollments.map((enrollment) => getIdString(enrollment.studentId)).filter(Boolean),
+  ]);
+  const currentEnrolled = studentMonitoringRows.filter((student) =>
+    isCurrentMonthInIndia(student.programStartDate, now)
+      && ["Active", "Completed"].includes(student.programStatus)
+  ).length;
+  const activeToday = studentMonitoringRows.filter((student) => student.activeToday).length;
+  const completedStudents = studentMonitoringRows.filter((student) => student.programStatus === "Completed");
+  const accuracyValues = completedStudents
+    .map((student) => Number(student.completionAccuracy))
+    .filter((accuracy) => Number.isFinite(accuracy));
+
+  return {
+    students: studentMonitoringRows,
+    stats: {
+      totalEnrolled: everEnrolledStudentIds.size,
+      currentEnrolled,
+      activeToday,
+      completed: completedStudents.length,
+      accuracy: accuracyValues.length
+        ? Math.round(accuracyValues.reduce((sum, accuracy) => sum + accuracy, 0) / accuracyValues.length)
+        : null,
+    },
+    reports: {
+      days: PROGRAM_REPORT_DAYS,
+    },
+  };
 };
 
 /**
@@ -264,6 +634,8 @@ export const getProgramById = async (req, res) => {
   try {
     const { programId } = req.params;
 
+    await expireAllActiveBatches();
+
     if (!mongoose.Types.ObjectId.isValid(programId)) {
       return res.status(400).json({ success: false, message: "Invalid program ID format" });
     }
@@ -305,12 +677,21 @@ export const getProgramById = async (req, res) => {
       }
     });
 
+    const baseStudents = (program.studentIds || []).map((student) => ({
+      ...student,
+      enrollment: enrollmentByStudentId.get(student._id?.toString()) || null,
+    }));
+    const monitoringData = await buildProgramMonitoringData({
+      program,
+      enrollments,
+      students: baseStudents,
+    });
     const programWithEnrollments = {
       ...program,
-      studentIds: (program.studentIds || []).map((student) => ({
-        ...student,
-        enrollment: enrollmentByStudentId.get(student._id?.toString()) || null,
-      })),
+      studentIds: monitoringData.students,
+      studentCount: monitoringData.stats.totalEnrolled,
+      programStats: monitoringData.stats,
+      programReports: monitoringData.reports,
     };
 
     res.json({

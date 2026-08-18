@@ -18,6 +18,12 @@ export const navigateUserByProgram = (user, navigate, options = {}) => {
     return;
   }
 
+  // Once onboarding is completed, every future login goes directly to Dashboard
+  if (user.onboardingCompleted) {
+    navigate('/dashboard');
+    return;
+  }
+
   // Explicit new signup or missing primary programId -> /onboarding/programs
   if (options.isNewSignup || !user.programId) {
     navigate('/onboarding/programs');
