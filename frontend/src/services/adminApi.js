@@ -533,6 +533,7 @@ export const adminAPI = {
     const suffix = query.toString() ? `?${query.toString()}` : '';
     return request(`/admin/programs/${programId}/performance${suffix}`, { noCache: true });
   },
+  getProgramReadinessLeads: (programId) => request(`/admin/programs/${programId}/readiness-leads`, { noCache: true }),
   syncProgramPerformance: (programId, options = {}) => {
     const query = new URLSearchParams();
     if (options.includeRecords) query.set('includeRecords', 'true');

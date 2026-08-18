@@ -20,6 +20,7 @@ import {
   getProgramPerformance,
   syncProgramPerformanceReport,
 } from "../controllers/admin/adminProgramPerformanceController.js";
+import { listProgramReadinessLeads } from "../controllers/admin/adminProgramLearningController.js";
 
 const router = express.Router();
 
@@ -35,6 +36,7 @@ router.patch("/:programId/blueprints/:blueprintId", updateBlueprint);
 router.delete("/:programId/blueprints/:blueprintId", deleteBlueprint);
 router.get("/:programId/performance", getProgramPerformance);
 router.post("/:programId/performance/sync", syncProgramPerformanceReport);
+router.get("/:programId/readiness-leads", listProgramReadinessLeads);
 router.get("/:programId", getProgramById);
 router.patch("/:programId", updateProgram);
 router.delete("/:programId", deleteProgram);

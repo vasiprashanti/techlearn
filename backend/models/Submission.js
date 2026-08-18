@@ -43,6 +43,32 @@ const submissionSchema = new mongoose.Schema(
       default: null,
     },
 
+    programId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Program",
+      default: null,
+      index: true,
+    },
+
+    programAssignmentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ProgramAssignment",
+      default: null,
+      index: true,
+    },
+
+    programPhase: {
+      type: String,
+      enum: ["day_0_readiness", "learning", "revision", "company_preparation", "mock_interview", "final_assessment", null],
+      default: null,
+    },
+
+    programDay: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+
     trackId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Track",
@@ -256,6 +282,7 @@ submissionSchema.index({ studentId: 1, categoryId: 1 }, { sparse: true });
 submissionSchema.index({ batchId: 1, categoryId: 1 }, { sparse: true });
 // questionVersionId already has sparse: true in field definition
 submissionSchema.index({ submissionType: 1, submittedAt: -1 }, { sparse: true });
+submissionSchema.index({ programId: 1, programAssignmentId: 1, questionId: 1 }, { sparse: true });
 // Ensure MCQ retries and concurrent duplicates collapse to a single canonical submission per student/question.
 submissionSchema.index(
   { studentId: 1, questionId: 1, categoryType: 1 },

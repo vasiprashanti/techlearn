@@ -17,7 +17,8 @@
     "validate:phase1:concurrency": "node scripts/validate-analytics-concurrency.js",
     "validate:phase2": "node scripts/validate-phase2.js",
     "validate:analytics-mix": "node scripts/validate-analytics-mix.js",
-    "validate:program": "node scripts/validate-program-entity.js"
+    "validate:program": "node scripts/validate-program-entity.js",
+    "validate:program-runtime": "node scripts/validate-program-runtime.js"
   },
   "keywords": [],
   "author": "",

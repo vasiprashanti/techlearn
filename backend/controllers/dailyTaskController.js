@@ -406,6 +406,42 @@ export const submitDailyTask = async (req, res) => {
 
     await attempt.save();
 
+    // Record the completed question immediately so the Revision, Company
+    // Preparation, and Final Assessment engines can consume fresh data.
+    // The source key matches the reconciliation service and is idempotent.
+    if (schedule.programId && task.questionId) {
+      try {
+        const taskQuestion = await Question.findById(task.questionId)
+          .select("_id categoryId categoryType categoryTitle categorySlug trackType tags difficulty title subject topic subtopic content")
+          .lean();
+        const taskAccuracy = typeof task.accuracy === "number"
+          ? task.accuracy
+          : (typeof task.isCorrect === "boolean" ? (task.isCorrect ? 100 : 0) : null);
+        const taskSourceKey = "daily-task:" + String(attempt._id) + ":" + String(task.questionId) + ":" + String(task.taskType || "Unknown");
+        const { recordProgramPerformanceAttempt } = await import("../services/programPerformanceService.js");
+        await recordProgramPerformanceAttempt({
+          programId: schedule.programId,
+          studentId: student._id,
+          userId,
+          programDay: dayNumber,
+          source: "Daily Task",
+          sourceKey: taskSourceKey,
+          sourceRecordId: attempt._id,
+          taskType: task.taskType,
+          questionId: task.questionId,
+          question: taskQuestion,
+          attempted: true,
+          correct: task.isCorrect,
+          score: taskAccuracy,
+          accuracy: taskAccuracy,
+          timeSpentMs: task.timeSpentMs || task.timeSpent,
+          attemptedAt: task.completedAt,
+        });
+      } catch (performanceError) {
+        console.error("Daily Task performance capture failed:", performanceError);
+      }
+    }
+
     const dayAssignment = (trackTemplate.dayAssignments || []).find((assignment) => Number(assignment.dayNumber) === Number(dayNumber));
     const configuredTask = (dayAssignment?.tasks || []).find(
       (assigned) => String(assigned.questionId) === String(questionId) && assigned.taskType === taskType

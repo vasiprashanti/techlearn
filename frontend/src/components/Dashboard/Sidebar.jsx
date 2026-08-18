@@ -37,6 +37,7 @@ const Sidebar = () => {
     location.pathname.startsWith('/demo') ||
     location.pathname.startsWith('/dashboard/') ||
     location.pathname.startsWith('/resources/roadmaps') ||
+    location.pathname.startsWith('/learn/program/') ||
     location.pathname === '/dashboard/profile' ||
     location.pathname.startsWith('/dashboard/profile/');
   const isProfileRoute = location.pathname.startsWith('/dashboard/profile');

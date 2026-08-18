@@ -66,6 +66,17 @@ const parsePositiveNumber = (value, fallback) => {
   return parsed;
 };
 
+const normalizeStringArray = (value, fallback = []) => {
+  const values = Array.isArray(value)
+    ? value
+    : String(value || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+  return [...new Set(values.map((item) => String(item || "").trim()).filter(Boolean))];
+};
+
 const buildReferenceSolution = (referenceLanguage, solutionCode) => {
   const code = String(solutionCode || "");
   if (!code.trim()) return {};
@@ -189,6 +200,12 @@ export const buildCentralQuestionPayload = async ({ category, body = {}, existin
     subject: String(body.subject ?? existingQuestion?.subject ?? "").trim(),
     topic: String(body.topic ?? existingQuestion?.topic ?? "").trim(),
     subtopic: String(body.subtopic ?? existingQuestion?.subtopic ?? "").trim(),
+    roles: normalizeStringArray(body.roles ?? body.targetRoles ?? existingQuestion?.roles),
+    companies: normalizeStringArray(body.companies ?? body.targetCompanies ?? existingQuestion?.companies),
+    pattern: String(body.pattern ?? existingQuestion?.pattern ?? "").trim(),
+    usage: ["Assessment", "Practice", "Both"].includes(body.usage)
+      ? body.usage
+      : (existingQuestion?.usage || "Both"),
     tags,
     status,
     isActive: status !== "Archived",
@@ -284,6 +301,10 @@ export const formatQuestionForAdmin = (question, category = null) => {
     subject: question.subject || question.content?.subject || "",
     topic: question.topic || question.content?.topic || "",
     subtopic: question.subtopic || question.content?.subtopic || "",
+    roles: question.roles || [],
+    companies: question.companies || [],
+    pattern: question.pattern || "",
+    usage: question.usage || "Both",
     track: question.trackType || category?.title || question.categoryTitle || "General",
     created: question.createdAt?.toISOString?.().slice(0, 10) || "",
     status: question.status || (question.isActive === false ? "Archived" : "Active"),

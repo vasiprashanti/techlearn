@@ -28,7 +28,7 @@ const programPerformanceRecordSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ["Daily Task", "Daily Challenge"],
+      enum: ["Daily Task", "Daily Challenge", "Program Assignment"],
       required: true,
       index: true,
     },

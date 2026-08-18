@@ -2,6 +2,7 @@ import Program from "../models/Program.js";
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import User from "../models/User.js";
 import Student from "../models/Student.js";
+import ProgramReadinessLead from "../models/ProgramReadinessLead.js";
 import { matchProgramsForUser } from "./programMatching.js";
 
 const escapeRegex = (value = "") =>
@@ -85,6 +86,23 @@ export const upsertProgramEnrollment = async ({
       $addToSet: {
         studentIds: studentId,
         ...(batchId ? { batchIds: batchId } : {}),
+      },
+    }
+  );
+
+  // A completed Day 0 assessment becomes a converted lead only when the
+  // learner is actually enrolled. Leads remain outside Program -> Students
+  // until this enrollment write succeeds.
+  await ProgramReadinessLead.updateOne(
+    {
+      userId,
+      programId: resolvedProgramId,
+      status: { $in: ["Started", "Completed"] },
+    },
+    {
+      $set: {
+        status: "Converted",
+        convertedAt: now,
       },
     }
   );

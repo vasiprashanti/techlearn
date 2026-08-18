@@ -695,6 +695,24 @@ export default function Dashboard() {
           }`}
         >
           <div className="w-full max-w-[1400px] space-y-8">
+            {displayUser?.programId && (
+              <div className="flex flex-col gap-4 rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-400">Program learning path</p>
+                  <h2 className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">Continue your personalized program</h2>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300/75">
+                    Your day, revision, company preparation, and assessments follow your enrollment schedule.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/learn/program/' + String(displayUser.programId?._id || displayUser.programId))}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
+                >
+                  Open Program <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
 
 
             <div className="flex flex-col lg:grid lg:grid-cols-8 gap-8 items-stretch w-full">

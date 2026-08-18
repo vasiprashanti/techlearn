@@ -154,6 +154,25 @@ const questionSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    roles: {
+      type: [String],
+      default: [],
+    },
+    companies: {
+      type: [String],
+      default: [],
+    },
+    pattern: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    usage: {
+      type: String,
+      enum: ['Assessment', 'Practice', 'Both'],
+      default: 'Both',
+      index: true,
+    },
     tags: [
       {
         type: String,
@@ -211,6 +230,9 @@ questionSchema.index({ trackType: 1 });
 questionSchema.index({ categoryId: 1, isActive: 1 });
 questionSchema.index({ status: 1, difficulty: 1, createdAt: -1 });
 questionSchema.index({ tags: 1, status: 1 });
+questionSchema.index({ roles: 1, status: 1 });
+questionSchema.index({ companies: 1, status: 1 });
+questionSchema.index({ subject: 1, topic: 1, subtopic: 1, status: 1 });
 questionSchema.index({ title: "text", description: "text", tags: "text" });
 questionSchema.index({ description: 1, tags: 1, status: 1 });
 

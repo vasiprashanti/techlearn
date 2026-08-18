@@ -435,7 +435,7 @@ const ProgramPerformancePanel = ({ performance, loading, error }) => {
         <div>
           <h3 className="text-sm font-bold text-slate-900 dark:text-white">Performance profile</h3>
           <p className="mt-1 text-xs text-black/45 dark:text-white/45">
-            Generated from Daily Task and Daily Challenge question attempts. Topic summaries are available to the future revision engine.
+            Generated from Daily Task, Daily Challenge, and dynamic program assignment attempts. Topic summaries feed the revision engine.
           </p>
         </div>
         {performance?.generatedAt && (

@@ -3,6 +3,9 @@ import DailyTaskAttempt from "../models/DailyTaskAttempt.js";
 import DailyChallengeAttempt from "../models/DailyChallengeAttempt.js";
 import StudentCodingSubmission from "../models/StudentCodingSubmission.js";
 import Question from "../models/Questions.js";
+import Program from "../models/Program.js";
+import ProgramEnrollment from "../models/ProgramEnrollment.js";
+import Student from "../models/Student.js";
 import ProgramPerformanceRecord from "../models/ProgramPerformanceRecord.js";
 import ProgramPerformanceSummary from "../models/ProgramPerformanceSummary.js";
 
@@ -332,10 +335,14 @@ const buildPerformanceReport = ({ program, context, records, summaries, includeR
     return counts;
   }, { Weak: 0, Average: 0, Strong: 0, Unclassified: 0 });
   const sourceCounts = records.reduce((counts, record) => {
-    const key = record.source === "Daily Challenge" ? "dailyChallenge" : "dailyTask";
+    const key = record.source === "Daily Challenge"
+      ? "dailyChallenge"
+      : record.source === "Program Assignment"
+        ? "programAssignment"
+        : "dailyTask";
     counts[key] = (counts[key] || 0) + 1;
     return counts;
-  }, { dailyTask: 0, dailyChallenge: 0 });
+  }, { dailyTask: 0, dailyChallenge: 0, programAssignment: 0 });
 
   return {
     generatedAt: new Date(),
@@ -650,10 +657,14 @@ export const syncProgramPerformance = async ({
     );
     await ProgramPerformanceRecord.deleteMany({
       programId,
+      source: { $in: ["Daily Task", "Daily Challenge"] },
       sourceKey: { $nin: recordsToPersist.map((record) => record.sourceKey) },
     });
   } else {
-    await ProgramPerformanceRecord.deleteMany({ programId });
+    await ProgramPerformanceRecord.deleteMany({
+      programId,
+      source: { $in: ["Daily Task", "Daily Challenge"] },
+    });
   }
 
   const persistedRecords = await ProgramPerformanceRecord.find({ programId }).lean();
@@ -752,6 +763,185 @@ export const deleteProgramPerformance = async (programId) => {
     ProgramPerformanceRecord.deleteMany({ programId }),
     ProgramPerformanceSummary.deleteMany({ programId }),
   ]);
+};
+
+const rebuildSummaryDocuments = async (programId) => {
+  const records = await ProgramPerformanceRecord.find({ programId }).lean();
+  const summaryGroups = new Map();
+
+  records.forEach((record) => {
+    const key = buildSummaryKey({
+      studentId: getIdString(record.studentId),
+      programDay: record.programDay,
+      subject: record.subject,
+      topic: record.topic,
+      subtopic: record.subtopic,
+    });
+    const group = summaryGroups.get(key) || {
+      programId,
+      studentId: record.studentId,
+      programDay: record.programDay,
+      subject: record.subject,
+      topic: record.topic,
+      subtopic: record.subtopic,
+      summaryKey: key,
+      questionsAttempted: 0,
+      scoredQuestions: 0,
+      correctAnswers: 0,
+      accuracyTotal: 0,
+      sources: new Set(),
+      firstAttemptedAt: null,
+      lastAttemptedAt: null,
+    };
+
+    group.questionsAttempted += record.attempted === false ? 0 : 1;
+    group.scoredQuestions += Number.isFinite(Number(record.accuracy)) ? 1 : 0;
+    group.correctAnswers += record.correct === true ? 1 : 0;
+    if (Number.isFinite(Number(record.accuracy))) group.accuracyTotal += Number(record.accuracy);
+    if (record.source) group.sources.add(record.source);
+
+    const attemptedAt = toDate(record.attemptedAt);
+    if (attemptedAt && (!group.firstAttemptedAt || attemptedAt < group.firstAttemptedAt)) {
+      group.firstAttemptedAt = attemptedAt;
+    }
+    if (attemptedAt && (!group.lastAttemptedAt || attemptedAt > group.lastAttemptedAt)) {
+      group.lastAttemptedAt = attemptedAt;
+    }
+    summaryGroups.set(key, group);
+  });
+
+  const summaries = [...summaryGroups.values()].map((group) => {
+    const accuracy = roundToPercent(group.accuracyTotal, group.scoredQuestions);
+    return {
+      programId: group.programId,
+      studentId: group.studentId,
+      programDay: group.programDay,
+      subject: group.subject,
+      topic: group.topic,
+      subtopic: group.subtopic,
+      summaryKey: group.summaryKey,
+      questionsAttempted: group.questionsAttempted,
+      scoredQuestions: group.scoredQuestions,
+      correctAnswers: group.correctAnswers,
+      accuracy,
+      classification: classifyAccuracy(accuracy),
+      sources: [...group.sources],
+      firstAttemptedAt: group.firstAttemptedAt,
+      lastAttemptedAt: group.lastAttemptedAt,
+    };
+  });
+
+  if (summaries.length > 0) {
+    await ProgramPerformanceSummary.bulkWrite(
+      summaries.map((summary) => ({
+        updateOne: {
+          filter: { programId, summaryKey: summary.summaryKey },
+          update: { $set: summary },
+          upsert: true,
+        },
+      })),
+      { ordered: false }
+    );
+    await ProgramPerformanceSummary.deleteMany({
+      programId,
+      summaryKey: { $nin: summaries.map((summary) => summary.summaryKey) },
+    });
+  } else {
+    await ProgramPerformanceSummary.deleteMany({ programId });
+  }
+
+  return ProgramPerformanceSummary.find({ programId })
+    .sort({ programDay: 1, subject: 1, topic: 1, subtopic: 1 })
+    .lean();
+};
+
+export const recordProgramPerformanceAttempt = async ({
+  programId,
+  studentId,
+  userId = null,
+  programDay,
+  source,
+  sourceKey,
+  sourceRecordId = null,
+  taskType = "Unknown",
+  questionId = null,
+  question = null,
+  fallback = {},
+  attempted = true,
+  correct = null,
+  score = null,
+  accuracy = null,
+  timeSpentMs = null,
+  attemptedAt = new Date(),
+}) => {
+  const normalizedDay = Number(programDay);
+  if (!programId || !studentId || !Number.isInteger(normalizedDay) || normalizedDay < 1 || !sourceKey) return null;
+  if (!["Daily Task", "Daily Challenge", "Program Assignment"].includes(source)) return null;
+
+  const dimensions = getQuestionDimensions({ question, fallback, taskType });
+  const normalizedAccuracy = toPercent(accuracy);
+  const normalizedScore = toPercent(score === null || score === undefined ? normalizedAccuracy : score);
+  const record = await ProgramPerformanceRecord.findOneAndUpdate(
+    { programId, sourceKey },
+    {
+      $set: {
+        programId,
+        studentId,
+        userId: userId || null,
+        programDay: normalizedDay,
+        source,
+        sourceKey,
+        sourceRecordId: getId(sourceRecordId),
+        taskType: firstText(taskType, "Unknown"),
+        questionId: getId(questionId),
+        categoryId: dimensions.categoryId,
+        categoryType: dimensions.categoryType,
+        subject: dimensions.subject,
+        topic: dimensions.topic,
+        subtopic: dimensions.subtopic,
+        difficulty: dimensions.difficulty,
+        attempted: Boolean(attempted),
+        correct: typeof correct === "boolean" ? correct : null,
+        score: normalizedScore,
+        accuracy: normalizedAccuracy,
+        timeSpentMs: Number.isFinite(Number(timeSpentMs)) ? Number(timeSpentMs) : null,
+        attemptedAt: toDate(attemptedAt),
+        sourceUpdatedAt: new Date(),
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  const summaries = await rebuildSummaryDocuments(programId);
+  return { record, summaries };
+};
+
+export const syncProgramPerformanceForUser = async ({ programId, userId }) => {
+  if (!programId) return null;
+  const program = await Program.findById(programId).lean();
+  if (!program) return null;
+
+  const enrollments = await ProgramEnrollment.find({
+    programId,
+    ...(userId ? { userId } : {}),
+    status: { $in: ["Active", "Completed", "Paused"] },
+  })
+    .populate("batchId", "_id name startDate expiryDate releaseTime assignedTrackTemplateAt assignedDailyTaskTrackAt assignedDailyChallengeTrackAt")
+    .lean();
+
+  const studentIds = enrollments.map((enrollment) => getId(enrollment.studentId)).filter(Boolean);
+  const students = studentIds.length
+    ? await Student.find({ _id: { $in: studentIds } })
+      .select("_id userId name email rollNo status createdAt")
+      .lean()
+    : [];
+
+  return syncProgramPerformance({
+    program,
+    enrollments,
+    students,
+    includeRecords: false,
+  });
 };
 
 export { DAY_IN_MILLISECONDS };
