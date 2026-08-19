@@ -15,6 +15,10 @@ import {
 } from "../services/programQuestionEngineService.js";
 import { classifyAccuracy } from "../services/programPerformanceService.js";
 import { calculateProgramDayNumber } from "../utils/programSchedule.js";
+import {
+  getEffectiveEnrollmentBatchId,
+  orderAccessibleProgramEnrollments,
+} from "../utils/dashboardProgramAccess.js";
 
 const id = () => new mongoose.Types.ObjectId();
 
@@ -59,6 +63,40 @@ const run = () => {
     }),
     2
   );
+
+  const individualEnrollment = { programId: id(), batchId: null };
+  assert.equal(
+    getEffectiveEnrollmentBatchId({
+      enrollment: individualEnrollment,
+      studentBatchId: id(),
+      userBatchId: id(),
+    }),
+    null,
+    "An explicit null batch must keep the learner on an individual schedule"
+  );
+
+  const legacyEnrollment = { programId: id() };
+  const legacyBatchId = id();
+  assert.equal(
+    String(getEffectiveEnrollmentBatchId({ enrollment: legacyEnrollment, studentBatchId: legacyBatchId })),
+    String(legacyBatchId),
+    "Old enrollments without batchId should retain their legacy batch fallback"
+  );
+
+  const preferredProgramId = id();
+  const newestProgramId = id();
+  const staleProgramId = id();
+  const orderedEnrollments = orderAccessibleProgramEnrollments({
+    preferredProgramId,
+    accessibleProgramIds: [preferredProgramId, newestProgramId],
+    enrollments: [
+      { programId: newestProgramId, assignedAt: new Date("2026-08-19T00:00:00.000Z") },
+      { programId: staleProgramId, assignedAt: new Date("2026-08-20T00:00:00.000Z") },
+      { programId: preferredProgramId, assignedAt: new Date("2026-08-01T00:00:00.000Z") },
+    ],
+  });
+  assert.equal(String(orderedEnrollments[0].programId), String(preferredProgramId));
+  assert.equal(orderedEnrollments.some((enrollment) => String(enrollment.programId) === String(staleProgramId)), false);
 
   assert.equal(classifyAccuracy(59), "Weak");
   assert.equal(classifyAccuracy(60), "Average");
