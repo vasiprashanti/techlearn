@@ -1,11 +1,186 @@
 import mongoose from "mongoose";
 import Program from "../models/Program.js";
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
+import ProgramAssignment from "../models/ProgramAssignment.js";
+import ProgramWaitlistLead from "../models/ProgramWaitlistLead.js";
 import User from "../models/User.js";
 import Student from "../models/Student.js";
 import Blueprint from "../models/Blueprint.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
 import { expireAllActiveBatches } from "../utils/batchLifecycle.js";
+import {
+  getCurrentProgramAssignment,
+  getProgramLearningContext,
+} from "../services/programQuestionEngineService.js";
+import { ensureReadinessLead } from "../services/programAssignmentService.js";
+
+/**
+ * GET /api/programs/public
+ * Public endpoint to list all discoverable programs on Learn page.
+ */
+export const getPublicPrograms = async (req, res) => {
+  try {
+    const programs = await Program.find({
+      status: "Active",
+      visibility: "Public",
+    })
+      .select("_id name description programType duration durationDays phases pricingType programFee courseIds roadmapIds projectIds targetRoles targetCompanies")
+      .populate("courseIds", "_id title level courseType numTopics")
+      .populate("roadmapIds", "_id title status")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const readinessIds = await Blueprint.find({
+      programId: { $in: programs.map((p) => p._id) },
+      blueprintType: { $in: ["day_0_readiness", "free_assessment"] },
+      status: { $in: ["Active", "Draft"] },
+    }).distinct("programId");
+    const readinessSet = new Set(readinessIds.map((id) => String(id)));
+
+    const formatted = programs.map((p) => ({
+      ...p,
+      hasFreeAssessment: readinessSet.has(String(p._id)),
+    }));
+
+    return res.json({ success: true, programs: formatted });
+  } catch (error) {
+    console.error("Error fetching public programs:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch programs." });
+  }
+};
+
+/**
+ * POST /api/programs/:programId/waitlist
+ * Allows guests and users to join program waitlist.
+ */
+export const joinProgramWaitlist = async (req, res) => {
+  try {
+    const { programId } = req.params;
+    const { name, email, phone, targetRole, targetCompany } = req.body;
+
+    if (!email || !String(email).trim()) {
+      return res.status(400).json({ success: false, message: "Email is required to join waitlist." });
+    }
+    if (!mongoose.Types.ObjectId.isValid(programId)) {
+      return res.status(400).json({ success: false, message: "Invalid program ID." });
+    }
+
+    const program = await Program.findById(programId).lean();
+    if (!program) {
+      return res.status(404).json({ success: false, message: "Program not found." });
+    }
+
+    const userId = req.user?._id || null;
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    const lead = await ProgramWaitlistLead.findOneAndUpdate(
+      { programId, email: normalizedEmail },
+      {
+        $set: {
+          name: name ? String(name).trim() : "",
+          phone: phone ? String(phone).trim() : "",
+          targetRole: targetRole ? String(targetRole).trim() : "",
+          targetCompany: targetCompany ? String(targetCompany).trim() : "",
+          userId,
+          status: "Waitlisted",
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    return res.json({
+      success: true,
+      message: "Successfully joined the waitlist! We will notify you when batches open.",
+      leadId: lead._id,
+    });
+  } catch (error) {
+    console.error("Error joining waitlist:", error);
+    return res.status(500).json({ success: false, message: error.message || "Failed to join waitlist." });
+  }
+};
+
+/**
+ * POST /api/programs/free-assessment/start
+ * Protected endpoint to start/resume the Free Assessment with Target Role & Target Company.
+ */
+export const startFreeAssessment = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { targetRole, targetCompany, programId: requestedProgramId } = req.body;
+
+    let programId = requestedProgramId;
+    if (!programId) {
+      const publicPlacement = await Program.findOne({
+        programType: "Placement",
+        status: "Active",
+        visibility: "Public",
+      }).sort({ createdAt: -1 }).lean();
+
+      if (!publicPlacement) {
+        return res.status(404).json({ success: false, message: "No active Placement Program available." });
+      }
+      programId = publicPlacement._id;
+    }
+
+    // Update user's targetRole & targetCompanies if supplied
+    const updates = {};
+    if (targetRole && typeof targetRole === "string" && targetRole.trim()) {
+      updates.targetRole = targetRole.trim();
+    }
+    if (targetCompany && typeof targetCompany === "string" && targetCompany.trim()) {
+      updates.targetCompanies = [targetCompany.trim()];
+    } else if (Array.isArray(targetCompany) && targetCompany.length > 0) {
+      updates.targetCompanies = targetCompany.map((c) => String(c).trim()).filter(Boolean);
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await Promise.all([
+        User.updateOne({ _id: userId }, { $set: updates }),
+        Student.updateOne({ userId }, { $set: updates }),
+      ]);
+      Object.assign(req.user, updates);
+    }
+
+    const context = await getProgramLearningContext({
+      user: req.user,
+      programId,
+      allowUnenrolled: true,
+    });
+
+    const assignment = await getCurrentProgramAssignment(context, {
+      allowDraft: req.user?.role === "admin",
+    });
+
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: "No Free Assessment questions currently configured for this program.",
+      });
+    }
+
+    await ensureReadinessLead({ context, assignment });
+
+    const isCompleted = assignment.status === "Completed";
+    const answeredCount = (assignment.questions || []).filter((q) => q.attempted).length;
+    const correctCount = (assignment.questions || []).filter((q) => q.correct === true).length;
+    const totalCount = (assignment.questions || []).length;
+    const score = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
+
+    return res.json({
+      success: true,
+      programId,
+      assignmentId: assignment._id,
+      status: assignment.status,
+      score: isCompleted ? (assignment.accuracy ?? score) : null,
+      isCompleted,
+      totalQuestions: totalCount,
+      answeredQuestions: answeredCount,
+    });
+  } catch (error) {
+    console.error("Error starting Free Assessment:", error);
+    return res.status(500).json({ success: false, message: error.message || "Failed to start Free Assessment." });
+  }
+};
 
 /**
  * GET /api/programs/assigned

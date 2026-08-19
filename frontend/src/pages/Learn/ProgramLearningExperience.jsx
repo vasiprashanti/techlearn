@@ -309,9 +309,9 @@ export default function ProgramLearningExperience() {
                       <button
                         type="button"
                         onClick={() => navigate('/onboarding/programs')}
-                        className="mt-6 inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white"
+                        className="mt-6 inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 cursor-pointer"
                       >
-                        Continue to Enrollment <ChevronRight className="h-4 w-4" />
+                        Continue to Programs <ChevronRight className="h-4 w-4" />
                       </button>
                     )}
                   </div>
@@ -419,7 +419,7 @@ export default function ProgramLearningExperience() {
                         className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                        {isReadiness ? 'Submit Readiness Answer' : 'Submit Answer'}
+                        {isReadiness ? 'Submit Assessment Answer' : 'Submit Answer'}
                         {!submitting && <ChevronRight className="h-4 w-4" />}
                       </button>
                     </div>

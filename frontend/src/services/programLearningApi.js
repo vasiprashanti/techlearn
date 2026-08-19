@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const getHeaders = () => {
   const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -24,7 +24,16 @@ const request = async (path, options = {}) => {
 };
 
 export const programLearningAPI = {
+  getPublicPrograms: () => request('/programs/public'),
   getReadinessOptions: () => request('/programs/readiness-options'),
+  joinWaitlist: (programId, leadData) => request('/programs/' + programId + '/waitlist', {
+    method: 'POST',
+    body: JSON.stringify(leadData),
+  }),
+  startFreeAssessment: (data = {}) => request('/programs/free-assessment/start', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
   getExperience: (programId) => request('/programs/' + programId + '/experience'),
   getFinalReport: (programId) => request('/programs/' + programId + '/final-report'),
   getAssignment: (programId, assignmentId) => request(

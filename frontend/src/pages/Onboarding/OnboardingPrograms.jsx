@@ -315,14 +315,14 @@ export default function OnboardingPrograms() {
             >
               <div>
                 <p className="text-sm font-bold text-slate-900 dark:text-white">Check your placement readiness first</p>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Complete Day 0 before choosing your program plan.</p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Complete your Free Assessment before choosing your program plan.</p>
               </div>
               <button
                 type="button"
                 onClick={() => navigate(`/learn/program/${readinessPrograms[0]._id}`)}
                 className="inline-flex shrink-0 items-center justify-center rounded-xl bg-violet-500 px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-violet-600"
               >
-                CHECK MY READINESS
+                START FREE ASSESSMENT
               </button>
             </Motion.div>
           )}

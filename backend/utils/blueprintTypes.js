@@ -6,7 +6,8 @@ export const BLUEPRINT_TYPES = Object.freeze([
 ]);
 
 export const BLUEPRINT_TYPE_LABELS = Object.freeze({
-  day_0_readiness: "Day 0 Placement Readiness",
+  day_0_readiness: "Free Assessment",
+  free_assessment: "Free Assessment",
   revision: "Revision",
   company_preparation: "Company Preparation",
   final_assessment: "Final Assessment",
@@ -26,6 +27,8 @@ const BLUEPRINT_TYPE_ALIASES = Object.freeze({
   day_0_readiness: "day_0_readiness",
   "day 0 readiness": "day_0_readiness",
   "day 0 placement readiness": "day_0_readiness",
+  free_assessment: "day_0_readiness",
+  "free assessment": "day_0_readiness",
   revision: "revision",
   "company preparation": "company_preparation",
   company_preparation: "company_preparation",
