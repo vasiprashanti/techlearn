@@ -52,6 +52,12 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin"],
       default: "user",
     },
+    // Server-managed permissions used by admin APIs. The browser never gets
+    // to choose these values; they are read from the authenticated User row.
+    permissions: {
+      type: [String],
+      default: [],
+    },
     isClub: {
       type: Boolean,
       default: false,

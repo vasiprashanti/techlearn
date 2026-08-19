@@ -62,6 +62,7 @@ const Certification = lazy(() => import('./pages/Learn/Certification'))
 const CertificationPayment = lazy(() => import('./pages/Learn/CertificationPayment'))
 const OnlineCompiler = lazy(() => import('./pages/Learn/OnlineCompiler'))
 const DynamicPracticeQuestions = lazy(() => import('./pages/Learn/DynamicPracticeQuestions'))
+const ProgramLearningExperience = lazy(() => import('./pages/Learn/ProgramLearningExperience'))
 
 const Roadmaps = lazy(() => import('./pages/Resources/Roadmaps'))
 const ResumeTemplates = lazy(() => import('./pages/Resources/ResumeTemplates'))
@@ -218,6 +219,7 @@ function LayoutWrapper() {
     location.pathname.startsWith('/resources/roadmaps') ||
     location.pathname.startsWith('/resources/resume-templates') ||
     location.pathname.startsWith('/learn/exercises') ||
+    location.pathname.startsWith('/learn/program/') ||
     location.pathname === '/dashboard/profile' ||
     location.pathname.startsWith('/dashboard/profile/');
 
@@ -244,6 +246,7 @@ function LayoutWrapper() {
           
           <Route element={<PrivateRoute />}>
             <Route path="/onboarding/programs" element={<OnboardingPrograms />} />
+            <Route path="/learn/program/:programId" element={<ProgramLearningExperience />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/demo" element={<DemoDashboard />} />
             <Route path="/demo/project/day-notes" element={<ProjectDayNotes />} />

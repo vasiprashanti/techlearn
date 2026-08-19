@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { Sparkles, Target, ArrowDown, ShieldCheck, Check, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
@@ -8,6 +8,8 @@ import { useTheme } from '../../context/ThemeContext';
 import API from '../../api/client';
 import { initiateRazorpayPayment } from '../../utils/razorpayCheckout';
 import PricingExitFeedbackModal from '../../components/PricingExitFeedbackModal';
+import { programLearningAPI } from '../../services/programLearningApi';
+
 
 export default function OnboardingPrograms() {
   const navigate = useNavigate();
@@ -23,6 +25,7 @@ export default function OnboardingPrograms() {
   const [loading, setLoading] = useState(false);
   const [isSkillReturningUser, setIsSkillReturningUser] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [readinessPrograms, setReadinessPrograms] = useState([]);
 
   const storedUserData = (() => {
     try {
@@ -66,6 +69,19 @@ export default function OnboardingPrograms() {
     checkEligibility();
     return () => { isMounted = false; };
   }, []);
+
+  useEffect(() => {
+    if (!isPlacement) return undefined;
+    let isMounted = true;
+    programLearningAPI.getReadinessOptions()
+      .then((response) => {
+        if (isMounted) setReadinessPrograms(response?.programs || []);
+      })
+      .catch(() => {
+        if (isMounted) setReadinessPrograms([]);
+      });
+    return () => { isMounted = false; };
+  }, [isPlacement]);
 
   const handleEnrollNow = async (planId) => {
     if (loading) return;
@@ -231,7 +247,7 @@ export default function OnboardingPrograms() {
 
         <div className="mx-auto flex max-w-3xl flex-col items-center px-6 text-center">
           
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
@@ -244,9 +260,9 @@ export default function OnboardingPrograms() {
             <span className="font-semibold text-[#3c83f6] dark:text-[#60a5fa]">
               {isPlacement ? targetRole : displaySkills}
             </span>
-          </motion.div>
+          </Motion.div>
 
-          <motion.h1
+          <Motion.h1
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
@@ -254,9 +270,9 @@ export default function OnboardingPrograms() {
           >
             <span>{isPlacement ? 'PLACEMENT PROGRAM' : 'SKILL PROGRAM'}</span>
             <span>PRICING</span>
-          </motion.h1>
+          </Motion.h1>
 
-          <motion.p
+          <Motion.p
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -264,9 +280,9 @@ export default function OnboardingPrograms() {
           >
             Based on your onboarding preferences, we matched you with the following learning
             programs. Choose your plan to complete enrollment.
-          </motion.p>
+          </Motion.p>
 
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
@@ -288,9 +304,30 @@ export default function OnboardingPrograms() {
                 </>
               )}
             </p>
-          </motion.div>
+          </Motion.div>
 
-          <motion.div
+          {isPlacement && readinessPrograms.length > 0 && (
+            <Motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.35 }}
+              className="mt-5 flex w-full max-w-xl flex-col items-center gap-3 rounded-2xl border border-violet-400/25 bg-violet-500/10 p-4 text-center shadow-sm sm:flex-row sm:justify-between sm:text-left"
+            >
+              <div>
+                <p className="text-sm font-bold text-slate-900 dark:text-white">Check your placement readiness first</p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Complete Day 0 before choosing your program plan.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate(`/learn/program/${readinessPrograms[0]._id}`)}
+                className="inline-flex shrink-0 items-center justify-center rounded-xl bg-violet-500 px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-violet-600"
+              >
+                CHECK MY READINESS
+              </button>
+            </Motion.div>
+          )}
+
+          <Motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
@@ -304,7 +341,7 @@ export default function OnboardingPrograms() {
               <span>CHECK PRICING</span>
               <ArrowDown className="ml-2.5 h-4 w-4 transition-transform group-hover:translate-y-1" />
             </button>
-          </motion.div>
+          </Motion.div>
 
         </div>
       </section>

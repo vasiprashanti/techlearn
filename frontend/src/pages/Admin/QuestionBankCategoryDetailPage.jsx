@@ -20,6 +20,13 @@ const createQuestionForm = (track = '') => ({
   title: '',
   trackType: track,
   difficulty: 'Easy',
+  subject: '',
+  topic: '',
+  subtopic: '',
+  rolesText: '',
+  companiesText: '',
+  pattern: '',
+  usage: 'Both',
   tags: [],
   tagInput: '',
   problemDescription: '',
@@ -48,6 +55,13 @@ const formFromQuestion = (question) => ({
   title: question.title || '',
   trackType: question.track || question.trackType || '',
   difficulty: question.difficulty || 'Easy',
+  subject: question.subject || '',
+  topic: question.topic || '',
+  subtopic: question.subtopic || '',
+  rolesText: Array.isArray(question.roles) ? question.roles.join(', ') : '',
+  companiesText: Array.isArray(question.companies) ? question.companies.join(', ') : '',
+  pattern: question.pattern || '',
+  usage: question.usage || 'Both',
   tags: Array.isArray(question.tags) ? question.tags : [],
   tagInput: '',
   problemDescription: question.description || '',
@@ -410,6 +424,13 @@ export const QuestionBankCategoryDetailPage = () => {
       const questionsPayload = bulkForms.map((form) => ({
         title: form.title.trim(),
         difficulty: form.difficulty,
+        subject: form.subject,
+        topic: form.topic,
+        subtopic: form.subtopic,
+        roles: form.rolesText,
+        companies: form.companiesText,
+        pattern: form.pattern,
+        usage: form.usage,
         categoryId: category?.id || category?._id,
         categorySlug: category?.slug || categoryId,
         categoryTitle: category?.title || '',
@@ -472,6 +493,13 @@ export const QuestionBankCategoryDetailPage = () => {
     const backendPayload = {
       title: questionForm.title.trim(),
       difficulty: questionForm.difficulty,
+      subject: questionForm.subject,
+      topic: questionForm.topic,
+      subtopic: questionForm.subtopic,
+      roles: questionForm.rolesText,
+      companies: questionForm.companiesText,
+      pattern: questionForm.pattern,
+      usage: questionForm.usage,
       categoryId: category?.id || category?._id,
       categorySlug: category?.slug || categoryId,
       categoryTitle: category?.title || '',
@@ -577,6 +605,28 @@ export const QuestionBankCategoryDetailPage = () => {
           <option className={dropdownOptionClass}>Hard</option>
         </select>
         <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+      </div>
+    </div>
+  );
+
+  const assignmentMetadataField = (
+    <div className="md:col-span-2 rounded-xl border border-blue-400/20 bg-blue-500/5 p-3">
+      <div className="mb-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-[#3C83F6] dark:text-[#bceaff]">Dynamic assignment metadata</p>
+        <p className="mt-1 text-[11px] text-black/50 dark:text-white/50">Used to match role, company, topic, difficulty, and usage when a Blueprint assigns this question.</p>
+      </div>
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+        <input value={questionForm.subject} onChange={(e) => updateFormField('subject', e.target.value)} placeholder="Subject (e.g. DSA)" className={questionFormInputClass} />
+        <input value={questionForm.topic} onChange={(e) => updateFormField('topic', e.target.value)} placeholder="Topic (e.g. Arrays)" className={questionFormInputClass} />
+        <input value={questionForm.subtopic} onChange={(e) => updateFormField('subtopic', e.target.value)} placeholder="Subtopic (e.g. Sliding Window)" className={questionFormInputClass} />
+        <input value={questionForm.rolesText} onChange={(e) => updateFormField('rolesText', e.target.value)} placeholder="Roles, comma separated" className={questionFormInputClass} />
+        <input value={questionForm.companiesText} onChange={(e) => updateFormField('companiesText', e.target.value)} placeholder="Companies, comma separated" className={questionFormInputClass} />
+        <input value={questionForm.pattern} onChange={(e) => updateFormField('pattern', e.target.value)} placeholder="Pattern (optional)" className={questionFormInputClass} />
+        <select value={questionForm.usage} onChange={(e) => updateFormField('usage', e.target.value)} className={questionFormInputClass}>
+          <option className={dropdownOptionClass} value="Both">Usage: Both</option>
+          <option className={dropdownOptionClass} value="Assessment">Usage: Assessment</option>
+          <option className={dropdownOptionClass} value="Practice">Usage: Practice</option>
+        </select>
       </div>
     </div>
   );
@@ -779,6 +829,25 @@ export const QuestionBankCategoryDetailPage = () => {
                       </div>
                     );
 
+                    const formAssignmentMetadataField = (
+                      <div className="md:col-span-2 rounded-xl border border-blue-400/20 bg-blue-500/5 p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#3C83F6] dark:text-[#bceaff]">Dynamic assignment metadata</p>
+                        <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-3">
+                          <input value={form.subject} onChange={(e) => updateBulkFormField(index, 'subject', e.target.value)} placeholder="Subject" className={questionFormInputClass} />
+                          <input value={form.topic} onChange={(e) => updateBulkFormField(index, 'topic', e.target.value)} placeholder="Topic" className={questionFormInputClass} />
+                          <input value={form.subtopic} onChange={(e) => updateBulkFormField(index, 'subtopic', e.target.value)} placeholder="Subtopic" className={questionFormInputClass} />
+                          <input value={form.rolesText} onChange={(e) => updateBulkFormField(index, 'rolesText', e.target.value)} placeholder="Roles, comma separated" className={questionFormInputClass} />
+                          <input value={form.companiesText} onChange={(e) => updateBulkFormField(index, 'companiesText', e.target.value)} placeholder="Companies, comma separated" className={questionFormInputClass} />
+                          <input value={form.pattern} onChange={(e) => updateBulkFormField(index, 'pattern', e.target.value)} placeholder="Pattern" className={questionFormInputClass} />
+                          <select value={form.usage} onChange={(e) => updateBulkFormField(index, 'usage', e.target.value)} className={questionFormInputClass}>
+                            <option className={dropdownOptionClass} value="Both">Usage: Both</option>
+                            <option className={dropdownOptionClass} value="Assessment">Usage: Assessment</option>
+                            <option className={dropdownOptionClass} value="Practice">Usage: Practice</option>
+                          </select>
+                        </div>
+                      </div>
+                    );
+
                     const formDescriptionField = (
                       <div className="md:col-span-2">
                         <label className="admin-micro-label text-black/45 dark:text-white/45">
@@ -821,12 +890,14 @@ export const QuestionBankCategoryDetailPage = () => {
                               {formExplanationField}
                               {formTitleField}
                               {formTagsField}
+                              {formAssignmentMetadataField}
                             </>
                           ) : (
                             <>
                               {formTitleField}
                               {formDifficultyField}
                               {formTagsField}
+                              {formAssignmentMetadataField}
                               {formDescriptionField}
                               {formDynamicHostField}
                             </>
@@ -845,12 +916,14 @@ export const QuestionBankCategoryDetailPage = () => {
                     {explanationField}
                     {titleField}
                     {tagsField}
+                    {assignmentMetadataField}
                   </>
                 ) : (
                   <>
                     {titleField}
                     {difficultyField}
                     {tagsField}
+                    {assignmentMetadataField}
                     {descriptionField}
                     {dynamicHostField}
                   </>

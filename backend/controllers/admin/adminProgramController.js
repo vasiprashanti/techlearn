@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import Program, { PROGRAM_TYPES } from "../../models/Program.js";
+import Program, { PROGRAM_PLACEMENT_CATEGORIES, PROGRAM_TYPES } from "../../models/Program.js";
 import Batch from "../../models/Batch.js";
 import Student from "../../models/Student.js";
 import Course from "../../models/Course.js";
@@ -12,12 +12,16 @@ import ProgramEnrollment from "../../models/ProgramEnrollment.js";
 import DailyTaskAttempt from "../../models/DailyTaskAttempt.js";
 import DailyChallengeAttempt from "../../models/DailyChallengeAttempt.js";
 import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
+import Blueprint from "../../models/Blueprint.js";
 import {
   pauseProgramEnrollment,
   syncPrimaryProgramPointers,
   upsertProgramEnrollment,
 } from "../../utils/programEnrollment.js";
 import { expireAllActiveBatches } from "../../utils/batchLifecycle.js";
+import { validateAndNormalizeProgramPhases } from "../../utils/programPhases.js";
+import { deleteProgramPerformance } from "../../services/programPerformanceService.js";
+import { syncProgramEnrollmentsForProgram } from "../../services/programCompletionService.js";
 
 // Whitelist mapping for attachment entity types
 export const ENTITY_CONFIG = {
@@ -101,6 +105,30 @@ const parseProgramDurationDays = (duration) => {
         : 1;
 
   return Math.max(1, Math.round(amount * multiplier));
+};
+
+const resolveProgramDurationDays = ({ durationDays, duration }) => {
+  const requestedDurationDays = durationDays === undefined || durationDays === null || durationDays === ""
+    ? parseProgramDurationDays(duration)
+    : Number(durationDays);
+  return Number.isInteger(requestedDurationDays) ? requestedDurationDays : null;
+};
+
+const normalizePlacementCategories = (value, { allowLegacyFallback = false } = {}) => {
+  const categories = Array.isArray(value)
+    ? [...new Set(value.map((item) => String(item || "").trim()).filter(Boolean))]
+    : [];
+  const invalid = categories.filter((category) => !PROGRAM_PLACEMENT_CATEGORIES.includes(category));
+
+  if (invalid.length > 0 && !allowLegacyFallback) {
+    return {
+      error: `Placement category must be one of: ${PROGRAM_PLACEMENT_CATEGORIES.join(", ")}.`,
+    };
+  }
+
+  return {
+    categories: invalid.length > 0 ? ["Both"] : categories,
+  };
 };
 
 // Reports and enrollment stats use the product's India-facing calendar day,
@@ -222,8 +250,8 @@ const getProgramStatus = ({ enrollment, expiryDate, now = new Date() }) => {
   return "Active";
 };
 
-const getStoredAccuracy = (student, enrollment) => {
-  const candidates = [student?.overallAccuracy, student?.accuracy, enrollment?.overallAccuracy, enrollment?.accuracy];
+const getStoredAccuracy = (enrollment) => {
+  const candidates = [enrollment?.completionAccuracy];
   const value = candidates.map(Number).find((candidate) => Number.isFinite(candidate));
   return value === undefined ? null : value;
 };
@@ -236,7 +264,8 @@ const averageScores = (...activities) => {
 
 const buildProgramMonitoringData = async ({ program, enrollments, students }) => {
   const now = new Date();
-  const durationDays = parseProgramDurationDays(program.duration) || PROGRAM_REPORT_DAYS;
+  const durationDays = Number(program.durationDays) || parseProgramDurationDays(program.duration) || PROGRAM_REPORT_DAYS;
+  const reportDays = durationDays;
   const programBatchIds = (program.batchIds || []).map(getIdString).filter(Boolean);
   const currentStudentIds = students.map((student) => getIdString(student)).filter(Boolean);
   const studentEmails = students.map((student) => String(student.email || "").trim().toLowerCase()).filter(Boolean);
@@ -356,13 +385,13 @@ const buildProgramMonitoringData = async ({ program, enrollments, students }) =>
       .map(([, activity]) => activity);
     const status = getProgramStatus({ enrollment, expiryDate: scheduleExpiryDate, now });
     const completionAccuracy = status === "Completed"
-      ? (getStoredAccuracy(student, enrollment) ?? averageScores(...taskActivities, ...challengeActivities))
+      ? (getStoredAccuracy(enrollment) ?? averageScores(...taskActivities, ...challengeActivities))
       : null;
     const programReport = {
       studentId,
       dayNumber,
       status,
-      days: Array.from({ length: PROGRAM_REPORT_DAYS }, (_, index) => {
+      days: Array.from({ length: reportDays }, (_, index) => {
         const reportDay = index + 1;
         const task = taskActivityByUserDay.get(`${userId}:${reportDay}`);
         const challenge = challengeActivityByStudentDay.get(`${studentId}:${reportDay}`)
@@ -426,7 +455,7 @@ const buildProgramMonitoringData = async ({ program, enrollments, students }) =>
         : null,
     },
     reports: {
-      days: PROGRAM_REPORT_DAYS,
+      days: reportDays,
     },
   };
 };
@@ -508,6 +537,8 @@ export const listPrograms = async (req, res) => {
       description: p.description,
       programType: p.programType,
       duration: p.duration,
+      durationDays: p.durationDays || parseProgramDurationDays(p.duration),
+      phases: p.phases || [],
       status: p.status,
       visibility: p.visibility,
       pricingType: p.pricingType,
@@ -517,7 +548,6 @@ export const listPrograms = async (req, res) => {
       targetCompanies: p.targetCompanies || [],
       skillTags: p.skillTags || [],
       targetRoles: p.targetRoles || [],
-      accessTier: p.accessTier || "Both",
       studentCount: Array.isArray(p.studentIds) ? p.studentIds.length : 0,
       batchCount: Array.isArray(p.batchIds) ? p.batchIds.length : 0,
       courseCount: Array.isArray(p.courseIds) ? p.courseIds.length : 0,
@@ -556,6 +586,8 @@ export const createProgram = async (req, res) => {
       description,
       programType,
       duration,
+      durationDays,
+      phases,
       status,
       visibility,
       pricingType,
@@ -565,10 +597,9 @@ export const createProgram = async (req, res) => {
       targetCompanies,
       skillTags,
       targetRoles,
-      accessTier,
     } = req.body;
 
-    if (!name || !programType || !duration) {
+    if (!name || !programType || (!duration && durationDays === undefined)) {
       return res.status(400).json({
         success: false,
         message: "Program name, program type, and duration are required",
@@ -581,6 +612,28 @@ export const createProgram = async (req, res) => {
         success: false,
         message: "Program type must be Placement or Skill",
       });
+    }
+
+    const resolvedDurationDays = resolveProgramDurationDays({ durationDays, duration });
+    if (!resolvedDurationDays) {
+      return res.status(400).json({
+        success: false,
+        message: "Duration must be a whole number of days or a value such as 30 Days.",
+      });
+    }
+
+    const phaseValidation = validateAndNormalizeProgramPhases({
+      programType: normalizedProgramType,
+      durationDays: resolvedDurationDays,
+      phases,
+    });
+    if (phaseValidation.error) {
+      return res.status(400).json({ success: false, message: phaseValidation.error });
+    }
+
+    const placementCategoryResult = normalizePlacementCategories(placementCategories);
+    if (placementCategoryResult.error) {
+      return res.status(400).json({ success: false, message: placementCategoryResult.error });
     }
 
     let parsedFee = 0;
@@ -598,17 +651,18 @@ export const createProgram = async (req, res) => {
       name: name.trim(),
       description: (description || "").trim(),
       programType: normalizedProgramType,
-      duration: duration.trim(),
+      duration: `${resolvedDurationDays} Days`,
+      durationDays: resolvedDurationDays,
+      phases: phaseValidation.phases,
       status: status || "Draft",
       visibility: visibility || "Public",
       pricingType: pricingType || "Free",
       programFee: pricingType === "Paid" ? parsedFee : 0,
       learningGoals: Array.isArray(learningGoals) ? learningGoals : [],
-      placementCategories: Array.isArray(placementCategories) ? placementCategories : [],
+      placementCategories: placementCategoryResult.categories,
       targetCompanies: Array.isArray(targetCompanies) ? targetCompanies : [],
       skillTags: Array.isArray(skillTags) ? skillTags : [],
       targetRoles: Array.isArray(targetRoles) ? targetRoles : [],
-      accessTier: accessTier || "Both",
       createdBy: req.user?._id || null,
       updatedBy: req.user?._id || null,
     });
@@ -635,6 +689,7 @@ export const getProgramById = async (req, res) => {
     const { programId } = req.params;
 
     await expireAllActiveBatches();
+    await syncProgramEnrollmentsForProgram({ programId });
 
     if (!mongoose.Types.ObjectId.isValid(programId)) {
       return res.status(400).json({ success: false, message: "Invalid program ID format" });
@@ -664,10 +719,13 @@ export const getProgramById = async (req, res) => {
     // Keep the program's learning path separate from its optional cohort
     // schedule. The enrollment record is the source of truth for the
     // student's access tier, individual start date, and selected batch.
-    const enrollments = await ProgramEnrollment.find({ programId })
-      .sort({ assignedAt: -1, createdAt: -1 })
-      .populate("batchId", "_id name startDate expiryDate releaseTime")
-      .lean();
+    const [enrollments, blueprintCount] = await Promise.all([
+      ProgramEnrollment.find({ programId })
+        .sort({ assignedAt: -1, createdAt: -1 })
+        .populate("batchId", "_id name startDate expiryDate releaseTime")
+        .lean(),
+      Blueprint.countDocuments({ programId }),
+    ]);
 
     const enrollmentByStudentId = new Map();
     enrollments.forEach((enrollment) => {
@@ -692,6 +750,7 @@ export const getProgramById = async (req, res) => {
       studentCount: monitoringData.stats.totalEnrolled,
       programStats: monitoringData.stats,
       programReports: monitoringData.reports,
+      blueprintCount,
     };
 
     res.json({
@@ -726,6 +785,8 @@ export const updateProgram = async (req, res) => {
       description,
       programType,
       duration,
+      durationDays,
+      phases,
       status,
       visibility,
       pricingType,
@@ -735,31 +796,70 @@ export const updateProgram = async (req, res) => {
       targetCompanies,
       skillTags,
       targetRoles,
-      accessTier,
     } = req.body;
+
+    const nextProgramType = programType === undefined
+      ? program.programType
+      : String(programType).trim();
+    if (!PROGRAM_TYPES.includes(nextProgramType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Program type must be Placement or Skill",
+      });
+    }
+
+    const nextDurationDays = resolveProgramDurationDays({
+      durationDays: durationDays === undefined ? program.durationDays : durationDays,
+      duration: duration === undefined ? program.duration : duration,
+    });
+    if (!nextDurationDays) {
+      return res.status(400).json({
+        success: false,
+        message: "Duration must be a whole number of days or a value such as 30 Days.",
+      });
+    }
+
+    const isStructureChanging = programType !== undefined
+      || duration !== undefined
+      || durationDays !== undefined
+      || phases !== undefined
+      || !Array.isArray(program.phases)
+      || program.phases.length === 0;
+    const phaseValidation = validateAndNormalizeProgramPhases({
+      programType: nextProgramType,
+      durationDays: nextDurationDays,
+      phases: isStructureChanging ? phases : program.phases,
+    });
+    if (phaseValidation.error) {
+      return res.status(400).json({ success: false, message: phaseValidation.error });
+    }
 
     if (name !== undefined) program.name = String(name).trim();
     if (description !== undefined) program.description = String(description).trim();
-    if (programType !== undefined) {
-      const normalizedProgramType = String(programType).trim();
-      if (!PROGRAM_TYPES.includes(normalizedProgramType)) {
-        return res.status(400).json({
-          success: false,
-          message: "Program type must be Placement or Skill",
-        });
-      }
-      program.programType = normalizedProgramType;
-    }
-    if (duration !== undefined) program.duration = String(duration).trim();
+    program.programType = nextProgramType;
+    program.duration = `${nextDurationDays} Days`;
+    program.durationDays = nextDurationDays;
+    program.phases = phaseValidation.phases;
     if (status !== undefined) program.status = status;
     if (visibility !== undefined) program.visibility = visibility;
     if (learningGoals !== undefined) program.learningGoals = Array.isArray(learningGoals) ? learningGoals : [];
-    if (placementCategories !== undefined) program.placementCategories = Array.isArray(placementCategories) ? placementCategories : [];
+    if (placementCategories !== undefined) {
+      const placementCategoryResult = normalizePlacementCategories(placementCategories);
+      if (placementCategoryResult.error) {
+        return res.status(400).json({ success: false, message: placementCategoryResult.error });
+      }
+      program.placementCategories = nextProgramType === "Placement"
+        ? placementCategoryResult.categories
+        : [];
+    } else {
+      const legacyPlacementCategoryResult = normalizePlacementCategories(program.placementCategories, { allowLegacyFallback: true });
+      program.placementCategories = nextProgramType === "Placement"
+        ? legacyPlacementCategoryResult.categories
+        : [];
+    }
     if (targetCompanies !== undefined) program.targetCompanies = Array.isArray(targetCompanies) ? targetCompanies : [];
     if (skillTags !== undefined) program.skillTags = Array.isArray(skillTags) ? skillTags : [];
     if (targetRoles !== undefined) program.targetRoles = Array.isArray(targetRoles) ? targetRoles : [];
-    if (accessTier !== undefined) program.accessTier = accessTier;
-
     if (pricingType !== undefined) {
       program.pricingType = pricingType;
       if (pricingType === "Paid") {
@@ -815,6 +915,9 @@ export const deleteProgram = async (req, res) => {
     if (!program) {
       return res.status(404).json({ success: false, message: "Program not found" });
     }
+
+    await Blueprint.deleteMany({ programId });
+    await deleteProgramPerformance(programId);
 
     res.json({
       success: true,

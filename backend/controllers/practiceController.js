@@ -6,6 +6,7 @@ import { getTrackAssignmentDate, calculateCurrentDayNumber } from "../utils/trac
 import { resolveProgramSchedule } from "../utils/programSchedule.js";
 import { normalizeCategoryType } from "../utils/questionBank.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
+import { recordProgramPerformanceAttempt } from "../services/programPerformanceService.js";
 
 const TRACKS = ["DSA", "Core CS", "SQL", "Aptitude", "Company Based"];
 const PRACTICE_DAILY_RUN_LIMIT = Math.max(1, Number(process.env.PRACTICE_DAILY_RUN_LIMIT || 50));
@@ -571,6 +572,23 @@ export const recordPracticeSubmission = async (req, res) => {
                     task.attempted = true;
                     task.status = "In Progress";
                     await attempt.save();
+                    await recordProgramPerformanceAttempt({
+                      programId: schedule.programId,
+                      studentId: student._id,
+                      userId: req.user._id,
+                      programDay: dayNumber,
+                      source: "Daily Task",
+                      sourceKey: "daily-task:" + String(attempt._id) + ":" + String(task.questionId) + ":" + String(task.taskType || "Unknown"),
+                      sourceRecordId: attempt._id,
+                      taskType: task.taskType,
+                      questionId: task.questionId,
+                      question: canonicalQuestion,
+                      attempted: true,
+                      correct: task.isCorrect,
+                      score: accuracy,
+                      accuracy,
+                      attemptedAt: new Date(),
+                    });
                   } else {
                     // MCQ, Aptitude, Core CS
                     task.status = "In Progress";
@@ -579,6 +597,23 @@ export const recordPracticeSubmission = async (req, res) => {
                     task.attempted = true;
                     task.completedAt = new Date();
                     await attempt.save();
+                    await recordProgramPerformanceAttempt({
+                      programId: schedule.programId,
+                      studentId: student._id,
+                      userId: req.user._id,
+                      programDay: dayNumber,
+                      source: "Daily Task",
+                      sourceKey: "daily-task:" + String(attempt._id) + ":" + String(task.questionId) + ":" + String(task.taskType || "Unknown"),
+                      sourceRecordId: attempt._id,
+                      taskType: task.taskType,
+                      questionId: task.questionId,
+                      question: canonicalQuestion,
+                      attempted: true,
+                      correct: task.isCorrect,
+                      score: task.isCorrect === true ? 100 : task.isCorrect === false ? 0 : null,
+                      accuracy: task.isCorrect === true ? 100 : task.isCorrect === false ? 0 : null,
+                      attemptedAt: task.completedAt,
+                    });
                   }
                 } else {
                   // When final Finish is clicked (finalize: true)
@@ -642,10 +677,37 @@ export const recordPracticeSubmission = async (req, res) => {
                   const trackedTasks = attempt.tasksProgress.filter((progressTask) => isSameTrack(progressTask.taskType));
                   const trackedQuestions = await Question.find({
                     _id: { $in: trackedTasks.map((progressTask) => progressTask.questionId).filter(Boolean) },
-                  }).select("_id difficulty").lean();
+                  }).select("_id categoryId categoryType categoryTitle categorySlug trackType tags difficulty title subject topic subtopic content").lean();
                   const difficultyByQuestionId = new Map(
                     trackedQuestions.map((trackedQuestion) => [String(trackedQuestion._id), trackedQuestion.difficulty || "Easy"])
                   );
+                  const questionById = new Map(
+                    trackedQuestions.map((trackedQuestion) => [String(trackedQuestion._id), trackedQuestion])
+                  );
+
+                  for (const progressTask of trackedTasks) {
+                    const trackedQuestion = questionById.get(String(progressTask.questionId)) || null;
+                    const trackedAccuracy = typeof progressTask.accuracy === "number"
+                      ? progressTask.accuracy
+                      : (typeof progressTask.isCorrect === "boolean" ? (progressTask.isCorrect ? 100 : 0) : null);
+                    await recordProgramPerformanceAttempt({
+                      programId: schedule.programId,
+                      studentId: student._id,
+                      userId: req.user._id,
+                      programDay: dayNumber,
+                      source: "Daily Task",
+                      sourceKey: "daily-task:" + String(attempt._id) + ":" + String(progressTask.questionId) + ":" + String(progressTask.taskType || "Unknown"),
+                      sourceRecordId: attempt._id,
+                      taskType: progressTask.taskType,
+                      questionId: progressTask.questionId,
+                      question: trackedQuestion,
+                      attempted: progressTask.attempted,
+                      correct: progressTask.isCorrect,
+                      score: trackedAccuracy,
+                      accuracy: trackedAccuracy,
+                      attemptedAt: progressTask.completedAt,
+                    });
+                  }
                   
                   attempt.tasksProgress.forEach((t) => {
                     if (isSameTrack(t.taskType)) {

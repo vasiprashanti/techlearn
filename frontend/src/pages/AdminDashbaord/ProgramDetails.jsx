@@ -4,6 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 import StudentReportModal from '../../components/AdminDashbaord/StudentReportModal';
+import ProgramBlueprintsPanel from './ProgramBlueprintsPanel';
 import { adminAPI } from '../../services/adminApi';
 import {
   FiArrowLeft,
@@ -31,6 +32,7 @@ import {
 
 const SECTIONS = [
   { key: 'students', label: 'Students', icon: FiUsers, field: 'studentIds', route: '/students' },
+  { key: 'blueprints', label: 'Blueprints', icon: FiLayers, field: null, route: null },
   { key: 'batches', label: 'Batches', icon: FiLayers, field: 'batchIds', route: '/batches' },
   { key: 'courses', label: 'Courses', icon: FiBookOpen, field: 'courseIds', route: '/admin/courses' },
   { key: 'roadmaps', label: 'Roadmaps', icon: FiFileText, field: 'roadmapIds', route: '/admin/roadmaps' },
@@ -132,7 +134,7 @@ const buildStudentTableRow = (student, program) => {
   const feeLabel = Number.isFinite(fee) && fee > 0 ? ` ₹${fee.toLocaleString('en-IN')}` : '';
   const configuredPlan = String(student?.programPlan || '').trim();
   const planBase = configuredPlan || (isPaid
-    ? (program?.accessTier === 'Member' ? 'Member' : 'Paid')
+    ? 'Paid'
     : (totalDays ? `${totalDays}-Day Trial` : 'Free Access'));
 
   return {
@@ -356,7 +358,7 @@ const ProgramReportsTable = ({ students, program, onOpenStudent }) => {
   );
 };
 
-const ProgramAnalyticsPanel = ({ program }) => {
+const ProgramAnalyticsPanel = ({ program, readinessLeads = [], readinessLoading = false }) => {
   const stats = program?.programStats || {};
   const enrolledStudents = Array.isArray(program?.studentIds) ? program.studentIds : [];
   const metrics = [
@@ -382,6 +384,162 @@ const ProgramAnalyticsPanel = ({ program }) => {
         <p className="mt-1 text-xs text-black/45 dark:text-white/45">
           Analytics are calculated from the learners enrolled in this program and their day-wise activity.
         </p>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-black/10 bg-white/80 dark:border-white/10 dark:bg-[#0f1f43]">
+        <div className="flex items-center justify-between gap-3 border-b border-black/5 px-4 py-3 dark:border-white/5">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Readiness leads</h3>
+            <p className="mt-1 text-xs text-black/45 dark:text-white/45">Learners who started Day 0 before enrolling in this program.</p>
+          </div>
+          <span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-700 dark:text-violet-300">{readinessLeads.length}</span>
+        </div>
+        {readinessLoading ? (
+          <div className="px-4 py-6 text-center text-xs text-black/45 dark:text-white/45">Loading readiness leads…</div>
+        ) : readinessLeads.length === 0 ? (
+          <div className="px-4 py-6 text-center text-xs text-black/45 dark:text-white/45">No readiness leads yet.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-[680px] w-full text-left">
+              <thead className="bg-black/[0.03] dark:bg-white/[0.04]">
+                <tr className="border-b border-black/10 dark:border-white/10">
+                  {['Learner', 'Role', 'Companies', 'Status', 'Score'].map((label) => (
+                    <th key={label} className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">{label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {readinessLeads.map((lead) => {
+                  const user = lead.userId || {};
+                  const name = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.name || user.email || 'Learner';
+                  return (
+                    <tr key={lead._id} className="border-b border-black/5 last:border-b-0 dark:border-white/5">
+                      <td className="px-4 py-3 text-xs font-semibold text-slate-800 dark:text-white">
+                        {name}<span className="mt-0.5 block text-[11px] font-normal text-black/40 dark:text-white/40">{user.email || '—'}</span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">{lead.targetRole || user.targetRole || '—'}</td>
+                      <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">{(lead.targetCompanies || user.targetCompanies || []).join(', ') || '—'}</td>
+                      <td className="px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-200">{lead.status}</td>
+                      <td className="px-4 py-3 text-xs font-semibold tabular-nums text-slate-700 dark:text-slate-200">{lead.accuracy === null || lead.accuracy === undefined ? '—' : `${Math.round(Number(lead.accuracy))}%`}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const performanceClassificationClass = (classification) => {
+  if (classification === 'Strong') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
+  if (classification === 'Average') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300';
+  if (classification === 'Weak') return 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300';
+  return 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300';
+};
+
+const formatPerformanceAccuracy = (value) => (
+  value === null || value === undefined ? '—' : `${Math.round(Number(value))}%`
+);
+
+const ProgramPerformancePanel = ({ performance, loading, error }) => {
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] px-4 py-8 text-center text-sm text-black/45 dark:text-white/45">
+        Generating performance report from student attempts…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50/80 dark:bg-red-500/10 px-4 py-4 text-sm text-red-700 dark:text-red-300">
+        {error}
+      </div>
+    );
+  }
+
+  const stats = performance?.stats || {};
+  const students = performance?.students || [];
+  const topics = performance?.topics || [];
+  const studentNames = new Map(students.map((student) => [String(student.studentId), student.name || student.email || 'Unnamed Student']));
+  const classifications = stats.classificationCounts || {};
+  const metrics = [
+    { label: 'Questions Attempted', value: stats.questionsAttempted ?? 0 },
+    { label: 'Correct Answers', value: stats.correctAnswers ?? 0 },
+    { label: 'Accuracy', value: formatPerformanceAccuracy(stats.accuracy) },
+    { label: 'Weak Topics', value: classifications.Weak ?? 0 },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+        <div>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Performance profile</h3>
+          <p className="mt-1 text-xs text-black/45 dark:text-white/45">
+            Generated from Daily Task, Daily Challenge, and dynamic program assignment attempts. Topic summaries feed the revision engine.
+          </p>
+        </div>
+        {performance?.generatedAt && (
+          <span className="text-[10px] font-semibold text-black/40 dark:text-white/40">
+            Updated {new Date(performance.generatedAt).toLocaleString()}
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {metrics.map((metric) => (
+          <div key={metric.label} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] px-4 py-3">
+            <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{metric.value}</p>
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">{metric.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-[980px] w-full text-left">
+            <caption className="sr-only">Program topic performance summaries</caption>
+            <thead className="bg-black/[0.03] dark:bg-white/[0.04]">
+              <tr className="border-b border-black/10 dark:border-white/10">
+                {['Student', 'Day', 'Subject', 'Topic', 'Subtopic', 'Attempted', 'Correct', 'Accuracy', 'Status'].map((label) => (
+                  <th key={label} scope="col" className="px-3 py-3 text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45 whitespace-nowrap">
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {topics.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-6 py-10 text-center text-sm text-black/45 dark:text-white/45">
+                    No completed question attempts have been recorded for this program yet.
+                  </td>
+                </tr>
+              ) : topics.map((topic) => (
+                <tr key={`${topic.studentId}-${topic.programDay}-${topic.subject}-${topic.topic}-${topic.subtopic}`} className="border-b border-black/5 dark:border-white/5 last:border-b-0">
+                  <td className="px-3 py-3 text-xs font-semibold text-slate-800 dark:text-white whitespace-nowrap">
+                    {studentNames.get(String(topic.studentId)) || 'Unnamed Student'}
+                  </td>
+                  <td className="px-3 py-3 text-xs font-semibold tabular-nums text-slate-600 dark:text-slate-300">Day {topic.programDay}</td>
+                  <td className="px-3 py-3 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">{topic.subject}</td>
+                  <td className="px-3 py-3 text-xs font-semibold text-slate-800 dark:text-white whitespace-nowrap">{topic.topic}</td>
+                  <td className="px-3 py-3 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">{topic.subtopic}</td>
+                  <td className="px-3 py-3 text-xs tabular-nums text-slate-600 dark:text-slate-300">{topic.questionsAttempted}</td>
+                  <td className="px-3 py-3 text-xs tabular-nums text-slate-600 dark:text-slate-300">{topic.correctAnswers}</td>
+                  <td className="px-3 py-3 text-xs font-semibold tabular-nums text-slate-800 dark:text-white">{formatPerformanceAccuracy(topic.accuracy)}</td>
+                  <td className="px-3 py-3">
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${performanceClassificationClass(topic.classification)}`}>
+                      {topic.classification}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -419,6 +577,11 @@ export default function ProgramDetails() {
   const [studentPlanFilter, setStudentPlanFilter] = useState('all');
   const [studentSort, setStudentSort] = useState('latest');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [performance, setPerformance] = useState(null);
+  const [performanceLoading, setPerformanceLoading] = useState(false);
+  const [performanceError, setPerformanceError] = useState('');
+  const [readinessLeads, setReadinessLeads] = useState([]);
+  const [readinessLeadsLoading, setReadinessLeadsLoading] = useState(false);
 
   const [attachModalType, setAttachModalType] = useState(null);
   const [availableItems, setAvailableItems] = useState([]);
@@ -467,6 +630,55 @@ export default function ProgramDetails() {
   useEffect(() => {
     fetchProgramDetail();
   }, [fetchProgramDetail]);
+
+  useEffect(() => {
+    if (activeTab !== 'students' || studentsSubTab !== 'reports') return undefined;
+
+    let cancelled = false;
+    setPerformanceLoading(true);
+    setPerformanceError('');
+    adminAPI
+      .getProgramPerformance(programId)
+      .then((response) => {
+        if (cancelled) return;
+        if (!response?.performance) {
+          setPerformanceError('Performance report data was not returned.');
+          return;
+        }
+        setPerformance(response.performance);
+      })
+      .catch((err) => {
+        if (!cancelled) setPerformanceError(err.message || 'Failed to generate performance report.');
+      })
+      .finally(() => {
+        if (!cancelled) setPerformanceLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, studentsSubTab, programId]);
+
+  useEffect(() => {
+    if (activeTab !== 'analytics') return undefined;
+    let cancelled = false;
+    setReadinessLeadsLoading(true);
+    adminAPI.getProgramReadinessLeads(programId)
+      .then((response) => {
+        if (!cancelled) setReadinessLeads(response?.leads || []);
+      })
+      .catch((err) => {
+        if (!cancelled) console.error('Error fetching readiness leads:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setReadinessLeadsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [activeTab, programId]);
+
+  const handleBlueprintCountChange = useCallback((count) => {
+    setProgram((current) => (current ? { ...current, blueprintCount: count } : current));
+  }, []);
 
   useEffect(() => {
     const returnType = searchParams.get('attachType');
@@ -1172,7 +1384,11 @@ export default function ProgramDetails() {
           <div className="-mt-1 flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
             {SECTIONS.map((sec) => {
               const Icon = sec.icon;
-              const count = sec.field ? (program[sec.field] || []).length : null;
+              const count = sec.key === 'blueprints'
+                ? Number(program.blueprintCount || 0)
+                : sec.field
+                  ? (program[sec.field] || []).length
+                  : null;
               const isActive = activeTab === sec.key;
               return (
                 <button
@@ -1208,20 +1424,27 @@ export default function ProgramDetails() {
                 <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                   {currentSection.key === 'students'
                     ? 'Students'
+                    : currentSection.key === 'blueprints'
+                    ? 'Blueprints'
                     : currentSection.key === 'analytics'
                     ? 'Analytics'
                     : `Attached ${currentSection.label}`}
-                  {currentSection.key !== 'analytics' && (
+                  {currentSection.key !== 'analytics' && currentSection.key !== 'blueprints' && (
                     <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[#3C83F6]/10 dark:bg-[#bceaff]/15 text-[#3C83F6] dark:text-[#bceaff]">
                       {attachedItems.length}
                     </span>
                   )}
                 </h2>
-                {currentSection.key !== 'students' && (
+                {currentSection.key !== 'students' && currentSection.key !== 'blueprints' && (
                   <p className="text-xs text-black/45 dark:text-white/45 mt-0.5">
                     {currentSection.key === 'analytics'
                       ? 'Program performance overview'
                       : `Manage attached ${currentSection.label.toLowerCase()} or add new resources`}
+                  </p>
+                )}
+                {currentSection.key === 'blueprints' && (
+                  <p className="text-xs text-black/45 dark:text-white/45 mt-0.5">
+                    Configure dynamic question mixes for this {getProgramType(program.programType)} program.
                   </p>
                 )}
               </div>
@@ -1234,7 +1457,7 @@ export default function ProgramDetails() {
                   <FiPlus className="w-3.5 h-3.5" />
                   Add Student
                 </button>
-              ) : currentSection.key !== 'analytics' ? (
+              ) : currentSection.key !== 'analytics' && currentSection.key !== 'blueprints' ? (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleCreateNewResource(currentSection)}
@@ -1255,8 +1478,14 @@ export default function ProgramDetails() {
             </div>
 
             {/* Attached Items */}
-            {currentSection.key === 'analytics' ? (
-              <ProgramAnalyticsPanel program={program} />
+            {currentSection.key === 'blueprints' ? (
+              <ProgramBlueprintsPanel
+                programId={programId}
+                programType={getProgramType(program.programType)}
+                onCountChange={handleBlueprintCountChange}
+              />
+            ) : currentSection.key === 'analytics' ? (
+              <ProgramAnalyticsPanel program={program} readinessLeads={readinessLeads} readinessLoading={readinessLeadsLoading} />
             ) : currentSection.key === 'students' ? (
               <>
                 <div className="flex items-center gap-1 border-b border-black/5 dark:border-white/5">
@@ -1380,11 +1609,18 @@ export default function ProgramDetails() {
                 </div>
 
                 {studentsSubTab === 'reports' ? (
-                  <ProgramReportsTable
-                    students={visibleStudentItems}
-                    program={program}
-                    onOpenStudent={setSelectedStudent}
-                  />
+                  <>
+                    <ProgramPerformancePanel
+                      performance={performance}
+                      loading={performanceLoading}
+                      error={performanceError}
+                    />
+                    <ProgramReportsTable
+                      students={visibleStudentItems}
+                      program={program}
+                      onOpenStudent={setSelectedStudent}
+                    />
+                  </>
                 ) : (
                   <StudentDatabaseTable
                     students={visibleStudentItems}

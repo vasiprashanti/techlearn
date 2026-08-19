@@ -34,6 +34,16 @@ const programEnrollmentSchema = new mongoose.Schema(
       enum: ["Active", "Completed", "Paused"],
       default: "Active",
     },
+    completedAt: {
+      type: Date,
+      default: null,
+    },
+    completionAccuracy: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: null,
+    },
     accessTier: {
       type: String,
       enum: ["Free", "Member"],
