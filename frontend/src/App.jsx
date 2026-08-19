@@ -220,9 +220,11 @@ function LayoutWrapper() {
     location.pathname === '/dashboard/profile' ||
     location.pathname.startsWith('/dashboard/profile/');
 
+  const isHomePage = location.pathname === '/';
   const showNavbar = !['/mcq'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
-                     !location.pathname.startsWith('/daily-challenge/');
+                     !location.pathname.startsWith('/daily-challenge/') &&
+                     !isHomePage;
 
   const showFooter = !['/mcq', '/signup', '/login'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
