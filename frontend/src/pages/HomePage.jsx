@@ -102,14 +102,14 @@ const faqsData = [
 ]
 
 const milestonesData = [
-  { label: "START", progress: 0.04, x: 80, y: 70, position: "above start-node" },
-  { label: "FOUNDATION", progress: 0.25, x: 760, y: 70, position: "above" },
-  { label: "PRACTICE", progress: 0.50, x: 1280, y: 170, position: "above" },
-  { label: "REAL ROUNDS", progress: 0.75, x: 500, y: 270, position: "above" },
-  { label: "INTERVIEW READY", progress: 0.96, x: 1520, y: 350, position: "above end-node" }
+  { label: "START", progress: 0.0, x: 80, y: 70, position: "above start-node" },
+  { label: "FOUNDATION", progress: 0.20, x: 760, y: 70, position: "above" },
+  { label: "PRACTICE", progress: 0.36, x: 1280, y: 170, position: "above" },
+  { label: "REAL ROUNDS", progress: 0.65, x: 500, y: 270, position: "above" },
+  { label: "INTERVIEW READY", progress: 1.0, x: 1520, y: 350, position: "above end-node" }
 ]
 
-const pathD = "M -40 70 C 120 70, 260 70, 400 70 L 760 70 C 850 70, 850 170, 940 170 L 1280 170 C 1370 170, 1370 270, 1280 270 L 500 270 C 410 270, 410 350, 500 350 L 1640 350"
+const pathD = "M 80 70 L 760 70 C 850 70, 850 170, 940 170 L 1280 170 C 1370 170, 1370 270, 1280 270 L 500 270 C 410 270, 410 350, 500 350 L 1520 350"
 
 const HomePage = () => {
   const { theme, toggleTheme } = useTheme()
@@ -145,6 +145,31 @@ const HomePage = () => {
 
   // Final CTA typewriter state
   const [typingText, setTypingText] = useState("")
+
+  // Navbar sticky scroll state
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [isOverDarkSection, setIsOverDarkSection] = useState(false)
+  const resultsSectionRef = useRef(null)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY
+      setIsScrolled(scrollY > 20)
+
+      if (resultsSectionRef.current) {
+        const rect = resultsSectionRef.current.getBoundingClientRect()
+        // Navbar is at top 0-84px; detect if results section overlaps top viewport
+        if (rect.top <= 65 && rect.bottom >= 45) {
+          setIsOverDarkSection(true)
+        } else {
+          setIsOverDarkSection(false)
+        }
+      }
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    handleScroll()
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
 
   // --- 1. Code Background Particle Generation ---
   useEffect(() => {
@@ -294,19 +319,19 @@ const HomePage = () => {
       }
 
       setMilestonesState(
-        milestonesData.map((m) => ({
-          completed: progress >= m.progress,
-          active: Math.abs(progress - m.progress) < 0.04
+        milestonesData.map((m, idx) => ({
+          completed: progress >= m.progress || (idx === 0),
+          active: Math.abs(progress - m.progress) < 0.05 || (idx === 0 && progress < 0.05) || (idx === 4 && progress > 0.95)
         }))
       )
 
-      if (progress < 0.125) {
+      if (progress < 0.10) {
         setJourneyStatusText("START · BUILD YOUR FOUNDATION")
-      } else if (progress < 0.375) {
+      } else if (progress < 0.28) {
         setJourneyStatusText("FOUNDATION · BUILD THE SKILLS")
-      } else if (progress < 0.625) {
+      } else if (progress < 0.50) {
         setJourneyStatusText("PRACTICE · TRAIN WITH PURPOSE")
-      } else if (progress < 0.875) {
+      } else if (progress < 0.82) {
         setJourneyStatusText("REAL ROUNDS · PREPARE FOR THE INTERVIEW")
       } else {
         setJourneyStatusText("INTERVIEW READY · YOU KNOW WHAT'S NEXT")
@@ -383,19 +408,18 @@ const HomePage = () => {
   return (
     <div className="tl-landing">
       {/* =========================================================
-           01 — HERO & NAVBAR (hero.html exact specifications)
+           00 — FIXED / STICKY NAVBAR
       ========================================================= */}
-      <section className="tl-hero" id="start">
+      <header className={`tl-nav-wrapper ${isScrolled ? 'scrolled' : ''} ${isOverDarkSection ? 'on-dark-section' : ''}`}>
         <nav className="tl-nav">
           <Link to="/" className="tl-logo">
             TechLearn
           </Link>
 
           <ul className="tl-nav-links">
-            <li><a href="#journey">Program</a></li>
-            <li><a href="#results">Results</a></li>
-            <li><a href="#pricing">Pricing</a></li>
-            <li><a href="#faqs">FAQs</a></li>
+            <li><Link to="/learn">Learn</Link></li>
+            <li><a href="#journey">Roadmaps</a></li>
+            <li><a href="#pricing">Hiring</a></li>
           </ul>
 
           <div className="tl-nav-action">
@@ -411,21 +435,23 @@ const HomePage = () => {
             </Link>
           </div>
         </nav>
+      </header>
 
+      {/* =========================================================
+           01 — HERO (hero.html exact specifications)
+      ========================================================= */}
+      <section className="tl-hero" id="start">
         <div className="tl-code-field" ref={codeFieldRef}></div>
 
         <main className="tl-hero-content">
-          <div className="tl-eyebrow">
-            WORK SMARTER NOT HARDER
-          </div>
-
           <h1 className="tl-hero-title">
-            <span>Where Placement Preperation</span>
+            <span>Where Placement Preparation</span>
             <span>Meets Company Patterns</span>
           </h1>
 
           <p className="tl-hero-description">
-            Know what to learn and Practice with what's being asked to get your dream job.
+            Know what to do every day. Practice real interview questions.<br />
+            Stay on track for your dream job.
           </p>
 
           <div className="tl-hero-actions">
@@ -629,7 +655,7 @@ const HomePage = () => {
       {/* =========================================================
            04 — RESULTS / REVIEWS
       ========================================================= */}
-      <section className="tl-results" id="results">
+      <section className="tl-results" id="results" ref={resultsSectionRef}>
         <div className="section-inner">
           <div className="tl-results-header">
             <h2>
@@ -691,71 +717,67 @@ const HomePage = () => {
       <section className="tl-pricing-section" id="pricing">
         <div className="tl-pricing-inner">
           <div className="tl-pricing-header">
-            <div className="section-label">
-              SIMPLE. ONE-TIME. DONE.
-            </div>
             <h2 className="tl-pricing-title">
               PICK YOUR PATH.
             </h2>
             <p className="tl-pricing-description">
-              No monthly subscription. No confusing upgrades.
-              Choose the level of preparation you need and start.
+              Build a real technical skill or prepare specifically for placements. One focused program, structured practice, and a clear path forward.
             </p>
           </div>
 
           <div className="tl-pricing-grid">
-            {/* Starter Plan */}
+            {/* Skill Program */}
             <article className="tl-price-card">
               <div className="tl-price-name">
-                PLACEMENT STARTER
+                Build real technical skills.
               </div>
-              <h3>Build the base.</h3>
+              <h3 className="tl-price-card-title">SKILL PROGRAM</h3>
               <p className="tl-price-subtitle">
-                For students who want a structured placement preparation system to follow.
+                Pick a skill and build real ability through structured learning, daily practice and hands-on work.
               </p>
               <div className="tl-price">
-                ₹799 <small>one-time</small>
+                ₹399 <small>/year</small>
               </div>
               <div className="tl-price-divider"></div>
               <ul className="tl-price-features">
-                <li>30-day structured placement path</li>
-                <li>Daily practice tasks</li>
-                <li>Coding & technical challenges</li>
-                <li>Aptitude & SQL preparation</li>
-                <li>Company-focused questions</li>
-                <li>Progress tracking</li>
+                <li>DSA with Java or Python</li>
+                <li>AI, ML & Generative AI</li>
+                <li>Structured roadmap with concept-wise notes</li>
+                <li>Daily tasks, challenges & quizzes</li>
+                <li>Weekly assessments & progress tracking</li>
+                <li>Monthly mini-project ideas + course certificate</li>
               </ul>
               <Link to="/signup" className="tl-price-button">
-                START WITH ₹799 →
+                START LEARNING →
               </Link>
             </article>
 
-            {/* Season Featured Plan */}
+            {/* Placement Program (Featured) */}
             <article className="tl-price-card featured">
               <div className="tl-price-badge">
                 MOST POPULAR
               </div>
               <div className="tl-price-name">
-                PLACEMENT SEASON
+                Prepare for your placement.
               </div>
-              <h3>Go all in.</h3>
+              <h3 className="tl-price-card-title">PLACEMENT PROGRAM</h3>
               <p className="tl-price-subtitle">
-                For students who want deeper preparation and more practice before placement season.
+                A focused preparation system for students who want to become interview-ready and improve their chances of landing a job.
               </p>
               <div className="tl-price">
-                ₹999 <small>one-time</small>
+                ₹799 <small>/year</small>
               </div>
               <div className="tl-price-divider"></div>
               <ul className="tl-price-features">
-                <li>Everything in Placement Starter</li>
-                <li>Extended platform access</li>
-                <li>More company-specific practice</li>
-                <li>Interview preparation</li>
-                <li>Mock interview practice</li>
-                <li>Stronger placement readiness tracking</li>
+                <li>Structured DSA practice</li>
+                <li>Aptitude & Core CS preparation</li>
+                <li>Company & role-based interview questions</li>
+                <li>Daily placement tasks & challenges</li>
+                <li>Mock interview + feedback report</li>
+                <li>Jobs & internships board</li>
               </ul>
               <Link to="/signup" className="tl-price-button">
-                GET PLACEMENT SEASON →
+                START PREPARING →
               </Link>
             </article>
           </div>

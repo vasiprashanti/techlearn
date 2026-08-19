@@ -1713,30 +1713,62 @@ html {
 }
 
 /* =========================================================
-   01 — HERO (hero.html exact specs)
+   00 — FIXED / STICKY NAVBAR
 ========================================================= */
 
-.tl-hero {
-  position: relative;
+.tl-nav-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   width: 100%;
-  min-height: 100vh;
-  min-height: 100svh;
-  overflow: hidden;
-  isolation: isolate;
-  background: var(--hero-bg);
-  color: var(--hero-text);
-  transition: background 0.3s ease, color 0.3s ease;
+  z-index: 1000;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.tl-nav-wrapper.scrolled,
+.dark .tl-nav-wrapper.scrolled {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.tl-nav-wrapper.on-dark-section .tl-logo {
+  color: #ffffff !important;
+}
+
+.tl-nav-wrapper.on-dark-section .tl-nav-links a {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+.tl-nav-wrapper.on-dark-section .tl-nav-links a:hover {
+  color: #ffffff !important;
+}
+
+.tl-nav-wrapper.on-dark-section .tl-theme-btn {
+  color: #ffffff !important;
 }
 
 .tl-nav {
   position: relative;
   z-index: 30;
   width: min(1180px, calc(100% - 48px));
-  height: 88px;
+  height: 84px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
+  transition: height 0.3s ease;
+}
+
+.tl-nav-wrapper.scrolled .tl-nav {
+  height: 70px;
 }
 
 .tl-logo {
@@ -1821,6 +1853,22 @@ html {
   box-shadow: 0 8px 25px rgba(185, 236, 119, 0.25);
 }
 
+/* =========================================================
+   01 — HERO (hero.html exact specs)
+========================================================= */
+
+.tl-hero {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--hero-bg);
+  color: var(--hero-text);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
 .tl-code-field {
   position: absolute;
   inset: 0;
@@ -1868,10 +1916,10 @@ html {
   position: relative;
   z-index: 10;
   width: min(900px, calc(100% - 40px));
-  min-height: calc(100vh - 88px);
-  min-height: calc(100svh - 88px);
+  min-height: 100vh;
+  min-height: 100svh;
   margin: 0 auto;
-  padding: 0 0 80px;
+  padding: 84px 0 80px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1894,7 +1942,7 @@ html {
   line-height: 1.08;
   font-weight: 800;
   letter-spacing: -0.045em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .tl-hero-title span {
@@ -1959,7 +2007,7 @@ html {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 30px 24px;
+  padding: clamp(90px, 12vh, 140px) 24px clamp(50px, 8vh, 80px);
   background: var(--light-bg);
   color: var(--light-text);
   overflow: hidden;
@@ -2371,7 +2419,7 @@ html {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: clamp(80px, 12vh, 120px) clamp(24px, 5vw, 64px) clamp(65px, 10vh, 100px);
+  padding: clamp(110px, 15vh, 160px) clamp(24px, 5vw, 64px) clamp(90px, 13vh, 140px);
   transition: background 0.3s ease, color 0.3s ease;
 }
 
@@ -2486,14 +2534,14 @@ html {
 }
 
 .tl-milestone.start-node .tl-milestone-label {
-  left: 0;
-  transform: translateX(0);
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .tl-milestone.end-node .tl-milestone-label {
-  left: auto;
-  right: 0;
-  transform: translateX(0);
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
 }
 
 .tl-milestone.above .tl-milestone-label {
@@ -2611,6 +2659,7 @@ html {
   align-items: center;
   justify-content: flex-start;
   width: 100%;
+  margin-bottom: 12px;
 }
 
 .tl-journey-checkpoint-chip {
@@ -2892,7 +2941,7 @@ html {
 }
 
 /* =========================================================
-   05 — PRICING (Compact viewport fit)
+   05 — PRICING (Top spaced, extended card height)
 ========================================================= */
 
 .tl-pricing-section {
@@ -2902,21 +2951,21 @@ html {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 30px 24px;
+  padding: 65px 24px 20px;
   background: var(--light-bg);
   color: var(--light-text);
   transition: background 0.3s ease, color 0.3s ease;
 }
 
 .tl-pricing-inner {
-  width: min(940px, 100%);
+  width: min(900px, 100%);
   margin: 0 auto;
 }
 
 .tl-pricing-header {
   text-align: center;
-  max-width: 600px;
-  margin: 0 auto 20px;
+  max-width: 580px;
+  margin: 0 auto 18px;
 }
 
 .tl-pricing-header .section-label {
@@ -2926,7 +2975,7 @@ html {
 }
 
 .tl-pricing-title {
-  margin-top: 8px;
+  margin-top: 6px;
   font-size: clamp(34px, 4.4vw, 54px);
   line-height: 0.95;
   letter-spacing: -0.05em;
@@ -2936,129 +2985,145 @@ html {
 
 .tl-pricing-description {
   max-width: 440px;
-  margin: 8px auto 0;
+  margin: 6px auto 0;
   color: var(--dark-muted);
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: 11.5px;
+  line-height: 1.35;
 }
 
 .tl-pricing-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 18px;
   align-items: stretch;
 }
 
 .tl-price-card {
   position: relative;
-  padding: 28px 24px;
-  border-radius: 14px;
-  background: var(--card-bg);
-  border: 1px solid var(--line);
+  padding: 26px 24px 22px;
+  border-radius: 18px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.3s ease, border-color 0.3s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 .tl-price-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 50px rgba(4, 16, 61, 0.08);
+  transform: translateY(-3px);
 }
 
-/* Card 1: Starter — light white card */
-.tl-price-card:not(.featured) {
-  background: #ffffff;
-  color: #04103d;
-  border: 1.5px solid rgba(4, 16, 61, 0.12);
-  box-shadow: 0 10px 30px rgba(4, 16, 61, 0.05);
+/* Card 1: Skill Program — White card in BOTH Light and Dark modes */
+.tl-price-card:not(.featured),
+.dark .tl-price-card:not(.featured) {
+  background: #ffffff !important;
+  color: #04103d !important;
+  border: 1.5px solid rgba(4, 16, 61, 0.1) !important;
+  box-shadow: 0 10px 30px rgba(4, 16, 61, 0.05) !important;
 }
 
 .dark .tl-price-card:not(.featured) {
-  background: #0d1f4d;
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
 
-/* Card 2: Season — dark navy blue card */
-.tl-price-card.featured {
-  background: #04103d;
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 20px 50px rgba(4, 16, 61, 0.25);
+/* Card 2: Placement Program — Dark Navy Blue card in BOTH Light and Dark modes */
+.tl-price-card.featured,
+.dark .tl-price-card.featured {
+  background: #04103d !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 16px 45px rgba(4, 16, 61, 0.25) !important;
 }
 
 .dark .tl-price-card.featured {
-  background: #04103d;
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
 .tl-price-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 24px;
+  min-height: 20px;
 }
 
 .tl-price-badge {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  padding: 5px 9px;
+  top: 18px;
+  right: 18px;
+  padding: 4.5px 9px;
   border-radius: 999px;
   background: var(--green);
-  color: var(--navy);
+  color: #04103d;
   font-family: "Press Start 2P", monospace;
   font-size: 6px;
   font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .tl-price-name {
-  font-family: "Press Start 2P", monospace;
-  font-size: 7.5px;
-  line-height: 1.5;
-  color: var(--dark-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: #55627a;
+  font-weight: 500;
 }
 
-.tl-price-card.featured .tl-price-name {
-  color: rgba(255, 255, 255, 0.55);
+.tl-price-card:not(.featured) .tl-price-name,
+.dark .tl-price-card:not(.featured) .tl-price-name {
+  color: #55627a;
 }
 
+.tl-price-card.featured .tl-price-name,
 .dark .tl-price-card.featured .tl-price-name {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.7);
 }
 
-.tl-price-card h3 {
-  margin-top: 10px;
+.tl-price-card h3,
+.tl-price-card-title {
+  margin-top: 8px;
   font-size: 22px;
-  letter-spacing: -0.04em;
-  font-weight: 700;
-  line-height: 1.2;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.tl-price-card:not(.featured) h3,
+.tl-price-card:not(.featured) .tl-price-card-title,
+.dark .tl-price-card:not(.featured) h3,
+.dark .tl-price-card:not(.featured) .tl-price-card-title {
+  color: #04103d;
+}
+
+.tl-price-card.featured h3,
+.tl-price-card.featured .tl-price-card-title,
+.dark .tl-price-card.featured h3,
+.dark .tl-price-card.featured .tl-price-card-title {
+  color: #ffffff;
 }
 
 .tl-price-subtitle {
-  margin-top: 6px;
-  color: var(--dark-muted);
+  margin-top: 5px;
   font-size: 11.5px;
   font-weight: 400;
   line-height: 1.4;
-  min-height: 34px;
+  min-height: 32px;
 }
 
-.tl-price-card.featured .tl-price-subtitle {
-  color: rgba(255, 255, 255, 0.6);
+.tl-price-card:not(.featured) .tl-price-subtitle,
+.dark .tl-price-card:not(.featured) .tl-price-subtitle {
+  color: #55627a;
 }
 
+.tl-price-card.featured .tl-price-subtitle,
 .dark .tl-price-card.featured .tl-price-subtitle {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .tl-price {
-  margin-top: 14px;
-  font-size: 34px;
+  margin-top: 12px;
+  font-size: 32px;
   line-height: 1;
   font-weight: 800;
   letter-spacing: -0.05em;
@@ -3066,24 +3131,45 @@ html {
   align-items: baseline;
 }
 
+.tl-price-card:not(.featured) .tl-price,
+.dark .tl-price-card:not(.featured) .tl-price {
+  color: #04103d;
+}
+
+.tl-price-card.featured .tl-price,
+.dark .tl-price-card.featured .tl-price {
+  color: #ffffff;
+}
+
 .tl-price small {
-  font-size: 11.5px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   letter-spacing: 0;
-  margin-left: 6px;
+  margin-left: 5px;
+}
+
+.tl-price-card:not(.featured) .tl-price small,
+.dark .tl-price-card:not(.featured) .tl-price small {
+  color: #04103d;
+}
+
+.tl-price-card.featured .tl-price small,
+.dark .tl-price-card.featured .tl-price small {
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .tl-price-divider {
   width: 100%;
   height: 1px;
-  margin: 16px 0;
-  background: var(--line);
+  margin: 12px 0 14px;
 }
 
-.tl-price-card.featured .tl-price-divider {
-  background: rgba(255, 255, 255, 0.15);
+.tl-price-card:not(.featured) .tl-price-divider,
+.dark .tl-price-card:not(.featured) .tl-price-divider {
+  background: rgba(4, 16, 61, 0.1);
 }
 
+.tl-price-card.featured .tl-price-divider,
 .dark .tl-price-card.featured .tl-price-divider {
   background: rgba(255, 255, 255, 0.15);
 }
@@ -3091,7 +3177,7 @@ html {
 .tl-price-features {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -3102,43 +3188,45 @@ html {
 .tl-price-features li {
   position: relative;
   padding-left: 20px;
-  color: var(--dark-muted);
   font-size: 11.5px;
   font-weight: 400;
   line-height: 1.4;
 }
 
-.tl-price-card.featured .tl-price-features li {
-  color: rgba(255, 255, 255, 0.85);
+.tl-price-card:not(.featured) .tl-price-features li,
+.dark .tl-price-card:not(.featured) .tl-price-features li {
+  color: #2b3956;
 }
 
+.tl-price-card.featured .tl-price-features li,
 .dark .tl-price-card.featured .tl-price-features li {
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .tl-price-features li::before {
   content: "✓";
   position: absolute;
   left: 0;
-  color: var(--light-text);
   font-weight: 800;
-  font-size: 11px;
+  font-size: 11.5px;
 }
 
-.tl-price-card.featured .tl-price-features li::before {
-  color: #2d7fe8;
+.tl-price-card:not(.featured) .tl-price-features li::before,
+.dark .tl-price-card:not(.featured) .tl-price-features li::before {
+  color: #04103d;
 }
 
+.tl-price-card.featured .tl-price-features li::before,
 .dark .tl-price-card.featured .tl-price-features li::before {
-  color: var(--green);
+  color: #38bdf8;
 }
 
 .tl-price-button {
   width: 100%;
-  min-height: 46px;
+  min-height: 44px;
   margin-top: auto;
-  font-size: 7.5px;
-  padding: 0 16px;
+  font-size: 8px;
+  padding: 0 14px;
 }
 
 /* =========================================================
@@ -3397,9 +3485,12 @@ html {
 @media (max-width: 700px) {
   .tl-nav {
     width: calc(100% - 32px);
-    height: 72px;
+    height: 68px;
     display: flex;
     justify-content: space-between;
+  }
+  .tl-nav-wrapper.scrolled .tl-nav {
+    height: 60px;
   }
   .tl-logo {
     font-size: 18px;
@@ -3411,14 +3502,14 @@ html {
     margin-left: auto;
   }
   .tl-nav-cta {
-    min-height: 38px;
+    min-height: 36px;
     padding: 0 14px;
     font-size: 8px !important;
   }
   .tl-hero-content {
     width: calc(100% - 32px);
-    min-height: calc(100svh - 72px);
-    padding-bottom: 50px;
+    min-height: 100svh;
+    padding: 68px 0 50px;
   }
   .tl-eyebrow {
     max-width: 300px;
@@ -3450,7 +3541,7 @@ html {
   /* Platform preview mobile */
   .tl-platform-preview {
     min-height: 780px;
-    padding: 60px 14px 50px;
+    padding: 90px 14px 50px;
   }
   .tl-platform-title {
     max-width: 390px;
@@ -3490,7 +3581,7 @@ html {
   .tl-journey-sticky {
     height: 100%;
     min-height: 100svh;
-    padding: 36px 16px 28px;
+    padding: 60px 16px 40px;
     justify-content: space-between;
     gap: 8px;
   }
