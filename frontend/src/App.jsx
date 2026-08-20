@@ -13,6 +13,7 @@ import AdminPrivateRoute from './Routes/AdminPrivateRoute'
 import FloatingCodeWords from './components/FloatingCodeWords'
 import Hiring from "./pages/AdminDashbaord/Hiring.jsx";
 
+const Jobs = lazy(() => import('./pages/Jobs'));
 const HomePage = lazy(() => import('./pages/HomePage'))
 const Signup = lazy(() => import('./pages/Auth/Signup'))
 const ResetPassword = lazy(() => import('./components/auth/ResetPassword'))
@@ -354,6 +355,7 @@ function LayoutWrapper() {
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/system-health" element={<SystemHealth />} />
             <Route path="/colleges" element={<Colleges />} />
+            <Route path="/jobs" element={<Jobs />} />
 <Route path="/colleges/:collegeId" element={<CollegeDetails />} />
 <Route path="/batches" element={<Batches />} />
 <Route path="/batches/:batchId" element={<BatchDetails />} />
