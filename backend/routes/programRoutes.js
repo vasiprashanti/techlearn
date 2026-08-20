@@ -18,13 +18,14 @@ import {
   submitReadinessAnswer,
 } from "../controllers/programLearningController.js";
 import { protect, protectOptional } from "../middleware/authMiddleware.js";
+import { guestAssessmentRateLimiter } from "../middleware/guestRateLimitMiddleware.js";
 
 const router = express.Router();
 
 // Public / Guest-accessible endpoints
 router.get("/public", getPublicPrograms);
 router.get("/readiness-options", getReadinessOptions);
-router.post("/:programId/waitlist", protectOptional, joinProgramWaitlist);
+router.post("/:programId/waitlist", guestAssessmentRateLimiter, protectOptional, joinProgramWaitlist);
 
 // Protected student-facing endpoints
 router.get("/assigned", protect, getAssignedPrograms);

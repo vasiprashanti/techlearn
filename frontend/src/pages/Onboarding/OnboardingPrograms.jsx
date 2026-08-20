@@ -8,7 +8,6 @@ import { useTheme } from '../../context/ThemeContext';
 import API from '../../api/client';
 import { initiateRazorpayPayment } from '../../utils/razorpayCheckout';
 import PricingExitFeedbackModal from '../../components/PricingExitFeedbackModal';
-import { programLearningAPI } from '../../services/programLearningApi';
 
 
 export default function OnboardingPrograms() {
@@ -25,7 +24,6 @@ export default function OnboardingPrograms() {
   const [loading, setLoading] = useState(false);
   const [isSkillReturningUser, setIsSkillReturningUser] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
-  const [readinessPrograms, setReadinessPrograms] = useState([]);
 
   const storedUserData = (() => {
     try {
@@ -69,19 +67,6 @@ export default function OnboardingPrograms() {
     checkEligibility();
     return () => { isMounted = false; };
   }, []);
-
-  useEffect(() => {
-    if (!isPlacement) return undefined;
-    let isMounted = true;
-    programLearningAPI.getReadinessOptions()
-      .then((response) => {
-        if (isMounted) setReadinessPrograms(response?.programs || []);
-      })
-      .catch(() => {
-        if (isMounted) setReadinessPrograms([]);
-      });
-    return () => { isMounted = false; };
-  }, [isPlacement]);
 
   const handleEnrollNow = async (planId) => {
     if (loading) return;
@@ -305,27 +290,6 @@ export default function OnboardingPrograms() {
               )}
             </p>
           </Motion.div>
-
-          {isPlacement && readinessPrograms.length > 0 && (
-            <Motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.35 }}
-              className="mt-5 flex w-full max-w-xl flex-col items-center gap-3 rounded-2xl border border-violet-400/25 bg-violet-500/10 p-4 text-center shadow-sm sm:flex-row sm:justify-between sm:text-left"
-            >
-              <div>
-                <p className="text-sm font-bold text-slate-900 dark:text-white">Check your placement readiness first</p>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Complete your Free Assessment before choosing your program plan.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate(`/learn/program/${readinessPrograms[0]._id}`)}
-                className="inline-flex shrink-0 items-center justify-center rounded-xl bg-violet-500 px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-violet-600"
-              >
-                START FREE ASSESSMENT
-              </button>
-            </Motion.div>
-          )}
 
           <Motion.div
             initial={{ opacity: 0, y: 15 }}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Sparkles, Building2, Briefcase, ChevronRight, Loader2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useAuthModalContext } from '../../context/AuthModalContext';
 import { programLearningAPI } from '../../services/programLearningApi';
 
 const POPULAR_ROLES = [
@@ -27,12 +27,15 @@ const POPULAR_COMPANIES = [
 
 export default function FreeAssessmentModal({ isOpen, onClose, defaultProgramId = null, initialRole = null }) {
   const { user } = useAuth();
+  const { openSignup } = useAuthModalContext();
   const navigate = useNavigate();
 
   const [selectedRole, setSelectedRole] = useState(initialRole || user?.targetRole || 'Full Stack Developer');
   const [customRole, setCustomRole] = useState('');
   const [selectedCompany, setSelectedCompany] = useState(user?.targetCompanies?.[0] || 'TCS');
   const [customCompany, setCustomCompany] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   React.useEffect(() => {
     if (initialRole) {
@@ -41,8 +44,25 @@ export default function FreeAssessmentModal({ isOpen, onClose, defaultProgramId 
     }
   }, [initialRole, isOpen]);
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  // If user just logged in and had a pending assessment, trigger it automatically
+  React.useEffect(() => {
+    const triggerPending = async () => {
+      const pendingRaw = sessionStorage.getItem('pending_assessment');
+      if (user && pendingRaw) {
+        try {
+          const pending = JSON.parse(pendingRaw);
+          sessionStorage.removeItem('pending_assessment');
+          const response = await programLearningAPI.startFreeAssessment(pending);
+          if (response?.success && response?.programId) {
+            navigate(`/free-assessment/${response.programId}`);
+          }
+        } catch (e) {
+          console.error("Failed to start pending assessment:", e);
+        }
+      }
+    };
+    triggerPending();
+  }, [user, navigate]);
 
   if (!isOpen) return null;
 
@@ -59,6 +79,17 @@ export default function FreeAssessmentModal({ isOpen, onClose, defaultProgramId 
       return;
     }
 
+    if (!user) {
+      sessionStorage.setItem('pending_assessment', JSON.stringify({
+        targetRole: finalRole,
+        targetCompany: finalCompany,
+        programId: defaultProgramId,
+      }));
+      onClose();
+      openSignup();
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -71,7 +102,7 @@ export default function FreeAssessmentModal({ isOpen, onClose, defaultProgramId 
 
       if (response?.success && response?.programId) {
         onClose();
-        navigate(`/learn/program/${response.programId}`);
+        navigate(`/free-assessment/${response.programId}`);
       } else {
         throw new Error(response?.message || 'Could not generate assessment.');
       }
@@ -84,147 +115,319 @@ export default function FreeAssessmentModal({ isOpen, onClose, defaultProgramId 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-lg rounded-2xl border border-black/10 bg-white p-6 shadow-2xl transition-all dark:border-white/10 dark:bg-[#071330] text-slate-900 dark:text-slate-100">
-        
-        {/* Close Button */}
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={loading}
-          className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-white"
-        >
-          <X className="h-5 w-5" />
-        </button>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.65)',
+        backdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 99999,
+        padding: '16px',
+      }}
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Press+Start+2P&display=swap');
 
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 text-violet-500 dark:bg-violet-400/20 dark:text-violet-300">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold">Start Free Assessment</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Personalized for your target placement role and company pattern
-            </p>
-          </div>
+        .fam-root * {
+          box-sizing: border-box;
+          font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .fam-card {
+          background: #ffffff !important;
+          width: 100% !important;
+          max-width: 520px !important;
+          max-height: calc(100vh - 32px) !important;
+          border-radius: 24px !important;
+          padding: 24px !important;
+          box-shadow: 0 12px 32px rgba(0,0,0,0.25) !important;
+          display: flex !important;
+          flex-direction: column !important;
+          position: relative !important;
+          overflow-y: auto !important;
+          color: #111111 !important;
+        }
+
+        .fam-top-bar {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: flex-end !important;
+          margin-bottom: 8px !important;
+        }
+
+        .fam-close-btn {
+          background: transparent !important;
+          border: none !important;
+          font-size: 22px !important;
+          color: #8e8e93 !important;
+          cursor: pointer !important;
+          line-height: 1 !important;
+          padding: 0 4px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          transition: color 0.15s ease !important;
+        }
+        .fam-close-btn:hover {
+          color: #1c1c1e !important;
+        }
+
+        .fam-h2 {
+          font-family: 'Press Start 2P', cursive !important;
+          font-size: 13px !important;
+          font-weight: 400 !important;
+          line-height: 1.4 !important;
+          margin-bottom: 6px !important;
+          color: #000000 !important;
+          text-align: center !important;
+          letter-spacing: 0.8px !important;
+        }
+
+        .fam-description {
+          font-size: 12px !important;
+          font-weight: 400 !important;
+          color: #666666 !important;
+          line-height: 1.4 !important;
+          margin-bottom: 14px !important;
+          text-align: center !important;
+        }
+
+        .fam-followup-card {
+          background: #f8f9fa !important;
+          border: 1px solid #e9ecef !important;
+          border-radius: 14px !important;
+          padding: 12px 14px !important;
+          margin-bottom: 12px !important;
+        }
+
+        .fam-followup-card h3 {
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          color: #333333 !important;
+          margin-bottom: 8px !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.5px !important;
+        }
+
+        .fam-chip {
+          padding: 6px 12px !important;
+          border-radius: 12px !important;
+          border: 1px solid #e5e5ea !important;
+          font-size: 11px !important;
+          font-weight: 400 !important;
+          cursor: pointer !important;
+          background: #ffffff !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 4px !important;
+          user-select: none !important;
+          color: #333333 !important;
+          transition: all 0.15s ease !important;
+        }
+        .fam-chip:hover {
+          border-color: #1c1c1e !important;
+          transform: translateY(-1px) !important;
+        }
+        .fam-chip.selected {
+          background-color: #a3e635 !important;
+          border-color: #a3e635 !important;
+          color: #000000 !important;
+          font-weight: 600 !important;
+          box-shadow: 0 2px 6px rgba(163,230,53,0.3) !important;
+        }
+
+        .fam-input {
+          width: 100% !important;
+          height: 38px !important;
+          padding: 0 12px !important;
+          border-radius: 10px !important;
+          border: 1px solid #e5e5ea !important;
+          font-size: 12px !important;
+          outline: none !important;
+          background-color: #ffffff !important;
+          color: #1c1c1e !important;
+          margin-top: 8px !important;
+          transition: border-color 0.2s, box-shadow 0.2s !important;
+        }
+        .fam-input:focus {
+          border-color: #1c1c1e !important;
+          box-shadow: 0 0 0 3px rgba(28, 28, 30, 0.08) !important;
+        }
+        .fam-input::placeholder {
+          color: #a7a7a7 !important;
+        }
+
+        .fam-btn-row {
+          display: flex !important;
+          gap: 10px !important;
+          width: 100% !important;
+          margin-top: 6px !important;
+          padding-top: 6px !important;
+        }
+        .fam-btn-row .fam-btn-primary,
+        .fam-btn-row .fam-btn-secondary {
+          flex: 1 1 0% !important;
+          width: 50% !important;
+        }
+
+        .fam-btn-secondary {
+          height: 44px !important;
+          border-radius: 12px !important;
+          border: none !important;
+          background-color: #f2f2f7 !important;
+          color: #1c1c1e !important;
+          font-family: 'Press Start 2P', cursive !important;
+          font-size: 9px !important;
+          font-weight: 400 !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          text-transform: uppercase !important;
+          transition: opacity 0.2s, transform 0.1s !important;
+        }
+        .fam-btn-secondary:hover {
+          opacity: 0.9 !important;
+        }
+
+        .fam-btn-primary {
+          height: 44px !important;
+          border-radius: 12px !important;
+          border: none !important;
+          background-color: #a3e635 !important;
+          color: #000000 !important;
+          font-family: 'Press Start 2P', cursive !important;
+          font-size: 9px !important;
+          font-weight: 400 !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          text-transform: uppercase !important;
+          transition: opacity 0.2s, transform 0.1s !important;
+          box-shadow: 0 2px 8px rgba(163,230,53,0.3) !important;
+        }
+        .fam-btn-primary:hover {
+          opacity: 0.95 !important;
+          transform: translateY(-1px) !important;
+        }
+        .fam-btn-primary:disabled,
+        .fam-btn-secondary:disabled {
+          opacity: 0.5 !important;
+          cursor: not-allowed !important;
+          transform: none !important;
+        }
+
+        .fam-status-error {
+          padding: 8px 12px !important;
+          border-radius: 10px !important;
+          font-size: 11px !important;
+          background-color: #ffe5e5 !important;
+          color: #d32f2f !important;
+          margin-bottom: 10px !important;
+        }
+      `}</style>
+
+      <div className="fam-root fam-card">
+        {/* Top Bar Row */}
+        <div className="fam-top-bar">
+          <button type="button" className="fam-close-btn" onClick={onClose} disabled={loading}>
+            &times;
+          </button>
         </div>
 
-        {error && (
-          <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-600 dark:text-red-400">
-            {error}
-          </div>
-        )}
+        <h2 className="fam-h2">START FREE ASSESSMENT</h2>
+        <p className="fam-description">
+          Personalized for your target placement role and company pattern.
+        </p>
 
-        <div className="mt-6 space-y-5">
-          {/* Step 1: Target Role */}
-          <div>
-            <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              <Briefcase className="h-3.5 w-3.5 text-violet-500" />
-              Select Target Role
-            </label>
-            <div className="mt-2.5 flex flex-wrap gap-2">
-              {POPULAR_ROLES.map((role) => {
-                const isSelected = selectedRole === role && !customRole;
-                return (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => {
-                      setSelectedRole(role);
-                      setCustomRole('');
-                    }}
-                    className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
-                      isSelected
-                        ? 'bg-violet-600 text-white shadow-sm shadow-violet-500/30'
-                        : 'border border-slate-200 bg-slate-50 text-slate-700 hover:border-violet-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-violet-500/40'
-                    }`}
-                  >
-                    {role}
-                  </button>
-                );
-              })}
-            </div>
-            <input
-              type="text"
-              placeholder="Or type custom role..."
-              value={customRole}
-              onChange={(e) => {
-                setCustomRole(e.target.value);
-                setSelectedRole(e.target.value);
-              }}
-              className="mt-2.5 w-full rounded-xl border border-slate-200 bg-transparent px-3.5 py-2 text-xs outline-none focus:border-violet-500 dark:border-white/10"
-            />
-          </div>
+        {error && <div className="fam-status-error">{error}</div>}
 
-          {/* Step 2: Target Company */}
-          <div>
-            <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              <Building2 className="h-3.5 w-3.5 text-violet-500" />
-              Select Target Company
-            </label>
-            <div className="mt-2.5 flex flex-wrap gap-2">
-              {POPULAR_COMPANIES.map((company) => {
-                const isSelected = selectedCompany === company && !customCompany;
-                return (
-                  <button
-                    key={company}
-                    type="button"
-                    onClick={() => {
-                      setSelectedCompany(company);
-                      setCustomCompany('');
-                    }}
-                    className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
-                      isSelected
-                        ? 'bg-violet-600 text-white shadow-sm shadow-violet-500/30'
-                        : 'border border-slate-200 bg-slate-50 text-slate-700 hover:border-violet-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-violet-500/40'
-                    }`}
-                  >
-                    {company}
-                  </button>
-                );
-              })}
-            </div>
-            <input
-              type="text"
-              placeholder="Or type custom company..."
-              value={customCompany}
-              onChange={(e) => {
-                setCustomCompany(e.target.value);
-                setSelectedCompany(e.target.value);
-              }}
-              className="mt-2.5 w-full rounded-xl border border-slate-200 bg-transparent px-3.5 py-2 text-xs outline-none focus:border-violet-500 dark:border-white/10"
-            />
+        {/* 1. Target Role Section */}
+        <div className="fam-followup-card">
+          <h3>1. Target Role</h3>
+          <p style={{ fontSize: '10px', color: '#666', marginBottom: '8px' }}>
+            Select the role you are preparing for:
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {POPULAR_ROLES.map((role) => {
+              const isSelected = selectedRole === role && !customRole;
+              return (
+                <div
+                  key={role}
+                  className={`fam-chip ${isSelected ? 'selected' : ''}`}
+                  onClick={() => {
+                    setSelectedRole(role);
+                    setCustomRole('');
+                  }}
+                >
+                  {role}
+                </div>
+              );
+            })}
           </div>
+          <input
+            type="text"
+            className="fam-input"
+            placeholder="Or type custom role..."
+            value={customRole}
+            onChange={(e) => {
+              setCustomRole(e.target.value);
+              setSelectedRole(e.target.value);
+            }}
+          />
         </div>
 
-        {/* Action Button */}
-        <div className="mt-8 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
-          >
-            Cancel
+        {/* 2. Target Company Section */}
+        <div className="fam-followup-card">
+          <h3>2. Target Company</h3>
+          <p style={{ fontSize: '10px', color: '#666', marginBottom: '8px' }}>
+            Select your dream or target company:
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {POPULAR_COMPANIES.map((company) => {
+              const isSelected = selectedCompany === company && !customCompany;
+              return (
+                <div
+                  key={company}
+                  className={`fam-chip ${isSelected ? 'selected' : ''}`}
+                  onClick={() => {
+                    setSelectedCompany(company);
+                    setCustomCompany('');
+                  }}
+                >
+                  {company}
+                </div>
+              );
+            })}
+          </div>
+          <input
+            type="text"
+            className="fam-input"
+            placeholder="Or type custom company..."
+            value={customCompany}
+            onChange={(e) => {
+              setCustomCompany(e.target.value);
+              setSelectedCompany(e.target.value);
+            }}
+          />
+        </div>
+
+        {/* Action Button Row */}
+        <div className="fam-btn-row">
+          <button type="button" className="fam-btn-secondary" onClick={onClose} disabled={loading}>
+            CANCEL
           </button>
           <button
             type="button"
+            className="fam-btn-primary"
             onClick={handleStartAssessment}
             disabled={loading || !finalRole || !finalCompany}
-            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-violet-600/25 transition hover:bg-violet-700 disabled:opacity-50"
           >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Generating Blueprint...</span>
-              </>
-            ) : (
-              <>
-                <span>Generate Assessment</span>
-                <ChevronRight className="h-4 w-4" />
-              </>
-            )}
+            {loading ? 'STARTING...' : 'START TEST →'}
           </button>
         </div>
       </div>

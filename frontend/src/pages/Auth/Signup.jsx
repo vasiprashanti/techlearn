@@ -571,8 +571,6 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
         setTimeout(() => {
           handleClose();
           if (selectedPath === 'Member') {
-            navigate('/learn/certification/payment');
-          } else {
             navigate('/onboarding/programs', {
               state: {
                 targetRole: payload.targetRole,
@@ -580,6 +578,8 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
                 learningGoal: payload.learningGoal,
               }
             });
+          } else {
+            navigate('/dashboard');
           }
         }, 1800);
         return;

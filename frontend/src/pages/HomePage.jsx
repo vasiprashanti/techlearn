@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Moon, Sun } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
+import FreeAssessmentModal from '../components/Learn/FreeAssessmentModal'
 
 const codeFragments = [
   "DSA.solve(problem)",
@@ -146,10 +148,37 @@ const HomePage = () => {
   // Final CTA typewriter state
   const [typingText, setTypingText] = useState("")
 
+  // Auth state & user dropdown
+  const { user, isAuthenticated, logout } = useAuth()
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const userMenuRef = useRef(null)
+
   // Navbar sticky scroll state
   const [isScrolled, setIsScrolled] = useState(false)
   const [isOverDarkSection, setIsOverDarkSection] = useState(false)
+  const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false)
   const resultsSectionRef = useRef(null)
+
+  useEffect(() => {
+    if (!isUserMenuOpen) return undefined
+
+    const handleOutsideClick = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false)
+      }
+    }
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setIsUserMenuOpen(false)
+    }
+
+    window.addEventListener('mousedown', handleOutsideClick)
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('mousedown', handleOutsideClick)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [isUserMenuOpen])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -412,17 +441,32 @@ const HomePage = () => {
       ========================================================= */}
       <header className={`tl-nav-wrapper ${isScrolled ? 'scrolled' : ''} ${isOverDarkSection ? 'on-dark-section' : ''}`}>
         <nav className="tl-nav">
-          <Link to="/" className="tl-logo">
-            TechLearn
+          <Link to="/" className="tl-logo flex items-center">
+            <div className="relative flex items-center" style={{ height: '44px', minWidth: '120px' }}>
+              <img
+                src="/logoo-small.webp"
+                alt="Light Logo"
+                className={`absolute top-1/2 -translate-y-1/2 left-0 h-10 md:h-12 w-auto transition-all duration-300 ${
+                  isDarkMode ? 'opacity-0' : 'opacity-100'
+                }`}
+              />
+              <img
+                src="/logoo2-small.webp"
+                alt="Dark Logo"
+                className={`absolute top-1/2 -translate-y-1/2 left-0 h-10 md:h-12 w-auto transition-all duration-300 ${
+                  isDarkMode ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+            </div>
           </Link>
 
           <ul className="tl-nav-links">
             <li><Link to="/learn">Learn</Link></li>
-            <li><a href="#journey">Roadmaps</a></li>
+            <li><Link to="/roadmaps">Roadmaps</Link></li>
             <li><a href="#pricing">Hiring</a></li>
           </ul>
 
-          <div className="tl-nav-action">
+          <div className="tl-nav-action flex items-center gap-3">
             <button
               onClick={toggleTheme}
               className="tl-theme-btn"
@@ -430,9 +474,60 @@ const HomePage = () => {
             >
               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <Link to="/signup" className="tl-nav-cta">
-              SIGN UP
-            </Link>
+
+            {isAuthenticated && user ? (
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsUserMenuOpen((prev) => !prev)}
+                  className="cursor-pointer text-sm font-medium text-[#00113b] dark:text-[#e0e6f5] hover:opacity-80 transition flex items-center gap-1.5 px-2 py-1 rounded-lg"
+                  aria-expanded={isUserMenuOpen}
+                  aria-haspopup="true"
+                >
+                  <span>Hi, {user?.firstName ? `${user.firstName} ${user?.lastName || ''}`.trim() : (user?.name || user?.email?.split('@')[0] || 'User')}</span>
+                </button>
+
+                {isUserMenuOpen && (
+                  <div className="absolute top-full right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-[#86c4ff]/45 bg-gradient-to-br from-[#e7f6ff]/95 to-[#d9efff]/90 shadow-[0_12px_34px_rgba(60,131,246,0.16)] backdrop-blur-xl dark:border-[#6fbfff]/35 dark:from-[#052152]/95 dark:to-[#072b63]/90 text-left">
+                    <div className="border-b border-[#86c4ff]/45 bg-[#dbf1ff]/70 p-3.5 dark:border-[#6fbfff]/30 dark:bg-[#0d366f]/60">
+                      <h3 className="truncate text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
+                        {user?.firstName ? `${user.firstName} ${user?.lastName || ''}`.trim() : (user?.name || user?.email || 'User')}
+                      </h3>
+                      <p className="mt-0.5 truncate text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">
+                        {user?.email || 'student@techlearn.com'}
+                      </p>
+                      <span className="mt-2 inline-flex items-center rounded-full border border-[#86c4ff]/60 bg-[#edf8ff] px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-[#2d7fe8] dark:border-[#6bb8ec]/50 dark:bg-[#0a2f6f] dark:text-[#8fd9ff]">
+                        Student
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 space-y-1.5">
+                      <Link
+                        to="/dashboard"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="block w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 px-3 py-2 text-center text-xs font-semibold text-[#00113b] dark:text-[#e0e6f5] hover:bg-white/80 dark:hover:bg-white/10 transition"
+                      >
+                        Dashboard
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          logout();
+                        }}
+                        className="w-full rounded-xl border border-red-600 bg-red-600 px-3 py-2 text-center text-xs font-semibold text-white transition hover:bg-red-700 hover:border-red-700 cursor-pointer"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link to="/signup" className="tl-nav-cta">
+                SIGN UP
+              </Link>
+            )}
           </div>
         </nav>
       </header>
@@ -848,6 +943,11 @@ const HomePage = () => {
           </Link>
         </div>
       </section>
+
+      <FreeAssessmentModal
+        isOpen={isAssessmentModalOpen}
+        onClose={() => setIsAssessmentModalOpen(false)}
+      />
     </div>
   )
 }

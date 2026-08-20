@@ -5,7 +5,7 @@ import Footer from './components/Footer'
 import ScrollToTop from './components/ScrollToTop'
 import ExternalLinkHandler from './components/ExternalLinkHandler'
 import { ThemeProvider } from './context/ThemeContext'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { AuthModalProvider } from './context/AuthModalContext'
 import { UserProvider } from './context/UserContext'
 import PrivateRoute from './Routes/PrivateRoute'
@@ -62,6 +62,7 @@ const CertificationPayment = lazy(() => import('./pages/Learn/CertificationPayme
 const OnlineCompiler = lazy(() => import('./pages/Learn/OnlineCompiler'))
 const DynamicPracticeQuestions = lazy(() => import('./pages/Learn/DynamicPracticeQuestions'))
 const ProgramLearningExperience = lazy(() => import('./pages/Learn/ProgramLearningExperience'))
+const FreeAssessmentTest = lazy(() => import('./pages/Assessment/FreeAssessmentTest'))
 
 const Roadmaps = lazy(() => import('./pages/Resources/Roadmaps'))
 const ResumeTemplates = lazy(() => import('./pages/Resources/ResumeTemplates'))
@@ -176,6 +177,7 @@ function RouteFallback() {
 
 function LayoutWrapper() {
   const location = useLocation();
+  const { isAuthenticated, user } = useAuth();
 
   // NEW: Array containing all our sidebar dashboard routes
   const adminSidebarRoutes = [
@@ -213,7 +215,7 @@ function LayoutWrapper() {
     location.pathname.startsWith('/learn/interview-questions') ||
     location.pathname.startsWith('/core-prep/languages') ||
     location.pathname.startsWith('/core-prep/important-concepts') ||
-    location.pathname.startsWith('/resources/roadmaps') ||
+    (Boolean(isAuthenticated && user) && (location.pathname.startsWith('/resources/roadmaps') || location.pathname.startsWith('/roadmaps') || location.pathname === '/dashboard/roadmap')) ||
     location.pathname.startsWith('/resources/resume-templates') ||
     location.pathname.startsWith('/learn/exercises') ||
     location.pathname.startsWith('/learn/program/') ||
@@ -224,11 +226,13 @@ function LayoutWrapper() {
   const showNavbar = !['/mcq'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
                      !location.pathname.startsWith('/daily-challenge/') &&
+                     !location.pathname.startsWith('/free-assessment') &&
                      !isHomePage;
 
   const showFooter = !['/mcq', '/signup', '/login'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
                      !location.pathname.startsWith('/daily-challenge/') &&
+                     !location.pathname.startsWith('/free-assessment') &&
                      !isDashboardRoute &&
                      !isStudentSidebarRoute;
 
@@ -245,6 +249,8 @@ function LayoutWrapper() {
           
           <Route element={<PrivateRoute />}>
             <Route path="/onboarding/programs" element={<OnboardingPrograms />} />
+            <Route path="/free-assessment/:programId" element={<FreeAssessmentTest />} />
+            <Route path="/free-assessment" element={<FreeAssessmentTest />} />
             <Route path="/learn/program/:programId" element={<ProgramLearningExperience />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/demo" element={<DemoDashboard />} />

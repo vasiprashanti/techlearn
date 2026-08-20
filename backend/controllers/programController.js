@@ -10,6 +10,7 @@ import { invalidateDashboardCache } from "./dashboardController.js";
 import { expireAllActiveBatches } from "../utils/batchLifecycle.js";
 import {
   getCurrentProgramAssignment,
+  getOrCreateProgramAssignment,
   getProgramLearningContext,
 } from "../services/programQuestionEngineService.js";
 import { ensureReadinessLead } from "../services/programAssignmentService.js";
@@ -147,7 +148,10 @@ export const startFreeAssessment = async (req, res) => {
       allowUnenrolled: true,
     });
 
-    const assignment = await getCurrentProgramAssignment(context, {
+    const assignment = await getOrCreateProgramAssignment({
+      context,
+      phase: "day_0_readiness",
+      programDay: 0,
       allowDraft: req.user?.role === "admin",
     });
 
