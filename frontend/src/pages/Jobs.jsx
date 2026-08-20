@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FiSearch, FiSliders, FiChevronDown, FiMapPin } from "react-icons/fi";
 import {
   BriefcaseBusiness,
@@ -6,103 +6,49 @@ import {
 } from "lucide-react";
 import Sidebar from "../components/Dashboard/Sidebar";
 import { useTheme } from "../context/ThemeContext";
+import { hiringAPI } from "../services/api";
 
-const mockJobs = [
-  {
-    id: "1",
-    title: "Frontend Developer",
-    company: "Razorpay",
-    location: "Bengaluru, India",
-    experience: "1–3 yrs",
-    jobType: "Full-time",
-    workMode: "Hybrid",
-    salary: "₹10–18 LPA",
-    category: "Jobs",
-    posted: "2 days ago",
-    skills: ["React", "JavaScript", "CSS"],
-  },
-  {
-    id: "2",
-    title: "Software Engineer",
-    company: "Google",
-    location: "Bengaluru, India",
-    experience: "0–2 yrs",
-    jobType: "Full-time",
-    workMode: "Hybrid",
-    salary: "₹12–20 LPA",
-    category: "Jobs",
-    posted: "3 days ago",
-    skills: ["Python", "Java", "DSA"],
-  },
-  {
-    id: "3",
-    title: "Machine Learning Intern",
-    company: "Microsoft",
-    location: "Hyderabad, India",
-    experience: "Fresher",
-    jobType: "Internship",
-    workMode: "On-site",
-    salary: "₹40K–60K/month",
-    category: "Internships",
-    posted: "5 days ago",
-    skills: ["Python", "Machine Learning", "SQL"],
-  },
-  {
-    id: "4",
-    title: "Data Analyst",
-    company: "Deloitte",
-    location: "Gurugram, India",
-    experience: "0–2 yrs",
-    jobType: "Full-time",
-    workMode: "Hybrid",
-    salary: "₹6–10 LPA",
-    category: "Jobs",
-    posted: "1 week ago",
-    skills: ["SQL", "Excel", "Power BI"],
-  },
-  {
-    id: "5",
-    title: "UI/UX Designer",
-    company: "Infosys",
-    location: "Pune, India",
-    experience: "1–3 yrs",
-    jobType: "Freelance",
-    workMode: "Remote",
-    salary: "₹50K–80K/project",
-    category: "Freelance",
-    posted: "1 week ago",
-    skills: ["Figma", "UI Design", "UX"],
-  },
-];
 
 export default function Jobs() {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-
   const [activeTab, setActiveTab] = useState("For You");
   const [activeCategory, setActiveCategory] = useState("Jobs");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("Newest");
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const filteredJobs = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+  useEffect(() => {
+  const fetchJobs = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-    return mockJobs.filter((job) => {
-      const matchesSearch =
-        !query ||
-        job.title.toLowerCase().includes(query) ||
-        job.company.toLowerCase().includes(query) ||
-        job.location.toLowerCase().includes(query) ||
-        job.skills.some((skill) =>
-          skill.toLowerCase().includes(query)
-        );
+      const response = await hiringAPI.getJobs({
+        search: searchQuery,
+        category: activeCategory,
+        sort: sortBy === "Newest" ? "newest" : "oldest",
+        page,
+        limit: 10,
+      });
 
-      const matchesCategory =
-        activeCategory === "All" || job.category === activeCategory;
+      setJobs(response.data || []);
+      setTotalPages(response.pagination?.totalPages || 1);
+    } catch (err) {
+      console.error("Failed to fetch jobs:", err);
+      setError(err.message || "Failed to load jobs.");
+      setJobs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      return matchesSearch && matchesCategory;
-    });
-  }, [searchQuery, activeCategory]);
+  fetchJobs();
+}, [searchQuery, activeCategory, sortBy, page]);
 
   return (
     <div
@@ -266,7 +212,15 @@ export default function Jobs() {
 
               {/* Results */}
               <div className="space-y-4">
-                {filteredJobs.length === 0 ? (
+                {loading ? (
+  <div className="py-12 text-center">
+    <p className="text-sm text-slate-500">Loading jobs...</p>
+  </div>
+) : error ? (
+  <div className="py-12 text-center">
+    <p className="font-semibold text-red-500">{error}</p>
+  </div>
+) : jobs.length === 0 ? (
                   <div
                     className={`rounded-2xl border p-12 text-center ${
                       isDarkMode
@@ -283,9 +237,9 @@ export default function Jobs() {
                     </p>
                   </div>
                 ) : (
-                  filteredJobs.map((job) => (
+                  jobs.map((job) => (
                     <article
-  key={job.id}
+  key={job._id}
   className={`rounded-2xl border px-6 py-5 transition-all ${
     isDarkMode
       ? "bg-[#0b1934] border-white/10 hover:border-[#a8e63d]/30"
@@ -324,7 +278,7 @@ export default function Jobs() {
           isDarkMode ? "text-white" : "text-[#17251a]"
         }`}
       >
-        {job.company}
+        {job.companyName}
       </p>
 
       <div className="flex flex-wrap gap-3 mt-2">

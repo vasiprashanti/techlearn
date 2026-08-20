@@ -1,6 +1,6 @@
 import { auth } from '../config/firebase';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const GET_RETRY_ATTEMPTS = 2;
 const GET_RETRY_DELAY_MS = 250;
 const requestCache = new Map();
