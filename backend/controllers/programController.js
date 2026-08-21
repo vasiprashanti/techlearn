@@ -9,14 +9,15 @@ import Blueprint from "../models/Blueprint.js";
 import College from "../models/College.js";
 import ProgramWaitlist from "../models/ProgramWaitlist.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
-import { expireAllActiveBatches } from "../utils/batchLifecycle.js";
-<<<<<<< HEAD
 import {
   getCurrentProgramAssignment,
   getOrCreateProgramAssignment,
   getProgramLearningContext,
 } from "../services/programQuestionEngineService.js";
 import { ensureReadinessLead } from "../services/programAssignmentService.js";
+import { ensureStudentForUser } from "../utils/userProfile.js";
+import { syncPrimaryProgramPointers, upsertProgramEnrollment } from "../utils/programEnrollment.js";
+import { matchProgramsForUser } from "../utils/programMatching.js";
 
 /**
  * GET /api/programs/public
@@ -50,10 +51,8 @@ export const getPublicPrograms = async (req, res) => {
   } catch (error) {
     console.error("Error fetching public programs:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch programs." });
-=======
-import { ensureStudentForUser } from "../utils/userProfile.js";
-import { syncPrimaryProgramPointers, upsertProgramEnrollment } from "../utils/programEnrollment.js";
-import { matchProgramsForUser } from "../utils/programMatching.js";
+  }
+};
 
 /**
  * Public catalog used by Learn. It deliberately exposes only active/public
@@ -84,7 +83,6 @@ export const getProgramCatalog = async (req, res) => {
   } catch (error) {
     console.error("Error fetching public program catalog:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch program catalog." });
->>>>>>> origin/main
   }
 };
 
