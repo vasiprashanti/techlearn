@@ -42,7 +42,7 @@ export const upsertProgramEnrollment = async ({
   student,
   program,
   programId,
-  batchId = null,
+  batchId,
   accessTier,
   source = "admin",
 }) => {
@@ -58,6 +58,26 @@ export const upsertProgramEnrollment = async ({
     programId: resolvedProgramId,
   }).lean();
 
+  // Callers that do not specify a schedule (for example, payment
+  // confirmation) must preserve an existing batch schedule. A legacy batch
+  // pointer is only a fallback when it belongs to this same program; an
+  // unrelated batch must never attach itself to a new program purchase.
+  let resolvedBatchId = batchId;
+  if (typeof batchId === "undefined") {
+    const hasEnrollmentBatch = existing
+      && Object.prototype.hasOwnProperty.call(existing, "batchId");
+    if (hasEnrollmentBatch) {
+      resolvedBatchId = existing.batchId;
+    } else {
+      const legacyProgramId = getId(student?.programId) || getId(user?.programId);
+      const isSameLegacyProgram = legacyProgramId
+        && String(legacyProgramId) === String(resolvedProgramId);
+      resolvedBatchId = isSameLegacyProgram
+        ? (getId(student?.batchId) || getId(user?.batchId) || null)
+        : null;
+    }
+  }
+
   const update = {
     $set: {
       userId,
@@ -65,7 +85,7 @@ export const upsertProgramEnrollment = async ({
       programId: resolvedProgramId,
       status: "Active",
       accessTier: getAccessTier(program, accessTier),
-      batchId: batchId || null,
+      batchId: resolvedBatchId || null,
       individualStartDate: existing?.individualStartDate || existing?.assignedAt || now,
     },
     $setOnInsert: {
@@ -85,7 +105,7 @@ export const upsertProgramEnrollment = async ({
     {
       $addToSet: {
         studentIds: studentId,
-        ...(batchId ? { batchIds: batchId } : {}),
+        ...(resolvedBatchId ? { batchIds: resolvedBatchId } : {}),
       },
     }
   );
@@ -180,8 +200,13 @@ export const syncProgramEnrollment = async ({
   programId,
   programSelection,
   onboardingData = {},
+  source = "onboarding",
 }) => {
   if (!user || !student) return null;
+
+  const requestedLearningPath = String(
+    onboardingData.learningPath || user.learningPath || ""
+  ).trim();
 
   // Build complete onboarding answers from user object or passed payload
   const fullOnboardingData = {
@@ -190,7 +215,7 @@ export const syncProgramEnrollment = async ({
     targetCompanies: onboardingData.targetCompanies || user.targetCompanies || [],
     skills: onboardingData.skills || user.skills || [],
     targetRole: onboardingData.targetRole || user.targetRole || "",
-    learningPath: onboardingData.learningPath || user.learningPath || "Free",
+    learningPath: requestedLearningPath || "Free",
   };
 
   // An explicitly assigned Program from the admin flow is authoritative.
@@ -223,8 +248,11 @@ export const syncProgramEnrollment = async ({
   }
 
   // If user is on Free tier, pause any previous enrollments for Paid / Member-only programs
-  const isFreeTier = String(fullOnboardingData.learningPath || "").toLowerCase() === "free";
-  if (isFreeTier) {
+  // Do not infer a Free choice for legacy accounts that never stored a
+  // learning path. In particular, login synchronization must not pause a
+  // previously paid enrollment just because this field is absent.
+  const isFreeTier = requestedLearningPath.toLowerCase() === "free";
+  if (source === "onboarding" && isFreeTier) {
     const paidProgramIds = await Program.find({
       pricingType: "Paid",
     }).distinct("_id");
@@ -240,19 +268,36 @@ export const syncProgramEnrollment = async ({
   const enrolledPrograms = [];
 
   for (const prog of matchedPrograms) {
-    const programId = prog._id;
+    const matchedProgramId = prog._id;
     const accessTier = getAccessTier(prog);
+    const existingEnrollment = await ProgramEnrollment.findOne({
+      userId: user._id,
+      programId: matchedProgramId,
+    }).lean();
+
+    // Login/onboarding synchronization must never resurrect a paused or
+    // completed enrollment. Re-entry is an explicit admin assignment or a
+    // verified payment event, not a side effect of reading the profile.
+    if (source === "onboarding" && existingEnrollment && existingEnrollment.status !== "Active") {
+      continue;
+    }
+
+    // Completing onboarding must not grant paid access. Paid enrollment is
+    // created by the verified payment flow or an explicit admin assignment.
+    // A previously verified enrollment may remain active for a Member path;
+    // a Free path pauses paid access instead of reactivating it.
+    const isPaidOnboardingMatch = source === "onboarding"
+      && prog.pricingType === "Paid"
+      && (!existingEnrollment || isFreeTier);
+    if (isPaidOnboardingMatch) continue;
+
     let enrollmentBatchId = batchId;
     if (typeof batchId === "undefined") {
-      const existingEnrollment = await ProgramEnrollment.findOne({
-        userId: user._id,
-        programId,
-        status: "Active",
-      }).lean();
-      const hasEnrollmentBatch = existingEnrollment
-        && Object.prototype.hasOwnProperty.call(existingEnrollment, "batchId");
+      const activeEnrollment = existingEnrollment?.status === "Active" ? existingEnrollment : null;
+      const hasEnrollmentBatch = activeEnrollment
+        && Object.prototype.hasOwnProperty.call(activeEnrollment, "batchId");
       enrollmentBatchId = hasEnrollmentBatch
-        ? existingEnrollment.batchId
+        ? activeEnrollment.batchId
         : (student.batchId || user.batchId || null);
     }
 
@@ -264,7 +309,7 @@ export const syncProgramEnrollment = async ({
       program: prog,
       batchId: enrollmentBatchId || null,
       accessTier,
-      source: "onboarding",
+      source,
     });
 
     enrolledPrograms.push(prog);
@@ -278,10 +323,15 @@ export const syncProgramEnrollment = async ({
 
     await Promise.all([user.save(), student.save()]);
   } else {
-    // If no active matched programs remain, clear primary programId if it pointed to a non-matching program
-    user.programId = null;
-    student.programId = null;
-    await Promise.all([user.save(), student.save()]);
+    // Preserve an imported/admin program pointer when onboarding could not
+    // create a new enrollment (for example, a paid program awaiting payment).
+    // The pointer is not an access grant; protected routes still require a
+    // verified ProgramEnrollment record.
+    if (!programId) {
+      user.programId = null;
+      student.programId = null;
+      await Promise.all([user.save(), student.save()]);
+    }
   }
 
   return enrolledPrograms;

@@ -244,6 +244,58 @@ export default function ProgramLearningExperience() {
               </div>
             </div>
 
+            {(experience?.program?.materials || []).length > 0 && (
+              <section className="border-b border-current/10 p-5 sm:p-6 lg:p-8">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <h2 className="flex items-center gap-2 text-lg font-bold">
+                      <BookOpen className="h-5 w-5 text-blue-400" /> Program materials
+                    </h2>
+                    <p className="mt-1 text-sm opacity-70">
+                      Courses, roadmaps, tracks, and projects assigned to this learning path.
+                    </p>
+                  </div>
+                  <span className="text-xs font-semibold uppercase tracking-wider opacity-60">
+                    {experience.program.materials.length} resources
+                  </span>
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {experience.program.materials.map((material) => {
+                    const content = (
+                      <>
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-400">
+                            {material.type}
+                          </span>
+                          {material.href && <ChevronRight className="h-4 w-4 shrink-0 opacity-60" />}
+                        </div>
+                        <h3 className="mt-2 font-semibold">{material.title || 'Learning resource'}</h3>
+                        {material.description && <p className="mt-1 line-clamp-2 text-xs opacity-70">{material.description}</p>}
+                      </>
+                    );
+
+                    return material.href ? (
+                      <button
+                        key={`${material.type}-${material.id}`}
+                        type="button"
+                        onClick={() => navigate(material.href)}
+                        className="rounded-xl border border-current/10 bg-black/5 p-4 text-left transition hover:border-blue-400/50 hover:bg-blue-500/10 dark:bg-white/5"
+                      >
+                        {content}
+                      </button>
+                    ) : (
+                      <div
+                        key={`${material.type}-${material.id}`}
+                        className="rounded-xl border border-current/10 bg-black/5 p-4 dark:bg-white/5"
+                      >
+                        {content}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
             <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_300px] lg:p-8">
               <div>
                 {error && (

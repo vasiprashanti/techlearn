@@ -34,6 +34,40 @@ const buildContextPayload = (context) => ({
     duration: context.program.duration,
     durationDays: context.program.durationDays,
     phases: context.program.phases || [],
+    courses: context.program.courseIds || [],
+    roadmaps: context.program.roadmapIds || [],
+    trackTemplates: context.program.trackTemplateIds || [],
+    projects: context.program.projectIds || [],
+    materials: [
+      ...(context.program.courseIds || []).map((course) => ({
+        id: course._id,
+        type: "Course",
+        title: course.title,
+        description: course.description || "",
+        href: `/learn/courses/${course._id}/topics`,
+      })),
+      ...(context.program.roadmapIds || []).map((roadmap) => ({
+        id: roadmap._id,
+        type: "Roadmap",
+        title: roadmap.title,
+        description: roadmap.description || "",
+        href: "/resources/roadmaps",
+      })),
+      ...(context.program.trackTemplateIds || []).map((track) => ({
+        id: track._id,
+        type: track.trackType || "Track",
+        title: track.name,
+        description: track.description || "",
+        href: null,
+      })),
+      ...(context.program.projectIds || []).map((project) => ({
+        id: project._id,
+        type: "Project",
+        title: project.title,
+        description: project.description || "",
+        href: null,
+      })),
+    ],
   },
   enrolled: context.isEnrolled,
   scheduleType: context.schedule?.scheduleType || null,
@@ -98,6 +132,9 @@ export const getProgramExperience = async (req, res) => {
     const context = await getProgramLearningContext({
       user: req.user,
       programId: req.params.programId,
+      // Placement learners can preview and complete the free readiness
+      // assessment before purchasing; all later phases still require an
+      // active verified enrollment through the context guard.
       allowUnenrolled: true,
     });
     const assignment = await getCurrentProgramAssignment(context, {

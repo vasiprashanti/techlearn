@@ -9,6 +9,17 @@ import {
 export const PROGRAM_TYPES = Object.freeze(["Placement", "Skill"]);
 export const PROGRAM_PLACEMENT_CATEGORIES = Object.freeze(["On-Campus", "Off-Campus", "Both"]);
 
+const pricingPlanSchema = new mongoose.Schema(
+  {
+    key: { type: String, required: true, trim: true },
+    title: { type: String, required: true, trim: true },
+    price: { type: Number, required: true, min: 0 },
+    benefits: { type: [String], default: [] },
+    active: { type: Boolean, default: true },
+  },
+  { _id: false }
+);
+
 const programSchema = new mongoose.Schema(
   {
     name: {
@@ -108,6 +119,12 @@ const programSchema = new mongoose.Schema(
         },
         message: "Program fee is required and must be non-negative for Paid programs",
       },
+    },
+    // Admin-configurable annual plans. programFee remains a compatibility
+    // fallback for older records that only had one price.
+    pricingPlans: {
+      type: [pricingPlanSchema],
+      default: [],
     },
     learningGoals: [
       {
@@ -218,6 +235,18 @@ programSchema.pre("validate", function populateProgramStructure(next) {
   if ((!Array.isArray(this.phases) || this.phases.length === 0) && this.programType && this.durationDays) {
     const defaultPhases = buildDefaultProgramPhases(this.programType, this.durationDays);
     if (defaultPhases.length) this.phases = defaultPhases;
+  }
+
+  if (this.pricingType === "Paid" && (!Array.isArray(this.pricingPlans) || this.pricingPlans.length === 0)) {
+    this.pricingPlans = this.programType === "Skill"
+      ? [
+          { key: "skill-basic", title: "Skill Program", price: 399, benefits: ["Recorded videos", "1 live doubt session"] },
+          { key: "skill-pro", title: "Skill Program Pro", price: 699, benefits: ["Recorded videos", "1 live doubt session"] },
+        ]
+      : [
+          { key: "placement-basic", title: "Placement Program", price: 799, benefits: ["Recorded videos", "Live sessions"] },
+          { key: "placement-pro", title: "Placement Program Pro", price: 1199, benefits: ["Recorded videos", "Live sessions"] },
+        ];
   }
 
   next();

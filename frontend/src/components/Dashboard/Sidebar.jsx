@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Award,
+  BarChart3,
   LayoutDashboard,
   Map,
   PlayCircle,
@@ -16,6 +17,7 @@ const menuGroups = [
     title: "MAIN",
     items: [
       { id: "dashboard", title: "Dashboard", icon: <LayoutDashboard className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "dashboard/reports", title: "Reports", icon: <BarChart3 className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/roadmap", title: "Roadmaps", icon: <Map className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/practice", title: "Practice", icon: <PlayCircle className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/leaderboard", title: "Leaderboard", icon: <Award className="w-[18px] h-[18px] md:w-5 md:h-5" /> },

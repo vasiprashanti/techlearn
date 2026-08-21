@@ -4,12 +4,16 @@ import jwt from "jsonwebtoken";
 import { invalidateDashboardCache } from "./dashboardController.js";
 import College from "../models/College.js";
 import Student from "../models/Student.js";
-import Batch from "../models/Batch.js";
 import Project from "../models/Project.js";
 import ProjectDay from "../models/ProjectDay.js";
 import ProjectTask from "../models/ProjectTask.js";
 import { syncProgramEnrollment } from "../utils/programEnrollment.js";
 import StudentProject from "../models/StudentProject.js";
+import {
+  buildUnifiedProfile,
+  ensureStudentForUser,
+  getUnifiedProfileForUser,
+} from "../utils/userProfile.js";
 
 
 // JWT token generator
@@ -152,8 +156,12 @@ export const registerUser = async (req, res) => {
       personalizedDetail,
       placementReadiness,
       dailyCommitment,
-      declarationAccepted
+      declarationAccepted,
+      onboardingCompleted,
+      completeOnboarding,
     } = req.body;
+
+    const shouldCompleteOnboarding = onboardingCompleted === true || completeOnboarding === true;
 
     const emailCheck = (email || "").trim().toLowerCase();
     if (!emailCheck) {
@@ -193,15 +201,20 @@ export const registerUser = async (req, res) => {
       trimmedLastName = (lastName || "").trim();
     }
 
-    // Resolve or create College
-    const collegeNameText = (collegeName || "TechLearn College").trim();
-    let college = await College.findOne({ name: { $regex: new RegExp(`^${escapeRegex(collegeNameText)}$`, "i") } });
-    if (!college) {
-      college = await College.create({
-        name: collegeNameText,
-        code: collegeNameText.replace(/[^a-z0-9]/gi, "").slice(0, 8).toUpperCase() || "TLC",
-        status: "Active",
-      });
+    // A draft account must not require or invent a college/batch. The
+    // college is resolved only when onboarding is explicitly completed.
+    const collegeNameText = (collegeName || "").trim();
+    let college = null;
+    if (shouldCompleteOnboarding) {
+      const resolvedCollegeName = collegeNameText || "TechLearn College";
+      college = await College.findOne({ name: { $regex: new RegExp(`^${escapeRegex(resolvedCollegeName)}$`, "i") } });
+      if (!college) {
+        college = await College.create({
+          name: resolvedCollegeName,
+          code: resolvedCollegeName.replace(/[^a-z0-9]/gi, "").slice(0, 8).toUpperCase() || "TLC",
+          status: "Active",
+        });
+      }
     }
 
     let targetUser = await User.findOne({ email: emailCheck });
@@ -227,27 +240,16 @@ export const registerUser = async (req, res) => {
       if (Array.isArray(targetCompanies)) targetUser.targetCompanies = targetCompanies;
       if (placementTimeline) targetUser.placementTimeline = placementTimeline;
       if (learningPath) targetUser.learningPath = learningPath;
-      targetUser.onboardingCompleted = true;
-      targetUser.onboardingCompletedAt = new Date();
+      if (programSelection) targetUser.programSelection = programSelection;
+      if (shouldCompleteOnboarding && !targetUser.onboardingCompleted) {
+        targetUser.onboardingCompleted = true;
+        targetUser.onboardingCompletedAt = new Date();
+      }
 
       await targetUser.save();
     } else {
       const rawPassword = password || "UserAuthAccount123!";
       const hashedPassword = await bcrypt.hash(rawPassword, 12);
-
-      let batch = await Batch.findOne({ collegeId: college._id, name: "Cohort 1" });
-      if (!batch) {
-        const { startDate, expiryDate } = getDefaultBatchWindow();
-        batch = await Batch.create({
-          name: "Cohort 1",
-          collegeId: college._id,
-          startDate,
-          expiryDate,
-          releaseTime: "00:00",
-          status: "Active",
-          assignedTrack: programSelection || "Placement Sprint",
-        });
-      }
 
       targetUser = new User({
         firstName: trimmedFirstName,
@@ -275,9 +277,11 @@ export const registerUser = async (req, res) => {
         placementReadiness: placementReadiness || "",
         dailyCommitment: dailyCommitment || "",
         declarationAccepted: declarationAccepted || false,
-        batchId: batch._id,
-        onboardingCompleted: true,
-        onboardingCompletedAt: new Date(),
+        // New accounts are not put into a cohort implicitly. A batch is only
+        // written by an explicit admin enrollment or an imported record.
+        batchId: null,
+        onboardingCompleted: shouldCompleteOnboarding,
+        onboardingCompletedAt: shouldCompleteOnboarding ? new Date() : null,
       });
 
       await targetUser.save();
@@ -285,17 +289,44 @@ export const registerUser = async (req, res) => {
 
     const token = generatorToken(targetUser._id);
 
-    // Check if an admin already created a student profile for this email
+    // Check if an admin already created a student profile for this email.
+    // Draft accounts intentionally do not create a duplicate Student row.
     let student = await Student.findOne({ email: emailCheck });
+
+    if (!shouldCompleteOnboarding) {
+      if (student && (!student.userId || String(student.userId) !== String(targetUser._id))) {
+        student.userId = targetUser._id;
+        await student.save();
+      }
+      const importedDraft = student
+        ? await Student.findById(student._id)
+          .populate("collegeId", "name")
+          .populate("batchId", "name startDate expiryDate status")
+          .populate("programId", "name programType duration durationDays status visibility")
+          .lean()
+        : null;
+      const draftToken = generatorToken(targetUser._id);
+      return res.status(201).json({
+        message: "Draft account created successfully",
+        token: draftToken,
+        user: {
+          ...buildUnifiedProfile({ user: targetUser, student: importedDraft }),
+          onboardingCompleted: false,
+          onboardingCompletedAt: null,
+        },
+      });
+    }
 
     if (student) {
       // Link the existing student profile to the new user account
       student.userId = targetUser._id;
-      student.collegeId = student.collegeId || college._id;
+      student.collegeId = student.collegeId || college?._id;
+      // Imported enrollment data remains authoritative. Only fill missing
+      // profile fields; never overwrite an imported batch or program.
       student.programSelection = student.programSelection || targetUser.programSelection;
-      student.degree = targetUser.degree || student.degree;
-      student.branch = targetUser.branch || student.branch;
-      student.graduationYear = targetUser.graduationYear || student.graduationYear;
+      if (!student.degree && targetUser.degree) student.degree = targetUser.degree;
+      if (!student.branch && targetUser.branch) student.branch = targetUser.branch;
+      if (!student.graduationYear && targetUser.graduationYear) student.graduationYear = targetUser.graduationYear;
       student.learningGoal = targetUser.learningGoal;
       student.skills = targetUser.skills;
       student.targetRole = targetUser.targetRole;
@@ -421,26 +452,28 @@ export const loginUser = async (req, res) => {
         lastName: user.lastName || "",
         name: fullName || user.firstName,
         email: user.email,
+        authProvider: user.authProvider || "local",
         photoUrl: user.avatar || "",
         avatar: user.avatar || "",
         role: user.role,
         isClub: user.isClub,
-        collegeName: user.collegeName || "",
-        degree: user.degree || student?.degree || "",
-        branch: user.branch || student?.branch || "",
-        graduationYear: user.graduationYear || student?.graduationYear || null,
-        targetRole: user.targetRole || student?.targetRole || "",
-        otherTargetRole: user.otherTargetRole || student?.otherTargetRole || "",
-        learningGoal: user.learningGoal || student?.learningGoal || "",
-        placementCategory: user.placementCategory || student?.placementCategory || "",
-        targetCompanies: user.targetCompanies?.length ? user.targetCompanies : (student?.targetCompanies || []),
-        placementTimeline: user.placementTimeline || student?.placementTimeline || "",
-        skills: user.skills?.length ? user.skills : (student?.skills || []),
+        collegeName: student?.collegeName || user.collegeName || "",
+        degree: student?.degree || user.degree || "",
+        branch: student?.branch || user.branch || "",
+        graduationYear: student?.graduationYear || user.graduationYear || null,
+        targetRole: student?.targetRole || user.targetRole || student?.otherTargetRole || user.otherTargetRole || "",
+        otherTargetRole: student?.otherTargetRole || user.otherTargetRole || "",
+        learningGoal: student?.learningGoal || user.learningGoal || "",
+        placementCategory: student?.placementCategory || user.placementCategory || "",
+        targetCompanies: student?.targetCompanies?.length ? student.targetCompanies : (user.targetCompanies || []),
+        placementTimeline: student?.placementTimeline || user.placementTimeline || "",
+        skills: student?.skills?.length ? student.skills : (user.skills || []),
         programId: user.programId || student?.programId || null,
         batchId: user.batchId || student?.batchId || null,
         isEnrolledStudent: user.isClub || Boolean(user.batchId) || Boolean(student),
         onboardingCompleted: isProfileComplete,
         onboardingCompletedAt: user.onboardingCompletedAt || student?.onboardingCompletedAt || (isProfileComplete ? user.updatedAt : null),
+        profile: buildUnifiedProfile({ user, student }),
       },
       token,
     });
@@ -489,75 +522,109 @@ export const updateUserProfile = async (req, res) => {
   }
 };
 
-// 📌 PUT /api/users/preferences
-export const updatePreferences = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const {
-      skills,
-      targetRole,
-      otherTargetRole,
-      targetRoleOther,
-      placementCategory,
-      targetCompanies,
-      placementTimeline,
-      learningPath,
-      learningGoal,
-      collegeName,
-      degree,
-      branch,
-      graduationYear,
-    } = req.body;
+const saveProfileState = async ({ req, completeOnboarding }) => {
+  const userId = req.user._id;
+  const user = await User.findById(userId);
+  if (!user) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+    throw error;
+  }
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+  const {
+    skills,
+    targetRole,
+    otherTargetRole,
+    targetRoleOther,
+    placementCategory,
+    targetCompanies,
+    placementTimeline,
+    learningPath,
+    learningGoal,
+    collegeName,
+    degree,
+    branch,
+    graduationYear,
+    programSelection,
+  } = req.body || {};
 
-    if (skills !== undefined) user.skills = Array.isArray(skills) ? skills : [];
-    if (targetRole !== undefined) user.targetRole = targetRole;
-    if (otherTargetRole !== undefined || targetRoleOther !== undefined) user.otherTargetRole = otherTargetRole || targetRoleOther || "";
-    if (placementCategory !== undefined) user.placementCategory = placementCategory;
-    if (targetCompanies !== undefined) user.targetCompanies = Array.isArray(targetCompanies) ? targetCompanies : [];
-    if (placementTimeline !== undefined) user.placementTimeline = placementTimeline;
-    if (learningPath !== undefined) user.learningPath = learningPath;
-    if (learningGoal !== undefined) user.learningGoal = learningGoal;
-    if (collegeName) user.collegeName = collegeName;
-    if (degree) user.degree = degree;
-    if (branch) user.branch = branch;
-    if (graduationYear) user.graduationYear = Number(graduationYear);
+  let student = await Student.findOne({
+    $or: [
+      { userId: user._id },
+      ...(user.email ? [{ email: user.email.toLowerCase() }] : []),
+    ],
+  }).populate("collegeId", "name");
 
+  // Imported student enrollment data is authoritative. Copy it into the
+  // authenticated user only when the user record is missing that value.
+  if (student?.collegeId?.name && !user.collegeName) user.collegeName = student.collegeId.name;
+  if (student?.degree && !user.degree) user.degree = student.degree;
+  if (student?.branch && !user.branch) user.branch = student.branch;
+  if (student?.graduationYear && !user.graduationYear) user.graduationYear = student.graduationYear;
+  if (student?.programId && !user.programId) user.programId = student.programId;
+  if (student?.batchId && !user.batchId) user.batchId = student.batchId;
+
+  if (skills !== undefined) user.skills = Array.isArray(skills) ? skills : [];
+  if (targetRole !== undefined) user.targetRole = targetRole;
+  if (otherTargetRole !== undefined || targetRoleOther !== undefined) {
+    user.otherTargetRole = otherTargetRole || targetRoleOther || "";
+  }
+  if (placementCategory !== undefined) user.placementCategory = placementCategory;
+  if (targetCompanies !== undefined) user.targetCompanies = Array.isArray(targetCompanies) ? targetCompanies : [];
+  if (placementTimeline !== undefined) user.placementTimeline = placementTimeline;
+  if (learningPath !== undefined) user.learningPath = learningPath;
+  if (learningGoal !== undefined) user.learningGoal = learningGoal;
+  if (collegeName && !student?.collegeId?._id) user.collegeName = String(collegeName).trim();
+  if (degree && !student?.degree) user.degree = degree;
+  if (branch && !student?.branch) user.branch = branch;
+  if (graduationYear && !student?.graduationYear) user.graduationYear = Number(graduationYear);
+  if (programSelection && !student?.programId) user.programSelection = programSelection;
+
+  if (completeOnboarding) {
     user.onboardingCompleted = true;
-    user.onboardingCompletedAt = new Date();
+    user.onboardingCompletedAt = user.onboardingCompletedAt || new Date();
+  }
 
-    await user.save();
+  await user.save();
 
-    let student = await Student.findOne({ userId: user._id });
-    if (!student && user.email) {
-      student = await Student.findOne({ email: user.email.toLowerCase() });
-    }
+  if (completeOnboarding) {
+    student = await ensureStudentForUser({ user, student, collegeModel: College });
+  }
 
-    if (student) {
-      student.skills = user.skills;
-      student.targetRole = user.targetRole;
-      student.otherTargetRole = user.otherTargetRole;
-      student.placementCategory = user.placementCategory;
-      student.targetCompanies = user.targetCompanies;
-      student.placementTimeline = user.placementTimeline;
-      student.learningPath = user.learningPath;
-      if (degree) student.degree = degree;
-      if (branch) student.branch = branch;
-      if (graduationYear) student.graduationYear = Number(graduationYear);
-      if (learningGoal) student.learningGoal = user.learningGoal;
+  if (student) {
+    student.userId = user._id;
+    // Keep enrollment fields untouched; only synchronize learner profile data.
+    student.skills = user.skills;
+    student.targetRole = user.targetRole;
+    student.otherTargetRole = user.otherTargetRole;
+    student.placementCategory = user.placementCategory;
+    student.targetCompanies = user.targetCompanies;
+    student.placementTimeline = user.placementTimeline;
+    student.learningPath = user.learningPath;
+    if (!student.degree && user.degree) student.degree = user.degree;
+    if (!student.branch && user.branch) student.branch = user.branch;
+    if (!student.graduationYear && user.graduationYear) student.graduationYear = user.graduationYear;
+    if (learningGoal !== undefined || completeOnboarding) student.learningGoal = user.learningGoal;
+    if (completeOnboarding) {
       student.onboardingCompleted = true;
       student.onboardingCompletedAt = user.onboardingCompletedAt;
-      await student.save();
     }
+    await student.save();
+  }
 
-    // Re-run program matching
-    const enrolledPrograms = await syncProgramEnrollment({
+  let enrolledPrograms = [];
+  if (completeOnboarding && student) {
+    // Passing null explicitly preserves the individual schedule. A batch is
+    // used only when the imported/admin enrollment already has one.
+    // Leave the value undefined when no legacy batch is present so the
+    // enrollment helper can preserve an existing per-program batch schedule.
+    // A genuinely new enrollment still resolves to an individual schedule.
+    const enrollmentBatchId = student.batchId || user.batchId || undefined;
+    const enrolled = await syncProgramEnrollment({
       user,
       student,
+      batchId: enrollmentBatchId,
+      programId: student.programId || user.programId || null,
       programSelection: user.programSelection,
       onboardingData: {
         learningGoal: user.learningGoal,
@@ -568,17 +635,56 @@ export const updatePreferences = async (req, res) => {
         learningPath: user.learningPath,
       },
     });
+    enrolledPrograms = Array.isArray(enrolled) ? enrolled : [enrolled].filter(Boolean);
+  }
 
-    invalidateDashboardCache(userId);
+  invalidateDashboardCache(userId);
+  const profileData = await getUnifiedProfileForUser(userId);
 
-    res.json({
-      message: "Preferences updated and programs matched successfully",
-      user,
-      assignedPrograms: enrolledPrograms,
+  return {
+    user: profileData?.profile || buildUnifiedProfile({ user, student }),
+    profile: profileData?.profile || buildUnifiedProfile({ user, student }),
+    assignedPrograms: enrolledPrograms,
+  };
+};
+
+// 📌 GET /api/users/profile
+export const getCurrentUserProfile = async (req, res) => {
+  try {
+    const profileData = await getUnifiedProfileForUser(req.user._id);
+    if (!profileData) return res.status(404).json({ success: false, message: "User profile not found" });
+    return res.json({ success: true, profile: profileData.profile, user: profileData.profile });
+  } catch (error) {
+    console.error("Get profile error:", error);
+    return res.status(500).json({ success: false, message: error.message || "Failed to load profile" });
+  }
+};
+
+// 📌 PUT /api/users/onboarding/draft
+export const saveOnboardingDraft = async (req, res) => {
+  try {
+    const result = await saveProfileState({ req, completeOnboarding: false });
+    return res.json({ success: true, message: "Onboarding progress saved", ...result });
+  } catch (error) {
+    console.error("Save onboarding draft error:", error);
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message || "Failed to save onboarding progress" });
+  }
+};
+
+// 📌 PUT /api/users/preferences
+export const updatePreferences = async (req, res) => {
+  try {
+    // Existing clients omit the flag; preserve their completion behaviour.
+    const completeOnboarding = req.body?.completeOnboarding !== false && req.body?.onboardingCompleted !== false;
+    const result = await saveProfileState({ req, completeOnboarding });
+    return res.json({
+      success: true,
+      message: completeOnboarding ? "Preferences updated and programs matched successfully" : "Onboarding progress saved",
+      ...result,
     });
   } catch (error) {
     console.error("Update Preferences Error:", error);
-    res.status(500).json({ message: error.message || "Failed to update preferences" });
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message || "Failed to update preferences" });
   }
 };
 

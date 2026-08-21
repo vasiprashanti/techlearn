@@ -48,6 +48,7 @@ import resourceRoutes from "./routes/resourceRoutes.js";
 import leaderboardRoutes from "./routes/leaderboardRoutes.js";
 import practiceRoutes from "./routes/practiceRoutes.js";
 import programRoutes from "./routes/programRoutes.js";
+import learnerReportRoutes from "./routes/learnerReportRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -102,6 +103,7 @@ app.use("/api/courses", courseRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/programs", programRoutes);
+app.use("/api/reports", learnerReportRoutes);
 app.use("/api/user-progress", userProgressRoutes);
 app.use("/api/certificate", paymentRoutes);
 app.use("/api/payments", paymentRoutes);

@@ -20,6 +20,7 @@ const DemoDashboard = lazy(() => import('./pages/Dashboard/Demo'))
 const ProjectDayNotes = lazy(() => import('./pages/Dashboard/ProjectDayNotes'))
 const ProjectOverview = lazy(() => import('./pages/Dashboard/ProjectOverview'))
 const Performance = lazy(() => import('./pages/Dashboard/Performance'))
+const LearnerReports = lazy(() => import('./pages/Dashboard/Reports'))
 const DashboardSettings = lazy(() => import('./pages/Dashboard/Settings'))
 const OnboardingPrograms = lazy(() => import('./pages/Onboarding/OnboardingPrograms'))
 const Languages = lazy(() => import('./pages/Dashboard/Languages'))
@@ -268,6 +269,7 @@ function LayoutWrapper() {
             <Route path="/dashboard/practice/company-based/mock/:company/:questionId" element={<CompanyMockQuestionDetail />} />
             <Route path="/dashboard/practice/category/:categorySlug" element={<DynamicPracticeQuestions />} />
             <Route path="/dashboard/performance" element={<Performance />} />
+            <Route path="/dashboard/reports" element={<LearnerReports />} />
             <Route path="/dashboard/leaderboard" element={<Leaderboard />} />
              <Route path="/dashboard/resources" element={<ResourcesHub />} />
             <Route path="/dashboard/resources/free-courses" element={<Navigate to="/learn" replace />} />

@@ -1,5 +1,9 @@
 import express from "express";
 import {
+  getProgramCatalog,
+  getProgramRecommendations,
+  enrollInFreeProgram,
+  joinProgramWaitlist,
   getAssignedPrograms,
   getReadinessOptions,
   selectActiveProgram,
@@ -19,9 +23,13 @@ import { protect } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 // Protected student-facing endpoints
+router.get("/catalog", getProgramCatalog);
+router.get("/recommendations", protect, getProgramRecommendations);
 router.get("/assigned", protect, getAssignedPrograms);
 router.get("/readiness-options", protect, getReadinessOptions);
 router.post("/select-active", protect, selectActiveProgram);
+router.post("/:programId/free-enroll", protect, enrollInFreeProgram);
+router.post("/:programId/waitlist", protect, joinProgramWaitlist);
 router.get("/:programId/experience", protect, getProgramExperience);
 router.get("/:programId/final-report", protect, getFinalProgramReport);
 router.get("/:programId/readiness", protect, getProgramAssignment);

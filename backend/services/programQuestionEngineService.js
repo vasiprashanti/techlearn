@@ -86,11 +86,11 @@ const getUserRecord = async (user) => {
 };
 
 const buildProfile = ({ user, student }) => ({
-  targetRole: String(user?.targetRole || student?.targetRole || user?.otherTargetRole || student?.otherTargetRole || "").trim(),
-  targetCompanies: uniqueStrings(user?.targetCompanies?.length ? user.targetCompanies : student?.targetCompanies || []),
-  learningGoal: String(user?.learningGoal || student?.learningGoal || "").trim(),
-  skills: uniqueStrings(user?.skills?.length ? user.skills : student?.skills || []),
-  placementCategory: String(user?.placementCategory || student?.placementCategory || "").trim(),
+  targetRole: String(student?.targetRole || user?.targetRole || student?.otherTargetRole || user?.otherTargetRole || "").trim(),
+  targetCompanies: uniqueStrings(student?.targetCompanies?.length ? student.targetCompanies : user?.targetCompanies || []),
+  learningGoal: String(student?.learningGoal || user?.learningGoal || "").trim(),
+  skills: uniqueStrings(student?.skills?.length ? student.skills : user?.skills || []),
+  placementCategory: String(student?.placementCategory || user?.placementCategory || "").trim(),
 });
 
 export const getProgramLearningContext = async ({
@@ -107,7 +107,12 @@ export const getProgramLearningContext = async ({
   }
 
   const [program, userRecord, student] = await Promise.all([
-    Program.findById(programId).lean(),
+    Program.findById(programId)
+      .populate("courseIds", "_id title description level courseType numTopics")
+      .populate("roadmapIds", "_id title description status")
+      .populate("trackTemplateIds", "_id name trackType description totalDays status")
+      .populate("projectIds", "_id title description category duration_days status")
+      .lean(),
     getUserRecord(user),
     getLearnerRecord({ user, student: providedStudent }),
   ]);
@@ -140,6 +145,15 @@ export const getProgramLearningContext = async ({
 
   if (!isEnrolled && !allowUnenrolled && !isAdmin) {
     const error = new Error("You do not have an active enrollment in this program.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const canAccessFreeReadiness = allowUnenrolled
+    && !enrollment
+    && program.programType === "Placement";
+  if (!isAdmin && program.pricingType === "Paid" && !canAccessFreeReadiness && (!enrollment || enrollment.accessTier !== "Member")) {
+    const error = new Error("Paid program access requires a verified enrollment.");
     error.statusCode = 403;
     throw error;
   }

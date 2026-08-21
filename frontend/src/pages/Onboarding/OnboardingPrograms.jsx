@@ -23,9 +23,11 @@ export default function OnboardingPrograms() {
 
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isSkillReturningUser, setIsSkillReturningUser] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [readinessPrograms, setReadinessPrograms] = useState([]);
+  const [configuredPricingPlans, setConfiguredPricingPlans] = useState([]);
+  const [catalogPrograms, setCatalogPrograms] = useState([]);
+  const [recommendedPrograms, setRecommendedPrograms] = useState([]);
 
   const storedUserData = (() => {
     try {
@@ -46,29 +48,21 @@ export default function OnboardingPrograms() {
   const isPlacement = goal === 'Get Placed' || !goal;
 
   const targetRole = currentUser?.targetRole || 'Software Developer';
+  const selectedCatalogProgram = catalogPrograms.find((program) => String(program._id) === String(currentUser?.programId))
+    || recommendedPrograms[0]
+    || catalogPrograms.find((program) => (
+      program.programType === (isPlacement ? 'Placement' : 'Skill')
+      && program.pricingType === (currentUser?.learningPath === 'Free' ? 'Free' : 'Paid')
+    ));
+  const selectedProgramId = currentUser?.programId
+    || selectedCatalogProgram?._id
+    || null;
 
   const userSkills = Array.isArray(currentUser?.skills) && currentUser.skills.length > 0 
     ? currentUser.skills 
     : (currentUser?.skill ? [currentUser.skill] : ['Java']);
   const selectedSkill = userSkills[0];
   const displaySkills = userSkills.join(', ');
-
-  // Fetch Skill eligibility from backend on mount
-  useEffect(() => {
-    let isMounted = true;
-    const checkEligibility = async () => {
-      try {
-        const res = await API.get('/api/payments/eligibility?programType=Skill');
-        if (isMounted && res.data?.success) {
-          setIsSkillReturningUser(!!res.data.isReturningUser);
-        }
-      } catch (err) {
-        console.error('Error fetching payment eligibility:', err);
-      }
-    };
-    checkEligibility();
-    return () => { isMounted = false; };
-  }, []);
 
   useEffect(() => {
     if (!isPlacement) return undefined;
@@ -83,6 +77,52 @@ export default function OnboardingPrograms() {
     return () => { isMounted = false; };
   }, [isPlacement]);
 
+  useEffect(() => {
+    if (currentUser?.programId) return undefined;
+    let mounted = true;
+    API.get('/api/programs/catalog')
+      .then((response) => {
+        if (mounted) setCatalogPrograms(response.data?.programs || []);
+      })
+      .catch(() => {
+        if (mounted) setCatalogPrograms([]);
+      });
+    return () => { mounted = false; };
+  }, [currentUser?.programId]);
+
+  useEffect(() => {
+    if (currentUser?.programId) return undefined;
+    let mounted = true;
+    API.get('/api/programs/recommendations')
+      .then((response) => {
+        if (mounted) setRecommendedPrograms(response.data?.programs || []);
+      })
+      .catch(() => {
+        if (mounted) setRecommendedPrograms([]);
+      });
+    return () => { mounted = false; };
+  }, [currentUser?.programId]);
+
+  useEffect(() => {
+    if (!selectedProgramId) {
+      setConfiguredPricingPlans([]);
+      return undefined;
+    }
+    if (!currentUser?.programId && selectedCatalogProgram) {
+      setConfiguredPricingPlans(selectedCatalogProgram.pricingPlans || []);
+      return undefined;
+    }
+    let mounted = true;
+    API.get(`/api/programs/${selectedProgramId}`)
+      .then((response) => {
+        if (mounted) setConfiguredPricingPlans(response.data?.program?.pricingPlans || []);
+      })
+      .catch(() => {
+        if (mounted) setConfiguredPricingPlans([]);
+    });
+    return () => { mounted = false; };
+  }, [selectedProgramId, currentUser?.programId, selectedCatalogProgram]);
+
   const handleEnrollNow = async (planId) => {
     if (loading) return;
     setSelectedPlanId(planId);
@@ -90,7 +130,8 @@ export default function OnboardingPrograms() {
 
     initiateRazorpayPayment({
       planId,
-      programId: currentUser?.programId || null,
+      programId: selectedProgramId,
+      programType: isPlacement ? 'Placement' : 'Skill',
       user: currentUser,
       onSuccess: async (resData) => {
         console.log('Payment successful & verified:', resData);
@@ -124,11 +165,12 @@ export default function OnboardingPrograms() {
     });
   };
 
-  // Placement Plans: ONLY ₹799 and ₹999 cards (No Free/₹0 card)
+  // Annual Placement plans. The server resolves the final amount from the
+  // selected program's admin-configured pricingPlans.
   const placementPlans = [
     {
-      id: 'placement_season_pass',
-      title: 'Placement Season Pass',
+      id: 'placement-basic',
+      title: 'Placement Program',
       price: '₹799',
       subtitle: '90 Days Total Access',
       badge: 'MOST POPULAR',
@@ -144,12 +186,12 @@ export default function OnboardingPrograms() {
         'Company-wise interview preparation',
         'Placement readiness & mock prep'
       ],
-      refundNotice: 'Cancel anytime. Get refunded if you cancel within 5 days.',
+      refundNotice: 'No refunds or cancellations after purchase.',
     },
     {
-      id: 'placement_season_pass_pro',
-      title: 'Placement Season Pass Pro',
-      price: '₹999',
+      id: 'placement-pro',
+      title: 'Placement Program Pro',
+      price: '₹1,199',
       subtitle: '120 Days Total Access',
       badge: 'BEST VALUE',
       highlight: false,
@@ -164,18 +206,19 @@ export default function OnboardingPrograms() {
         'Company-wise preparation & assessments',
         'Longer period to prepare post-program'
       ],
-      refundNotice: 'Cancel anytime. Get refunded if you cancel within 5 days.',
+      refundNotice: 'No refunds or cancellations after purchase.',
     }
   ];
 
-  // Skill Plans: Server eligibility determines whether user pays ₹499 or ₹199
+  // Annual Skill plans. Benefits and prices can be overridden by the Program
+  // entity's pricingPlans; these are the safe display defaults.
   const skillPlans = [
     {
-      id: isSkillReturningUser ? 'skill_membership' : 'skill_program',
-      title: isSkillReturningUser ? 'Returning Paid User' : 'First-Time Paid User',
-      price: isSkillReturningUser ? '₹199' : '₹499',
-      subtitle: '30 Days Access',
-      badge: isSkillReturningUser ? 'RETURNING OFFER' : '30-DAY ACCESS',
+      id: 'skill-basic',
+      title: 'Skill Program',
+      price: '₹399',
+      subtitle: 'Annual access',
+      badge: 'STANDARD',
       highlight: true,
       icon: Sparkles,
       color: 'border-[#a3e635] bg-[#f7fee7]/60 dark:bg-[#1a2e05]/40 shadow-xl shadow-[#a3e635]/15 ring-2 ring-[#a3e635]',
@@ -185,13 +228,43 @@ export default function OnboardingPrograms() {
         'Complete learning roadmap & course content',
         'Daily tasks & coding challenges',
         'Practice questions & notes',
-        isSkillReturningUser ? 'Discounted returning learner price (₹199)' : 'First-time paid learner access (₹499)',
+        'Recorded videos + 1 live doubt session',
       ],
-      refundNotice: null,
+      refundNotice: 'No refunds or cancellations after purchase.',
+    },
+    {
+      id: 'skill-pro',
+      title: 'Skill Program Pro',
+      price: '₹699',
+      subtitle: 'Annual access',
+      badge: 'BEST VALUE',
+      highlight: false,
+      icon: Sparkles,
+      color: 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/30 shadow-xl shadow-blue-500/10',
+      btnStyle: 'bg-[#3c83f6] text-white font-extrabold hover:bg-blue-600 shadow-lg shadow-blue-500/25',
+      features: [
+        `Full ${displaySkills} learning program`,
+        'Complete learning roadmap & course content',
+        'Daily tasks & coding challenges',
+        'Recorded videos + 1 live doubt session',
+      ],
+      refundNotice: 'No refunds or cancellations after purchase.',
     }
   ];
 
-  const plans = isPlacement ? placementPlans : skillPlans;
+  const configuredPlans = configuredPricingPlans
+    .filter((plan) => plan.active !== false)
+    .map((plan, index) => {
+      const fallback = (isPlacement ? placementPlans : skillPlans)[index] || placementPlans[0];
+      return {
+        ...fallback,
+        id: plan.key || fallback.id,
+        title: plan.title || fallback.title,
+        price: `₹${Number(plan.price || 0).toLocaleString('en-IN')}`,
+        features: Array.isArray(plan.benefits) && plan.benefits.length ? plan.benefits : fallback.features,
+      };
+    });
+  const plans = configuredPlans.length ? configuredPlans : (isPlacement ? placementPlans : skillPlans);
 
   const handleCheckPricing = (e) => {
     e.preventDefault();
@@ -225,7 +298,7 @@ export default function OnboardingPrograms() {
         isOpen={showExitModal}
         onClose={() => setShowExitModal(false)}
         onSubmitted={() => navigate(-1)}
-        programId={currentUser?.programId}
+        programId={selectedProgramId}
         selectedPlan={selectedPlanId}
       />
 
@@ -281,6 +354,23 @@ export default function OnboardingPrograms() {
             Based on your onboarding preferences, we matched you with the following learning
             programs. Choose your plan to complete enrollment.
           </Motion.p>
+
+          {selectedCatalogProgram && (
+            <Motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.25 }}
+              className="mt-5 rounded-2xl border border-blue-500/20 bg-blue-500/10 px-5 py-4 text-left shadow-sm"
+            >
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-blue-500 dark:text-blue-300">
+                Recommended for you
+              </p>
+              <p className="mt-1 text-sm font-bold text-slate-900 dark:text-white">{selectedCatalogProgram.name}</p>
+              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                {selectedCatalogProgram.description || `${selectedCatalogProgram.programType} learning path matched to your profile.`}
+              </p>
+            </Motion.div>
+          )}
 
           <Motion.div
             initial={{ opacity: 0, y: 15 }}

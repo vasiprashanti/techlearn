@@ -1,4 +1,5 @@
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
+import Program from "../models/Program.js";
 import { combineDateAndTime, getTrackAssignmentDate } from "./trackAssignmentSchedule.js";
 import { expireBatchIfNeeded } from "./batchLifecycle.js";
 
@@ -77,6 +78,49 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
     individualStartDate: getValidDate(student?.createdAt, user?.createdAt),
     batchExpired: Boolean(lifecycle.expired),
   };
+};
+
+/**
+ * Guard legacy task/challenge endpoints with the same program entitlement
+ * rules as the newer learning APIs. A stale pointer is never enough to open a
+ * paid program; the learner needs an active Member enrollment for that exact
+ * program. Free legacy pointers remain readable for migration compatibility.
+ */
+export const assertProgramScheduleAccess = async ({ user, student, programId }) => {
+  const resolvedProgramId = getId(programId);
+  if (!resolvedProgramId || user?.role === "admin") return null;
+
+  const program = await Program.findById(resolvedProgramId)
+    .select("pricingType status visibility")
+    .lean();
+  if (!program || program.status !== "Active" || program.visibility !== "Public") {
+    const error = new Error("This program is not available.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (program.pricingType !== "Paid") return null;
+
+  const identifiers = [
+    user?._id ? { userId: user._id } : null,
+    student?._id ? { studentId: student._id } : null,
+  ].filter(Boolean);
+  const enrollment = identifiers.length
+    ? await ProgramEnrollment.findOne({
+        programId: resolvedProgramId,
+        status: "Active",
+        accessTier: "Member",
+        $or: identifiers,
+      }).select("_id accessTier").lean()
+    : null;
+
+  if (!enrollment) {
+    const error = new Error("Paid program access requires a verified enrollment.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return enrollment;
 };
 
 /** Return the date from which the current program schedule should advance. */

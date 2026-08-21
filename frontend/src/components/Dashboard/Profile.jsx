@@ -13,6 +13,7 @@ import UserSidebarLayout from "./UserSidebarLayout";
 
 const AVATAR_COUNT = 8;
 const AVATAR_PATH = "/profile_avatars";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const getInitialAvatar = () => {
   const storedUser = JSON.parse(localStorage.getItem("userData"));
@@ -74,7 +75,7 @@ const Profile = () => {
       const userId = storedUser.id;
 
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/users/user/${userId}`,
+        `${API_BASE_URL}/users/user/${userId}`,
         {
           method: "PUT",
           headers: {
@@ -105,8 +106,17 @@ const Profile = () => {
 
   const userData = JSON.parse(localStorage.getItem("userData")) || {};
   const displayUser = user || userData;
+  const canonicalProfile = displayUser?.profile || {};
+  const profileAccount = canonicalProfile.account || {};
+  const profileEducation = canonicalProfile.education || {};
+  const profileEnrollment = canonicalProfile.enrollment || {};
+  const profileGoals = canonicalProfile.goals || {};
+  const profileSkills = canonicalProfile.skills?.selectedSkills || displayUser?.skills || [];
+  const targetCompanies = Array.isArray(profileGoals.companies)
+    ? profileGoals.companies
+    : (Array.isArray(displayUser?.targetCompanies) ? displayUser.targetCompanies : []);
   
-  const userName = displayUser?.firstName ? `${displayUser.firstName} ${displayUser.lastName || ''}` : 'Student';
+  const userName = profileAccount.name || (displayUser?.firstName ? `${displayUser.firstName} ${displayUser.lastName || ''}` : 'Student');
 
   if (isLoading) {
     return (
@@ -187,7 +197,7 @@ const Profile = () => {
                       {displayUser?.role === 'admin' ? 'ADMIN ACCOUNT' : 'STUDENT ACCOUNT'}
                     </span>
                     <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-0.5 text-[8px] uppercase tracking-widest text-blue-600 dark:text-blue-400 font-extrabold">
-                      {displayUser?.programSelection || "Placement Sprint"}
+                      {profileEnrollment.program?.name || displayUser?.programSelection || "Placement Sprint"}
                     </span>
                     <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[8px] uppercase tracking-widest text-amber-600 dark:text-amber-400 font-extrabold">
                       {Number(xp || 0).toLocaleString()} XP
@@ -286,19 +296,19 @@ const Profile = () => {
                   <div className="py-1.5 flex items-center justify-between gap-3">
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Full Name</span>
                     <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
-                      {displayUser?.firstName || "First"} {displayUser?.lastName || "Last"}
+                      {profileAccount.name || `${displayUser?.firstName || "First"} ${displayUser?.lastName || "Last"}`}
                     </span>
                   </div>
                   <div className="py-1.5 flex items-center justify-between gap-3">
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Email Address</span>
                     <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
-                      {displayUser?.email || "No email provided"}
+                      {profileAccount.email || displayUser?.email || "No email provided"}
                     </span>
                   </div>
                   <div className="py-1.5 flex items-center justify-between gap-3">
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Account Role</span>
                     <span className="font-semibold text-[#0d2a57] dark:text-white capitalize">
-                      {displayUser?.role || "Student"}
+                      {profileAccount.role || displayUser?.role || "Student"}
                     </span>
                   </div>
                   <div className="py-1.5 flex items-center justify-between gap-3">
@@ -328,31 +338,37 @@ const Profile = () => {
                   <div className="py-1.5 flex items-center justify-between gap-3">
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">College</span>
                     <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
-                      {displayUser?.collegeName || "Not assigned"}
+                      {profileEducation.college || displayUser?.collegeName || "Not assigned"}
                     </span>
                   </div>
                   <div className="py-1.5 flex items-center justify-between gap-3">
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Degree</span>
                     <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
-                      {displayUser?.degree || "Not assigned"}
+                      {profileEducation.degree || displayUser?.degree || "Not assigned"}
                     </span>
                   </div>
                   <div className="py-1.5 flex items-center justify-between gap-3">
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Branch / Stream</span>
                     <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
-                      {displayUser?.branch || "Not specified"}
+                      {profileEducation.branch || displayUser?.branch || "Not specified"}
                     </span>
                   </div>
                   <div className="py-1.5 flex items-center justify-between gap-3">
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Graduation Year</span>
                     <span className="font-semibold text-[#0d2a57] dark:text-white">
-                      {displayUser?.graduationYear || "Not specified"}
+                      {profileEducation.graduationYear || displayUser?.graduationYear || "Not specified"}
+                    </span>
+                  </div>
+                  <div className="py-1.5 flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Batch</span>
+                    <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
+                      {profileEnrollment.batch?.name || displayUser?.batchName || (displayUser?.batchId ? "Assigned batch" : "Individual schedule")}
                     </span>
                   </div>
                   <div className="py-1.5 flex items-center justify-between gap-3">
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Program Selection</span>
                     <span className="font-bold text-blue-600 dark:text-blue-400">
-                      {displayUser?.programSelection || "Placement Sprint"}
+                      {profileEnrollment.program?.name || displayUser?.programSelection || "Not assigned"}
                     </span>
                   </div>
                 </div>
@@ -360,7 +376,7 @@ const Profile = () => {
             </div>
 
             {/* ROW 2 - CARD C: Goals & Placement Preferences */}
-            {(displayUser?.learningGoal === "Get Placed" || Boolean(displayUser?.targetRole) || Boolean(displayUser?.placementCategory)) && (
+            {(profileGoals.learningGoal === "Get Placed" || Boolean(profileGoals.targetRole) || Boolean(profileGoals.opportunityType) || displayUser?.learningGoal === "Get Placed" || Boolean(displayUser?.targetRole) || Boolean(displayUser?.placementCategory)) && (
               <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col justify-between h-full">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 pb-1 border-b border-black/5 dark:border-white/5">
@@ -376,25 +392,25 @@ const Profile = () => {
                     <div className="py-1.5 flex items-center justify-between gap-3">
                       <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Learning Goal</span>
                       <span className="font-semibold text-[#0d2a57] dark:text-white">
-                        {displayUser?.learningGoal || "Not specified"}
+                        {profileGoals.learningGoal || displayUser?.learningGoal || "Not specified"}
                       </span>
                     </div>
                     <div className="py-1.5 flex items-center justify-between gap-3">
                       <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Target Role</span>
                       <span className="font-semibold text-[#0d2a57] dark:text-white">
-                        {displayUser?.targetRole || displayUser?.otherTargetRole || "Not specified"}
+                        {profileGoals.targetRole || displayUser?.targetRole || displayUser?.otherTargetRole || "Not specified"}
                       </span>
                     </div>
                     <div className="py-1.5 flex items-center justify-between gap-3">
                       <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Opportunity Type</span>
                       <span className="font-semibold text-[#0d2a57] dark:text-white">
-                        {displayUser?.placementCategory || "Not specified"}
+                        {profileGoals.opportunityType || displayUser?.placementCategory || "Not specified"}
                       </span>
                     </div>
                     <div className="py-1.5 flex items-center justify-between gap-3">
                       <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Placement Timeline</span>
                       <span className="font-semibold text-[#0d2a57] dark:text-white">
-                        {displayUser?.placementTimeline || "Not specified"}
+                        {profileGoals.placementTimeline || displayUser?.placementTimeline || "Not specified"}
                       </span>
                     </div>
                   </div>
@@ -405,7 +421,7 @@ const Profile = () => {
             {/* ROW 2 - CARD D: Target Companies & Skills Cards */}
             <div className="flex flex-col gap-3.5 justify-between h-full">
               {/* Target Companies */}
-              {(displayUser?.learningGoal === "Get Placed" || Boolean(displayUser?.targetCompanies?.length)) && (
+              {(profileGoals.learningGoal === "Get Placed" || Boolean(profileGoals.companies?.length) || displayUser?.learningGoal === "Get Placed" || Boolean(displayUser?.targetCompanies?.length)) && (
                 <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl p-3.5 sm:p-4 shadow-sm space-y-2 flex-1 flex flex-col justify-center">
                   <div className="flex items-center gap-2 pb-1 border-b border-black/5 dark:border-white/5">
                     <div className="p-1 rounded-md bg-blue-500/10 text-blue-500">
@@ -417,8 +433,8 @@ const Profile = () => {
                   </div>
 
                   <div className="flex flex-wrap gap-1.5 pt-0.5">
-                    {Array.isArray(displayUser?.targetCompanies) && displayUser.targetCompanies.length > 0 ? (
-                      displayUser.targetCompanies.map((company, index) => (
+                    {targetCompanies.length > 0 ? (
+                      targetCompanies.map((company, index) => (
                         <span key={index} className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-300">
                           {company}
                         </span>
@@ -431,7 +447,7 @@ const Profile = () => {
               )}
 
               {/* Skills & Interests */}
-              {(displayUser?.learningGoal === "Learn New Skills" || (Array.isArray(displayUser?.skills) && displayUser.skills.length > 0)) && (
+              {(profileGoals.learningGoal === "Learn New Skills" || profileSkills.length > 0 || displayUser?.learningGoal === "Learn New Skills" || (Array.isArray(displayUser?.skills) && displayUser.skills.length > 0)) && (
                 <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl p-3.5 sm:p-4 shadow-sm space-y-2 flex-1 flex flex-col justify-center">
                   <div className="flex items-center gap-2 pb-1 border-b border-black/5 dark:border-white/5">
                     <div className="p-1 rounded-md bg-blue-500/10 text-blue-500">
@@ -443,8 +459,8 @@ const Profile = () => {
                   </div>
 
                   <div className="flex flex-wrap gap-1.5 pt-0.5">
-                    {Array.isArray(displayUser?.skills) && displayUser.skills.length > 0 ? (
-                      displayUser.skills.map((skill, index) => (
+                    {profileSkills.length > 0 ? (
+                      profileSkills.map((skill, index) => (
                         <span key={index} className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-300">
                           {skill}
                         </span>
