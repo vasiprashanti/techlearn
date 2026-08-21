@@ -335,32 +335,7 @@ export const enrollInFreeProgram = async (req, res) => {
   }
 };
 
-export const joinProgramWaitlist = async (req, res) => {
-  try {
-    const { programId } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(programId)) {
-      return res.status(400).json({ success: false, message: "Invalid program ID." });
-    }
-    const program = await Program.findOne({
-      _id: programId,
-      status: "Active",
-      visibility: "Public",
-      pricingType: "Paid",
-    }).select("_id name programType").lean();
-    if (!program) return res.status(404).json({ success: false, message: "Trainer-led program not found." });
 
-    const waitlist = await ProgramWaitlist.findOneAndUpdate(
-      { userId: req.user._id, programId },
-      { $setOnInsert: { userId: req.user._id, programId, status: "Waiting" } },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    ).lean();
-    return res.status(201).json({ success: true, waitlist, program });
-  } catch (error) {
-    console.error("Error joining program waitlist:", error);
-    return res.status(500).json({ success: false, message: error.message || "Failed to join waitlist." });
-  }
-};
->>>>>>> origin/main
 
 /**
  * GET /api/programs/assigned
