@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
 import { useTheme } from '../../context/ThemeContext';
 import API from '../../api/client';
+import { programLearningAPI } from '../../services/programLearningApi';
 import { initiateRazorpayPayment } from '../../utils/razorpayCheckout';
 import PricingExitFeedbackModal from '../../components/PricingExitFeedbackModal';
 

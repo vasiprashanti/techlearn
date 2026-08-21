@@ -610,23 +610,92 @@ export const QuestionBankCategoryDetailPage = () => {
   );
 
   const assignmentMetadataField = (
-    <div className="md:col-span-2 rounded-xl border border-blue-400/20 bg-blue-500/5 p-3">
-      <div className="mb-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-[#3C83F6] dark:text-[#bceaff]">Dynamic assignment metadata</p>
-        <p className="mt-1 text-[11px] text-black/50 dark:text-white/50">Used to match role, company, topic, difficulty, and usage when a Blueprint assigns this question.</p>
+    <div className="md:col-span-2 rounded-xl border border-blue-400/20 bg-blue-500/5 p-4 mt-2 space-y-3">
+      <div>
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-[#3C83F6] dark:bg-[#bceaff]" />
+          <p className="text-xs font-bold uppercase tracking-wider text-[#3C83F6] dark:text-[#bceaff]">
+            Target & Assessment Mapping (Optional)
+          </p>
+        </div>
+        <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+          Tag this question with target roles, companies, or subject topics so Blueprints and automated assessments can accurately recommend and assign it to learners.
+        </p>
       </div>
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-        <input value={questionForm.subject} onChange={(e) => updateFormField('subject', e.target.value)} placeholder="Subject (e.g. DSA)" className={questionFormInputClass} />
-        <input value={questionForm.topic} onChange={(e) => updateFormField('topic', e.target.value)} placeholder="Topic (e.g. Arrays)" className={questionFormInputClass} />
-        <input value={questionForm.subtopic} onChange={(e) => updateFormField('subtopic', e.target.value)} placeholder="Subtopic (e.g. Sliding Window)" className={questionFormInputClass} />
-        <input value={questionForm.rolesText} onChange={(e) => updateFormField('rolesText', e.target.value)} placeholder="Roles, comma separated" className={questionFormInputClass} />
-        <input value={questionForm.companiesText} onChange={(e) => updateFormField('companiesText', e.target.value)} placeholder="Companies, comma separated" className={questionFormInputClass} />
-        <input value={questionForm.pattern} onChange={(e) => updateFormField('pattern', e.target.value)} placeholder="Pattern (optional)" className={questionFormInputClass} />
-        <select value={questionForm.usage} onChange={(e) => updateFormField('usage', e.target.value)} className={questionFormInputClass}>
-          <option className={dropdownOptionClass} value="Both">Usage: Both</option>
-          <option className={dropdownOptionClass} value="Assessment">Usage: Assessment</option>
-          <option className={dropdownOptionClass} value="Practice">Usage: Practice</option>
-        </select>
+
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3">
+        <div>
+          <label className="admin-micro-label text-black/45 dark:text-white/45">Subject</label>
+          <input
+            value={questionForm.subject}
+            onChange={(e) => updateFormField('subject', e.target.value)}
+            placeholder="e.g. Data Structures, SQL, Core Java"
+            className={questionFormInputClass}
+          />
+        </div>
+
+        <div>
+          <label className="admin-micro-label text-black/45 dark:text-white/45">Topic</label>
+          <input
+            value={questionForm.topic}
+            onChange={(e) => updateFormField('topic', e.target.value)}
+            placeholder="e.g. Arrays, Joins, OOP"
+            className={questionFormInputClass}
+          />
+        </div>
+
+        <div>
+          <label className="admin-micro-label text-black/45 dark:text-white/45">Subtopic (Optional)</label>
+          <input
+            value={questionForm.subtopic}
+            onChange={(e) => updateFormField('subtopic', e.target.value)}
+            placeholder="e.g. Two Pointers, Indexing"
+            className={questionFormInputClass}
+          />
+        </div>
+
+        <div>
+          <label className="admin-micro-label text-black/45 dark:text-white/45">Target Roles</label>
+          <input
+            value={questionForm.rolesText}
+            onChange={(e) => updateFormField('rolesText', e.target.value)}
+            placeholder="e.g. Backend Developer, Software Engineer"
+            className={questionFormInputClass}
+          />
+        </div>
+
+        <div>
+          <label className="admin-micro-label text-black/45 dark:text-white/45">Target Companies</label>
+          <input
+            value={questionForm.companiesText}
+            onChange={(e) => updateFormField('companiesText', e.target.value)}
+            placeholder="e.g. TCS, Infosys, Amazon"
+            className={questionFormInputClass}
+          />
+        </div>
+
+        <div>
+          <label className="admin-micro-label text-black/45 dark:text-white/45">Pattern / Category Tag</label>
+          <input
+            value={questionForm.pattern}
+            onChange={(e) => updateFormField('pattern', e.target.value)}
+            placeholder="e.g. Sliding Window, BFS/DFS"
+            className={questionFormInputClass}
+          />
+        </div>
+
+        <div className="sm:col-span-2 md:col-span-3">
+          <label className="admin-micro-label text-black/45 dark:text-white/45">Usage Type</label>
+          <select
+            value={questionForm.usage}
+            onChange={(e) => updateFormField('usage', e.target.value)}
+            className={questionFormInputClass}
+          >
+            <option className={dropdownOptionClass} value="Both">Both (Assessment & Practice Hub)</option>
+            <option className={dropdownOptionClass} value="Assessment">Assessment Only (Tests & Blueprints)</option>
+            <option className={dropdownOptionClass} value="Practice">Practice Hub Only</option>
+          </select>
+        </div>
       </div>
     </div>
   );
@@ -830,20 +899,51 @@ export const QuestionBankCategoryDetailPage = () => {
                     );
 
                     const formAssignmentMetadataField = (
-                      <div className="md:col-span-2 rounded-xl border border-blue-400/20 bg-blue-500/5 p-3">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-[#3C83F6] dark:text-[#bceaff]">Dynamic assignment metadata</p>
-                        <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-3">
-                          <input value={form.subject} onChange={(e) => updateBulkFormField(index, 'subject', e.target.value)} placeholder="Subject" className={questionFormInputClass} />
-                          <input value={form.topic} onChange={(e) => updateBulkFormField(index, 'topic', e.target.value)} placeholder="Topic" className={questionFormInputClass} />
-                          <input value={form.subtopic} onChange={(e) => updateBulkFormField(index, 'subtopic', e.target.value)} placeholder="Subtopic" className={questionFormInputClass} />
-                          <input value={form.rolesText} onChange={(e) => updateBulkFormField(index, 'rolesText', e.target.value)} placeholder="Roles, comma separated" className={questionFormInputClass} />
-                          <input value={form.companiesText} onChange={(e) => updateBulkFormField(index, 'companiesText', e.target.value)} placeholder="Companies, comma separated" className={questionFormInputClass} />
-                          <input value={form.pattern} onChange={(e) => updateBulkFormField(index, 'pattern', e.target.value)} placeholder="Pattern" className={questionFormInputClass} />
-                          <select value={form.usage} onChange={(e) => updateBulkFormField(index, 'usage', e.target.value)} className={questionFormInputClass}>
-                            <option className={dropdownOptionClass} value="Both">Usage: Both</option>
-                            <option className={dropdownOptionClass} value="Assessment">Usage: Assessment</option>
-                            <option className={dropdownOptionClass} value="Practice">Usage: Practice</option>
-                          </select>
+                      <div className="md:col-span-2 rounded-xl border border-blue-400/20 bg-blue-500/5 p-4 mt-2 space-y-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-[#3C83F6] dark:bg-[#bceaff]" />
+                            <p className="text-xs font-bold uppercase tracking-wider text-[#3C83F6] dark:text-[#bceaff]">
+                              Target & Assessment Mapping (Optional)
+                            </p>
+                          </div>
+                          <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                            Tag this question with target roles, companies, or subject topics for Blueprint matching.
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3">
+                          <div>
+                            <label className="admin-micro-label text-black/45 dark:text-white/45">Subject</label>
+                            <input value={form.subject} onChange={(e) => updateBulkFormField(index, 'subject', e.target.value)} placeholder="e.g. Data Structures, SQL" className={questionFormInputClass} />
+                          </div>
+                          <div>
+                            <label className="admin-micro-label text-black/45 dark:text-white/45">Topic</label>
+                            <input value={form.topic} onChange={(e) => updateBulkFormField(index, 'topic', e.target.value)} placeholder="e.g. Arrays, OOP" className={questionFormInputClass} />
+                          </div>
+                          <div>
+                            <label className="admin-micro-label text-black/45 dark:text-white/45">Subtopic (Optional)</label>
+                            <input value={form.subtopic} onChange={(e) => updateBulkFormField(index, 'subtopic', e.target.value)} placeholder="e.g. Sliding Window" className={questionFormInputClass} />
+                          </div>
+                          <div>
+                            <label className="admin-micro-label text-black/45 dark:text-white/45">Target Roles</label>
+                            <input value={form.rolesText} onChange={(e) => updateBulkFormField(index, 'rolesText', e.target.value)} placeholder="e.g. Backend Developer" className={questionFormInputClass} />
+                          </div>
+                          <div>
+                            <label className="admin-micro-label text-black/45 dark:text-white/45">Target Companies</label>
+                            <input value={form.companiesText} onChange={(e) => updateBulkFormField(index, 'companiesText', e.target.value)} placeholder="e.g. TCS, Infosys" className={questionFormInputClass} />
+                          </div>
+                          <div>
+                            <label className="admin-micro-label text-black/45 dark:text-white/45">Pattern / Category Tag</label>
+                            <input value={form.pattern} onChange={(e) => updateBulkFormField(index, 'pattern', e.target.value)} placeholder="e.g. Two Pointers" className={questionFormInputClass} />
+                          </div>
+                          <div className="sm:col-span-2 md:col-span-3">
+                            <label className="admin-micro-label text-black/45 dark:text-white/45">Usage Type</label>
+                            <select value={form.usage} onChange={(e) => updateBulkFormField(index, 'usage', e.target.value)} className={questionFormInputClass}>
+                              <option className={dropdownOptionClass} value="Both">Both (Assessment & Practice Hub)</option>
+                              <option className={dropdownOptionClass} value="Assessment">Assessment Only (Tests & Blueprints)</option>
+                              <option className={dropdownOptionClass} value="Practice">Practice Hub Only</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
                     );
@@ -892,14 +992,22 @@ export const QuestionBankCategoryDetailPage = () => {
                               {formTagsField}
                               {formAssignmentMetadataField}
                             </>
+                          ) : isNotesCategory ? (
+                            <>
+                              {formTitleField}
+                              {formTagsField}
+                              {formDescriptionField}
+                              {formDynamicHostField}
+                              {formAssignmentMetadataField}
+                            </>
                           ) : (
                             <>
                               {formTitleField}
                               {formDifficultyField}
                               {formTagsField}
-                              {formAssignmentMetadataField}
                               {formDescriptionField}
                               {formDynamicHostField}
+                              {formAssignmentMetadataField}
                             </>
                           )}
                         </div>
@@ -918,14 +1026,22 @@ export const QuestionBankCategoryDetailPage = () => {
                     {tagsField}
                     {assignmentMetadataField}
                   </>
+                ) : isNotesCategory ? (
+                  <>
+                    {titleField}
+                    {tagsField}
+                    {descriptionField}
+                    {dynamicHostField}
+                    {assignmentMetadataField}
+                  </>
                 ) : (
                   <>
                     {titleField}
                     {difficultyField}
                     {tagsField}
-                    {assignmentMetadataField}
                     {descriptionField}
                     {dynamicHostField}
+                    {assignmentMetadataField}
                   </>
                 )}
               </div>
