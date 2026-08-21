@@ -3,7 +3,6 @@ import {
   getProgramCatalog,
   getProgramRecommendations,
   enrollInFreeProgram,
-  joinProgramWaitlist,
   getAssignedPrograms,
   getPublicPrograms,
   getReadinessOptions,
