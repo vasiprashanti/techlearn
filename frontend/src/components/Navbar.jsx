@@ -464,22 +464,22 @@ export default function Navbar() {
         }
 
         .tl-theme-toggle-btn {
-          background: var(--theme-btn-bg);
-          border: 1px solid var(--border);
-          border-radius: 8px;
+          background: transparent;
+          border: none;
+          outline: none;
           width: 36px;
           height: 36px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          color: var(--theme-btn-color);
+          color: var(--text);
           cursor: pointer;
-          transition: color .2s, background .2s;
+          transition: color .2s ease, transform .2s ease;
         }
 
         .tl-theme-toggle-btn:hover {
           color: var(--text-hover);
-          background: var(--theme-btn-hover);
+          transform: scale(1.08);
         }
 
         @media (max-width: 760px) {
