@@ -138,7 +138,7 @@ export default function Navbar() {
         .tl-nav {
           width: 100%;
           height: 72px;
-          padding: 0 38px;
+          padding: 0 38px 0 23px;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -151,6 +151,7 @@ export default function Navbar() {
           align-items: center;
           text-decoration: none;
           flex-shrink: 0;
+          margin-left: 0;
         }
 
         .tl-nav-brand img {
@@ -484,7 +485,7 @@ export default function Navbar() {
         @media (max-width: 760px) {
           .tl-nav {
             height: 68px;
-            padding: 0 18px;
+            padding: 0 16px;
           }
           .tl-nav-brand img {
             width: 34px;
@@ -513,7 +514,7 @@ export default function Navbar() {
 
         @media (max-width: 380px) {
           .tl-nav {
-            padding: 0 14px;
+            padding: 0 12px 0 8px;
           }
           .tl-get-started {
             padding: 0 10px;
@@ -526,7 +527,7 @@ export default function Navbar() {
         <nav className="tl-nav">
           {/* BRAND */}
           <Link
-            to={isAuthenticated ? "/dashboard" : "/"}
+            to="/"
             className="tl-nav-brand"
             aria-label="TechLearn"
           >
