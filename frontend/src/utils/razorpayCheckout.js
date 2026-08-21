@@ -27,6 +27,7 @@ export const loadRazorpayScript = () => {
 export const initiateRazorpayPayment = async ({
   programId,
   planId,
+  programType,
   user,
   onSuccess,
   onFailure,
@@ -44,9 +45,10 @@ export const initiateRazorpayPayment = async ({
     const orderRes = await API.post('/api/payments/create-order', {
       programId,
       planId,
+      programType,
     });
 
-    const { orderId, amount, currency, key, planName, programType } = orderRes.data;
+    const { orderId, amount, currency, key, planName } = orderRes.data;
 
     // Helper for test/mock execution if Razorpay SDK isn't available or running mock order
     const isMockOrder = orderId?.startsWith('order_mock_') || key === 'rzp_test_mock_key';
@@ -74,7 +76,7 @@ export const initiateRazorpayPayment = async ({
       amount: amount * 100, // paise
       currency,
       name: 'TechLearn',
-      description: `${planName || 'Program Access'}`,
+      description: `${planName || 'Program Access'} — No refunds or cancellations after purchase`,
       order_id: orderId,
       prefill: {
         name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || '',

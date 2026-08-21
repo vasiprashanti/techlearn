@@ -32,6 +32,7 @@ import {
   upsertProgramEnrollment,
 } from "../../utils/programEnrollment.js";
 import { expireAllActiveBatches, expireBatchIfNeeded, isBatchExpired } from "../../utils/batchLifecycle.js";
+import { buildUnifiedProfile } from "../../utils/userProfile.js";
 
 const LEGACY_PROGRAM_SELECTIONS = ["Placement Sprint", "Full Stack Project Program", "Both"];
 
@@ -3264,6 +3265,19 @@ export const getStudentDetailAdmin = async (req, res) => {
     }
 
     const submissions = await Submission.find({ studentId }).sort({ submittedAt: -1 }).lean();
+    const enrollment = await ProgramEnrollment.findOne({
+      $or: [
+        student.userId ? { userId: student.userId } : null,
+        { studentId: student._id },
+      ].filter(Boolean),
+      ...(student.programId ? { programId: student.programId?._id || student.programId } : {}),
+      status: { $in: ["Active", "Completed"] },
+    })
+      .sort({ assignedAt: -1, createdAt: -1 })
+      .populate("programId", "name programType")
+      .populate("batchId", "name startDate expiryDate status")
+      .lean();
+    const unifiedProfile = buildUnifiedProfile({ user, student, enrollment });
     const score =
       submissions.length > 0
         ? Number(
@@ -3287,6 +3301,7 @@ export const getStudentDetailAdmin = async (req, res) => {
         programId: student.programId?._id || student.programId || null,
         programName: student.programId?.name || null,
         programType: student.programId?.programType || null,
+        profile: unifiedProfile,
         accuracy: score,
         score,
         streak: student.streak || 0,

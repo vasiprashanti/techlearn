@@ -19,22 +19,27 @@ const getRazorpayInstance = () => {
   return new Razorpay({ key_id, key_secret });
 };
 
-/**
- * Check if the user has any previous completed/captured payments
- */
-const hasPreviousSuccessfulPayment = async (userId, studentId) => {
-  const query = [];
-  if (userId) query.push({ userId });
-  if (studentId) query.push({ studentId });
+const DEFAULT_PRICING_PLANS = {
+  Placement: [
+    { key: "placement-basic", title: "Placement Program", price: 799 },
+    { key: "placement-pro", title: "Placement Program Pro", price: 1199 },
+  ],
+  Skill: [
+    { key: "skill-basic", title: "Skill Program", price: 399 },
+    { key: "skill-pro", title: "Skill Program Pro", price: 699 },
+  ],
+};
 
-  if (query.length === 0) return false;
-
-  const successfulPayment = await Payment.findOne({
-    $or: query,
-    status: { $in: ["captured", "approved"] },
-  }).lean();
-
-  return !!successfulPayment;
+const getPricingPlan = (program, planId) => {
+  const type = program?.programType === "Skill" ? "Skill" : "Placement";
+  const configuredPlans = Array.isArray(program?.pricingPlans)
+    ? program.pricingPlans.filter((plan) => plan.active !== false)
+    : [];
+  const configured = configuredPlans.length ? configuredPlans : DEFAULT_PRICING_PLANS[type];
+  const requested = String(planId || "").toLowerCase();
+  return configured.find((plan) => String(plan.key || "").toLowerCase() === requested)
+    || configured.find((plan) => requested.includes("pro") && String(plan.key || "").toLowerCase().includes("pro"))
+    || configured[0];
 };
 
 /**
@@ -78,42 +83,45 @@ const getOrCreateStudentForUser = async (user) => {
  */
 export const checkPaymentEligibility = async (req, res) => {
   try {
-    const userId = req.user._id;
     const { programId, planId, programType: requestedType } = req.query;
-
-    let student = await Student.findOne({ userId });
-    const studentId = student?._id;
 
     let program = null;
     if (programId) {
-      program = await Program.findById(programId).lean();
+      if (!mongoose.Types.ObjectId.isValid(programId)) {
+        return res.status(400).json({ success: false, message: "A valid programId is required." });
+      }
+      program = await Program.findOne({
+        _id: programId,
+        status: "Active",
+        visibility: "Public",
+      }).lean();
+      if (!program) return res.status(404).json({ success: false, message: "The selected program is not available." });
+      if (program.pricingType !== "Paid") {
+        return res.status(400).json({ success: false, message: "This program does not require paid checkout." });
+      }
     }
 
     const type = program?.programType || requestedType || "Placement";
 
     if (type === "Placement") {
-      const isPro = String(planId || "").toLowerCase().includes("pro");
-      const price = isPro ? 999 : 799;
+      const plan = getPricingPlan(program, planId);
       return res.json({
         success: true,
         programType: "Placement",
-        plan: isPro ? "Pro" : "Basic",
-        price,
+        plan: plan.title,
+        price: plan.price,
         currency: "INR",
-        refundPolicy: "5-day refund window",
+        refundPolicy: "No refunds or cancellations after purchase",
       });
     } else {
-      // Skill Program Logic
-      const hasPrevious = await hasPreviousSuccessfulPayment(userId, studentId);
-      const price = hasPrevious ? 199 : 499;
+      const plan = getPricingPlan(program, planId);
       return res.json({
         success: true,
         programType: "Skill",
-        isReturningUser: hasPrevious,
-        price,
+        plan: plan.title,
+        price: plan.price,
         currency: "INR",
-        accessDays: 30,
-        refundPolicy: "No 5-day refund offer for Skill programs",
+        refundPolicy: "No refunds or cancellations after purchase",
       });
     }
   } catch (error) {
@@ -129,7 +137,7 @@ export const checkPaymentEligibility = async (req, res) => {
 export const createPaymentOrder = async (req, res) => {
   try {
     const user = req.user;
-    const { programId, planId } = req.body;
+    const { programId, planId, programType: requestedProgramType } = req.body;
 
     if (!programId && !planId) {
       return res.status(400).json({ success: false, message: "programId or planId is required" });
@@ -138,32 +146,44 @@ export const createPaymentOrder = async (req, res) => {
     const student = await getOrCreateStudentForUser(user);
 
     let program = null;
-    if (programId && mongoose.Types.ObjectId.isValid(programId)) {
-      program = await Program.findById(programId);
+    if (programId) {
+      if (!mongoose.Types.ObjectId.isValid(programId)) {
+        return res.status(400).json({ success: false, message: "A valid programId is required." });
+      }
+      program = await Program.findOne({
+        _id: programId,
+        status: "Active",
+        visibility: "Public",
+      });
+      if (!program) {
+        return res.status(404).json({ success: false, message: "The selected program is not available for checkout." });
+      }
     }
 
     // Fallback program lookup by type if specific ID not provided
-    let rawType = program?.programType || "";
+    let rawType = program?.programType || requestedProgramType || "";
     let programType = rawType.toLowerCase().includes("skill") ? "Skill" : "Placement";
 
     if (!program) {
-      program = await Program.findOne({ programType, status: "Active" });
+      program = await Program.findOne({
+        programType,
+        status: "Active",
+        visibility: "Public",
+        pricingType: "Paid",
+      });
+    }
+
+    if (!program || program.pricingType !== "Paid") {
+      return res.status(400).json({ success: false, message: "A paid program is required for checkout." });
     }
 
     // Determine trusted server-side price
     let amount = 0;
     let planName = planId || "Basic";
 
-    if (programType === "Placement") {
-      const isPro = String(planId || "").toLowerCase().includes("pro");
-      amount = isPro ? 999 : 799;
-      planName = isPro ? "Placement Season Pass Pro" : "Placement Season Pass";
-    } else {
-      // Skill Program
-      const hasPrevious = await hasPreviousSuccessfulPayment(user._id, student._id);
-      amount = hasPrevious ? 199 : 499;
-      planName = hasPrevious ? "Skill Membership (Returning User)" : "Skill Program (First Time)";
-    }
+    const selectedPlan = getPricingPlan(program, planId);
+    amount = selectedPlan.price;
+    planName = selectedPlan.title;
 
     const currency = "INR";
     const receipt = `rcpt_${user._id}_${Date.now()}`;
@@ -182,6 +202,7 @@ export const createPaymentOrder = async (req, res) => {
           programId: program?._id ? program._id.toString() : "",
           programType,
           planName,
+          refundPolicy: "No refunds or cancellations after purchase",
         },
       });
       razorpayOrderId = razorpayOrder.id;
@@ -214,6 +235,7 @@ export const createPaymentOrder = async (req, res) => {
       key: process.env.RAZORPAY_KEY_ID || "rzp_test_mock_key",
       programType,
       planName,
+      refundPolicy: "No refunds or cancellations after purchase",
     });
   } catch (error) {
     console.error("createPaymentOrder error stack:", error.stack || error);
@@ -238,6 +260,9 @@ export const verifyPayment = async (req, res) => {
     if (!payment) {
       return res.status(404).json({ success: false, message: "Payment record not found" });
     }
+    if (String(payment.userId) !== String(user._id)) {
+      return res.status(403).json({ success: false, message: "You do not own this payment." });
+    }
 
     // Check idempotency: If payment is already captured
     if (payment.status === "captured") {
@@ -250,6 +275,7 @@ export const verifyPayment = async (req, res) => {
         message: "Payment already verified",
         payment,
         enrollment,
+        refundPolicy: "No refunds or cancellations after purchase",
       });
     }
 
@@ -285,7 +311,12 @@ export const verifyPayment = async (req, res) => {
       program = await Program.findById(payment.programId);
     }
     if (!program && payment.programType) {
-      program = await Program.findOne({ programType: payment.programType, status: "Active" });
+      program = await Program.findOne({
+        programType: payment.programType,
+        status: "Active",
+        visibility: "Public",
+        pricingType: "Paid",
+      });
     }
 
     let enrollment = null;
@@ -313,6 +344,7 @@ export const verifyPayment = async (req, res) => {
       message: "Payment verified successfully and program enrollment activated!",
       payment,
       enrollment,
+      refundPolicy: "No refunds or cancellations after purchase",
     });
   } catch (error) {
     console.error("verifyPayment error:", error);
@@ -355,7 +387,12 @@ export const handleRazorpayWebhook = async (req, res) => {
           await payment.save();
 
           const student = await Student.findById(payment.studentId);
-          const program = await Program.findById(payment.programId);
+      const program = await Program.findOne({
+        _id: payment.programId,
+        status: "Active",
+        visibility: "Public",
+        pricingType: "Paid",
+      });
           if (student && program) {
             const enrollment = await upsertProgramEnrollment({
               user: { _id: payment.userId },

@@ -7,6 +7,7 @@ import { LANGUAGE_IDS, testCodeWithJudge0 } from "../utils/judgeUtil.js";
 import { recordProgramPerformanceAttempt } from "./programPerformanceService.js";
 import { syncProgramEnrollmentCompletion } from "./programCompletionService.js";
 import { getProgramAssignmentQuestion } from "./programQuestionEngineService.js";
+import { persistAssessmentLearnerReport } from "./learnerReportService.js";
 
 const MCQ_LABELS = ["A", "B", "C", "D"];
 
@@ -362,6 +363,14 @@ export const submitProgramAssignmentAnswer = async ({
   await assignment.save();
   const summary = assignmentSummary(assignment);
   await updateReadinessLead(assignment, summary);
+
+  if (summary.completed) {
+    try {
+      await persistAssessmentLearnerReport({ assignment });
+    } catch (reportError) {
+      console.error("Assessment report persistence failed:", reportError);
+    }
+  }
 
   if (assignment.phase === "final_assessment" && summary.completed) {
     await syncProgramEnrollmentCompletion({

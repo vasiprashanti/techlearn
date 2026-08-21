@@ -1,28 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Check, Sparkles, Zap, Crown, RefreshCw } from 'lucide-react';
-import API from '../../api/client';
 import { initiateRazorpayPayment } from '../../utils/razorpayCheckout';
 
 export default function PricingCards({ goal, selectedSkill, onSelectPlan, currentPlan, isBusy, user }) {
   const isPlacement = goal === 'Get Placed' || !goal;
-  const [isSkillReturningUser, setIsSkillReturningUser] = useState(false);
   const [loadingPlanId, setLoadingPlanId] = useState('');
-
-  useEffect(() => {
-    let isMounted = true;
-    const checkEligibility = async () => {
-      try {
-        const res = await API.get('/api/payments/eligibility?programType=Skill');
-        if (isMounted && res.data?.success) {
-          setIsSkillReturningUser(!!res.data.isReturningUser);
-        }
-      } catch (err) {
-        console.error('Error fetching payment eligibility:', err);
-      }
-    };
-    checkEligibility();
-    return () => { isMounted = false; };
-  }, []);
 
   const handleEnroll = async (planId) => {
     if (isBusy || loadingPlanId) return;
@@ -31,6 +13,7 @@ export default function PricingCards({ goal, selectedSkill, onSelectPlan, curren
     initiateRazorpayPayment({
       planId,
       programId: user?.programId || null,
+      programType: isPlacement ? 'Placement' : 'Skill',
       user,
       onSuccess: async (resData) => {
         setLoadingPlanId('');
@@ -50,11 +33,12 @@ export default function PricingCards({ goal, selectedSkill, onSelectPlan, curren
     });
   };
 
-  // Placement Learners Cards (Only ₹799 and ₹999)
+  // Annual pricing defaults. The backend remains authoritative and uses the
+  // selected Program.pricingPlans when a program-specific configuration exists.
   const placementPlans = [
     {
-      id: 'placement_season_pass',
-      title: 'Placement Season Pass',
+      id: 'placement-basic',
+      title: 'Placement Program',
       price: '₹799',
       subtitle: '90 Days Total Access',
       badge: 'MOST POPULAR',
@@ -70,12 +54,12 @@ export default function PricingCards({ goal, selectedSkill, onSelectPlan, curren
         'Company-wise interview preparation',
         'Placement readiness & mock prep'
       ],
-      refundNotice: 'Cancel anytime. Get refunded if you cancel within 5 days.',
+      refundNotice: 'No refunds or cancellations after purchase.',
     },
     {
-      id: 'placement_season_pass_pro',
-      title: 'Placement Season Pass Pro',
-      price: '₹999',
+      id: 'placement-pro',
+      title: 'Placement Program Pro',
+      price: '₹1,199',
       subtitle: '120 Days Total Access',
       badge: 'BEST VALUE',
       highlight: false,
@@ -90,18 +74,18 @@ export default function PricingCards({ goal, selectedSkill, onSelectPlan, curren
         'Company-wise preparation & assessments',
         'Longer period to prepare post-program'
       ],
-      refundNotice: 'Cancel anytime. Get refunded if you cancel within 5 days.',
+      refundNotice: 'No refunds or cancellations after purchase.',
     }
   ];
 
   // Skill Learners Cards
   const skillPlans = [
     {
-      id: isSkillReturningUser ? 'skill_membership' : 'skill_program',
-      title: isSkillReturningUser ? 'Returning Paid User' : 'First-Time Paid User',
-      price: isSkillReturningUser ? '₹199' : '₹499',
-      subtitle: '30 Days Access',
-      badge: isSkillReturningUser ? 'RETURNING OFFER' : '30-DAY ACCESS',
+      id: 'skill-basic',
+      title: 'Skill Program',
+      price: '₹399',
+      subtitle: 'Annual access',
+      badge: 'STANDARD',
       highlight: true,
       icon: Sparkles,
       color: 'border-[#a3e635] bg-[#f7fee7]/40 dark:bg-[#1a2e05]/30 shadow-xl shadow-[#a3e635]/15 ring-2 ring-[#a3e635]',
@@ -111,9 +95,27 @@ export default function PricingCards({ goal, selectedSkill, onSelectPlan, curren
         'Complete learning roadmap & course content',
         'Daily tasks & coding challenges',
         'Practice questions & notes',
-        isSkillReturningUser ? 'Discounted returning learner price (₹199)' : 'First-time paid learner access (₹499)',
+        'Recorded videos + 1 live doubt session',
       ],
-      refundNotice: null,
+      refundNotice: 'No refunds or cancellations after purchase.',
+    },
+    {
+      id: 'skill-pro',
+      title: 'Skill Program Pro',
+      price: '₹699',
+      subtitle: 'Annual access',
+      badge: 'BEST VALUE',
+      highlight: false,
+      icon: Crown,
+      color: 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 shadow-lg',
+      btnStyle: 'bg-blue-600 text-white font-extrabold hover:bg-blue-700',
+      features: [
+        `Full ${selectedSkill || 'Skill'} Program`,
+        'Complete learning roadmap & course content',
+        'Daily tasks & coding challenges',
+        'Recorded videos + 1 live doubt session',
+      ],
+      refundNotice: 'No refunds or cancellations after purchase.',
     }
   ];
 

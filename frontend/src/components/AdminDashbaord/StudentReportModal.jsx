@@ -172,6 +172,13 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
     : (batchStudentData?.leaderboardRank || '_');
   const totalXp = batchStudentData?.totalXp || studentBasic?.score || 0;
   const track = studentDetails?.track || studentBasic?.track || 'General Track';
+  const canonicalProfile = studentDetails?.profile || {};
+  const legacyProfile = studentDetails?.userProfile || {};
+  const profileAccount = canonicalProfile.account || {};
+  const profileEducation = canonicalProfile.education || {};
+  const profileEnrollment = canonicalProfile.enrollment || {};
+  const profileGoals = canonicalProfile.goals || {};
+  const profileSkills = canonicalProfile.skills || {};
 
   // Compute strong & weak topics from dayWiseHistoryTasksDetail
   const strongTopics = [];
@@ -415,15 +422,15 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Full Name</span>
-                        <span className="font-semibold text-sm mt-0.5 block truncate">{studentDetails?.userProfile?.name || name}</span>
+                        <span className="font-semibold text-sm mt-0.5 block truncate">{profileAccount.name || legacyProfile.name || name}</span>
                       </div>
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Email Address</span>
-                        <span className="font-semibold text-sm mt-0.5 block truncate">{studentDetails?.userProfile?.email || email}</span>
+                        <span className="font-semibold text-sm mt-0.5 block truncate">{profileAccount.email || legacyProfile.email || email}</span>
                       </div>
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Account Role</span>
-                        <span className="font-semibold text-sm mt-0.5 block capitalize">{studentDetails?.userProfile?.role || 'user'}</span>
+                        <span className="font-semibold text-sm mt-0.5 block capitalize">{profileAccount.role || legacyProfile.role || 'user'}</span>
                       </div>
                     </div>
                   </div>
@@ -434,19 +441,19 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">College</span>
-                        <span className="font-semibold mt-0.5 block truncate">{studentDetails?.userProfile?.college || college}</span>
+                        <span className="font-semibold mt-0.5 block truncate">{profileEducation.college || legacyProfile.college || college}</span>
                       </div>
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Degree</span>
-                        <span className="font-semibold mt-0.5 block truncate">{studentDetails?.userProfile?.degree || 'Not specified'}</span>
+                        <span className="font-semibold mt-0.5 block truncate">{profileEducation.degree || legacyProfile.degree || 'Not specified'}</span>
                       </div>
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Branch / Stream</span>
-                        <span className="font-semibold mt-0.5 block truncate">{studentDetails?.userProfile?.branch || 'Not specified'}</span>
+                        <span className="font-semibold mt-0.5 block truncate">{profileEducation.branch || legacyProfile.branch || 'Not specified'}</span>
                       </div>
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Graduation Year</span>
-                        <span className="font-semibold mt-0.5 block">{studentDetails?.userProfile?.graduationYear || 'Not specified'}</span>
+                        <span className="font-semibold mt-0.5 block">{profileEducation.graduationYear || legacyProfile.graduationYear || 'Not specified'}</span>
                       </div>
                     </div>
                   </div>
@@ -457,11 +464,11 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Batch</span>
-                        <span className="font-semibold mt-0.5 block">{studentDetails?.userProfile?.batch || batch}</span>
+                        <span className="font-semibold mt-0.5 block">{profileEnrollment.batch?.name || legacyProfile.batch || batch}</span>
                       </div>
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Program</span>
-                        <span className="font-bold text-blue-600 dark:text-blue-400 mt-0.5 block">{studentDetails?.userProfile?.program || track}</span>
+                        <span className="font-bold text-blue-600 dark:text-blue-400 mt-0.5 block">{profileEnrollment.program?.name || legacyProfile.program || track}</span>
                       </div>
                     </div>
                   </div>
@@ -472,25 +479,27 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Learning Goal</span>
-                        <span className="font-semibold mt-0.5 block">{studentDetails?.userProfile?.learningGoal || 'Not specified'}</span>
+                        <span className="font-semibold mt-0.5 block">{profileGoals.learningGoal || legacyProfile.learningGoal || 'Not specified'}</span>
                       </div>
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Target Role</span>
-                        <span className="font-semibold mt-0.5 block">{studentDetails?.userProfile?.targetRole || studentDetails?.userProfile?.otherTargetRole || 'Not specified'}</span>
+                        <span className="font-semibold mt-0.5 block">{profileGoals.targetRole || profileGoals.otherTargetRole || legacyProfile.targetRole || legacyProfile.otherTargetRole || 'Not specified'}</span>
                       </div>
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Opportunity Type</span>
-                        <span className="font-semibold mt-0.5 block">{studentDetails?.userProfile?.placementCategory || 'Not specified'}</span>
+                        <span className="font-semibold mt-0.5 block">{profileGoals.opportunityType || legacyProfile.placementCategory || 'Not specified'}</span>
                       </div>
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Placement Timeline</span>
-                        <span className="font-semibold mt-0.5 block">{studentDetails?.userProfile?.placementTimeline || 'Not specified'}</span>
+                        <span className="font-semibold mt-0.5 block">{profileGoals.placementTimeline || legacyProfile.placementTimeline || 'Not specified'}</span>
                       </div>
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5 sm:col-span-2">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Selected Companies</span>
                         <span className="font-semibold mt-0.5 block">
-                          {Array.isArray(studentDetails?.userProfile?.targetCompanies) && studentDetails.userProfile.targetCompanies.length > 0
-                            ? studentDetails.userProfile.targetCompanies.join(', ')
+                          {Array.isArray(profileGoals.companies) && profileGoals.companies.length > 0
+                            ? profileGoals.companies.join(', ')
+                            : Array.isArray(legacyProfile.targetCompanies) && legacyProfile.targetCompanies.length > 0
+                              ? legacyProfile.targetCompanies.join(', ')
                             : 'None selected'}
                         </span>
                       </div>
@@ -501,8 +510,14 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                   <div className="space-y-3">
                     <h3 className="text-xs uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">Skills & Interests</h3>
                     <div className="flex flex-wrap gap-2">
-                      {Array.isArray(studentDetails?.userProfile?.skills) && studentDetails.userProfile.skills.length > 0 ? (
-                        studentDetails.userProfile.skills.map((s, i) => (
+                      {Array.isArray(profileSkills.selectedSkills) && profileSkills.selectedSkills.length > 0 ? (
+                        profileSkills.selectedSkills.map((s, i) => (
+                          <span key={i} className="inline-flex rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs px-3 py-1 font-semibold">
+                            {s}
+                          </span>
+                        ))
+                      ) : Array.isArray(legacyProfile.skills) && legacyProfile.skills.length > 0 ? (
+                        legacyProfile.skills.map((s, i) => (
                           <span key={i} className="inline-flex rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs px-3 py-1 font-semibold">
                             {s}
                           </span>

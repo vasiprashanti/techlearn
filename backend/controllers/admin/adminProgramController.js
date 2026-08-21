@@ -256,6 +256,20 @@ const getStoredAccuracy = (enrollment) => {
   return value === undefined ? null : value;
 };
 
+const normalizePricingPlans = (value) => (Array.isArray(value)
+  ? value
+    .map((plan, index) => ({
+      key: String(plan?.key || `plan-${index + 1}`).trim(),
+      title: String(plan?.title || plan?.name || `Plan ${index + 1}`).trim(),
+      price: Number(plan?.price),
+      benefits: Array.isArray(plan?.benefits)
+        ? plan.benefits.map((benefit) => String(benefit || "").trim()).filter(Boolean)
+        : [],
+      active: plan?.active !== false,
+    }))
+    .filter((plan) => plan.key && plan.title && Number.isFinite(plan.price) && plan.price >= 0)
+  : []);
+
 const averageScores = (...activities) => {
   const scores = activities.flatMap((activity) => activity?.scores || []);
   if (!scores.length) return null;
@@ -543,6 +557,7 @@ export const listPrograms = async (req, res) => {
       visibility: p.visibility,
       pricingType: p.pricingType,
       programFee: p.programFee,
+      pricingPlans: p.pricingPlans || [],
       learningGoals: p.learningGoals || [],
       placementCategories: p.placementCategories || [],
       targetCompanies: p.targetCompanies || [],
@@ -592,6 +607,7 @@ export const createProgram = async (req, res) => {
       visibility,
       pricingType,
       programFee,
+      pricingPlans,
       learningGoals,
       placementCategories,
       targetCompanies,
@@ -658,6 +674,7 @@ export const createProgram = async (req, res) => {
       visibility: visibility || "Public",
       pricingType: pricingType || "Free",
       programFee: pricingType === "Paid" ? parsedFee : 0,
+      pricingPlans: pricingType === "Paid" ? normalizePricingPlans(pricingPlans) : [],
       learningGoals: Array.isArray(learningGoals) ? learningGoals : [],
       placementCategories: placementCategoryResult.categories,
       targetCompanies: Array.isArray(targetCompanies) ? targetCompanies : [],
@@ -791,6 +808,7 @@ export const updateProgram = async (req, res) => {
       visibility,
       pricingType,
       programFee,
+      pricingPlans,
       learningGoals,
       placementCategories,
       targetCompanies,
@@ -860,6 +878,13 @@ export const updateProgram = async (req, res) => {
     if (targetCompanies !== undefined) program.targetCompanies = Array.isArray(targetCompanies) ? targetCompanies : [];
     if (skillTags !== undefined) program.skillTags = Array.isArray(skillTags) ? skillTags : [];
     if (targetRoles !== undefined) program.targetRoles = Array.isArray(targetRoles) ? targetRoles : [];
+    if (pricingPlans !== undefined) {
+      const normalizedPlans = normalizePricingPlans(pricingPlans);
+      if (program.pricingType === "Paid" && normalizedPlans.length === 0) {
+        return res.status(400).json({ success: false, message: "At least one valid pricing plan is required for Paid programs." });
+      }
+      program.pricingPlans = program.pricingType === "Paid" ? normalizedPlans : [];
+    }
     if (pricingType !== undefined) {
       program.pricingType = pricingType;
       if (pricingType === "Paid") {
@@ -873,6 +898,7 @@ export const updateProgram = async (req, res) => {
         program.programFee = parsedFee;
       } else {
         program.programFee = 0;
+        program.pricingPlans = [];
       }
     } else if (program.pricingType === "Paid" && programFee !== undefined) {
       const parsedFee = Number(programFee);

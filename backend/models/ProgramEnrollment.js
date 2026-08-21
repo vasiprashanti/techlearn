@@ -62,7 +62,7 @@ const programEnrollmentSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ["onboarding", "admin", "preference_update"],
+      enum: ["onboarding", "admin", "admin_bulk", "payment", "preference_update"],
       default: "onboarding",
     },
   },

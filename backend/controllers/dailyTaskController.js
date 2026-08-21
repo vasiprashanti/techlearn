@@ -9,7 +9,7 @@ import { calculateTaskXP, TASK_XP } from "../services/xpService.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
 import { calculateCurrentDayNumber } from "../utils/trackAssignmentSchedule.js";
-import { resolveProgramSchedule } from "../utils/programSchedule.js";
+import { assertProgramScheduleAccess, resolveProgramSchedule } from "../utils/programSchedule.js";
 
 const getISTDateParts = (date) => {
   const d = new Date(date);
@@ -76,6 +76,7 @@ export const getTodayDailyTasks = async (req, res) => {
     }
 
     const schedule = await resolveProgramSchedule({ user: req.user, student });
+    await assertProgramScheduleAccess({ user: req.user, student, programId: schedule.programId });
     if (schedule.batchExpired) {
       return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
     }
@@ -305,6 +306,7 @@ export const submitDailyTask = async (req, res) => {
     }
 
     const schedule = await resolveProgramSchedule({ user: req.user, student });
+    await assertProgramScheduleAccess({ user: req.user, student, programId: schedule.programId });
     if (schedule.batchExpired) {
       return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
     }
