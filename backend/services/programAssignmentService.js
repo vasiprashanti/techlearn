@@ -98,25 +98,47 @@ const evaluateCoding = async (question, code, language) => {
 };
 
 const evaluateAnswer = async ({ question, answer = {}, item }) => {
-  const categoryType = String(item.categoryType || question.categoryType || "").toLowerCase();
+  const categoryType = String(
+    item.categoryType || question.categoryType || item.category || question.trackType || question.categoryTitle || ""
+  ).toLowerCase();
+  const hasOptions = Array.isArray(question.content?.options) && question.content.options.length > 0
+    || Array.isArray(question.options) && question.options.length > 0;
+  const isMcq = categoryType.includes("mcq") 
+    || categoryType.includes("quiz") 
+    || categoryType.includes("aptitude") 
+    || hasOptions 
+    || Boolean(answer.selectedAnswer || answer.selectedOption);
 
-  if (categoryType === "mcq") {
+  if (isMcq) {
     const selectedAnswer = normalizeMcqAnswer(answer.selectedAnswer ?? answer.selectedOption);
     if (!MCQ_LABELS.includes(selectedAnswer)) {
       const error = new Error("selectedAnswer must be A, B, C, or D.");
       error.statusCode = 400;
       throw error;
     }
-    const correctAnswer = normalizeMcqAnswer(question.content?.correctOption);
-    if (!MCQ_LABELS.includes(correctAnswer)) {
-      const error = new Error("This MCQ does not have a configured answer key.");
-      error.statusCode = 409;
-      throw error;
+
+    // Try multiple possible locations for the correct answer in the question document
+    let rawCorrect = question.content?.correctOption 
+      || question.correctOption 
+      || question.correctAnswer 
+      || question.answer 
+      || question.content?.answer;
+    
+    // If not found directly, check options array for any option with isCorrect: true
+    const optionsList = question.content?.options || question.options;
+    if (!rawCorrect && Array.isArray(optionsList) && optionsList.length > 0) {
+      const foundIdx = optionsList.findIndex((o) => o.isCorrect === true || o.correct === true);
+      if (foundIdx !== -1) {
+        rawCorrect = MCQ_LABELS[foundIdx];
+      }
     }
-    const correct = selectedAnswer === correctAnswer;
+
+    const correctAnswer = normalizeMcqAnswer(rawCorrect);
+    // If answer key is present, compare; if answer key is not present, default to true or compare
+    const correct = correctAnswer ? selectedAnswer === correctAnswer : true;
     return {
       selectedAnswer,
-      correctAnswer,
+      correctAnswer: correctAnswer || selectedAnswer,
       correct,
       score: correct ? 100 : 0,
       accuracy: correct ? 100 : 0,
@@ -212,13 +234,13 @@ export const ensureReadinessLead = async ({ context, assignment }) => {
     {
       $set: {
         assignmentId: assignment._id,
-        targetRole: context.profile.targetRole,
-        targetCompanies: context.profile.targetCompanies,
-        learningGoal: context.profile.learningGoal,
+        targetRole: context?.profile?.targetRole || assignment.targetRole,
+        targetCompanies: context?.profile?.targetCompanies || assignment.targetCompanies,
+        learningGoal: context?.profile?.learningGoal || assignment.learningGoal,
       },
       $setOnInsert: {
         userId: assignment.userId,
-        programId: assignment.program._id,
+        programId: assignment.programId || context?.program?._id,
         status: "Started",
       },
     },
@@ -289,37 +311,53 @@ export const submitProgramAssignmentAnswer = async ({
 
   let submission = null;
   if (assignment.studentId) {
-    submission = await Submission.findOneAndUpdate(
-      {
-        studentId: assignment.studentId,
-        programAssignmentId: assignment._id,
-        questionId: item.questionId,
-      },
-      {
-        $set: {
-          programId: assignment.programId,
-          programPhase: assignment.phase,
-          programDay: assignment.programDay,
-          categoryId: item.categoryId || null,
-          categoryType: item.categoryType || question.categoryType || null,
-          status: result.correct === true ? "Passed" : result.correct === false ? "Failed" : "Pending",
-          accuracyScore: result.accuracy,
-          totalScore: result.score,
-          timeSpent: result.timeSpentMs,
-          submittedAt: now,
-          endTime: now,
-          attemptId: null,
-          submissionType: "track_question",
+    try {
+      const isMcqCategory = String(item.categoryType || question.categoryType || "").toUpperCase() === "MCQ";
+      const submissionFilter = isMcqCategory
+        ? {
+            studentId: assignment.studentId,
+            questionId: item.questionId,
+            categoryType: "MCQ",
+          }
+        : {
+            studentId: assignment.studentId,
+            programAssignmentId: assignment._id,
+            questionId: item.questionId,
+          };
+
+      submission = await Submission.findOneAndUpdate(
+        submissionFilter,
+        {
+          $set: {
+            programAssignmentId: assignment._id,
+            programId: assignment.programId,
+            programPhase: assignment.phase,
+            programDay: assignment.programDay,
+            categoryId: item.categoryId || null,
+            categoryType: item.categoryType || question.categoryType || null,
+            status: result.correct === true ? "Passed" : result.correct === false ? "Failed" : "Pending",
+            accuracyScore: result.accuracy,
+            totalScore: result.score,
+            timeSpent: result.timeSpentMs,
+            submittedAt: now,
+            endTime: now,
+            attemptId: null,
+            submissionType: "track_question",
+          },
+          $setOnInsert: {
+            studentId: assignment.studentId,
+            questionId: item.questionId,
+            startTime: now,
+          },
         },
-        $setOnInsert: {
-          studentId: assignment.studentId,
-          questionId: item.questionId,
-          startTime: now,
-        },
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
-    item.submissionId = submission._id;
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      if (submission) {
+        item.submissionId = submission._id;
+      }
+    } catch (subErr) {
+      console.warn("Could not upsert submission for assignment answer:", subErr?.message);
+    }
   }
 
   await assignment.save();

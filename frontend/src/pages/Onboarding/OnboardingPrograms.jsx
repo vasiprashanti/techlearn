@@ -8,7 +8,6 @@ import { useTheme } from '../../context/ThemeContext';
 import API from '../../api/client';
 import { initiateRazorpayPayment } from '../../utils/razorpayCheckout';
 import PricingExitFeedbackModal from '../../components/PricingExitFeedbackModal';
-import { programLearningAPI } from '../../services/programLearningApi';
 
 
 export default function OnboardingPrograms() {
@@ -23,7 +22,6 @@ export default function OnboardingPrograms() {
 
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showExitModal, setShowExitModal] = useState(false);
   const [readinessPrograms, setReadinessPrograms] = useState([]);
   const [configuredPricingPlans, setConfiguredPricingPlans] = useState([]);
   const [catalogPrograms, setCatalogPrograms] = useState([]);
@@ -63,6 +61,25 @@ export default function OnboardingPrograms() {
     : (currentUser?.skill ? [currentUser.skill] : ['Java']);
   const selectedSkill = userSkills[0];
   const displaySkills = userSkills.join(', ');
+
+  const [showExitModal, setShowExitModal] = useState(false);
+  const [isSkillReturningUser, setIsSkillReturningUser] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkEligibility = async () => {
+      try {
+        const res = await API.get('/api/payments/eligibility?programType=Skill');
+        if (isMounted && res.data?.success) {
+          setIsSkillReturningUser(!!res.data.isReturningUser);
+        }
+      } catch (err) {
+        console.error('Error fetching payment eligibility:', err);
+      }
+    };
+    checkEligibility();
+    return () => { isMounted = false; };
+  }, []);
 
   useEffect(() => {
     if (!isPlacement) return undefined;
@@ -395,27 +412,6 @@ export default function OnboardingPrograms() {
               )}
             </p>
           </Motion.div>
-
-          {isPlacement && readinessPrograms.length > 0 && (
-            <Motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.35 }}
-              className="mt-5 flex w-full max-w-xl flex-col items-center gap-3 rounded-2xl border border-violet-400/25 bg-violet-500/10 p-4 text-center shadow-sm sm:flex-row sm:justify-between sm:text-left"
-            >
-              <div>
-                <p className="text-sm font-bold text-slate-900 dark:text-white">Check your placement readiness first</p>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Complete Day 0 before choosing your program plan.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate(`/learn/program/${readinessPrograms[0]._id}`)}
-                className="inline-flex shrink-0 items-center justify-center rounded-xl bg-violet-500 px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-violet-600"
-              >
-                CHECK MY READINESS
-              </button>
-            </Motion.div>
-          )}
 
           <Motion.div
             initial={{ opacity: 0, y: 15 }}

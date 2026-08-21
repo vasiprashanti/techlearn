@@ -1,365 +1,717 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { useAuthModalContext } from '../context/AuthModalContext';
 import { useAuth } from '../context/AuthContext';
+import { useAuthModalContext } from '../context/AuthModalContext';
 
-const Navbar = () => {
+export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
-  const { openLogin } = useAuthModalContext();
   const { isAuthenticated, user, logout } = useAuth();
+  const { openLogin, openSignup } = useAuthModalContext();
   const location = useLocation();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const userMenuRef = useRef(null);
-  
-  const shouldHideNavbar = location.pathname === "/coding";
+  const navigate = useNavigate();
 
-  const hideLogoRoutes = [
-    "/admin/courses",
-    "/admin/upload-exercises",
-    "/admin/quizzes-upload",
-    "/admin/mcqupload",
-  ];
-  // Hide logo for exact matches or any subroutes (e.g., /admin/courses/123)
-  const hideLogo = hideLogoRoutes.some((route) => location.pathname === route || location.pathname.startsWith(route + "/"));
+  const isDarkMode = theme === 'dark';
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
-  // Handle scroll to hide/show navbar
+  const accountRef = useRef(null);
+  const mobileMenuRef = useRef(null);
+
+  // Close menus on outside click
   useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      const maxScrollY = Math.max(document.documentElement.scrollHeight - window.innerHeight, 0);
-      const isNearPageBottom = maxScrollY - currentScrollY < 24;
-
-      if (isNearPageBottom && currentScrollY > 100) {
-        setIsVisible(false);
-        setLastScrollY(currentScrollY);
-        return;
-      }
-
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        setIsVisible(false);
-      } else {
-        setIsVisible(true);
-      }
-
-      setLastScrollY(currentScrollY);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
-
-  useEffect(() => {
-    setIsVisible(true);
-    setLastScrollY(window.scrollY);
-  }, [location.pathname]);
-
-  const [isForceHidden, setIsForceHidden] = useState(false);
-
-  useEffect(() => {
-    const handleHideNavbar = (event) => {
-      setIsForceHidden(!!event.detail?.hide);
-    };
-
-    window.addEventListener('techlearn:hide-navbar', handleHideNavbar);
-    return () => window.removeEventListener('techlearn:hide-navbar', handleHideNavbar);
-  }, []);
-
-  useEffect(() => {
-    if (!isUserMenuOpen) return undefined;
-
     const handleOutsideClick = (event) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
-        setIsUserMenuOpen(false);
+      if (accountRef.current && !accountRef.current.contains(event.target)) {
+        setAccountMenuOpen(false);
+      }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target) && !event.target.closest('#menuButton')) {
+        setMobileMenuOpen(false);
       }
     };
 
     const handleEscape = (event) => {
-      if (event.key === 'Escape') setIsUserMenuOpen(false);
+      if (event.key === 'Escape') {
+        setAccountMenuOpen(false);
+        setMobileMenuOpen(false);
+      }
     };
 
-    window.addEventListener('mousedown', handleOutsideClick);
-    window.addEventListener('keydown', handleEscape);
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscape);
     return () => {
-      window.removeEventListener('mousedown', handleOutsideClick);
-      window.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
     };
-  }, [isUserMenuOpen]);
+  }, []);
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
+  // Close menus on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setAccountMenuOpen(false);
+  }, [location.pathname]);
+
+  const handleLogout = () => {
+    setAccountMenuOpen(false);
+    setMobileMenuOpen(false);
+    logout();
+    navigate('/');
   };
 
-  const closeMenu = () => {
-    setIsMenuOpen(false);
+  const handleGetStartedClick = (e) => {
+    e.preventDefault();
+    if (typeof openSignup === 'function') {
+      openSignup();
+    } else {
+      navigate('/signup');
+    }
   };
 
-  const isDarkMode = theme === 'dark';
+  const handleLoginClick = (e) => {
+    e.preventDefault();
+    if (typeof openLogin === 'function') {
+      openLogin();
+    } else {
+      navigate('/login');
+    }
+  };
 
-  if (shouldHideNavbar || isForceHidden) {
-    return null;
-  }
+  const firstName = user?.firstName || user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'User';
+  const fullName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.email?.split('@')[0] || 'Student');
+  const userEmail = user?.email || 'student@techlearn.com';
+  const userAvatar = user?.photoUrl || user?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}&backgroundColor=04103d,3c83f6,1e293b`;
 
   return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ${
-        isVisible ? 'translate-y-0' : '-translate-y-full'
-      }`}
-    >
-      <nav className="flex justify-between items-center px-4 md:px-15 py-2.5 md:py-8 bg-transparent relative z-[1000]">
-        
-        {/* Logo */}
-        <div className="logo flex items-center gap-3 lg:pl-1.5">
-          {!hideLogo && (
-            <>
-              <Link to="/" className="logo flex items-center">
-                <div className="relative" style={{ height: '48px', minWidth: '120px' }}>
-                  <img
-                    src="/logoo-small.webp"
-                    alt="Light Logo"
-                    className={`absolute top-0 left-0 h-12 md:h-19 w-auto transition-all duration-300 ${
-                      isDarkMode ? 'opacity-0' : 'opacity-100'
-                    }`}
-                  />
-                  <img
-                    src="/logoo2-small.webp"
-                    alt="Dark Logo"
-                    className={`absolute top-0 left-0 h-12 md:h-19 w-auto transition-all duration-300 ${
-                      isDarkMode ? 'opacity-100' : 'opacity-0'
-                    }`}
-                  />
-                </div>
-              </Link>
-            </>
-          )}
-        </div>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-transparent" style={{ background: 'transparent' }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center" style={{ gap: '62px' }}>
+        /* Light Mode Defaults */
+        .tl-navbar-root {
+          font-family: 'Inter', sans-serif;
+          --navy: #00113b;
+          --green: #b2e96a;
+          --green-text: #04103d;
+          --heading: #00113b;
+          --text: rgba(0, 17, 59, 0.78);
+          --text-hover: #00113b;
+          --muted: rgba(0, 17, 59, 0.55);
+          --border: rgba(0, 17, 59, 0.12);
+          --dropdown-bg: rgba(255, 255, 255, 0.98);
+          --dropdown-border: rgba(0, 17, 59, 0.12);
+          --dropdown-shadow: 0 20px 60px rgba(0, 17, 59, 0.15);
+          --dropdown-action-bg: rgba(0, 17, 59, 0.04);
+          --dropdown-action-hover: rgba(0, 17, 59, 0.08);
+          --dropdown-action-border: rgba(0, 17, 59, 0.12);
+          --dropdown-action-text: #00113b;
+          --dropdown-action-hover-text: #00113b;
+          --hamburger-color: #00113b;
+          --theme-btn-bg: rgba(0, 17, 59, 0.06);
+          --theme-btn-hover: rgba(0, 17, 59, 0.12);
+          --theme-btn-color: #00113b;
+        }
+
+        /* Dark Mode Overrides */
+        .dark .tl-navbar-root {
+          --navy: #04103d;
+          --green: #b2e96a;
+          --green-text: #04103d;
+          --heading: #ffffff;
+          --text: rgba(255, 255, 255, 0.72);
+          --text-hover: #ffffff;
+          --muted: rgba(255, 255, 255, 0.48);
+          --border: rgba(255, 255, 255, 0.10);
+          --dropdown-bg: rgba(4, 16, 61, 0.98);
+          --dropdown-border: rgba(255, 255, 255, 0.10);
+          --dropdown-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+          --dropdown-action-bg: rgba(255, 255, 255, 0.025);
+          --dropdown-action-hover: rgba(255, 255, 255, 0.055);
+          --dropdown-action-border: rgba(255, 255, 255, 0.10);
+          --dropdown-action-text: rgba(255, 255, 255, 0.72);
+          --dropdown-action-hover-text: #ffffff;
+          --hamburger-color: rgba(255, 255, 255, 0.75);
+          --theme-btn-bg: rgba(255, 255, 255, 0.04);
+          --theme-btn-hover: rgba(255, 255, 255, 0.08);
+          --theme-btn-color: rgba(255, 255, 255, 0.75);
+        }
+
+        .tl-nav {
+          width: 100%;
+          height: 72px;
+          padding: 0 38px 0 23px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          position: relative;
+          background: transparent;
+        }
+
+        .tl-nav-brand {
+          display: flex;
+          align-items: center;
+          text-decoration: none;
+          flex-shrink: 0;
+          margin-left: 0;
+        }
+
+        .tl-nav-brand img {
+          width: 44px;
+          height: 44px;
+          object-fit: contain;
+          display: block;
+          border-radius: 9px;
+        }
+
+        .tl-nav-right {
+          display: flex;
+          align-items: center;
+          gap: 24px;
+        }
+
+        .tl-nav-links {
+          display: flex;
+          align-items: center;
+          gap: 30px;
+          list-style: none;
+          margin: 0;
+          padding: 0;
+        }
+
+        .tl-nav-links a {
+          position: relative;
+          color: var(--text);
+          text-decoration: none;
+          font-size: 15px;
+          font-weight: 500;
+          white-space: nowrap;
+          transition: color .2s ease;
+        }
+
+        .tl-nav-links a:hover {
+          color: var(--text-hover);
+        }
+
+        .tl-sign-in {
+          color: var(--text);
+          text-decoration: none;
+          font-size: 15px;
+          font-weight: 500;
+          white-space: nowrap;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          transition: color .2s ease;
+        }
+
+        .tl-sign-in:hover {
+          color: var(--text-hover);
+        }
+
+        .tl-get-started {
+          height: 38px;
+          padding: 0 16px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 9px;
+          background: var(--green);
+          color: var(--green-text);
+          text-decoration: none;
+          font-size: 13px;
+          font-weight: 700;
+          white-space: nowrap;
+          border: none;
+          cursor: pointer;
+          transition: transform .2s ease, box-shadow .2s ease;
+        }
+
+        .tl-get-started:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 24px rgba(178,233,106,.24);
+        }
+
+        .tl-account {
+          position: relative;
+        }
+
+        .tl-account-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          padding: 8px 12px;
+          border: 0;
+          border-radius: 8px;
+          background: transparent;
+          color: var(--text);
+          font-family: inherit;
+          font-size: 14px;
+          font-weight: 500;
+          white-space: nowrap;
+          cursor: pointer;
+          transition: color .2s ease, background .2s ease;
+        }
+
+        .tl-account-button:hover {
+          color: var(--text-hover);
+          background: rgba(125,125,125,.08);
+        }
+
+        .tl-chevron {
+          width: 7px;
+          height: 7px;
+          border-right: 1.5px solid currentColor;
+          border-bottom: 1.5px solid currentColor;
+          transform: rotate(45deg) translateY(-2px);
+          transition: transform .2s ease;
+        }
+
+        .tl-account.open .tl-chevron {
+          transform: rotate(225deg) translateY(-1px);
+        }
+
+        .tl-account-menu {
+          position: absolute;
+          top: calc(100% + 12px);
+          right: 0;
+          width: 280px;
+          padding: 14px;
+          border: 1px solid var(--dropdown-border);
+          border-radius: 16px;
+          background: var(--dropdown-bg);
+          backdrop-filter: blur(20px);
+          box-shadow: var(--dropdown-shadow);
+          opacity: 0;
+          visibility: hidden;
+          transform: translateY(-6px);
+          transition: opacity .18s ease, visibility .18s ease, transform .18s ease;
+        }
+
+        .tl-account.open .tl-account-menu {
+          opacity: 1;
+          visibility: visible;
+          transform: translateY(0);
+        }
+
+        .tl-profile-header {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          padding: 4px 5px 15px;
+        }
+
+        .tl-profile-avatar {
+          width: 54px;
+          height: 54px;
+          display: block;
+          object-fit: cover;
+          border-radius: 50%;
+          border: 2px solid var(--border);
+          margin-bottom: 9px;
+        }
+
+        .tl-profile-name {
+          color: var(--heading);
+          font-size: 14px;
+          font-weight: 600;
+          line-height: 1.4;
+        }
+
+        .tl-profile-email {
+          margin-top: 3px;
+          color: var(--muted);
+          font-size: 11.5px;
+          font-weight: 400;
+          line-height: 1.4;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .tl-profile-action {
+          width: 100%;
+          min-height: 44px;
+          display: flex;
+          align-items: center;
+          border-radius: 9px;
+          text-decoration: none;
+          font-size: 12.5px;
+          font-weight: 500;
+          transition: background .18s ease, color .18s ease, border-color .18s ease;
+          border: 1px solid var(--dropdown-action-border);
+          background: var(--dropdown-action-bg);
+          color: var(--dropdown-action-text);
+          cursor: pointer;
+        }
+
+        .tl-manage-profile {
+          gap: 10px;
+          padding: 0 11px;
+        }
+
+        .tl-manage-profile:hover,
+        .tl-sign-out:hover {
+          background: var(--dropdown-action-hover);
+          color: var(--dropdown-action-hover-text);
+        }
+
+        .tl-manage-logo {
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .tl-manage-logo img {
+          width: 24px;
+          height: 24px;
+          object-fit: contain;
+          border-radius: 5px;
+        }
+
+        .tl-sign-out {
+          justify-content: center;
+          margin-top: 8px;
+        }
+
+        .tl-menu-button {
+          width: 38px;
+          height: 38px;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid var(--border);
+          border-radius: 9px;
+          background: var(--theme-btn-bg);
+          cursor: pointer;
+        }
+
+        .tl-menu-icon {
+          width: 16px;
+          height: 12px;
+          position: relative;
+        }
+
+        .tl-menu-icon span {
+          position: absolute;
+          left: 0;
+          width: 100%;
+          height: 1.5px;
+          background: var(--hamburger-color);
+          transition: transform .2s ease, top .2s ease;
+        }
+
+        .tl-menu-icon span:nth-child(1) { top: 0; }
+        .tl-menu-icon span:nth-child(2) { top: 5px; }
+        .tl-menu-icon span:nth-child(3) { top: 10px; }
+
+        .tl-menu-button.active .tl-menu-icon span:nth-child(1) {
+          top: 5px;
+          transform: rotate(45deg);
+        }
+        .tl-menu-button.active .tl-menu-icon span:nth-child(2) {
+          opacity: 0;
+        }
+        .tl-menu-button.active .tl-menu-icon span:nth-child(3) {
+          top: 5px;
+          transform: rotate(-45deg);
+        }
+
+        .tl-mobile-menu {
+          display: none;
+          position: absolute;
+          top: 72px;
+          left: 16px;
+          right: 16px;
+          padding: 10px;
+          border: 1px solid var(--dropdown-border);
+          border-radius: 12px;
+          background: var(--dropdown-bg);
+          backdrop-filter: blur(18px);
+          box-shadow: var(--dropdown-shadow);
+        }
+
+        .tl-mobile-menu.active {
+          display: block;
+        }
+
+        .tl-mobile-menu a,
+        .tl-mobile-menu button {
+          display: flex;
+          align-items: center;
+          width: 100%;
+          min-height: 44px;
+          padding: 0 12px;
+          border-radius: 8px;
+          color: var(--text);
+          text-decoration: none;
+          font-size: 13.5px;
+          font-weight: 500;
+          background: transparent;
+          border: none;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .tl-mobile-menu a:hover,
+        .tl-mobile-menu button:hover {
+          background: var(--dropdown-action-hover);
+          color: var(--text-hover);
+        }
+
+        .tl-theme-toggle-btn {
+          background: var(--theme-btn-bg);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          width: 36px;
+          height: 36px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--theme-btn-color);
+          cursor: pointer;
+          transition: color .2s, background .2s;
+        }
+
+        .tl-theme-toggle-btn:hover {
+          color: var(--text-hover);
+          background: var(--theme-btn-hover);
+        }
+
+        @media (max-width: 760px) {
+          .tl-nav {
+            height: 68px;
+            padding: 0 16px;
+          }
+          .tl-nav-brand img {
+            width: 34px;
+            height: 34px;
+          }
+          .tl-nav-links,
+          .tl-sign-in,
+          .tl-account {
+            display: none;
+          }
+          .tl-nav-right {
+            gap: 10px;
+          }
+          .tl-get-started {
+            height: 36px;
+            padding: 0 14px;
+            font-size: 12px;
+          }
+          .tl-menu-button {
+            display: flex;
+          }
+          .tl-mobile-menu {
+            top: 68px;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .tl-nav {
+            padding: 0 12px 0 8px;
+          }
+          .tl-get-started {
+            padding: 0 10px;
+            font-size: 11px;
+          }
+        }
+      `}</style>
+
+      <div className="tl-navbar-root">
+        <nav className="tl-nav">
+          {/* BRAND */}
           <Link
-            to={location.pathname === '/onboarding/programs' ? '#' : '/learn'}
-            onClick={(e) => {
-              if (location.pathname === '/onboarding/programs') {
-                e.preventDefault();
-              }
-            }}
-            className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out 
-              hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] 
-              after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out 
-              ${location.pathname.startsWith('/learn') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}
-              ${location.pathname === '/onboarding/programs' ? 'cursor-not-allowed opacity-70 hover:after:w-0' : ''}`}
+            to="/"
+            className="tl-nav-brand"
+            aria-label="TechLearn"
           >
-            Learn
-          </Link>
-          <Link
-            to={location.pathname === '/onboarding/programs' ? '#' : '/dashboard'}
-            onClick={(e) => {
-              if (location.pathname === '/onboarding/programs') {
-                e.preventDefault();
-              }
-            }}
-            className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out 
-              hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] 
-              after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out 
-              ${location.pathname.startsWith('/dashboard') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}
-              ${location.pathname === '/onboarding/programs' ? 'cursor-not-allowed opacity-70 hover:after:w-0' : ''}`}
-          >
-            Dashboard
+            <img
+              src={isDarkMode ? "/logoo2.png" : "/logoo-small.webp"}
+              alt="TechLearn"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = isDarkMode ? "/logoo2-small.webp" : "/logoo-small.webp";
+              }}
+            />
           </Link>
 
-
-          {isAuthenticated ? (
-            <div className="relative" ref={userMenuRef}>
-              <button
-                type="button"
-                onClick={() => setIsUserMenuOpen((prev) => !prev)}
-                className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out
-                  hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px]
-                  after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out
-                  ${isUserMenuOpen ? 'after:w-full' : 'after:w-0'}
-                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
-                aria-expanded={isUserMenuOpen}
-                aria-haspopup="true"
-              >
-                Hi, {user?.firstName || user?.email || 'User'}
-              </button>
-
-              {isUserMenuOpen && (
-                <div className="absolute top-full right-0 z-50 mt-3 w-72 overflow-hidden rounded-2xl border border-[#86c4ff]/45 bg-gradient-to-br from-[#e7f6ff]/95 to-[#d9efff]/90 shadow-[0_12px_34px_rgba(60,131,246,0.16)] backdrop-blur-xl dark:border-[#6fbfff]/35 dark:from-[#052152]/90 dark:to-[#072b63]/85">
-                  <div className="border-b border-[#86c4ff]/45 bg-[#dbf1ff]/70 p-4 dark:border-[#6fbfff]/30 dark:bg-[#0d366f]/60">
-                    <h3 className="truncate text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
-                      {user?.firstName ? `${user.firstName} ${user?.lastName || ''}`.trim() : (user?.email || 'User')}
-                    </h3>
-                    <p className="mt-0.5 truncate text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">
-                      {user?.email || 'student@techlearn.com'}
-                    </p>
-                    <span className="mt-2 inline-flex items-center rounded-full border border-[#86c4ff]/60 bg-[#edf8ff] px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-[#2d7fe8] dark:border-[#6bb8ec]/50 dark:bg-[#0a2f6f] dark:text-[#8fd9ff]">
-                      Student
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 space-y-1.5">
-                     <button
-                       onClick={() => {
-                         setIsUserMenuOpen(false);
-                         logout();
-                       }}
-                       className="w-full rounded-xl border border-red-600 bg-red-600 px-3 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-red-700 hover:border-red-700 dark:border-red-600 dark:bg-red-600 dark:text-white dark:hover:bg-red-700"
-                     >
-                       Logout
-                     </button>
-                  </div>
-                </div>
+          {/* RIGHT SIDE */}
+          <div className="tl-nav-right">
+            {/* DESKTOP LINKS */}
+            <ul className="tl-nav-links">
+              <li>
+                <Link to="/learn">Learn</Link>
+              </li>
+              {!isAuthenticated && (
+                <li>
+                  <Link to="/roadmaps">Roadmaps</Link>
+                </li>
               )}
-            </div>
-          ) : (
+              <li>
+                <Link to="/resources/roadmaps">Hiring</Link>
+              </li>
+              {isAuthenticated && (
+                <li>
+                  <Link to="/dashboard">Dashboard</Link>
+                </li>
+              )}
+            </ul>
+
+            {/* THEME TOGGLE BUTTON */}
             <button
-              onClick={openLogin}
-              className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out
-                hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] 
-                after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out
-                ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
+              onClick={toggleTheme}
+              className="tl-theme-toggle-btn"
+              aria-label="Toggle theme"
+              type="button"
             >
-              Log In
+              {isDarkMode ? <Sun size={17} /> : <Moon size={17} />}
             </button>
-          )}
 
-          {/* Dark Mode Toggle - Desktop */}
-          <button
-            onClick={toggleTheme}
-            className={`text-[15px] transition-colors duration-300 p-1.5 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
-            aria-label="Toggle dark mode"
-          >
-            {isDarkMode ? <Sun size={17} strokeWidth={2} /> : <Moon size={17} strokeWidth={2} />}
-          </button>
-        </nav>
+            {/* LOGGED OUT STATE */}
+            {!isAuthenticated ? (
+              <>
+                {/* SIGN IN */}
+                <button
+                  type="button"
+                  onClick={handleLoginClick}
+                  className="tl-sign-in"
+                >
+                  Log in
+                </button>
 
-        {/* Mobile Menu Toggle */}
-        <button
-          type="button"
-          className={`md:hidden flex justify-center items-center cursor-pointer transition-all duration-300 p-1 ${
-            isDarkMode ? 'text-[#e0e6f5]' : 'text-[#00113b]'
-          }`}
-          onClick={toggleMenu}
-          aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
-        >
-          <span className="text-2xl leading-none">{isMenuOpen ? '✕' : '☰'}</span>
-        </button>
-      </nav>
-
-      {/* Mobile Navigation Menu */}
-      <nav
-        className={`md:hidden ${isMenuOpen ? 'flex' : 'hidden'} flex-col gap-0.5 px-4 py-1.5 z-[999] 
-          transition-all duration-300 backdrop-blur-md border-b border-white/20 dark:border-gray-700/20 
-          w-full absolute top-full left-0 
-          ${
-            isDarkMode
-              ? 'bg-gradient-to-r from-[#0a1128]/90 via-[#001233]/90 to-[#0a1128]/90'
-              : 'bg-gradient-to-r from-[#daf0fa]/90 via-[#bceaff]/90 to-[#bceaff]/90'
-          }`}
-      >
-        <div className="flex flex-col w-full">
-          <Link
-            to={location.pathname === '/onboarding/programs' ? '#' : '/learn'}
-            onClick={(e) => {
-              if (location.pathname === '/onboarding/programs') {
-                e.preventDefault();
-                return;
-              }
-              closeMenu();
-            }}
-            className={`relative block py-1.5 text-[14px] transition-all duration-300 ease-in-out 
-              hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px 
-              after:bg-current after:transition-all after:duration-300 after:ease-in-out 
-              ${location.pathname.startsWith('/learn') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}
-              ${location.pathname === '/onboarding/programs' ? 'cursor-not-allowed opacity-70 hover:after:w-0' : ''}`}
-          >
-            Learn
-          </Link>
-          <Link
-            to={location.pathname === '/onboarding/programs' ? '#' : '/dashboard'}
-            onClick={(e) => {
-              if (location.pathname === '/onboarding/programs') {
-                e.preventDefault();
-                return;
-              }
-              closeMenu();
-            }}
-            className={`relative block py-1.5 text-[14px] transition-all duration-300 ease-in-out 
-              hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px 
-              after:bg-current after:transition-all after:duration-300 after:ease-in-out 
-              ${location.pathname.startsWith('/dashboard') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}
-              ${location.pathname === '/onboarding/programs' ? 'cursor-not-allowed opacity-70 hover:after:w-0' : ''}`}
-          >
-            Dashboard
-          </Link>
-        </div>
-
-
-        <div className="flex flex-col w-full">
-          {isAuthenticated ? (
-            <div className="py-1.5">
+                {/* PRIMARY CTA */}
+                <button
+                  type="button"
+                  onClick={handleGetStartedClick}
+                  className="tl-get-started"
+                >
+                  Get started
+                </button>
+              </>
+            ) : (
+              /* LOGGED IN ACCOUNT DROPDOWN */
               <div
-                className={`text-[14px] mb-1 ${
-                  isDarkMode ? 'text-[#e0e6f5]' : 'text-[#00113b]'
-                }`}
+                className={`tl-account ${accountMenuOpen ? 'open' : ''}`}
+                ref={accountRef}
               >
-                Hi, {user?.firstName || user?.email || 'User'}
-              </div>
-              <button
-                onClick={() => {
-                  closeMenu();
-                  logout();
-                }}
-                className={`relative block py-1.5 text-[14px] transition-colors duration-300 
-                  hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 
-                  after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 
-                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
-              >
-                Log Out
-              </button>
-            </div>
-          ) : (
-            <div className="py-1.5 w-full flex justify-start">
-              <button
-                onClick={() => {
-                  closeMenu();
-                  openLogin();
-                }}
-                className={`relative block py-1.5 text-[14px] transition-all duration-300 ease-in-out 
-                  hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 
-                  after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out 
-                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
-              >
-                Log In
-              </button>
-            </div>
-          )}
-        </div>
+                <button
+                  className="tl-account-button"
+                  id="accountButton"
+                  type="button"
+                  aria-expanded={accountMenuOpen}
+                  aria-haspopup="true"
+                  onClick={() => setAccountMenuOpen((prev) => !prev)}
+                >
+                  Hi, {firstName}
+                  <span className="tl-chevron"></span>
+                </button>
 
-        {/* Dark Mode Toggle - Mobile */}
-        <div className="w-full flex justify-start py-1">
-          <button
-            onClick={toggleTheme}
-            className={`text-[15px] transition-colors duration-300 p-1 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
-            aria-label="Toggle dark mode"
+                {/* PROFILE DROPDOWN MENU */}
+                <div className="tl-account-menu" id="accountMenu">
+                  {/* AVATAR + NAME + EMAIL */}
+                  <div className="tl-profile-header">
+                    <img
+                      src={userAvatar}
+                      alt={fullName}
+                      className="tl-profile-avatar"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "/logoo2-small.webp";
+                      }}
+                    />
+                    <div className="tl-profile-name">{fullName}</div>
+                    <div className="tl-profile-email">{userEmail}</div>
+                  </div>
+
+                  {/* MANAGE PROFILE */}
+                  <Link
+                    to="/dashboard/profile"
+                    className="tl-profile-action tl-manage-profile"
+                    onClick={() => setAccountMenuOpen(false)}
+                  >
+                    <span className="tl-manage-logo">
+                      <img
+                        src={isDarkMode ? "/logoo2.png" : "/logoo-small.webp"}
+                        alt="TechLearn"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = "/logoo2-small.webp";
+                        }}
+                      />
+                    </span>
+                    <span>Manage your profile</span>
+                  </Link>
+
+                  {/* SIGN OUT */}
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="tl-profile-action tl-sign-out"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* MOBILE HAMBURGER BUTTON */}
+            <button
+              className={`tl-menu-button ${mobileMenuOpen ? 'active' : ''}`}
+              id="menuButton"
+              type="button"
+              aria-label="Open menu"
+              aria-expanded={mobileMenuOpen}
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+            >
+              <span className="tl-menu-icon">
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
+            </button>
+          </div>
+
+          {/* MOBILE MENU DROPDOWN */}
+          <div
+            className={`tl-mobile-menu ${mobileMenuOpen ? 'active' : ''}`}
+            id="mobileMenu"
+            ref={mobileMenuRef}
           >
-            {isDarkMode ? <Sun size={17} strokeWidth={2} /> : <Moon size={17} strokeWidth={2} />}
-          </button>
-        </div>
-      </nav>
+            <Link to="/learn">Learn</Link>
+            <Link to="/roadmaps">Roadmaps</Link>
+            <Link to="/resources/roadmaps">Hiring</Link>
+
+            {isAuthenticated ? (
+              <>
+                <Link to="/dashboard">Dashboard</Link>
+                <Link to="/dashboard/profile">Manage your profile</Link>
+                <button type="button" onClick={handleLogout}>
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" onClick={handleLoginClick}>
+                  Log in
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGetStartedClick}
+                  style={{ color: 'var(--green)', fontWeight: '700' }}
+                >
+                  Get started →
+                </button>
+              </>
+            )}
+          </div>
+        </nav>
+      </div>
     </header>
   );
-};
-
-export default Navbar;
+}

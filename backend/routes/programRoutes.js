@@ -3,10 +3,12 @@ import {
   getProgramCatalog,
   getProgramRecommendations,
   enrollInFreeProgram,
-  joinProgramWaitlist,
   getAssignedPrograms,
+  getPublicPrograms,
   getReadinessOptions,
+  joinProgramWaitlist,
   selectActiveProgram,
+  startFreeAssessment,
   getProgramDetailForStudent,
 } from "../controllers/programController.js";
 import {
@@ -18,15 +20,21 @@ import {
   submitAssignmentAnswer,
   submitReadinessAnswer,
 } from "../controllers/programLearningController.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, protectOptional } from "../middleware/authMiddleware.js";
+import { guestAssessmentRateLimiter } from "../middleware/guestRateLimitMiddleware.js";
 
 const router = express.Router();
+
+// Public / Guest-accessible endpoints
+router.get("/public", getPublicPrograms);
+router.get("/readiness-options", getReadinessOptions);
+router.post("/:programId/waitlist", guestAssessmentRateLimiter, protectOptional, joinProgramWaitlist);
 
 // Protected student-facing endpoints
 router.get("/catalog", getProgramCatalog);
 router.get("/recommendations", protect, getProgramRecommendations);
 router.get("/assigned", protect, getAssignedPrograms);
-router.get("/readiness-options", protect, getReadinessOptions);
+router.post("/free-assessment/start", protect, startFreeAssessment);
 router.post("/select-active", protect, selectActiveProgram);
 router.post("/:programId/free-enroll", protect, enrollInFreeProgram);
 router.post("/:programId/waitlist", protect, joinProgramWaitlist);

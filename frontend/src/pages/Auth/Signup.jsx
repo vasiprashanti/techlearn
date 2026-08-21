@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
 import { register } from '../../api/authService';
 import { navigateUserByProgram } from '../../utils/navigation';
+import { programLearningAPI } from '../../services/programLearningApi';
 import { auth } from '../../config/firebase';
 import { 
   signInWithPopup, 
@@ -192,6 +193,28 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
     else navigate('/');
   };
 
+  const handlePendingAssessmentIfPresent = async () => {
+    const pendingRaw = sessionStorage.getItem('pending_assessment');
+    if (pendingRaw) {
+      try {
+        const pending = JSON.parse(pendingRaw);
+        sessionStorage.removeItem('pending_assessment');
+        setLoading(true);
+        const response = await programLearningAPI.startFreeAssessment(pending);
+        if (response?.success && response?.programId) {
+          handleClose();
+          navigate(`/free-assessment/${response.programId}`);
+          return true;
+        }
+      } catch (e) {
+        console.error('Failed to start pending assessment:', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    return false;
+  };
+
   const toggleAuthMode = () => {
     setIsLoginMode(prev => !prev);
     setEmail('');
@@ -287,6 +310,10 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
             localStorage.setItem('userData', JSON.stringify(authPayload.user));
             if (setSession) setSession(authPayload.user, authPayload.token);
             if (refetchUserData) await refetchUserData();
+
+            if (await handlePendingAssessmentIfPresent()) {
+              return;
+            }
 
             if (authPayload.user?.onboardingCompleted) {
               setLoading(false);
@@ -387,6 +414,10 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
           if (setSession) setSession(data.user, data.token);
           if (refetchUserData) refetchUserData();
 
+          if (await handlePendingAssessmentIfPresent()) {
+            return;
+          }
+
           // Check persistent onboardingCompleted state
           if (data.user?.onboardingCompleted) {
             handleClose();
@@ -485,6 +516,9 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
       if (auth && auth.currentUser) {
         await auth.currentUser.reload();
         if (auth.currentUser.emailVerified) {
+          if (await handlePendingAssessmentIfPresent()) {
+            return;
+          }
           await ensureDraftAccount();
           const fname = getFirstName(fullName || auth.currentUser.displayName, email || auth.currentUser.email);
           triggerWelcomeScreen(fname);
@@ -664,7 +698,6 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
 
     setLoading(true);
     setStatusMsg({ text: '', type: '' });
-
     try {
       // Email verification and Google sign-in create only a draft account.
       // Complete the profile through the preferences endpoint so onboarding
@@ -696,6 +729,10 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
       if (setSession) setSession(canonicalUser, token);
       if (refetchUserData) await refetchUserData();
       localStorage.removeItem('techlearn-onboarding-draft');
+
+      if (await handlePendingAssessmentIfPresent()) {
+        return;
+      }
 
       setLoading(false);
       setScreen('complete');
@@ -734,8 +771,6 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
           return;
         }
         if (selectedPath === 'Member') {
-          navigate('/learn/certification/payment');
-        } else {
           navigate('/onboarding/programs', {
             state: {
               targetRole: payload.targetRole,
@@ -743,6 +778,8 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
               learningGoal: payload.learningGoal,
             }
           });
+        } else {
+          navigate('/dashboard');
         }
       }, 1800);
     } catch (e) {

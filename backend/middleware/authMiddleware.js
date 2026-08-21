@@ -112,6 +112,8 @@ export const optionalProtect = async (req, res, next) => {
   }
 };
 
+export const protectOptional = optionalProtect;
+
 export const requirePlacementProgram = (req, res, next) => {
   if (["Placement Sprint", "Both"].includes(req.user?.programSelection)) {
     return next();
