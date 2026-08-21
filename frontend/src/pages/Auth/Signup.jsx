@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
 import { register } from '../../api/authService';
 import { navigateUserByProgram } from '../../utils/navigation';
+import { programLearningAPI } from '../../services/programLearningApi';
 import { auth } from '../../config/firebase';
 import { 
   signInWithPopup, 
@@ -86,6 +87,28 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
   const handleClose = () => {
     if (onClose) onClose();
     else navigate('/');
+  };
+
+  const handlePendingAssessmentIfPresent = async () => {
+    const pendingRaw = sessionStorage.getItem('pending_assessment');
+    if (pendingRaw) {
+      try {
+        const pending = JSON.parse(pendingRaw);
+        sessionStorage.removeItem('pending_assessment');
+        setLoading(true);
+        const response = await programLearningAPI.startFreeAssessment(pending);
+        if (response?.success && response?.programId) {
+          handleClose();
+          navigate(`/free-assessment/${response.programId}`);
+          return true;
+        }
+      } catch (e) {
+        console.error('Failed to start pending assessment:', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    return false;
   };
 
   const toggleAuthMode = () => {
@@ -183,6 +206,10 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
             localStorage.setItem('userData', JSON.stringify(authPayload.user));
             if (setSession) setSession(authPayload.user, authPayload.token);
             if (refetchUserData) await refetchUserData();
+
+            if (await handlePendingAssessmentIfPresent()) {
+              return;
+            }
 
             if (authPayload.user?.onboardingCompleted) {
               setLoading(false);
@@ -283,6 +310,10 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
           if (setSession) setSession(data.user, data.token);
           if (refetchUserData) refetchUserData();
 
+          if (await handlePendingAssessmentIfPresent()) {
+            return;
+          }
+
           // Check persistent onboardingCompleted state
           if (data.user?.onboardingCompleted) {
             handleClose();
@@ -357,6 +388,9 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
       if (auth && auth.currentUser) {
         await auth.currentUser.reload();
         if (auth.currentUser.emailVerified) {
+          if (await handlePendingAssessmentIfPresent()) {
+            return;
+          }
           const fname = getFirstName(fullName || auth.currentUser.displayName, email || auth.currentUser.email);
           triggerWelcomeScreen(fname);
           return;
@@ -565,6 +599,10 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
         localStorage.setItem('userData', JSON.stringify(res.data.user));
         if (setSession) setSession(res.data.user, res.data.token);
         if (refetchUserData) await refetchUserData();
+
+        if (await handlePendingAssessmentIfPresent()) {
+          return;
+        }
 
         setLoading(false);
         setScreen('complete');

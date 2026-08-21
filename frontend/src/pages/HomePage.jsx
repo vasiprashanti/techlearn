@@ -120,10 +120,6 @@ const HomePage = () => {
   // Code line animation state
   const codeFieldRef = useRef(null)
 
-  // Tilt animation state
-  const platformStageRef = useRef(null)
-  const platformWindowRef = useRef(null)
-
   // Journey animation state
   const journeySectionRef = useRef(null)
   const pathWrapperRef = useRef(null)
@@ -236,58 +232,7 @@ const HomePage = () => {
     return () => clearInterval(interval)
   }, [])
 
-  // --- 2. Platform Mockup Tilt on Mousemove ---
-  useEffect(() => {
-    const platformStage = platformStageRef.current
-    const platformWindow = platformWindowRef.current
-    if (!platformStage || !platformWindow) return
 
-    let tiltX = 1.5
-    let tiltY = -3
-    let targetX = 1.5
-    let targetY = -3
-    let animationFrameId
-
-    const handleMouseMove = (e) => {
-      if (window.innerWidth <= 700 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        return
-      }
-      const rect = platformStage.getBoundingClientRect()
-      const mouseX = (e.clientX - rect.left) / rect.width
-      const mouseY = (e.clientY - rect.top) / rect.height
-
-      targetY = (mouseX - 0.5) * 7
-      targetX = 1.5 - (mouseY - 0.5) * 2.2
-    }
-
-    const handleMouseLeave = () => {
-      targetX = 1.5
-      targetY = -3
-    }
-
-    const animateTilt = () => {
-      tiltX += (targetX - tiltX) * 0.08
-      tiltY += (targetY - tiltY) * 0.08
-
-      if (window.innerWidth > 700 && platformWindow) {
-        platformWindow.style.transform = `perspective(1800px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) translateY(8px) scale(0.97)`
-      }
-      animationFrameId = requestAnimationFrame(animateTilt)
-    }
-
-    platformStage.addEventListener("mousemove", handleMouseMove)
-    platformStage.addEventListener("mouseleave", handleMouseLeave)
-
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      animateTilt()
-    }
-
-    return () => {
-      platformStage.removeEventListener("mousemove", handleMouseMove)
-      platformStage.removeEventListener("mouseleave", handleMouseLeave)
-      cancelAnimationFrame(animationFrameId)
-    }
-  }, [])
 
   // --- 3. Interactive Roadmap Animation (Sticky scroll + SVG path character tracking) ---
   useEffect(() => {
@@ -436,101 +381,7 @@ const HomePage = () => {
 
   return (
     <div className="tl-landing">
-      {/* =========================================================
-           00 — FIXED / STICKY NAVBAR
-      ========================================================= */}
-      <header className={`tl-nav-wrapper ${isScrolled ? 'scrolled' : ''} ${isOverDarkSection ? 'on-dark-section' : ''}`}>
-        <nav className="tl-nav">
-          <Link to="/" className="tl-logo flex items-center">
-            <div className="relative flex items-center" style={{ height: '44px', minWidth: '120px' }}>
-              <img
-                src="/logoo-small.webp"
-                alt="Light Logo"
-                className={`absolute top-1/2 -translate-y-1/2 left-0 h-10 md:h-12 w-auto transition-all duration-300 ${
-                  isDarkMode ? 'opacity-0' : 'opacity-100'
-                }`}
-              />
-              <img
-                src="/logoo2-small.webp"
-                alt="Dark Logo"
-                className={`absolute top-1/2 -translate-y-1/2 left-0 h-10 md:h-12 w-auto transition-all duration-300 ${
-                  isDarkMode ? 'opacity-100' : 'opacity-0'
-                }`}
-              />
-            </div>
-          </Link>
 
-          <ul className="tl-nav-links">
-            <li><Link to="/learn">Learn</Link></li>
-            <li><Link to="/roadmaps">Roadmaps</Link></li>
-            <li><a href="#pricing">Hiring</a></li>
-          </ul>
-
-          <div className="tl-nav-action flex items-center gap-3">
-            <button
-              onClick={toggleTheme}
-              className="tl-theme-btn"
-              aria-label="Toggle dark mode"
-            >
-              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-
-            {isAuthenticated && user ? (
-              <div className="relative" ref={userMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsUserMenuOpen((prev) => !prev)}
-                  className="cursor-pointer text-sm font-medium text-[#00113b] dark:text-[#e0e6f5] hover:opacity-80 transition flex items-center gap-1.5 px-2 py-1 rounded-lg"
-                  aria-expanded={isUserMenuOpen}
-                  aria-haspopup="true"
-                >
-                  <span>Hi, {user?.firstName ? `${user.firstName} ${user?.lastName || ''}`.trim() : (user?.name || user?.email?.split('@')[0] || 'User')}</span>
-                </button>
-
-                {isUserMenuOpen && (
-                  <div className="absolute top-full right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-[#86c4ff]/45 bg-gradient-to-br from-[#e7f6ff]/95 to-[#d9efff]/90 shadow-[0_12px_34px_rgba(60,131,246,0.16)] backdrop-blur-xl dark:border-[#6fbfff]/35 dark:from-[#052152]/95 dark:to-[#072b63]/90 text-left">
-                    <div className="border-b border-[#86c4ff]/45 bg-[#dbf1ff]/70 p-3.5 dark:border-[#6fbfff]/30 dark:bg-[#0d366f]/60">
-                      <h3 className="truncate text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
-                        {user?.firstName ? `${user.firstName} ${user?.lastName || ''}`.trim() : (user?.name || user?.email || 'User')}
-                      </h3>
-                      <p className="mt-0.5 truncate text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">
-                        {user?.email || 'student@techlearn.com'}
-                      </p>
-                      <span className="mt-2 inline-flex items-center rounded-full border border-[#86c4ff]/60 bg-[#edf8ff] px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-[#2d7fe8] dark:border-[#6bb8ec]/50 dark:bg-[#0a2f6f] dark:text-[#8fd9ff]">
-                        Student
-                      </span>
-                    </div>
-
-                    <div className="p-2.5 space-y-1.5">
-                      <Link
-                        to="/dashboard"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="block w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 px-3 py-2 text-center text-xs font-semibold text-[#00113b] dark:text-[#e0e6f5] hover:bg-white/80 dark:hover:bg-white/10 transition"
-                      >
-                        Dashboard
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsUserMenuOpen(false);
-                          logout();
-                        }}
-                        className="w-full rounded-xl border border-red-600 bg-red-600 px-3 py-2 text-center text-xs font-semibold text-white transition hover:bg-red-700 hover:border-red-700 cursor-pointer"
-                      >
-                        Logout
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Link to="/signup" className="tl-nav-cta">
-                SIGN UP
-              </Link>
-            )}
-          </div>
-        </nav>
-      </header>
 
       {/* =========================================================
            01 — HERO (hero.html exact specifications)
@@ -557,129 +408,7 @@ const HomePage = () => {
         </main>
       </section>
 
-      {/* =========================================================
-           02 — PLATFORM PREVIEW (Placement Platform Section)
-      ========================================================= */}
-      <section className="tl-platform-preview" id="platform">
-        <div className="tl-platform-content">
-          <div className="tl-platform-eyebrow">
-            EVERYTHING IN ONE PLACE
-          </div>
 
-          <h2 className="tl-platform-title">
-            <span>The only</span> PLACEMENT PLATFORM <span>you need</span>
-          </h2>
-
-          <p className="tl-platform-description">
-            Your roadmap, daily practice, challenges and placement readiness
-            stay together so you always know what to do next.
-          </p>
-
-          <div className="tl-platform-stage" ref={platformStageRef}>
-            <div className="tl-platform-glow"></div>
-
-            <div className="tl-platform-window" ref={platformWindowRef}>
-              <div className="tl-browser-bar">
-                <div className="tl-browser-dots">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-                <div className="tl-browser-address">
-                  app.techlearn.in/dashboard
-                </div>
-              </div>
-
-              <div className="tl-dashboard">
-                <aside className="tl-dashboard-sidebar">
-                  <div className="tl-dashboard-logo">TechLearn</div>
-                  <div className="tl-side-item active">
-                    <span>⌂</span> Dashboard
-                  </div>
-                  <div className="tl-side-item">
-                    <span>◫</span> My Program
-                  </div>
-                  <div className="tl-side-item">
-                    <span>✓</span> Daily Tasks
-                  </div>
-                  <div className="tl-side-item">
-                    <span>◈</span> Challenges
-                  </div>
-                  <div className="tl-side-item">
-                    <span>↗</span> Progress
-                  </div>
-                </aside>
-
-                <main className="tl-dashboard-main">
-                  <div className="tl-dashboard-top">
-                    <div>
-                      <div className="tl-dash-small">DAY 12 OF 30</div>
-                      <h3>Good morning, Tanvika.</h3>
-                    </div>
-                    <div className="tl-dash-profile">TV</div>
-                  </div>
-
-                  <div className="tl-progress-card">
-                    <div className="tl-progress-copy">
-                      <span className="tl-dash-label">YOUR PLACEMENT PATH</span>
-                      <strong>40% complete</strong>
-                      <p>Keep going. You're building momentum.</p>
-                    </div>
-                    <div className="tl-progress-ring">12</div>
-                  </div>
-
-                  <div className="tl-dashboard-grid">
-                    <div className="tl-task-card">
-                      <div className="tl-card-top">
-                        <span>DAILY TASK</span>
-                        <b>+50 XP</b>
-                      </div>
-                      <h4>Today's practice</h4>
-                      <div className="tl-task-row">
-                        <span>DSA</span>
-                        <strong>2 / 3</strong>
-                      </div>
-                      <div className="tl-task-row">
-                        <span>SQL</span>
-                        <strong>1 / 2</strong>
-                      </div>
-                      <div className="tl-task-row">
-                        <span>Aptitude</span>
-                        <strong>3 / 3</strong>
-                      </div>
-                    </div>
-
-                    <div className="tl-challenge-card">
-                      <div className="tl-card-top">
-                        <span>DAILY CHALLENGE</span>
-                        <b>10:42</b>
-                      </div>
-                      <h4>Two Sum</h4>
-                      <p>Solve today's coding challenge.</p>
-                      <div className="tl-challenge-button">
-                        Solve Challenge →
-                      </div>
-                    </div>
-
-                    <div className="tl-score-card">
-                      <div className="tl-card-top">
-                        <span>PLACEMENT READINESS</span>
-                      </div>
-                      <div className="tl-score-number">
-                        78<span>%</span>
-                      </div>
-                      <div className="tl-score-bar">
-                        <div></div>
-                      </div>
-                      <p>Strong progress this week</p>
-                    </div>
-                  </div>
-                </main>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* =========================================================
            03 — CLEAR PATH (Interactive Roadmap Animation)

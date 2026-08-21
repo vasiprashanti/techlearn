@@ -18,10 +18,14 @@ import {
   RotateCcw,
   ChevronDown,
   ExternalLink,
+  Terminal,
+  Square,
+  Loader2,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { programLearningAPI } from '../../services/programLearningApi';
+import { compilerAPI } from '../../services/api';
 import pixelStarImg from '../../assets/pixel-star.png';
 
 const LANGUAGES = {
@@ -37,6 +41,16 @@ const LANGUAGES = {
     monacoLanguage: 'python',
     starter: '# Write your solution here\n',
   },
+};
+
+const formatTime = (seconds) => {
+  const mins = Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, '0');
+  const secs = Math.max(0, seconds % 60)
+    .toString()
+    .padStart(2, '0');
+  return `${mins}:${secs}`;
 };
 
 export default function FreeAssessmentTest() {
@@ -62,6 +76,39 @@ export default function FreeAssessmentTest() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [finalResult, setFinalResult] = useState(null);
   const [showQuestionDetails, setShowQuestionDetails] = useState(false);
+
+  // Run Limits for Judge0 compiler protection (5 runs per question)
+  const MAX_RUNS_PER_QUESTION = 5;
+  const runStorageKey = useMemo(() => `free_assessment_runs_${programId || 'default'}`, [programId]);
+  const [runCounts, setRunCounts] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`free_assessment_runs_${programId || 'default'}`);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [customInput, setCustomInput] = useState('');
+  const [activeTerminalTab, setActiveTerminalTab] = useState('output'); // 'output' | 'input'
+  const [executionResult, setExecutionResult] = useState(null);
+
+  // 30-Minute Countdown Timer (1800 seconds)
+  const timerStorageKey = useMemo(() => `free_assessment_timer_${programId || 'default'}`, [programId]);
+  const [timeLeft, setTimeLeft] = useState(() => {
+    try {
+      const saved = localStorage.getItem(timerStorageKey);
+      if (saved !== null) {
+        const parsed = parseInt(saved, 10);
+        return isNaN(parsed) || parsed <= 0 ? 30 * 60 : parsed;
+      }
+    } catch (e) {
+      console.warn('Could not read timer from localStorage:', e);
+    }
+    return 30 * 60; // 30 minutes
+  });
+
+  const currentRunsUsed = runCounts[activeQuestionIndex] || 0;
+  const currentRunsLeft = Math.max(0, MAX_RUNS_PER_QUESTION - currentRunsUsed);
 
   // Load assignment data
   useEffect(() => {
@@ -97,6 +144,9 @@ export default function FreeAssessmentTest() {
 
           if (ass.status === 'Completed') {
             setIsCompleted(true);
+            try {
+              localStorage.removeItem(timerStorageKey);
+            } catch (e) {}
             setFinalResult({
               score: ass.score ?? ass.accuracy ?? 0,
               accuracy: ass.accuracy ?? 0,
@@ -120,7 +170,39 @@ export default function FreeAssessmentTest() {
     return () => {
       isMounted = false;
     };
-  }, [programId]);
+  }, [programId, timerStorageKey]);
+
+  // 30-Minute Countdown Timer ticking effect with auto-submit
+  useEffect(() => {
+    if (loading || isCompleted || showEndModal) return;
+
+    if (timeLeft <= 0) {
+      handleFinishAssessment();
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        const next = prev - 1;
+        try {
+          if (next > 0) {
+            localStorage.setItem(timerStorageKey, String(next));
+          } else {
+            localStorage.removeItem(timerStorageKey);
+          }
+        } catch (e) {}
+
+        if (next <= 0) {
+          clearInterval(interval);
+          handleFinishAssessment();
+          return 0;
+        }
+        return next;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [loading, isCompleted, showEndModal, timeLeft, timerStorageKey]);
 
   const questions = useMemo(() => assignment?.questions || [], [assignment]);
   const currentItem = questions[activeQuestionIndex];
@@ -169,6 +251,9 @@ export default function FreeAssessmentTest() {
   useEffect(() => {
     if (!currentItem) return;
     setOutput('');
+    setExecutionResult(null);
+    setCustomInput('');
+    setActiveTerminalTab('output');
 
     if (!isMcq) {
       const existing = codeSolutions[activeQuestionIndex];
@@ -199,6 +284,93 @@ export default function FreeAssessmentTest() {
       LANGUAGES[lang]?.starter ||
       '';
     setCode(starter);
+  };
+
+  const handleRunCode = async () => {
+    if (running || submitting || !currentItem) return;
+
+    if (!code.trim()) {
+      setOutput('Please write code before running.');
+      return;
+    }
+
+    if (currentRunsLeft <= 0) {
+      setOutput(`Run limit reached for this question (${MAX_RUNS_PER_QUESTION}/${MAX_RUNS_PER_QUESTION} runs used). You can still submit your final solution.`);
+      return;
+    }
+
+    setRunning(true);
+    setOutput('Running your code...');
+
+    try {
+      // Record run count usage
+      const nextCounts = {
+        ...runCounts,
+        [activeQuestionIndex]: (runCounts[activeQuestionIndex] || 0) + 1,
+      };
+      setRunCounts(nextCounts);
+      try {
+        localStorage.setItem(runStorageKey, JSON.stringify(nextCounts));
+      } catch (e) {}
+
+      const inputPayload = (questionDetails?.visibleTestCases?.[0]?.input || '');
+
+      const response = await compilerAPI.compileCode({
+        language: selectedLanguage,
+        source_code: code,
+        stdin: inputPayload,
+      });
+
+      const outputLines = [];
+
+      if (response?.compile_output) {
+        outputLines.push('❌ Execution failed.');
+        if (response.compile_output) {
+          outputLines.push(response.compile_output);
+        }
+      } else if (response?.stderr) {
+        outputLines.push('❌ Execution failed.');
+        if (response.stderr) {
+          outputLines.push(response.stderr);
+        }
+      } else {
+        outputLines.push('✅ Code executed successfully.');
+
+        if (response?.stdout) {
+          outputLines.push(`\nConsole Output:\n${response.stdout}`);
+        }
+
+        if (response?.time != null) {
+          outputLines.push(`Execution Time: ${response.time}s`);
+        }
+        if (response?.memory != null) {
+          outputLines.push(`Memory Usage: ${response.memory} KB`);
+        }
+
+        // Visible test cases if available
+        if (Array.isArray(questionDetails?.visibleTestCases) && questionDetails.visibleTestCases.length > 0) {
+          outputLines.push(`\nSample Test Cases:`);
+          questionDetails.visibleTestCases.forEach((tc, idx) => {
+            const actual = (response?.stdout || '').trim();
+            const expected = (tc.output || '').trim();
+            const passed = actual === expected;
+            outputLines.push(
+              `  Test ${idx + 1}: ${passed ? '✅ Passed' : '❌ Failed'}\n` +
+              `    Input: ${tc.input ?? 'N/A'}\n` +
+              `    Expected: ${tc.output ?? 'N/A'}\n` +
+              `    Actual: ${actual || '(empty)'}`
+            );
+          });
+        }
+      }
+
+      setOutput(outputLines.join('\n'));
+    } catch (err) {
+      console.error('Run error:', err);
+      setOutput(err.message || 'Run failed.');
+    } finally {
+      setRunning(false);
+    }
   };
 
   const handleSubmitCurrent = async () => {
@@ -257,6 +429,10 @@ export default function FreeAssessmentTest() {
   const handleFinishAssessment = async () => {
     setShowEndModal(false);
     setSubmitting(true);
+    try {
+      localStorage.removeItem(timerStorageKey);
+      localStorage.removeItem(runStorageKey);
+    } catch (e) {}
 
     try {
       // Fetch latest assignment status / report
@@ -594,11 +770,13 @@ export default function FreeAssessmentTest() {
   const options = questionDetails.options || [];
   const selectedOption = selectedAnswers[activeQuestionIndex];
   const isQuestionSubmitted = submittedQuestions.has(activeQuestionIndex);
+  const candidateRole = assignment?.targetRole || user?.targetRole || 'Software Developer';
+  const candidateCompany = assignment?.targetCompanies?.[0] || 'Tech Corp';
 
   return (
     <div className="flex min-h-screen lg:h-screen flex-col lg:overflow-hidden bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] font-sans">
       {/* Top Bar Header */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-black/5 dark:border-white/10 bg-white/50 dark:bg-gray-900/60 px-6 backdrop-blur-xl">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-black/5 dark:border-white/10 bg-white/50 dark:bg-gray-900/60 px-4 sm:px-6 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <img
             src={theme === 'dark' ? '/logoo2-small.webp' : '/logoo-small.webp'}
@@ -607,11 +785,28 @@ export default function FreeAssessmentTest() {
           />
           <span className="hidden h-5 w-px bg-black/10 dark:bg-white/10 sm:block" />
           <span className="text-xs font-bold uppercase tracking-wider text-[#00113b] dark:text-[#8fd9ff]">
-            Free Assessment
+            30-Minute Interview
           </span>
+          <div className="hidden md:flex items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-full border border-black/5 dark:border-white/5">
+            <span>{candidateRole}</span>
+            <span className="text-slate-400">·</span>
+            <span className="text-blue-600 dark:text-blue-400">{candidateCompany}</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* 30-Minute Countdown Timer */}
+          <div
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-mono font-bold transition-colors ${
+              timeLeft < 300
+                ? 'border-red-500/40 bg-red-500/15 text-red-600 dark:text-red-400 animate-pulse'
+                : 'border-blue-500/20 bg-blue-500/10 text-blue-700 dark:text-blue-300'
+            }`}
+          >
+            <Clock className={`h-3.5 w-3.5 ${timeLeft < 300 ? 'text-red-500' : 'text-blue-500'}`} />
+            <span>{formatTime(timeLeft)}</span>
+          </div>
+
           <div className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 bg-white/30 dark:bg-black/30 border border-black/5 dark:border-white/5 px-3 py-1.5 rounded-full">
             <span>Question {activeQuestionIndex + 1} of {questions.length}</span>
             <span className="text-slate-400">•</span>
@@ -841,56 +1036,109 @@ export default function FreeAssessmentTest() {
             </div>
 
             {/* Right Editor & Terminal Panel */}
-            <div className="flex flex-col w-full lg:w-1/2 rounded-2xl border border-black/10 dark:border-white/10 bg-white/40 dark:bg-[#071330] p-3 shadow-sm flex-1">
-              <div className="flex items-center justify-between pb-2 border-b border-black/5 dark:border-white/5 px-2">
-                <div className="flex gap-2">
-                  {['java', 'python'].map((lang) => (
+            <div className="flex flex-col w-full lg:w-1/2 gap-2.5 flex-1 lg:overflow-hidden">
+              {/* Card 1: Code Editor Card */}
+              <section className="flex flex-col overflow-hidden rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 shrink-0">
+                {/* Editor Header Toolbar */}
+                <div className="flex items-center justify-between pb-2 border-b border-black/5 dark:border-white/5 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs sm:text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
+                      Code Editor
+                    </span>
+                    <div className="flex gap-1">
+                      {['java', 'python'].map((lang) => (
+                        <button
+                          key={lang}
+                          type="button"
+                          onClick={() => handleLanguageChange(lang)}
+                          className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase transition cursor-pointer ${
+                            selectedLanguage === lang
+                              ? 'bg-[#0043A1] text-white shadow-xs'
+                              : 'bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/5 hover:border-blue-400'
+                          }`}
+                        >
+                          {lang}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
                     <button
-                      key={lang}
                       type="button"
-                      onClick={() => handleLanguageChange(lang)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold uppercase transition cursor-pointer ${
-                        selectedLanguage === lang
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-black/5 dark:bg-white/5 text-slate-600 dark:text-slate-400'
-                      }`}
+                      onClick={handleRunCode}
+                      disabled={running || submitting || currentRunsLeft <= 0}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#0043A1]/20 dark:border-[#0043A1]/40 bg-[#0043A1]/5 dark:bg-[#0043A1]/15 px-2.5 py-1 text-xs font-semibold text-[#0043A1] dark:text-[#93c5fd] hover:bg-[#0043A1]/15 dark:hover:bg-[#0043A1]/35 transition-all duration-200 active:scale-[0.98] disabled:opacity-40 cursor-pointer"
                     >
-                      {lang}
+                      {running ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <span>Running...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-3.5 w-3.5 fill-current" />
+                          <span>Run ({currentRunsLeft})</span>
+                        </>
+                      )}
                     </button>
-                  ))}
+
+                    <button
+                      type="button"
+                      onClick={handleSubmitCurrent}
+                      disabled={submitting || running}
+                      className="inline-flex items-center gap-1 rounded-lg bg-[#0043A1] hover:bg-[#003680] px-3 py-1 text-xs font-semibold text-white transition-all duration-200 active:scale-[0.98] shadow-sm disabled:opacity-60 cursor-pointer"
+                    >
+                      <SendHorizontal className="h-3.5 w-3.5" />
+                      <span>{submitting ? 'Submitting...' : 'Submit & Next'}</span>
+                    </button>
+                  </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleSubmitCurrent}
-                  disabled={submitting}
-                  className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50"
-                >
-                  {submitting ? 'Submitting...' : 'Submit Solution'}
-                </button>
-              </div>
-
-              <div className="flex-1 min-h-[300px] mt-2 rounded-xl overflow-hidden border border-black/10 dark:border-white/10">
-                <Editor
-                  height="100%"
-                  language={LANGUAGES[selectedLanguage]?.monacoLanguage || 'java'}
-                  value={code}
-                  onChange={(val) => setCode(val || '')}
-                  theme={isDarkMode ? 'vs-dark' : 'light'}
-                  options={{
-                    fontSize: 13,
-                    minimap: { enabled: false },
-                    scrollBeyondLastLine: false,
-                    wordWrap: 'on',
-                  }}
-                />
-              </div>
-
-              {output && (
-                <div className="mt-2 rounded-xl border border-black/10 dark:border-white/10 bg-slate-900 text-slate-100 p-3 text-xs font-mono max-h-32 overflow-y-auto">
-                  {output}
+                {/* Monaco Editor Container */}
+                <div className="h-[240px] sm:h-[270px] overflow-hidden border border-gray-300 dark:border-gray-700 rounded-lg">
+                  <Editor
+                    height="100%"
+                    language={LANGUAGES[selectedLanguage]?.monacoLanguage || 'java'}
+                    value={code}
+                    onChange={(val) => setCode(val || '')}
+                    theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                    options={{
+                      fontSize: 13,
+                      minimap: { enabled: false },
+                      scrollBeyondLastLine: false,
+                      wordWrap: 'on',
+                    }}
+                  />
                 </div>
-              )}
+              </section>
+
+              {/* Card 2: Terminal Output Card */}
+              <section className="flex flex-col overflow-hidden rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 flex-1 min-h-[140px]">
+                <div className="flex items-center justify-between mb-2 shrink-0">
+                  <div className="font-semibold text-sm text-[#0d2a57] dark:text-[#8fd9ff]">
+                    Terminal
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                      Runs left: {currentRunsLeft}/{MAX_RUNS_PER_QUESTION}
+                    </span>
+                    {output && (
+                      <button
+                        type="button"
+                        onClick={() => setOutput('')}
+                        className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 text-[11px] underline cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <pre className="flex-grow overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed bg-white/60 dark:bg-black/35 p-2.5 rounded-none border border-black/5 dark:border-gray-700 text-gray-800 dark:text-emerald-400">
+                  {output || 'Run your code to see result output here.'}
+                </pre>
+              </section>
             </div>
           </div>
         </div>

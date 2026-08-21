@@ -62,6 +62,7 @@ const CertificationPayment = lazy(() => import('./pages/Learn/CertificationPayme
 const OnlineCompiler = lazy(() => import('./pages/Learn/OnlineCompiler'))
 const DynamicPracticeQuestions = lazy(() => import('./pages/Learn/DynamicPracticeQuestions'))
 const ProgramLearningExperience = lazy(() => import('./pages/Learn/ProgramLearningExperience'))
+const FreeAssessmentSetup = lazy(() => import('./pages/Assessment/FreeAssessmentSetup'))
 const FreeAssessmentTest = lazy(() => import('./pages/Assessment/FreeAssessmentTest'))
 
 const Roadmaps = lazy(() => import('./pages/Resources/Roadmaps'))
@@ -222,12 +223,10 @@ function LayoutWrapper() {
     location.pathname === '/dashboard/profile' ||
     location.pathname.startsWith('/dashboard/profile/');
 
-  const isHomePage = location.pathname === '/';
   const showNavbar = !['/mcq'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
                      !location.pathname.startsWith('/daily-challenge/') &&
-                     !location.pathname.startsWith('/free-assessment') &&
-                     !isHomePage;
+                     !location.pathname.startsWith('/free-assessment');
 
   const showFooter = !['/mcq', '/signup', '/login'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
@@ -250,7 +249,6 @@ function LayoutWrapper() {
           <Route element={<PrivateRoute />}>
             <Route path="/onboarding/programs" element={<OnboardingPrograms />} />
             <Route path="/free-assessment/:programId" element={<FreeAssessmentTest />} />
-            <Route path="/free-assessment" element={<FreeAssessmentTest />} />
             <Route path="/learn/program/:programId" element={<ProgramLearningExperience />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/demo" element={<DemoDashboard />} />
@@ -330,6 +328,8 @@ function LayoutWrapper() {
           <Route path="/interview/sql-questions" element={<SqlQuestions />} />
           <Route path="/interview/core-cs-questions" element={<CoreCsQuestions />} />
           <Route path="/interview/company-based-questions" element={<CompanyQuestions />} />
+          <Route path="/free-assessment" element={<FreeAssessmentSetup />} />
+          <Route path="/free-assessment/setup" element={<FreeAssessmentSetup />} />
 
           <Route path="/compiler" element={<OnlineCompiler />} />
           <Route path="/build" element={<BuildPageMain />} />
