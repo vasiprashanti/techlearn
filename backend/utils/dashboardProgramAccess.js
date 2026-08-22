@@ -88,7 +88,7 @@ export const resolveDashboardProgramAccess = async ({
     status: "Active",
     visibility: "Public",
   })
-    .select("_id name programType duration durationDays status visibility")
+    .select("_id name programType duration durationDays status visibility pricingType")
     .lean();
   const programById = new Map(programs.map((program) => [String(program._id), program]));
 
@@ -102,6 +102,10 @@ export const resolveDashboardProgramAccess = async ({
     const programId = getIdString(enrollment.programId);
     const program = programById.get(programId);
     if (!program) continue;
+
+    // Paid access is a server-side entitlement. A stale or malformed
+    // enrollment with a Free tier must not put a paid program on Dashboard.
+    if (program.pricingType === "Paid" && enrollment.accessTier !== "Member") continue;
 
     const batchId = getEffectiveEnrollmentBatchId({
       enrollment,
@@ -132,4 +136,3 @@ export const resolveDashboardProgramAccess = async ({
 
   return null;
 };
-

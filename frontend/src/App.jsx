@@ -5,7 +5,7 @@ import Footer from './components/Footer'
 import ScrollToTop from './components/ScrollToTop'
 import ExternalLinkHandler from './components/ExternalLinkHandler'
 import { ThemeProvider } from './context/ThemeContext'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { AuthModalProvider } from './context/AuthModalContext'
 import { UserProvider } from './context/UserContext'
 import PrivateRoute from './Routes/PrivateRoute'
@@ -22,6 +22,7 @@ const DemoDashboard = lazy(() => import('./pages/Dashboard/Demo'))
 const ProjectDayNotes = lazy(() => import('./pages/Dashboard/ProjectDayNotes'))
 const ProjectOverview = lazy(() => import('./pages/Dashboard/ProjectOverview'))
 const Performance = lazy(() => import('./pages/Dashboard/Performance'))
+const LearnerReports = lazy(() => import('./pages/Dashboard/Reports'))
 const DashboardSettings = lazy(() => import('./pages/Dashboard/Settings'))
 const OnboardingPrograms = lazy(() => import('./pages/Onboarding/OnboardingPrograms'))
 const Languages = lazy(() => import('./pages/Dashboard/Languages'))
@@ -64,6 +65,8 @@ const CertificationPayment = lazy(() => import('./pages/Learn/CertificationPayme
 const OnlineCompiler = lazy(() => import('./pages/Learn/OnlineCompiler'))
 const DynamicPracticeQuestions = lazy(() => import('./pages/Learn/DynamicPracticeQuestions'))
 const ProgramLearningExperience = lazy(() => import('./pages/Learn/ProgramLearningExperience'))
+const FreeAssessmentSetup = lazy(() => import('./pages/Assessment/FreeAssessmentSetup'))
+const FreeAssessmentTest = lazy(() => import('./pages/Assessment/FreeAssessmentTest'))
 
 const Roadmaps = lazy(() => import('./pages/Resources/Roadmaps'))
 const ResumeTemplates = lazy(() => import('./pages/Resources/ResumeTemplates'))
@@ -180,6 +183,7 @@ function RouteFallback() {
 
 function LayoutWrapper() {
   const location = useLocation();
+  const { isAuthenticated, user } = useAuth();
 
   // NEW: Array containing all our sidebar dashboard routes
   const adminSidebarRoutes = [
@@ -217,22 +221,22 @@ function LayoutWrapper() {
     location.pathname.startsWith('/learn/interview-questions') ||
     location.pathname.startsWith('/core-prep/languages') ||
     location.pathname.startsWith('/core-prep/important-concepts') ||
-    location.pathname.startsWith('/resources/roadmaps') ||
+    (Boolean(isAuthenticated && user) && (location.pathname.startsWith('/resources/roadmaps') || location.pathname.startsWith('/roadmaps') || location.pathname === '/dashboard/roadmap')) ||
     location.pathname.startsWith('/resources/resume-templates') ||
     location.pathname.startsWith('/learn/exercises') ||
     location.pathname.startsWith('/learn/program/') ||
     location.pathname === '/dashboard/profile' ||
     location.pathname.startsWith('/dashboard/profile/');
 
-  const isHomePage = location.pathname === '/';
   const showNavbar = !['/mcq'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
                      !location.pathname.startsWith('/daily-challenge/') &&
-                     !isHomePage;
+                     !location.pathname.startsWith('/free-assessment');
 
   const showFooter = !['/mcq', '/signup', '/login'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
                      !location.pathname.startsWith('/daily-challenge/') &&
+                     !location.pathname.startsWith('/free-assessment') &&
                      !isDashboardRoute &&
                      !isStudentSidebarRoute;
 
@@ -249,6 +253,7 @@ function LayoutWrapper() {
           
           <Route element={<PrivateRoute />}>
             <Route path="/onboarding/programs" element={<OnboardingPrograms />} />
+            <Route path="/free-assessment/:programId" element={<FreeAssessmentTest />} />
             <Route path="/learn/program/:programId" element={<ProgramLearningExperience />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/demo" element={<DemoDashboard />} />
@@ -274,6 +279,7 @@ function LayoutWrapper() {
             <Route path="/dashboard/practice/company-based/mock/:company/:questionId" element={<CompanyMockQuestionDetail />} />
             <Route path="/dashboard/practice/category/:categorySlug" element={<DynamicPracticeQuestions />} />
             <Route path="/dashboard/performance" element={<Performance />} />
+            <Route path="/dashboard/reports" element={<LearnerReports />} />
             <Route path="/dashboard/leaderboard" element={<Leaderboard />} />
              <Route path="/dashboard/resources" element={<ResourcesHub />} />
             <Route path="/dashboard/resources/free-courses" element={<Navigate to="/learn" replace />} />
@@ -284,28 +290,6 @@ function LayoutWrapper() {
             <Route path="/dashboard/account" element={<Navigate to="/dashboard/profile" replace />} />
             <Route path="/dashboard/profile/settings" element={<DashboardSettings />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
-            <Route path="/learn/interview-questions" element={<AllInterviewQuestions />} />
-            <Route path="/learn/interview-questions/dsa" element={<DsaQuestions />} />
-            <Route path="/learn/interview-questions/sql" element={<SqlQuestions />} />
-            <Route path="/learn/interview-questions/core-cs" element={<CoreCsQuestions />} />
-            <Route path="/learn/interview-questions/aptitude" element={<AptitudeQuestions />} />
-            <Route path="/learn/interview-questions/company" element={<CompanyQuestions />} />
-            <Route path="/learn/interview-questions/dsa/:questionId" element={<InterviewDsaQuestionDetail />} />
-            <Route path="/learn/interview-questions/sql/:questionId" element={<InterviewSqlQuestionDetail />} />
-            <Route path="/learn/interview-questions/core-cs/:questionId" element={<InterviewCoreCsQuestionDetail />} />
-            <Route path="/learn/interview-questions/aptitude/:questionId" element={<InterviewAptitudeQuestionDetail />} />
-            <Route path="/learn/interview-questions/company/:questionId" element={<InterviewCompanyQuestionDetail />} />
-            <Route path="/learn/interview-questions/company/mock/:company/:questionId" element={<CompanyMockQuestionDetail />} />
-            <Route path="/interview/all-questions" element={<AllInterviewQuestions />} />
-            <Route path="/interview/dsa-questions" element={<DsaQuestions />} />
-            <Route path="/interview/sql-questions" element={<SqlQuestions />} />
-            <Route path="/interview/core-cs-questions" element={<CoreCsQuestions />} />
-            <Route path="/interview/company-based-questions" element={<CompanyQuestions />} />
-            <Route path="/core-prep/languages" element={<Languages />} />
-            <Route path="/core-prep/important-concepts" element={<Concepts />} />
-            <Route path="/core-prep/important-concepts/:conceptId" element={<ImportantConceptDetail />} />
-            <Route path="/resources/roadmaps" element={<Roadmaps />} />
-            <Route path="/resources/resume-templates" element={<ResumeTemplates />} />
             <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />
           </Route>
           
@@ -325,6 +309,34 @@ function LayoutWrapper() {
           <Route path="/learn/exercises/:courseId/:exerciseId" element={<ExerciseDetail />} />
           <Route path="/learn/certification" element={<Certification />} />
           <Route path="/learn/certification/payment" element={<CertificationPayment />} />
+          
+          {/* Guest-accessible resource & interview routes */}
+          <Route path="/roadmaps" element={<Roadmaps />} />
+          <Route path="/resources/roadmaps" element={<Roadmaps />} />
+          <Route path="/resources/resume-templates" element={<ResumeTemplates />} />
+          <Route path="/core-prep/languages" element={<Languages />} />
+          <Route path="/core-prep/important-concepts" element={<Concepts />} />
+          <Route path="/core-prep/important-concepts/:conceptId" element={<ImportantConceptDetail />} />
+          <Route path="/learn/interview-questions" element={<AllInterviewQuestions />} />
+          <Route path="/learn/interview-questions/dsa" element={<DsaQuestions />} />
+          <Route path="/learn/interview-questions/sql" element={<SqlQuestions />} />
+          <Route path="/learn/interview-questions/core-cs" element={<CoreCsQuestions />} />
+          <Route path="/learn/interview-questions/aptitude" element={<AptitudeQuestions />} />
+          <Route path="/learn/interview-questions/company" element={<CompanyQuestions />} />
+          <Route path="/learn/interview-questions/dsa/:questionId" element={<InterviewDsaQuestionDetail />} />
+          <Route path="/learn/interview-questions/sql/:questionId" element={<InterviewSqlQuestionDetail />} />
+          <Route path="/learn/interview-questions/core-cs/:questionId" element={<InterviewCoreCsQuestionDetail />} />
+          <Route path="/learn/interview-questions/aptitude/:questionId" element={<InterviewAptitudeQuestionDetail />} />
+          <Route path="/learn/interview-questions/company/:questionId" element={<InterviewCompanyQuestionDetail />} />
+          <Route path="/learn/interview-questions/company/mock/:company/:questionId" element={<CompanyMockQuestionDetail />} />
+          <Route path="/interview/all-questions" element={<AllInterviewQuestions />} />
+          <Route path="/interview/dsa-questions" element={<DsaQuestions />} />
+          <Route path="/interview/sql-questions" element={<SqlQuestions />} />
+          <Route path="/interview/core-cs-questions" element={<CoreCsQuestions />} />
+          <Route path="/interview/company-based-questions" element={<CompanyQuestions />} />
+          <Route path="/free-assessment" element={<FreeAssessmentSetup />} />
+          <Route path="/free-assessment/setup" element={<FreeAssessmentSetup />} />
+
           <Route path="/compiler" element={<OnlineCompiler />} />
           <Route path="/build" element={<BuildPageMain />} />
           <Route path="/build/mini/:id" element={<ProjectDetail />} />

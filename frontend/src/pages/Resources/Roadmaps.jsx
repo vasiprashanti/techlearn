@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -7,6 +8,7 @@ import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github-dark.css';
 import {
   AlertCircle,
+  ArrowLeft,
   ArrowRight,
   CheckCircle2,
   Loader2,
@@ -14,6 +16,7 @@ import {
 } from 'lucide-react';
 import ScrollProgress from '../../components/ScrollProgress';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
+import { useAuth } from '../../context/AuthContext';
 import { resourceAPI } from '../../services/api';
 
 const ROADMAP_PATH = '/resources/roadmaps/roadmap.md';
@@ -208,6 +211,9 @@ const markdownComponents = {
 };
 
 export default function Roadmaps() {
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
   const [markdown, setMarkdown] = useState('');
   const [roadmapTitle, setRoadmapTitle] = useState('Roadmap');
   const [roadmapDescription, setRoadmapDescription] = useState('');
@@ -341,156 +347,180 @@ export default function Roadmaps() {
     };
   }, [error, loading]);
 
-  return (
-    <UserSidebarLayout maxWidthClass="max-w-[1180px]">
-      <ScrollProgress />
+  const roadmapContent = (
+    <div className="space-y-8 pb-8">
+      <motion.div
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.65 }}
+        className="mx-auto max-w-4xl pt-2 text-center md:pt-4"
+      >
+        <h1 className="font-press-start leading-normal">
+          <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
+            {heroTitle.toUpperCase()}
+          </span>
+        </h1>
+        {heroDescription && (
+          <p className="mt-3.5 text-sm leading-6 text-[#00113b]/65 dark:text-[#afcff1]/70 max-w-2xl mx-auto">
+            {heroDescription}
+          </p>
+        )}
+      </motion.div>
 
-      <div className="space-y-8 pb-8">
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.65 }}
-          className="mx-auto max-w-4xl pt-2 text-center md:pt-4"
-        >
-          <h1 className="font-press-start leading-normal">
-            <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
-              {heroTitle.toUpperCase()}
-            </span>
-          </h1>
-          {heroDescription && (
-            <p className="mt-3.5 text-sm leading-6 text-[#00113b]/65 dark:text-[#afcff1]/70 max-w-2xl mx-auto">
-              {heroDescription}
-            </p>
-          )}
-        </motion.div>
+      {loading ? (
+        <section className="flex min-h-[360px] items-center justify-center">
+          <div className="inline-flex items-center gap-3 rounded-full border border-[#86c4ff]/45 bg-white/40 px-5 py-3 text-sm font-medium text-[#00113b] shadow-sm shadow-[#3c83f6]/10 backdrop-blur-xl dark:border-[#6fbfff]/24 dark:bg-[#051738]/75 dark:text-[#8fd9ff]">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading roadmap content
+          </div>
+        </section>
+      ) : error ? (
+        <section className="dashboard-surface dashboard-surface-strong mx-auto max-w-2xl border-dashed p-8 text-center">
+          <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#8ec8ff] bg-[#e4f4ff] text-[#1266af] dark:border-[#6fbfff] dark:bg-[#14406f] dark:text-[#9cd6ff]">
+            <AlertCircle className="h-5 w-5" />
+          </div>
+          <h2 className="text-2xl font-semibold tracking-tight text-[#00113b] dark:text-[#d3edff]">{statusCopy.title}</h2>
+          <p className="mt-3 text-sm leading-7 text-[#00113b]/65 dark:text-[#afcff1]">{statusCopy.description}</p>
+        </section>
+      ) : isEmpty ? (
+        <section className="dashboard-surface dashboard-surface-strong mx-auto max-w-2xl border-dashed p-8 text-center">
+          <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#8ec8ff]/45 bg-white/40 px-5 py-5 text-[#1266af] dark:border-[#6fbfff]/24 dark:bg-[#051738]/75 dark:text-[#9cd6ff]">
+            <AlertCircle className="h-5 w-5" />
+          </div>
+          <h2 className="text-2xl font-semibold tracking-tight text-[#00113b] dark:text-[#d3edff]">No Roadmap Available</h2>
+          <p className="mt-3 text-sm leading-7 text-[#00113b]/65 dark:text-[#afcff1]">
+            There is no roadmap assigned to your program yet. Please check back later.
+          </p>
+        </section>
+      ) : (
+        <>
+          <section className="relative mx-auto max-w-[520px] md:max-w-[1040px]">
+            <div className="pointer-events-none absolute left-1/2 top-3 hidden h-[calc(100%-1.5rem)] w-px -translate-x-1/2 bg-[#86c4ff]/45 md:block dark:bg-[#28537f]/75" />
 
-        {loading ? (
-          <section className="flex min-h-[360px] items-center justify-center">
-            <div className="inline-flex items-center gap-3 rounded-full border border-[#86c4ff]/45 bg-white/40 px-5 py-3 text-sm font-medium text-[#00113b] shadow-sm shadow-[#3c83f6]/10 backdrop-blur-xl dark:border-[#6fbfff]/24 dark:bg-[#051738]/75 dark:text-[#8fd9ff]">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading roadmap content
-            </div>
-          </section>
-        ) : error ? (
-          <section className="dashboard-surface dashboard-surface-strong mx-auto max-w-2xl border-dashed p-8 text-center">
-            <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#8ec8ff] bg-[#e4f4ff] text-[#1266af] dark:border-[#6fbfff] dark:bg-[#14406f] dark:text-[#9cd6ff]">
-              <AlertCircle className="h-5 w-5" />
-            </div>
-            <h2 className="text-2xl font-semibold tracking-tight text-[#00113b] dark:text-[#d3edff]">{statusCopy.title}</h2>
-            <p className="mt-3 text-sm leading-7 text-[#00113b]/65 dark:text-[#afcff1]">{statusCopy.description}</p>
-          </section>
-        ) : isEmpty ? (
-          <section className="dashboard-surface dashboard-surface-strong mx-auto max-w-2xl border-dashed p-8 text-center">
-            <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#8ec8ff]/45 bg-white/40 px-5 py-5 text-[#1266af] dark:border-[#6fbfff]/24 dark:bg-[#051738]/75 dark:text-[#9cd6ff]">
-              <AlertCircle className="h-5 w-5" />
-            </div>
-            <h2 className="text-2xl font-semibold tracking-tight text-[#00113b] dark:text-[#d3edff]">No Roadmap Available</h2>
-            <p className="mt-3 text-sm leading-7 text-[#00113b]/65 dark:text-[#afcff1]">
-              There is no roadmap assigned to your program yet. Please check back later.
-            </p>
-          </section>
-        ) : (
-          <>
-            <section className="relative mx-auto max-w-[520px] md:max-w-[1040px]">
-              <div className="pointer-events-none absolute left-1/2 top-3 hidden h-[calc(100%-1.5rem)] w-px -translate-x-1/2 bg-[#86c4ff]/45 md:block dark:bg-[#28537f]/75" />
-
-              <div className="space-y-6 md:space-y-8">
-                {parsedRoadmap.steps.map((step, index) => {
-                  const isRight = index % 2 === 1;
-                  return (
-                    <motion.div
-                      key={step.id}
-                      initial={{ opacity: 0, y: 18 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, margin: '-80px' }}
-                      transition={{ duration: 0.45, delay: Math.min(index * 0.03, 0.18) }}
-                      className="relative grid items-start gap-3 md:grid-cols-[1fr_60px_1fr] md:gap-0"
-                    >
-                      <div className="absolute left-1/2 top-6 z-10 hidden h-3.5 w-3.5 -translate-x-1/2 rounded-full border-[4px] border-[#e0f5ff] bg-[#0000a8] shadow-[0_0_0_1px_rgba(0,17,59,0.08)] md:block dark:border-[#06142f] dark:bg-[#79cfff]" />
-
-                      <button
-                        type="button"
-                        onClick={() => setActiveStepId(step.id)}
-                        className={`dashboard-surface group relative w-full rounded-2xl px-5 py-5 text-left text-[#00113b] transition duration-300 hover:-translate-y-1 hover:border-[#3C83F6]/55 hover:bg-white/55 hover:shadow-lg dark:text-[#dff3ff] dark:hover:border-[#34699e] dark:hover:bg-[#071a3d] md:min-h-[96px] ${
-                          isRight ? 'md:col-start-3' : 'md:col-start-1'
-                        }`}
-                        aria-expanded={step.id === activeStepId}
-                      >
-                        <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-[#0000a8] dark:text-[#89d6ff]">
-                          {step.label}
-                        </span>
-                        <span className="mt-2 block pr-9 text-lg font-semibold tracking-tight sm:text-xl">{step.title}</span>
-                        <span className="absolute right-5 top-5 inline-flex h-7 w-7 items-center justify-center rounded-full text-[#00113b]/45 transition group-hover:translate-x-1 group-hover:text-[#0000a8] dark:text-white/45 dark:group-hover:text-[#8fd9ff]">
-                          <ArrowRight className="h-4 w-4" />
-                        </span>
-                      </button>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </section>
-
-            {createPortal(
-              <AnimatePresence mode="wait">
-                {activeStep && (
+            <div className="space-y-6 md:space-y-8">
+              {parsedRoadmap.steps.map((step, index) => {
+                const isRight = index % 2 === 1;
+                return (
                   <motion.div
-                    key="roadmap-detail-drawer"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-[2000] flex justify-end bg-[#00113b]/55 backdrop-blur-[1px]"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="roadmap-detail-title"
+                    key={step.id}
+                    initial={{ opacity: 0, y: 18 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: '-80px' }}
+                    transition={{ duration: 0.45, delay: Math.min(index * 0.03, 0.18) }}
+                    className="relative grid items-start gap-3 md:grid-cols-[1fr_60px_1fr] md:gap-0"
+                  >
+                    <div className="absolute left-1/2 top-6 z-10 hidden h-3.5 w-3.5 -translate-x-1/2 rounded-full border-[4px] border-[#e0f5ff] bg-[#0000a8] shadow-[0_0_0_1px_rgba(0,17,59,0.08)] md:block dark:border-[#06142f] dark:bg-[#79cfff]" />
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveStepId(step.id)}
+                      className={`dashboard-surface group relative w-full rounded-2xl px-5 py-5 text-left text-[#00113b] transition duration-300 hover:-translate-y-1 hover:border-[#3C83F6]/55 hover:bg-white/55 hover:shadow-lg dark:text-[#dff3ff] dark:hover:border-[#34699e] dark:hover:bg-[#071a3d] md:min-h-[96px] ${
+                        isRight ? 'md:col-start-3' : 'md:col-start-1'
+                      }`}
+                      aria-expanded={step.id === activeStepId}
+                    >
+                      <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-[#0000a8] dark:text-[#89d6ff]">
+                        {step.label}
+                      </span>
+                      <span className="mt-2 block pr-9 text-lg font-semibold tracking-tight sm:text-xl">{step.title}</span>
+                      <span className="absolute right-5 top-5 inline-flex h-7 w-7 items-center justify-center rounded-full text-[#00113b]/45 transition group-hover:translate-x-1 group-hover:text-[#0000a8] dark:text-white/45 dark:group-hover:text-[#8fd9ff]">
+                        <ArrowRight className="h-4 w-4" />
+                      </span>
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </section>
+
+          {createPortal(
+            <AnimatePresence mode="wait">
+              {activeStep && (
+                <motion.div
+                  key="roadmap-detail-drawer"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 z-[2000] flex justify-end bg-[#00113b]/55 backdrop-blur-[1px]"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="roadmap-detail-title"
+                >
+                  <button
+                    type="button"
+                    aria-label="Close roadmap details"
+                    onClick={() => setActiveStepId('')}
+                    className="absolute inset-0 cursor-default"
+                  />
+
+                  <motion.aside
+                    initial={{ x: '100%' }}
+                    animate={{ x: 0 }}
+                    exit={{ x: '100%' }}
+                    transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                    className="relative z-10 h-full w-full max-w-[560px] overflow-y-auto bg-gradient-to-br from-[#bceaff] via-[#d9f3ff] to-[#bceaff] px-7 py-8 text-[#00113b] shadow-[-22px_0_60px_rgba(0,17,59,0.22)] [scrollbar-width:thin] [scrollbar-color:#7abdf2_transparent] dark:bg-none dark:bg-[#06142f] dark:text-white md:px-10 md:py-10"
                   >
                     <button
                       type="button"
-                      aria-label="Close roadmap details"
                       onClick={() => setActiveStepId('')}
-                      className="absolute inset-0 cursor-default"
-                    />
-
-                    <motion.aside
-                      initial={{ x: '100%' }}
-                      animate={{ x: 0 }}
-                      exit={{ x: '100%' }}
-                      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                      className="relative z-10 h-full w-full max-w-[560px] overflow-y-auto bg-gradient-to-br from-[#bceaff] via-[#d9f3ff] to-[#bceaff] px-7 py-8 text-[#00113b] shadow-[-22px_0_60px_rgba(0,17,59,0.22)] [scrollbar-width:thin] [scrollbar-color:#7abdf2_transparent] dark:bg-none dark:bg-[#06142f] dark:text-white md:px-10 md:py-10"
+                      className="absolute right-6 top-6 inline-flex h-10 w-10 items-center justify-center rounded-full text-[#00113b] transition hover:bg-[#00113b]/8 dark:text-white dark:hover:bg-white/10"
+                      aria-label="Close roadmap details"
                     >
-                      <button
-                        type="button"
-                        onClick={() => setActiveStepId('')}
-                        className="absolute right-6 top-6 inline-flex h-10 w-10 items-center justify-center rounded-full text-[#00113b] transition hover:bg-[#00113b]/8 dark:text-white dark:hover:bg-white/10"
-                        aria-label="Close roadmap details"
-                      >
-                        <X className="h-6 w-6" />
-                      </button>
+                      <X className="h-6 w-6" />
+                    </button>
 
-                      <div className="pr-12">
-                        <span className="mb-5 inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.15em] text-[#0000a8] dark:text-[#8fd9ff]">
-                          <CheckCircle2 className="h-4 w-4" />
-                          {activeStep.label}
-                        </span>
-                        <h2 id="roadmap-detail-title" className="text-3xl font-semibold leading-tight tracking-tight md:text-4xl">
-                          {activeStep.title}
-                        </h2>
-                      </div>
+                    <div className="pr-12">
+                      <span className="mb-5 inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.15em] text-[#0000a8] dark:text-[#8fd9ff]">
+                        <CheckCircle2 className="h-4 w-4" />
+                        {activeStep.label}
+                      </span>
+                      <h2 id="roadmap-detail-title" className="text-3xl font-semibold leading-tight tracking-tight md:text-4xl">
+                        {activeStep.title}
+                      </h2>
+                    </div>
 
-                      <div className="roadmap-markdown mt-10">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={markdownComponents}>
-                          {activeStep.body}
-                        </ReactMarkdown>
-                      </div>
-                    </motion.aside>
-                  </motion.div>
-                )}
-              </AnimatePresence>,
-              document.body
-            )}
-          </>
-        )}
+                    <div className="roadmap-markdown mt-10">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={markdownComponents}>
+                        {activeStep.body}
+                      </ReactMarkdown>
+                    </div>
+                  </motion.aside>
+                </motion.div>
+              )}
+            </AnimatePresence>,
+            document.body
+          )}
+        </>
+      )}
+    </div>
+  );
+
+  // If user is authenticated, render with the User Sidebar Layout
+  if (isAuthenticated && user) {
+    return (
+      <UserSidebarLayout maxWidthClass="max-w-[1180px]">
+        <ScrollProgress />
+        {roadmapContent}
+      </UserSidebarLayout>
+    );
+  }
+
+  // For guest users, render as a full page with a back button
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] pt-24 md:pt-28 pb-16 px-4 md:px-8">
+      <ScrollProgress />
+      <div className="mx-auto max-w-5xl">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="mb-6 inline-flex items-center gap-2 rounded-xl border border-black/10 dark:border-white/10 bg-white/40 dark:bg-white/5 hover:bg-white/70 dark:hover:bg-white/10 px-4 py-2 text-xs font-bold text-[#00113b] dark:text-[#8fd9ff] shadow-sm transition hover:-translate-x-0.5 cursor-pointer backdrop-blur-md"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>Back</span>
+        </button>
+        {roadmapContent}
       </div>
-    </UserSidebarLayout>
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   Award,
   Briefcase,
+  BarChart3,
   LayoutDashboard,
   Map,
   PlayCircle,
@@ -17,6 +18,7 @@ const menuGroups = [
     title: "MAIN",
     items: [
       { id: "dashboard", title: "Dashboard", icon: <LayoutDashboard className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "dashboard/reports", title: "Reports", icon: <BarChart3 className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/roadmap", title: "Roadmaps", icon: <Map className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/practice", title: "Practice", icon: <PlayCircle className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/leaderboard", title: "Leaderboard", icon: <Award className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
@@ -95,7 +97,7 @@ const Sidebar = () => {
           }}
         >
           <div className="shrink-0">{item.icon}</div>
-          <span className="text-[8px] md:text-[9.5px] font-medium tracking-wide text-center max-w-[80px] truncate leading-none">
+          <span className="text-[8px] md:text-[9.5px] font-semibold tracking-wide text-center max-w-[80px] truncate leading-none">
             {item.title}
           </span>
         </NavLink>

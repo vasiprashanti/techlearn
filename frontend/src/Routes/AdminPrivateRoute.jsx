@@ -55,7 +55,9 @@ export default function AdminPrivateRoute() {
   }, [openLogin, state]);
 
   if (state === 'checking') {
-    return <div className="min-h-screen flex items-center justify-center text-sm text-slate-500">Checking administrator access…</div>;
+    // Keep the authorization check server-side without flashing an internal
+    // loading message before the protected admin route is ready.
+    return null;
   }
 
   if (state === 'login') {

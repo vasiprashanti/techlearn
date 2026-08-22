@@ -38,6 +38,16 @@ const PHASE_LABELS = {
 const PLACEMENT_CATEGORIES = ['On-Campus', 'Off-Campus', 'Both'];
 const LEARNING_GOALS = ['Get Placed', 'Learn New Skills', 'Exploring TechLearn'];
 
+const getDefaultPricingPlans = (programType) => programType === 'Skill'
+  ? [
+      { key: 'skill-basic', title: 'Skill Program', price: '399', benefitsText: 'Recorded videos, 1 live doubt session' },
+      { key: 'skill-pro', title: 'Skill Program Pro', price: '699', benefitsText: 'Recorded videos, 1 live doubt session' },
+    ]
+  : [
+      { key: 'placement-basic', title: 'Placement Program', price: '799', benefitsText: 'Recorded videos, Live sessions' },
+      { key: 'placement-pro', title: 'Placement Program Pro', price: '1199', benefitsText: 'Recorded videos, Live sessions' },
+    ];
+
 const SKILL_TAG_OPTIONS = [
   'Java',
   'Python',
@@ -154,6 +164,7 @@ export default function Programs() {
     visibility: 'Public',
     pricingType: 'Free',
     programFee: '0',
+    pricingPlans: getDefaultPricingPlans('Placement'),
     learningGoalsText: '',
     placementCategory: 'Both',
     targetCompanies: [],
@@ -230,6 +241,7 @@ export default function Programs() {
         programType: value,
         phases: getDefaultPhases(value, prev.durationDays),
         placementCategory: value === 'Placement' ? prev.placementCategory : 'Both',
+        pricingPlans: getDefaultPricingPlans(value),
         learningGoalsText: prev.learningGoalsText === 'Get Placed' && value === 'Skill'
           ? 'Learn New Skills'
           : prev.learningGoalsText === 'Learn New Skills' && value === 'Placement'
@@ -250,6 +262,15 @@ export default function Programs() {
       ...prev,
       phases: prev.phases.map((phase, phaseIndex) => (
         phaseIndex === index ? { ...phase, [field]: value } : phase
+      )),
+    }));
+  };
+
+  const handlePricingPlanChange = (index, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      pricingPlans: prev.pricingPlans.map((plan, planIndex) => (
+        planIndex === index ? { ...plan, [field]: value } : plan
       )),
     }));
   };
@@ -301,6 +322,7 @@ export default function Programs() {
       visibility: 'Public',
       pricingType: 'Free',
       programFee: '0',
+      pricingPlans: getDefaultPricingPlans('Placement'),
       learningGoalsText: 'Get Placed',
       placementCategory: 'Both',
       targetCompanies: [],
@@ -326,6 +348,14 @@ export default function Programs() {
       visibility: program.visibility || 'Public',
       pricingType: program.pricingType || 'Free',
       programFee: String(program.programFee || 0),
+      pricingPlans: Array.isArray(program.pricingPlans) && program.pricingPlans.length
+        ? program.pricingPlans.map((plan) => ({
+            key: plan.key || '',
+            title: plan.title || '',
+            price: String(plan.price ?? ''),
+            benefitsText: Array.isArray(plan.benefits) ? plan.benefits.join(', ') : '',
+          }))
+        : getDefaultPricingPlans(getProgramType(program.programType)),
       learningGoalsText: Array.isArray(program.learningGoals) && program.learningGoals[0]
         ? program.learningGoals[0]
         : getProgramType(program.programType) === 'Skill' ? 'Learn New Skills' : 'Get Placed',
@@ -379,6 +409,10 @@ export default function Programs() {
     if (formData.pricingType === 'Paid') {
       const feeNum = Number(formData.programFee);
       if (isNaN(feeNum) || feeNum < 0) { setModalError('Valid non-negative fee is required for Paid programs'); return; }
+      if (!formData.pricingPlans.length || formData.pricingPlans.some((plan) => !plan.title.trim() || !Number.isFinite(Number(plan.price)) || Number(plan.price) < 0)) {
+        setModalError('Configure at least one valid pricing plan for Paid programs.');
+        return;
+      }
     }
 
     const parseCommaString = (str) =>
@@ -397,6 +431,14 @@ export default function Programs() {
         visibility: formData.visibility,
         pricingType: formData.pricingType,
         programFee: formData.pricingType === 'Paid' ? Number(formData.programFee) : 0,
+        pricingPlans: formData.pricingType === 'Paid'
+          ? formData.pricingPlans.map((plan) => ({
+              key: plan.key,
+              title: plan.title,
+              price: Number(plan.price),
+              benefits: (plan.benefitsText || '').split(',').map((item) => item.trim()).filter(Boolean),
+            }))
+          : [],
         learningGoals: parseCommaString(formData.learningGoalsText),
         placementCategories: finalType === 'Placement' ? [formData.placementCategory] : [],
         targetCompanies: formData.targetCompanies,
@@ -695,6 +737,22 @@ export default function Programs() {
                     </div>
                   )}
                 </div>
+
+                {formData.pricingType === 'Paid' && (
+                  <div className="rounded-xl border border-blue-500/20 bg-blue-500/[0.04] p-3 dark:border-blue-400/20 dark:bg-blue-400/[0.04]">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff]">Annual Pricing Plans</p>
+                    <p className="mt-1 text-[11px] text-black/45 dark:text-white/45">Configure the plans shown to learners. Prices are read from this program at checkout.</p>
+                    <div className="mt-3 space-y-3">
+                      {formData.pricingPlans.map((plan, index) => (
+                        <div key={`${plan.key}-${index}`} className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_120px]">
+                          <input aria-label={`Plan ${index + 1} title`} value={plan.title} onChange={(event) => handlePricingPlanChange(index, 'title', event.target.value)} placeholder="Plan name" className={programFormInputClass} required />
+                          <input aria-label={`Plan ${index + 1} benefits`} value={plan.benefitsText} onChange={(event) => handlePricingPlanChange(index, 'benefitsText', event.target.value)} placeholder="Benefits, comma separated" className={programFormInputClass} />
+                          <input aria-label={`Plan ${index + 1} price`} type="number" min="0" step="1" value={plan.price} onChange={(event) => handlePricingPlanChange(index, 'price', event.target.value)} placeholder="₹ price" className={programFormInputClass} required />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="pt-1 border-t border-black/5 dark:border-white/5 space-y-3.5">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff] pt-1">Student Matching Metadata</p>

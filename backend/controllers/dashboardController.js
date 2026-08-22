@@ -11,6 +11,7 @@ import mongoose from "mongoose";
 
 import { updateStudentStreak } from "../utils/streakUtil.js";
 import { resolveDashboardProgramAccess } from "../utils/dashboardProgramAccess.js";
+import { buildUnifiedProfile } from "../utils/userProfile.js";
 
 const DASHBOARD_CACHE_TTL_MS = 30 * 1000;
 const dashboardCache = new Map();
@@ -62,6 +63,19 @@ const buildDashboardUserPayload = (user, linkedStudent, programAccess = null) =>
     .filter(Boolean);
   const fallbackLastName = remainingParts.join(" ");
 
+  const profile = buildUnifiedProfile({
+    user,
+    student: linkedStudent,
+    enrollment: programAccess?.available
+      ? {
+          batchId: programAccess.batchId || null,
+          programId: programAccess.programId || null,
+          individualStartDate: programAccess.individualStartDate || programAccess.assignedAt || null,
+          status: programAccess.enrollmentStatus || null,
+        }
+      : null,
+  });
+
   return {
     id: user?._id || null,
     firstName: String(user?.firstName || "").trim() || fallbackFirstName,
@@ -71,10 +85,10 @@ const buildDashboardUserPayload = (user, linkedStudent, programAccess = null) =>
     avatar: user?.avatar || user?.photoUrl || "",
     photoUrl: user?.photoUrl || user?.avatar || "",
     role: user?.role || "student",
-    collegeName: user?.collegeName || linkedStudent?.collegeId?.name || linkedStudent?.collegeName || "",
-    degree: user?.degree || linkedStudent?.degree || "",
-    branch: user?.branch || linkedStudent?.branch || "",
-    graduationYear: user?.graduationYear || linkedStudent?.graduationYear || null,
+    collegeName: linkedStudent?.collegeId?.name || linkedStudent?.collegeName || user?.collegeName || "",
+    degree: linkedStudent?.degree || user?.degree || "",
+    branch: linkedStudent?.branch || user?.branch || "",
+    graduationYear: linkedStudent?.graduationYear || user?.graduationYear || null,
     programSelection: linkedStudent?.programSelection || user?.programSelection || "Placement Sprint",
     // Only expose a program pointer when the enrollment has been verified.
     // The legacy User/Student pointers remain available in the database for
@@ -91,16 +105,17 @@ const buildDashboardUserPayload = (user, linkedStudent, programAccess = null) =>
       batchId: null,
     },
     streak: linkedStudent?.streak || 0,
-    learningGoal: user?.learningGoal || linkedStudent?.learningGoal || "",
-    targetRole: user?.targetRole || linkedStudent?.targetRole || "",
-    otherTargetRole: user?.otherTargetRole || linkedStudent?.otherTargetRole || "",
-    placementCategory: user?.placementCategory || linkedStudent?.placementCategory || "",
-    targetCompanies: user?.targetCompanies?.length ? user.targetCompanies : (linkedStudent?.targetCompanies || []),
-    placementTimeline: user?.placementTimeline || linkedStudent?.placementTimeline || "",
-    learningPath: user?.learningPath || linkedStudent?.learningPath || "",
-    skills: user?.skills?.length ? user.skills : (linkedStudent?.skills || []),
+    learningGoal: linkedStudent?.learningGoal || user?.learningGoal || "",
+    targetRole: linkedStudent?.targetRole || user?.targetRole || "",
+    otherTargetRole: linkedStudent?.otherTargetRole || user?.otherTargetRole || "",
+    placementCategory: linkedStudent?.placementCategory || user?.placementCategory || "",
+    targetCompanies: linkedStudent?.targetCompanies?.length ? linkedStudent.targetCompanies : (user?.targetCompanies || []),
+    placementTimeline: linkedStudent?.placementTimeline || user?.placementTimeline || "",
+    learningPath: linkedStudent?.learningPath || user?.learningPath || "",
+    skills: linkedStudent?.skills?.length ? linkedStudent.skills : (user?.skills || []),
     onboardingCompleted: user?.onboardingCompleted || linkedStudent?.onboardingCompleted || false,
     onboardingCompletedAt: user?.onboardingCompletedAt || linkedStudent?.onboardingCompletedAt || null,
+    profile,
   };
 };
 

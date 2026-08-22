@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
 import { register } from '../../api/authService';
 import { navigateUserByProgram } from '../../utils/navigation';
+import { programLearningAPI } from '../../services/programLearningApi';
 import { auth } from '../../config/firebase';
 import { 
   signInWithPopup, 
@@ -16,6 +17,7 @@ import {
 
 export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, initialMode = 'signup' }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setSession } = useAuth();
   const { refetchUserData } = useUser();
 
@@ -24,6 +26,7 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
   const [activeStep, setActiveStep] = useState(1);
   const [isGoogleAuth, setIsGoogleAuth] = useState(false);
   const [isEnrolledShortOnboarding, setIsEnrolledShortOnboarding] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
 
   useEffect(() => {
     setIsLoginMode(initialMode === 'login');
@@ -83,9 +86,133 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
     return 'Techlete';
   };
 
+  const getApiBase = () => {
+    const rawBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const cleanBase = rawBase.replace(/\/+$/, '');
+    return cleanBase.endsWith('/api') ? cleanBase : `${cleanBase}/api`;
+  };
+
+  const buildOnboardingPayload = (complete = false) => ({
+    collegeName: college === 'Other' ? collegeOther : college,
+    degree,
+    branch,
+    graduationYear,
+    learningGoal: goal,
+    skills,
+    targetRole: targetRole === 'Other' ? targetRoleOther : targetRole,
+    targetRoleOther,
+    placementCategory,
+    targetCompanies,
+    placementTimeline,
+    learningPath,
+    completeOnboarding: complete,
+  });
+
+  const saveDraftToServer = async (payload = buildOnboardingPayload(false)) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      await fetch(`${getApiBase()}/users/onboarding/draft`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      // Local draft persistence remains available when the API is temporarily
+      // unavailable; the next step or login will retry the server save.
+      console.warn('Unable to persist onboarding draft:', error);
+    }
+  };
+
+  useEffect(() => {
+    let savedDraft = null;
+    try {
+      savedDraft = JSON.parse(localStorage.getItem('techlearn-onboarding-draft') || 'null');
+    } catch {
+      savedDraft = null;
+    }
+
+    if (savedDraft && typeof savedDraft === 'object') {
+      if (savedDraft.collegeName) setCollege(savedDraft.collegeName);
+      if (savedDraft.collegeOther) setCollegeOther(savedDraft.collegeOther);
+      if (savedDraft.degree) setDegree(savedDraft.degree);
+      if (savedDraft.branch) setBranch(savedDraft.branch);
+      if (savedDraft.graduationYear) setGraduationYear(savedDraft.graduationYear);
+      if (savedDraft.learningGoal) setGoal(savedDraft.learningGoal);
+      if (Array.isArray(savedDraft.skills)) setSkills(savedDraft.skills);
+      if (savedDraft.targetRole) setTargetRole(savedDraft.targetRole);
+      if (savedDraft.targetRoleOther) setTargetRoleOther(savedDraft.targetRoleOther);
+      if (savedDraft.placementCategory) setPlacementCategory(savedDraft.placementCategory);
+      if (Array.isArray(savedDraft.targetCompanies)) setTargetCompanies(savedDraft.targetCompanies);
+      if (savedDraft.placementTimeline) setPlacementTimeline(savedDraft.placementTimeline);
+      if (savedDraft.learningPath) setLearningPath(savedDraft.learningPath);
+    }
+
+    let storedUser = null;
+    try {
+      storedUser = JSON.parse(localStorage.getItem('userData') || 'null');
+    } catch {
+      storedUser = null;
+    }
+
+    if (location.state?.resumeOnboarding && localStorage.getItem('token') && storedUser?.onboardingCompleted === false) {
+      const fname = getFirstName(storedUser.firstName || storedUser.name, storedUser.email);
+      setFullName(storedUser.name || [storedUser.firstName, storedUser.lastName].filter(Boolean).join(' '));
+      setEmail(storedUser.email || '');
+      setIsGoogleAuth(['google', 'firebase'].includes(storedUser.authProvider));
+      triggerWelcomeScreen(fname);
+    }
+
+    setDraftLoaded(true);
+  }, [location.state?.resumeOnboarding]);
+
+  useEffect(() => {
+    if (!draftLoaded || ['auth', 'verify-email', 'complete'].includes(screen)) return undefined;
+
+    const draft = {
+      ...buildOnboardingPayload(false),
+      collegeOther,
+      savedAt: new Date().toISOString(),
+    };
+    try {
+      localStorage.setItem('techlearn-onboarding-draft', JSON.stringify(draft));
+    } catch {
+      // Browser storage is a convenience; server persistence is authoritative.
+    }
+
+    const timeoutId = window.setTimeout(() => saveDraftToServer(draft), 350);
+    return () => window.clearTimeout(timeoutId);
+  }, [draftLoaded, screen, college, collegeOther, degree, branch, graduationYear, goal, skills, targetRole, targetRoleOther, placementCategory, targetCompanies, placementTimeline, learningPath]);
+
   const handleClose = () => {
     if (onClose) onClose();
     else navigate('/');
+  };
+
+  const handlePendingAssessmentIfPresent = async () => {
+    const pendingRaw = sessionStorage.getItem('pending_assessment');
+    if (pendingRaw) {
+      try {
+        const pending = JSON.parse(pendingRaw);
+        sessionStorage.removeItem('pending_assessment');
+        setLoading(true);
+        const response = await programLearningAPI.startFreeAssessment(pending);
+        if (response?.success && response?.programId) {
+          handleClose();
+          navigate(`/free-assessment/${response.programId}`);
+          return true;
+        }
+      } catch (e) {
+        console.error('Failed to start pending assessment:', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    return false;
   };
 
   const toggleAuthMode = () => {
@@ -183,6 +310,10 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
             localStorage.setItem('userData', JSON.stringify(authPayload.user));
             if (setSession) setSession(authPayload.user, authPayload.token);
             if (refetchUserData) await refetchUserData();
+
+            if (await handlePendingAssessmentIfPresent()) {
+              return;
+            }
 
             if (authPayload.user?.onboardingCompleted) {
               setLoading(false);
@@ -283,6 +414,10 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
           if (setSession) setSession(data.user, data.token);
           if (refetchUserData) refetchUserData();
 
+          if (await handlePendingAssessmentIfPresent()) {
+            return;
+          }
+
           // Check persistent onboardingCompleted state
           if (data.user?.onboardingCompleted) {
             handleClose();
@@ -349,6 +484,30 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
     }
   };
 
+  const ensureDraftAccount = async () => {
+    if (localStorage.getItem('token')) return true;
+
+    const draftPassword = isGoogleAuth ? 'GoogleAuthNoPassword123!' : password;
+    const response = await register({
+      fullName,
+      email,
+      password: draftPassword,
+      confirmPassword: draftPassword,
+      isGoogleUser: isGoogleAuth,
+      authProvider: isGoogleAuth ? 'google' : 'email',
+      ...buildOnboardingPayload(false),
+    });
+
+    if (!response?.data?.token) {
+      throw new Error(response?.data?.message || 'Unable to save your account before onboarding.');
+    }
+
+    localStorage.setItem('token', response.data.token);
+    localStorage.setItem('userData', JSON.stringify(response.data.user));
+    if (setSession) setSession(response.data.user, response.data.token);
+    return true;
+  };
+
   // Email Verification Handlers
   const handleCheckVerification = async () => {
     setStatusMsg({ text: '', type: '' });
@@ -357,6 +516,10 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
       if (auth && auth.currentUser) {
         await auth.currentUser.reload();
         if (auth.currentUser.emailVerified) {
+          if (await handlePendingAssessmentIfPresent()) {
+            return;
+          }
+          await ensureDraftAccount();
           const fname = getFirstName(fullName || auth.currentUser.displayName, email || auth.currentUser.email);
           triggerWelcomeScreen(fname);
           return;
@@ -364,6 +527,7 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
           setStatusMsg({ text: 'Email not verified yet. Please check your inbox and click the verification link.', type: 'error' });
         }
       } else {
+        await ensureDraftAccount();
         const fname = getFirstName(fullName, email);
         triggerWelcomeScreen(fname);
       }
@@ -534,61 +698,93 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
 
     setLoading(true);
     setStatusMsg({ text: '', type: '' });
-
-    const finalCollege = college === 'Other' ? collegeOther : college;
-    const finalPassword = isGoogleAuth ? "GoogleAuthNoPassword123!" : (password || "UserAuthAccount123!");
-    const payload = {
-      fullName,
-      email,
-      password: finalPassword,
-      confirmPassword: finalPassword,
-      isGoogleUser: isGoogleAuth,
-      authProvider: isGoogleAuth ? 'google' : 'email',
-      collegeName: finalCollege,
-      degree,
-      branch,
-      graduationYear,
-      learningGoal: goal,
-      skills,
-      targetRole: targetRole === 'Other' ? targetRoleOther : targetRole,
-      targetRoleOther,
-      placementCategory,
-      targetCompanies,
-      placementTimeline,
-      learningPath: selectedPath
-    };
-
     try {
-      const res = await register(payload);
-      if (res?.data?.token) {
-        localStorage.setItem('token', res.data.token);
-        localStorage.setItem('userData', JSON.stringify(res.data.user));
-        if (setSession) setSession(res.data.user, res.data.token);
-        if (refetchUserData) await refetchUserData();
-
-        setLoading(false);
-        setScreen('complete');
-        setTimeout(() => {
-          handleClose();
-          if (selectedPath === 'Member') {
-            navigate('/learn/certification/payment');
-          } else {
-            navigate('/onboarding/programs', {
-              state: {
-                targetRole: payload.targetRole,
-                skills: payload.skills,
-                learningGoal: payload.learningGoal,
-              }
-            });
-          }
-        }, 1800);
-        return;
-      } else {
-        throw new Error(res?.data?.message || 'Registration failed.');
+      // Email verification and Google sign-in create only a draft account.
+      // Complete the profile through the preferences endpoint so onboarding
+      // becomes the single source of truth and no default batch is assigned.
+      if (!localStorage.getItem('token') && !(await ensureDraftAccount())) {
+        throw new Error('Your account could not be created. Please try again.');
       }
+
+      const payload = {
+        ...buildOnboardingPayload(true),
+        learningPath: selectedPath,
+      };
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${getApiBase()}/users/preferences`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.message || 'Unable to complete onboarding.');
+      }
+
+      const canonicalUser = data.user || data.profile || {};
+      localStorage.setItem('userData', JSON.stringify(canonicalUser));
+      if (setSession) setSession(canonicalUser, token);
+      if (refetchUserData) await refetchUserData();
+      localStorage.removeItem('techlearn-onboarding-draft');
+
+      if (await handlePendingAssessmentIfPresent()) {
+        return;
+      }
+
+      setLoading(false);
+      setScreen('complete');
+      setTimeout(async () => {
+        const continuation = location.state || {};
+        handleClose();
+        if (selectedPath === 'Free' && continuation.freeProgramId) {
+          try {
+            const enrollResponse = await fetch(`${getApiBase()}/programs/${continuation.freeProgramId}/free-enroll`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            const enrollData = await enrollResponse.json().catch(() => ({}));
+            if (!enrollResponse.ok) throw new Error(enrollData.message || 'Unable to start this program.');
+            navigate(`/learn/program/${continuation.freeProgramId}`);
+          } catch (error) {
+            console.error('Program continuation after onboarding failed:', error);
+            navigate('/learn');
+          }
+          return;
+        }
+        if (continuation.waitlistProgramId) {
+          try {
+            const waitlistResponse = await fetch(`${getApiBase()}/programs/${continuation.waitlistProgramId}/waitlist`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!waitlistResponse.ok) {
+              const waitlistData = await waitlistResponse.json().catch(() => ({}));
+              throw new Error(waitlistData.message || 'Unable to join the waitlist.');
+            }
+          } catch (error) {
+            console.error('Waitlist continuation after onboarding failed:', error);
+          }
+          navigate('/learn');
+          return;
+        }
+        if (selectedPath === 'Member') {
+          navigate('/onboarding/programs', {
+            state: {
+              targetRole: payload.targetRole,
+              skills: payload.skills,
+              learningGoal: payload.learningGoal,
+            }
+          });
+        } else {
+          navigate('/dashboard');
+        }
+      }, 1800);
     } catch (e) {
-      console.error('Registration error:', e);
-      const errMsg = e.response?.data?.message || e.message || 'Registration failed. Please check your information and try again.';
+      console.error('Onboarding completion error:', e);
+      const errMsg = e.response?.data?.message || e.message || 'Unable to complete onboarding. Please check your information and try again.';
       setStatusMsg({ text: errMsg, type: 'error' });
       setLoading(false);
     }

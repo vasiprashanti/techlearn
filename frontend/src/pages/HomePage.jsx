@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Moon, Sun } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
+import FreeAssessmentModal from '../components/Learn/FreeAssessmentModal'
 
 const codeFragments = [
   "DSA.solve(problem)",
@@ -118,10 +120,6 @@ const HomePage = () => {
   // Code line animation state
   const codeFieldRef = useRef(null)
 
-  // Tilt animation state
-  const platformStageRef = useRef(null)
-  const platformWindowRef = useRef(null)
-
   // Journey animation state
   const journeySectionRef = useRef(null)
   const pathWrapperRef = useRef(null)
@@ -146,10 +144,37 @@ const HomePage = () => {
   // Final CTA typewriter state
   const [typingText, setTypingText] = useState("")
 
+  // Auth state & user dropdown
+  const { user, isAuthenticated, logout } = useAuth()
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const userMenuRef = useRef(null)
+
   // Navbar sticky scroll state
   const [isScrolled, setIsScrolled] = useState(false)
   const [isOverDarkSection, setIsOverDarkSection] = useState(false)
+  const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false)
   const resultsSectionRef = useRef(null)
+
+  useEffect(() => {
+    if (!isUserMenuOpen) return undefined
+
+    const handleOutsideClick = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false)
+      }
+    }
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setIsUserMenuOpen(false)
+    }
+
+    window.addEventListener('mousedown', handleOutsideClick)
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('mousedown', handleOutsideClick)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [isUserMenuOpen])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -207,58 +232,7 @@ const HomePage = () => {
     return () => clearInterval(interval)
   }, [])
 
-  // --- 2. Platform Mockup Tilt on Mousemove ---
-  useEffect(() => {
-    const platformStage = platformStageRef.current
-    const platformWindow = platformWindowRef.current
-    if (!platformStage || !platformWindow) return
 
-    let tiltX = 1.5
-    let tiltY = -3
-    let targetX = 1.5
-    let targetY = -3
-    let animationFrameId
-
-    const handleMouseMove = (e) => {
-      if (window.innerWidth <= 700 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        return
-      }
-      const rect = platformStage.getBoundingClientRect()
-      const mouseX = (e.clientX - rect.left) / rect.width
-      const mouseY = (e.clientY - rect.top) / rect.height
-
-      targetY = (mouseX - 0.5) * 7
-      targetX = 1.5 - (mouseY - 0.5) * 2.2
-    }
-
-    const handleMouseLeave = () => {
-      targetX = 1.5
-      targetY = -3
-    }
-
-    const animateTilt = () => {
-      tiltX += (targetX - tiltX) * 0.08
-      tiltY += (targetY - tiltY) * 0.08
-
-      if (window.innerWidth > 700 && platformWindow) {
-        platformWindow.style.transform = `perspective(1800px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) translateY(8px) scale(0.97)`
-      }
-      animationFrameId = requestAnimationFrame(animateTilt)
-    }
-
-    platformStage.addEventListener("mousemove", handleMouseMove)
-    platformStage.addEventListener("mouseleave", handleMouseLeave)
-
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      animateTilt()
-    }
-
-    return () => {
-      platformStage.removeEventListener("mousemove", handleMouseMove)
-      platformStage.removeEventListener("mouseleave", handleMouseLeave)
-      cancelAnimationFrame(animationFrameId)
-    }
-  }, [])
 
   // --- 3. Interactive Roadmap Animation (Sticky scroll + SVG path character tracking) ---
   useEffect(() => {
@@ -407,35 +381,7 @@ const HomePage = () => {
 
   return (
     <div className="tl-landing">
-      {/* =========================================================
-           00 — FIXED / STICKY NAVBAR
-      ========================================================= */}
-      <header className={`tl-nav-wrapper ${isScrolled ? 'scrolled' : ''} ${isOverDarkSection ? 'on-dark-section' : ''}`}>
-        <nav className="tl-nav">
-          <Link to="/" className="tl-logo">
-            TechLearn
-          </Link>
 
-          <ul className="tl-nav-links">
-            <li><Link to="/learn">Learn</Link></li>
-            <li><a href="#journey">Roadmaps</a></li>
-            <li><a href="#pricing">Hiring</a></li>
-          </ul>
-
-          <div className="tl-nav-action">
-            <button
-              onClick={toggleTheme}
-              className="tl-theme-btn"
-              aria-label="Toggle dark mode"
-            >
-              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-            <Link to="/signup" className="tl-nav-cta">
-              SIGN UP
-            </Link>
-          </div>
-        </nav>
-      </header>
 
       {/* =========================================================
            01 — HERO (hero.html exact specifications)
@@ -462,129 +408,7 @@ const HomePage = () => {
         </main>
       </section>
 
-      {/* =========================================================
-           02 — PLATFORM PREVIEW (Placement Platform Section)
-      ========================================================= */}
-      <section className="tl-platform-preview" id="platform">
-        <div className="tl-platform-content">
-          <div className="tl-platform-eyebrow">
-            EVERYTHING IN ONE PLACE
-          </div>
 
-          <h2 className="tl-platform-title">
-            <span>The only</span> PLACEMENT PLATFORM <span>you need</span>
-          </h2>
-
-          <p className="tl-platform-description">
-            Your roadmap, daily practice, challenges and placement readiness
-            stay together so you always know what to do next.
-          </p>
-
-          <div className="tl-platform-stage" ref={platformStageRef}>
-            <div className="tl-platform-glow"></div>
-
-            <div className="tl-platform-window" ref={platformWindowRef}>
-              <div className="tl-browser-bar">
-                <div className="tl-browser-dots">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-                <div className="tl-browser-address">
-                  app.techlearn.in/dashboard
-                </div>
-              </div>
-
-              <div className="tl-dashboard">
-                <aside className="tl-dashboard-sidebar">
-                  <div className="tl-dashboard-logo">TechLearn</div>
-                  <div className="tl-side-item active">
-                    <span>⌂</span> Dashboard
-                  </div>
-                  <div className="tl-side-item">
-                    <span>◫</span> My Program
-                  </div>
-                  <div className="tl-side-item">
-                    <span>✓</span> Daily Tasks
-                  </div>
-                  <div className="tl-side-item">
-                    <span>◈</span> Challenges
-                  </div>
-                  <div className="tl-side-item">
-                    <span>↗</span> Progress
-                  </div>
-                </aside>
-
-                <main className="tl-dashboard-main">
-                  <div className="tl-dashboard-top">
-                    <div>
-                      <div className="tl-dash-small">DAY 12 OF 30</div>
-                      <h3>Good morning, Tanvika.</h3>
-                    </div>
-                    <div className="tl-dash-profile">TV</div>
-                  </div>
-
-                  <div className="tl-progress-card">
-                    <div className="tl-progress-copy">
-                      <span className="tl-dash-label">YOUR PLACEMENT PATH</span>
-                      <strong>40% complete</strong>
-                      <p>Keep going. You're building momentum.</p>
-                    </div>
-                    <div className="tl-progress-ring">12</div>
-                  </div>
-
-                  <div className="tl-dashboard-grid">
-                    <div className="tl-task-card">
-                      <div className="tl-card-top">
-                        <span>DAILY TASK</span>
-                        <b>+50 XP</b>
-                      </div>
-                      <h4>Today's practice</h4>
-                      <div className="tl-task-row">
-                        <span>DSA</span>
-                        <strong>2 / 3</strong>
-                      </div>
-                      <div className="tl-task-row">
-                        <span>SQL</span>
-                        <strong>1 / 2</strong>
-                      </div>
-                      <div className="tl-task-row">
-                        <span>Aptitude</span>
-                        <strong>3 / 3</strong>
-                      </div>
-                    </div>
-
-                    <div className="tl-challenge-card">
-                      <div className="tl-card-top">
-                        <span>DAILY CHALLENGE</span>
-                        <b>10:42</b>
-                      </div>
-                      <h4>Two Sum</h4>
-                      <p>Solve today's coding challenge.</p>
-                      <div className="tl-challenge-button">
-                        Solve Challenge →
-                      </div>
-                    </div>
-
-                    <div className="tl-score-card">
-                      <div className="tl-card-top">
-                        <span>PLACEMENT READINESS</span>
-                      </div>
-                      <div className="tl-score-number">
-                        78<span>%</span>
-                      </div>
-                      <div className="tl-score-bar">
-                        <div></div>
-                      </div>
-                      <p>Strong progress this week</p>
-                    </div>
-                  </div>
-                </main>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* =========================================================
            03 — CLEAR PATH (Interactive Roadmap Animation)
@@ -848,6 +672,11 @@ const HomePage = () => {
           </Link>
         </div>
       </section>
+
+      <FreeAssessmentModal
+        isOpen={isAssessmentModalOpen}
+        onClose={() => setIsAssessmentModalOpen(false)}
+      />
     </div>
   )
 }

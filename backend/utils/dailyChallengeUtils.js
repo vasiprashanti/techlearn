@@ -8,7 +8,7 @@ import Program from "../models/Program.js";
 import Student from "../models/Student.js";
 import Track from "../models/Track.js";
 import DailyChallengeAttempt from "../models/DailyChallengeAttempt.js";
-import { resolveProgramSchedule } from "./programSchedule.js";
+import { assertProgramScheduleAccess, resolveProgramSchedule } from "./programSchedule.js";
 
 export const DAILY_CHALLENGE_RULES = {
   timerLimitMinutes: 60,
@@ -212,6 +212,12 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
         batchId: null,
         individualStartDate: null,
       };
+
+  await assertProgramScheduleAccess({
+    user,
+    student: studentContext.student,
+    programId: schedule.programId,
+  });
 
   const batch = schedule.batchId
     ? await Batch.findById(schedule.batchId)
@@ -477,6 +483,12 @@ export const resolveDailyChallengeParticipant = async ({ codingRound, user, emai
     user,
     student,
     programId: codingRound.programId || null,
+  });
+
+  await assertProgramScheduleAccess({
+    user,
+    student,
+    programId: codingRound.programId || schedule.programId,
   });
 
   if (schedule.batchExpired) {

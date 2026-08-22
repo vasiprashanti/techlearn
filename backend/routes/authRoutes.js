@@ -14,6 +14,7 @@ import { resolveProgramSchedule } from "../utils/programSchedule.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { isAdminIdentity } from "../utils/adminAccess.js";
 import { registerUser } from "../controllers/userController.js";
+import { buildUnifiedProfile } from "../utils/userProfile.js";
 
 const router = express.Router();
 const client = new OAuth2Client();
@@ -42,10 +43,8 @@ const mapUserToStudentCohort = async (user) => {
     student.userId = user._id;
     studentChanged = true;
   }
-  if (user.batchId && String(student.batchId?._id || student.batchId) !== String(user.batchId)) {
-    student.batchId = user.batchId;
-    studentChanged = true;
-  }
+  // Imported/admin enrollment fields on Student are authoritative. Never
+  // copy a stale legacy User.batchId back onto the Student during login.
   if (user.onboardingCompleted && !student.onboardingCompleted) {
     student.onboardingCompleted = true;
     student.onboardingCompletedAt = user.onboardingCompletedAt || new Date();
@@ -89,13 +88,15 @@ const mapUserToStudentCohort = async (user) => {
     await user.save();
   }
 
-  await syncProgramEnrollment({
-    user,
-    student,
-    batchId: schedule?.scheduleType === "batch" ? (schedule.batchId || student.batchId?._id || student.batchId) : null,
-    programId: student.programId || user.programId,
-    programSelection: student.programSelection || user.programSelection,
-  });
+  if (user.onboardingCompleted || student.onboardingCompleted) {
+    await syncProgramEnrollment({
+      user,
+      student,
+      batchId: schedule?.scheduleType === "batch" ? (schedule.batchId || student.batchId?._id || student.batchId) : null,
+      programId: student.programId || user.programId,
+      programSelection: student.programSelection || user.programSelection,
+    });
+  }
 
   return { user, student, batch, schedule };
 };
@@ -105,12 +106,25 @@ const formatAuthUser = (user, student = null, batch = null, schedule = null) => 
     user.onboardingCompleted ||
     student?.onboardingCompleted
   );
+  const profile = buildUnifiedProfile({
+    user,
+    student,
+    enrollment: schedule
+      ? {
+          batchId: schedule.scheduleType === "batch" ? schedule.batchId || batch || null : null,
+          programId: schedule.programId || user.programId || student?.programId || null,
+          individualStartDate: schedule.individualStartDate || null,
+          status: isProfileComplete ? "Active" : null,
+        }
+      : null,
+  });
 
   return {
     id: user._id,
     firstName: user.firstName,
     lastName: user.lastName,
     email: user.email,
+    authProvider: user.authProvider || "local",
     photoUrl: user.photoUrl || "",
     role: user.role,
     permissions: user.permissions || [],
@@ -123,19 +137,20 @@ const formatAuthUser = (user, student = null, batch = null, schedule = null) => 
     programId: user.programId || student?.programId || null,
     scheduleType: schedule?.scheduleType || ((user.batchId || student?.batchId || batch?._id) ? "batch" : "individual"),
     isEnrolledStudent: !!student || user.isClub || Boolean(user.batchId) || Boolean(schedule?.programId),
-    targetRole: user.targetRole || student?.targetRole || "",
-    otherTargetRole: user.otherTargetRole || student?.otherTargetRole || "",
-    learningGoal: user.learningGoal || student?.learningGoal || "",
-    collegeName: user.collegeName || (student?.collegeId && typeof student.collegeId === 'object' ? student.collegeId.name : "") || "",
-    degree: user.degree || student?.degree || "",
-    branch: user.branch || student?.branch || "",
-    graduationYear: user.graduationYear || student?.graduationYear || null,
-    placementCategory: user.placementCategory || student?.placementCategory || "",
-    targetCompanies: user.targetCompanies?.length ? user.targetCompanies : (student?.targetCompanies || []),
-    placementTimeline: user.placementTimeline || student?.placementTimeline || "",
-    skills: user.skills?.length ? user.skills : (student?.skills || []),
+    targetRole: student?.targetRole || user.targetRole || student?.otherTargetRole || user.otherTargetRole || "",
+    otherTargetRole: student?.otherTargetRole || user.otherTargetRole || "",
+    learningGoal: student?.learningGoal || user.learningGoal || "",
+    collegeName: (student?.collegeId && typeof student.collegeId === 'object' ? student.collegeId.name : "") || student?.collegeName || user.collegeName || "",
+    degree: student?.degree || user.degree || "",
+    branch: student?.branch || user.branch || "",
+    graduationYear: student?.graduationYear || user.graduationYear || null,
+    placementCategory: student?.placementCategory || user.placementCategory || "",
+    targetCompanies: student?.targetCompanies?.length ? student.targetCompanies : (user.targetCompanies || []),
+    placementTimeline: student?.placementTimeline || user.placementTimeline || "",
+    skills: student?.skills?.length ? student.skills : (user.skills || []),
     onboardingCompleted: isProfileComplete,
     onboardingCompletedAt: user.onboardingCompletedAt || student?.onboardingCompletedAt || (isProfileComplete ? user.updatedAt : null),
+    profile,
   };
 };
 
