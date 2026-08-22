@@ -88,7 +88,7 @@ const Sidebar = () => {
             return `flex flex-col items-center justify-center gap-1.5 w-[3.65rem] h-[3.65rem] md:w-[4.15rem] md:h-[4.15rem] rounded-[1.1rem] transition-all duration-300 ease-out select-none
             ${
               isCurrent
-                ? "bg-[#a3e635] text-[#0a1128] font-bold shadow-md shadow-[#a3e635]/25 border border-[#84cc16]/50 dark:bg-[#a3e635] dark:text-[#0a1128] dark:font-bold dark:shadow-md dark:shadow-[#a3e635]/25 dark:border-[#a3e635]/50"
+                ? "bg-[#b2e96a] text-[#0a1128] font-bold shadow-md shadow-[#b2e96a]/25 border border-[#b2e96a]/50 dark:bg-[#b2e96a] dark:text-[#0a1128] dark:font-bold dark:shadow-md dark:shadow-[#b2e96a]/25 dark:border-[#b2e96a]/50"
                 : "text-[#00113b]/70 dark:text-slate-400 hover:text-[#00113b] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 font-normal border border-transparent"
             }`;
           }}
