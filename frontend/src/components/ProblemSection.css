@@ -1,0 +1,354 @@
+/* =========================================================
+   SECTION 2 — THE PROBLEM (from Index.html)
+========================================================= */
+
+.tl-problem-section {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  background: #d6ebf4;
+  position: relative;
+  overflow: hidden;
+}
+
+.tl-problem-container {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-height: 700px;
+  margin: 0 auto;
+  padding: 80px 40px 100px;
+  box-sizing: border-box;
+  background: #d6ebf4;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.tl-problem-eyebrow {
+  position: relative;
+  z-index: 2;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  margin: 0 0 14px;
+  color: #04083d;
+  text-align: center;
+}
+
+.tl-problem-title {
+  position: relative;
+  z-index: 2;
+  font-size: clamp(34px, 4.4vw, 58px);
+  font-weight: 700;
+  color: #04083d;
+  text-align: center;
+  line-height: 1.12;
+  letter-spacing: -0.055em;
+  max-width: 750px;
+  margin: 0 0 55px;
+}
+
+.tl-problem-title i {
+  font-style: italic;
+}
+
+.tl-problem-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 36px;
+  max-width: 850px;
+  width: 85%;
+  z-index: 2;
+}
+
+.tl-problem-stat-item {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #020d27;
+  text-align: center;
+  opacity: 0.85;
+}
+
+/* APP CARDS */
+.tl-problem-app-card {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 18px;
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.10),
+    0 3px 10px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  transition: transform 0.3s ease;
+}
+
+.tl-problem-app-card:hover {
+  transform: scale(1.08) !important;
+}
+
+/* BADGES AND TAGS */
+.tl-problem-badge {
+  position: absolute;
+  background: #ff3b30;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 2px 7px;
+  line-height: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.tl-problem-pill-tag {
+  position: absolute;
+  background: #007aff;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 3px 7px;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.10);
+}
+
+.tl-problem-context-tag {
+  position: absolute;
+  background: #ffffff;
+  border: 1px solid #e5e5ea;
+  border-radius: 10px;
+  padding: 2px 7px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #333333;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+}
+
+.tl-problem-dark-badge {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.65);
+  color: #ffffff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* POSITIONS */
+.tl-problem-card-youtube {
+  top: 240px;
+  left: 35px;
+  width: 72px;
+  height: 72px;
+  transform: rotate(-8deg);
+}
+
+.tl-problem-card-youtube .tl-problem-pill-tag {
+  top: -8px;
+  right: -8px;
+  background: #ff0000;
+}
+
+.tl-problem-card-whatsapp {
+  top: 50px;
+  left: 250px;
+  width: 82px;
+  height: 82px;
+  transform: rotate(5deg);
+}
+
+.tl-problem-card-whatsapp .tl-problem-badge {
+  top: -6px;
+  right: -6px;
+  background: #25d366;
+}
+
+.tl-problem-card-meet {
+  top: 150px;
+  right: 125px;
+  width: 70px;
+  height: 70px;
+  transform: rotate(-10deg);
+}
+
+.tl-problem-card-meet .tl-problem-pill-tag {
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.tl-problem-card-linkedin {
+  top: 410px;
+  right: 35px;
+  width: 72px;
+  height: 72px;
+  transform: rotate(8deg);
+}
+
+.tl-problem-card-linkedin .tl-problem-pill-tag {
+  bottom: -10px;
+  left: -6px;
+  background: #0a66c2;
+}
+
+.tl-problem-card-drive {
+  bottom: 105px;
+  left: 220px;
+  width: 74px;
+  height: 74px;
+  transform: rotate(-5deg);
+}
+
+.tl-problem-card-drive .tl-problem-context-tag {
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.tl-problem-card-instagram {
+  bottom: 75px;
+  right: 155px;
+  width: 70px;
+  height: 70px;
+  transform: rotate(5deg);
+}
+
+.tl-problem-card-instagram .tl-problem-dark-badge {
+  bottom: -14px;
+  right: -16px;
+  background: #e1306c;
+}
+
+.tl-problem-card-google {
+  bottom: 135px;
+  left: 45px;
+  width: 72px;
+  height: 72px;
+  transform: rotate(-6deg);
+}
+
+.tl-problem-card-google .tl-problem-context-tag {
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* TABLET */
+@media (max-width: 900px) {
+  .tl-problem-container {
+    min-height: 650px;
+    padding: 60px 20px 80px;
+  }
+
+  .tl-problem-title {
+    font-size: 2.8rem;
+    max-width: 600px;
+    margin-bottom: 45px;
+  }
+
+  .tl-problem-stats-grid {
+    max-width: 700px;
+    gap: 20px;
+  }
+
+  .tl-problem-stat-item {
+    font-size: 0.85rem;
+  }
+
+  .tl-problem-app-card {
+    transform: scale(0.85);
+  }
+}
+
+/* MOBILE */
+@media (max-width: 600px) {
+  .tl-problem-container {
+    min-height: 680px;
+    padding: 50px 20px 70px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tl-problem-eyebrow {
+    font-size: 9px;
+    margin-bottom: 10px;
+  }
+
+  .tl-problem-title {
+    font-size: 1.85rem;
+    max-width: 340px;
+    margin-bottom: 30px;
+  }
+
+  .tl-problem-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    width: 92%;
+    max-width: 320px;
+  }
+
+  .tl-problem-stat-item {
+    font-size: 0.78rem;
+    text-align: center;
+  }
+
+  .tl-problem-app-card {
+    width: 54px;
+    height: 54px;
+    border-radius: 14px;
+  }
+
+  .tl-problem-app-card svg {
+    transform: scale(0.72);
+  }
+
+  .tl-problem-card-whatsapp {
+    top: 25px;
+    left: 6%;
+  }
+
+  .tl-problem-card-youtube {
+    top: 110px;
+    left: 4%;
+  }
+
+  .tl-problem-card-meet {
+    top: 35px;
+    right: 6%;
+  }
+
+  .tl-problem-card-linkedin {
+    top: auto;
+    bottom: 90px;
+    right: 4%;
+  }
+
+  .tl-problem-card-google {
+    top: auto;
+    bottom: 80px;
+    left: 4%;
+  }
+
+  .tl-problem-card-drive {
+    bottom: 15px;
+    left: 22%;
+  }
+
+  .tl-problem-card-instagram {
+    bottom: 15px;
+    right: 22%;
+  }
+}
