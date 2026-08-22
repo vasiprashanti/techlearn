@@ -303,7 +303,7 @@ export const enrollInFreeProgram = async (req, res) => {
     const existingBatchId = existingEnrollment
       && Object.prototype.hasOwnProperty.call(existingEnrollment, "batchId")
       ? existingEnrollment.batchId
-      : (student.batchId || req.user.batchId || null);
+      : undefined;
 
     const enrollment = await upsertProgramEnrollment({
       user: req.user,

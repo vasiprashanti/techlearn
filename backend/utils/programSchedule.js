@@ -34,7 +34,7 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
 
   let enrollment = null;
   if (identifiers.length > 0) {
-    const query = { status: "Active", $or: identifiers };
+    const query = { status: { $in: ["Active", "Completed"] }, $or: identifiers };
     if (programId) query.programId = programId;
     enrollment = await ProgramEnrollment.findOne(query)
       .sort({ assignedAt: -1, createdAt: -1 })

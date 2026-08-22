@@ -614,16 +614,12 @@ const saveProfileState = async ({ req, completeOnboarding }) => {
 
   let enrolledPrograms = [];
   if (completeOnboarding && student) {
-    // Passing null explicitly preserves the individual schedule. A batch is
-    // used only when the imported/admin enrollment already has one.
-    // Leave the value undefined when no legacy batch is present so the
-    // enrollment helper can preserve an existing per-program batch schedule.
-    // A genuinely new enrollment still resolves to an individual schedule.
-    const enrollmentBatchId = student.batchId || user.batchId || undefined;
+    // Let the enrollment synchronizer resolve the existing schedule for this
+    // exact program. It must not copy a legacy/global batch onto a new
+    // program enrollment.
     const enrolled = await syncProgramEnrollment({
       user,
       student,
-      batchId: enrollmentBatchId,
       programId: student.programId || user.programId || null,
       programSelection: user.programSelection,
       onboardingData: {

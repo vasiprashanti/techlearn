@@ -136,16 +136,31 @@ export const upsertProgramEnrollment = async ({
  * enrollment's individualStartDate is preserved so removing the batch can
  * safely return the learner to their original individual Day 1.
  */
-export const setBatchScheduleForStudent = async ({ student, user, batchId = null }) => {
+export const setBatchScheduleForStudent = async ({
+  student,
+  user,
+  batchId = null,
+  programId = null,
+  sourceBatchId = null,
+}) => {
   const identifiers = [
     getId(user) ? { userId: getId(user) } : null,
     getId(student) ? { studentId: getId(student) } : null,
   ].filter(Boolean);
 
-  if (identifiers.length === 0) return { modifiedCount: 0 };
+  // A student's legacy batch pointer is shared across all of their programs.
+  // Never use this helper without a per-program or existing-batch scope, or a
+  // cohort change could silently rewrite unrelated individual schedules.
+  if (identifiers.length === 0 || (!programId && !sourceBatchId)) {
+    return { modifiedCount: 0 };
+  }
+
+  const query = { status: "Active", $or: identifiers };
+  if (programId) query.programId = programId;
+  if (sourceBatchId) query.batchId = sourceBatchId;
 
   return ProgramEnrollment.updateMany(
-    { status: "Active", $or: identifiers },
+    query,
     { $set: { batchId: batchId || null } }
   );
 };
@@ -296,9 +311,21 @@ export const syncProgramEnrollment = async ({
       const activeEnrollment = existingEnrollment?.status === "Active" ? existingEnrollment : null;
       const hasEnrollmentBatch = activeEnrollment
         && Object.prototype.hasOwnProperty.call(activeEnrollment, "batchId");
-      enrollmentBatchId = hasEnrollmentBatch
-        ? activeEnrollment.batchId
-        : (student.batchId || user.batchId || null);
+
+      if (hasEnrollmentBatch) {
+        // Preserve the schedule already chosen for this exact program.
+        enrollmentBatchId = activeEnrollment.batchId;
+      } else {
+        // Legacy student/user batch fields are only safe when their primary
+        // program is the same program being synchronized. A new program must
+        // start individually even if the learner belongs to another cohort.
+        const legacyProgramId = getId(student.programId) || getId(user.programId);
+        const isSameLegacyProgram = legacyProgramId
+          && String(legacyProgramId) === String(matchedProgramId);
+        enrollmentBatchId = isSameLegacyProgram
+          ? (getId(student.batchId) || getId(user.batchId) || null)
+          : null;
+      }
     }
 
     // A null batch is a valid individual enrollment. Keep the batch choice on
