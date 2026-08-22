@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  >
+
+  <title>Path</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap"
+    rel="stylesheet"
+  >
+</head>
+
+<body>
+
+<style>
+
+/* =====================================================
+   RESET
+===================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+}
+
+
+/* =====================================================
+   PINNED JOURNEY
+===================================================== */
+
+.journey-scroll {
+  position: relative;
+
+  height: 320vh;
+
+  background: #e0eef4;
+}
+
+.journey-sticky {
+  position: sticky;
+
+  top: 0;
+
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+
+  min-height: 520px;
+
+  overflow: hidden;
+
+  background: #e0eef4;
+  color: #04103d;
+
+  isolation: isolate;
+}
+
+
+/* =====================================================
+   GRID
+   Pinned with the journey-sticky section
+===================================================== */
+
+.journey-sticky::before {
+  content: "";
+
+  position: absolute;
+
+  inset: 0;
+
+  z-index: 0;
+
+  pointer-events: none;
+
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(4, 16, 61, 0.055) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(4, 16, 61, 0.055) 1px,
+      transparent 1px
+    );
+
+  background-size:
+    75px 75px;
+
+  background-position:
+    center center;
+}
+
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.journey-header {
+  position: absolute;
+
+  top: clamp(
+    34px,
+    7vh,
+    75px
+  );
+
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  width: min(
+    750px,
+    calc(100% - 40px)
+  );
+
+  z-index: 30;
+
+  text-align: center;
+
+  font-family: "Inter", sans-serif;
+}
+
+.journey-eyebrow {
+  margin: 0 0 clamp(
+    10px,
+    1.5vh,
+    16px
+  );
+
+  color: rgba(4, 16, 61, .88);
+
+  font-family: "Press Start 2P", monospace;
+
+  font-size: clamp(
+    7px,
+    .65vw,
+    10px
+  );
+
+  line-height: 1.5;
+}
+
+.journey-title {
+  margin: 0;
+
+  color: #04103d;
+
+  font-family: "Inter", sans-serif;
+
+  font-size: clamp(
+    38px,
+    4.5vw,
+    62px
+  );
+
+  font-weight: 700;
+
+  line-height: 1.05;
+
+  letter-spacing: -0.055em;
+}
+
+.journey-title i {
+  font-style: italic;
+}
+
+
+/* =====================================================
+   PATH AREA
+===================================================== */
+
+.path-wrapper {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  transform:
+    translate(
+      -50%,
+      -50%
+    );
+
+  width: min(
+    1050px,
+    calc(100% - 70px)
+  );
+
+  height: clamp(
+    240px,
+    38vh,
+    380px
+  );
+
+  overflow: visible;
+
+  z-index: 5;
+}
+
+.journey-svg {
+  position: absolute;
+
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  overflow: visible;
+
+  display: block;
+}
+
+
+/* =====================================================
+   PATH
+===================================================== */
+
+.path-base {
+  fill: none;
+
+  stroke: rgba(
+    4,
+    16,
+    61,
+    .18
+  );
+
+  stroke-width: 4;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.path-progress {
+  fill: none;
+
+  stroke: #b9ec77;
+
+  stroke-width: 5;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+
+/* =====================================================
+   MILESTONES
+===================================================== */
+
+.milestone {
+  position: absolute;
+
+  transform:
+    translate(
+      -50%,
+      -50%
+    );
+
+  z-index: 10;
+
+  text-align: center;
+
+  pointer-events: none;
+}
+
+.milestone-dot {
+  width: 13px;
+  height: 13px;
+
+  margin: 0 auto;
+
+  border-radius: 50%;
+
+  background: #e0eef4;
+
+  border: 3px solid rgba(
+    4,
+    16,
+    61,
+    .28
+  );
+
+  transition:
+    background .3s ease,
+    border-color .3s ease,
+    transform .3s ease,
+    box-shadow .3s ease;
+}
+
+.milestone-label {
+  position: absolute;
+
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  white-space: nowrap;
+
+  font-family:
+    "Press Start 2P",
+    monospace;
+
+  font-size: clamp(
+    6px,
+    .6vw,
+    8px
+  );
+
+  line-height: 1.5;
+
+  color: rgba(
+    4,
+    16,
+    61,
+    .5
+  );
+
+  transition:
+    color .3s ease;
+}
+
+.milestone.above .milestone-label {
+  bottom: clamp(
+    19px,
+    2.5vh,
+    25px
+  );
+}
+
+.milestone.below .milestone-label {
+  top: clamp(
+    19px,
+    2.5vh,
+    25px
+  );
+}
+
+.milestone.active .milestone-dot {
+  background: #b9ec77;
+
+  border-color: #04103d;
+
+  transform: scale(1.35);
+
+  box-shadow:
+    0 0 0 7px
+    rgba(
+      185,
+      236,
+      119,
+      .18
+    );
+}
+
+.milestone.active .milestone-label {
+  color: #04103d;
+}
+
+.milestone.completed .milestone-dot {
+  background: #b9ec77;
+
+  border-color: #b9ec77;
+}
+
+
+/* =====================================================
+   CHARACTER
+===================================================== */
+
+.character {
+  position: absolute;
+
+  width: 38px;
+  height: 52px;
+
+  z-index: 20;
+
+  pointer-events: none;
+
+  transform:
+    translate(
+      -50%,
+      -100%
+    );
+
+  transform-origin:
+    center bottom;
+
+  will-change:
+    left,
+    top,
+    transform;
+}
+
+.character-head {
+  position: absolute;
+
+  top: 0;
+  left: 50%;
+
+  width: 17px;
+  height: 17px;
+
+  transform: translateX(-50%);
+
+  border-radius: 50%;
+
+  background: #04103d;
+}
+
+.character-body {
+  position: absolute;
+
+  top: 16px;
+  left: 50%;
+
+  width: 21px;
+  height: 24px;
+
+  transform: translateX(-50%);
+
+  border-radius:
+    9px 9px 5px 5px;
+
+  background: #04103d;
+}
+
+.character-leg {
+  position: absolute;
+
+  top: 37px;
+
+  width: 6px;
+  height: 15px;
+
+  border-radius: 5px;
+
+  background: #04103d;
+}
+
+.character-leg.left {
+  left: 10px;
+
+  transform: rotate(8deg);
+}
+
+.character-leg.right {
+  right: 10px;
+
+  transform: rotate(-8deg);
+}
+
+
+/* =====================================================
+   JOURNEY INFO
+===================================================== */
+
+.journey-info {
+  position: absolute;
+
+  right: clamp(
+    30px,
+    7vw,
+    110px
+  );
+
+  bottom: clamp(
+    35px,
+    7vh,
+    75px
+  );
+
+  width: min(
+    330px,
+    28vw
+  );
+
+  z-index: 25;
+
+  text-align: left;
+
+  font-family: "Inter", sans-serif;
+}
+
+.journey-info-step {
+  margin: 0 25px 12px;
+
+  color: rgba(
+    3,
+    12,
+    46,
+    .608
+  );
+
+  font-family:
+    "Press Start 2P",
+    monospace;
+
+  font-size: 8px;
+
+  text-align: right;
+
+  line-height: 1.5;
+}
+
+.journey-info-title {
+  margin: 0 20px 10px;
+
+  text-align: right;
+
+  color: #04103d;
+
+  font-size: clamp(
+    20px,
+    2vw,
+    24px
+  );
+
+  font-weight: 600;
+
+  line-height: .95;
+
+  letter-spacing: -.035em;
+}
+
+.journey-info-text {
+  margin: 0;
+
+  text-align: right;
+
+  max-width: 310px;
+
+  color: rgba(
+    4,
+    16,
+    61,
+    .62
+  );
+
+  font-size: 12px;
+
+  line-height: 1.55;
+}
+
+
+/* =====================================================
+   TABLETS
+===================================================== */
+
+@media (
+  min-width: 701px
+) and (
+  max-width: 1100px
+) {
+
+  .path-wrapper {
+    width:
+      calc(
+        100% - 60px
+      );
+
+    height:
+      clamp(
+        220px,
+        32vh,
+        310px
+      );
+  }
+
+  .journey-info {
+    right: 35px;
+
+    width: 270px;
+  }
+}
+
+
+/* =====================================================
+   MOBILE
+   ONE SIMPLE RULE SET
+===================================================== */
+
+@media (max-width: 700px) {
+
+  .journey-scroll {
+    height: 300vh;
+  }
+
+  .journey-sticky {
+    min-height: 500px;
+
+    padding-top:
+      env(safe-area-inset-top);
+
+    padding-bottom:
+      env(safe-area-inset-bottom);
+  }
+
+
+  /* GRID */
+
+  .journey-sticky::before {
+    background-size: 40px 40px;
+
+    background-position:
+      center center;
+  }
+
+
+  /* HEADER */
+
+  .journey-header {
+    top:
+      max(
+        24px,
+        calc(
+          env(safe-area-inset-top) + 18px
+        )
+      );
+
+    width:
+      calc(100% - 32px);
+
+    max-width: 520px;
+  }
+
+  .journey-eyebrow {
+    margin-bottom: 10px;
+
+    font-size:
+      clamp(
+        5px,
+        1.6vw,
+        7px
+      );
+
+    line-height: 1.5;
+  }
+
+  .journey-title {
+    font-size:
+      clamp(
+        29px,
+        9.5vw,
+        48px
+      );
+
+    line-height: 1.02;
+  }
+
+
+  /* PATH */
+
+  .path-wrapper {
+    top: 48%;
+
+    width:
+      calc(100% - 24px);
+
+    max-width: 620px;
+
+    height:
+      clamp(
+        170px,
+        27vh,
+        230px
+      );
+  }
+
+  .path-base {
+    stroke-width: 3;
+  }
+
+  .path-progress {
+    stroke-width: 4;
+  }
+
+
+  /* MILESTONES */
+
+  .milestone-dot {
+    width: 11px;
+    height: 11px;
+
+    border-width: 2.5px;
+  }
+
+  .milestone-label {
+    font-size:
+      clamp(
+        4px,
+        1.4vw,
+        6px
+      );
+
+    line-height: 1.4;
+  }
+
+  .milestone.above .milestone-label {
+    bottom: 16px;
+  }
+
+  .milestone.below .milestone-label {
+    top: 16px;
+  }
+
+
+  /* CHARACTER */
+
+  .character {
+    width: 31px;
+    height: 44px;
+  }
+
+  .character-head {
+    width: 14px;
+    height: 14px;
+  }
+
+  .character-body {
+    top: 13px;
+
+    width: 18px;
+    height: 21px;
+
+    border-radius:
+      8px 8px 5px 5px;
+  }
+
+  .character-leg {
+    top: 33px;
+
+    width: 5px;
+    height: 12px;
+  }
+
+  .character-leg.left {
+    left: 8px;
+  }
+
+  .character-leg.right {
+    right: 8px;
+  }
+
+
+  /* JOURNEY INFO */
+
+  .journey-info {
+    left: 20px;
+    right: 20px;
+
+    bottom:
+      max(
+        20px,
+        calc(
+          env(safe-area-inset-bottom) + 16px
+        )
+      );
+
+    width: auto;
+
+    max-width: 390px;
+
+    margin: 0 auto;
+  }
+
+  .journey-info-step {
+    margin:
+      0 10px 7px;
+
+    font-size: 5px;
+
+    line-height: 1.4;
+  }
+
+  .journey-info-title {
+    margin:
+      0 10px 7px;
+
+    font-size:
+      clamp(
+        17px,
+        5.5vw,
+        23px
+      );
+
+    line-height: 1;
+  }
+
+  .journey-info-text {
+    max-width: 350px;
+
+    font-size:
+      clamp(
+        9px,
+        2.8vw,
+        11px
+      );
+
+    line-height: 1.45;
+  }
+}
+
+
+/* =====================================================
+   REDUCED MOTION
+===================================================== */
+
+@media (
+  prefers-reduced-motion: reduce
+) {
+
+  .path-progress {
+    transition: none;
+  }
+
+  .milestone-dot,
+  .milestone-label {
+    transition: none;
+  }
+}
+
+</style>
+
+
+<section
+  class="journey-scroll"
+  id="journey"
+>
+
+  <div class="journey-sticky">
+
+
+    <!-- =================================================
+         HEADER
+    ================================================= -->
+
+    <div class="journey-header">
+
+      <div class="journey-eyebrow">
+        THE SOLUTION
+      </div>
+
+      <h2 class="journey-title">
+        One clear <i>path</i>
+      </h2>
+
+    </div>
+
+
+    <!-- =================================================
+         PATH
+    ================================================= -->
+
+    <div
+      class="path-wrapper"
+      id="pathWrapper"
+    >
+
+      <svg
+        class="journey-svg"
+        id="journeySvg"
+        viewBox="0 0 1600 410"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+
+        <path
+          id="journeyPath"
+          class="path-base"
+          d="
+            M -40 350
+            C 120 350,
+              260 350,
+              400 350
+            L 650 350
+            C 740 350,
+              740 270,
+              820 270
+            L 1080 270
+            C 1170 270,
+              1170 190,
+              1250 190
+            L 1450 190
+            C 1530 190,
+              1530 90,
+              1600 90
+          "
+        />
+
+        <path
+          id="journeyProgress"
+          class="path-progress"
+          d="
+            M -40 350
+            C 120 350,
+              260 350,
+              400 350
+            L 650 350
+            C 740 350,
+              740 270,
+              820 270
+            L 1080 270
+            C 1170 270,
+              1170 190,
+              1250 190
+            L 1450 190
+            C 1530 190,
+              1530 90,
+              1600 90
+          "
+        />
+
+      </svg>
+
+
+      <!-- MILESTONES -->
+
+      <div
+        class="milestone below"
+        data-progress="0"
+        data-x="0"
+        data-y="350"
+      >
+        <div class="milestone-dot"></div>
+
+        <div class="milestone-label">
+          TODAY
+        </div>
+      </div>
+
+
+      <div
+        class="milestone above"
+        data-progress=".25"
+        data-x="650"
+        data-y="350"
+      >
+        <div class="milestone-dot"></div>
+
+        <div class="milestone-label">
+          WEEK 1
+        </div>
+      </div>
+
+
+      <div
+        class="milestone below"
+        data-progress=".50"
+        data-x="1080"
+        data-y="270"
+      >
+        <div class="milestone-dot"></div>
+
+        <div class="milestone-label">
+          WEEK 2
+        </div>
+      </div>
+
+
+      <div
+        class="milestone above"
+        data-progress=".75"
+        data-x="1450"
+        data-y="190"
+      >
+        <div class="milestone-dot"></div>
+
+        <div class="milestone-label">
+          WEEK 3
+        </div>
+      </div>
+
+
+      <div
+        class="milestone above"
+        data-progress="1"
+        data-x="1600"
+        data-y="90"
+      >
+        <div class="milestone-dot"></div>
+
+        <div class="milestone-label">
+          WEEK 4
+        </div>
+      </div>
+
+
+      <!-- CHARACTER -->
+
+      <div
+        class="character"
+        id="character"
+        aria-hidden="true"
+      >
+
+        <div class="character-head"></div>
+
+        <div class="character-body"></div>
+
+        <div class="character-leg left"></div>
+
+        <div class="character-leg right"></div>
+
+      </div>
+
+    </div>
+
+
+    <!-- =================================================
+         JOURNEY INFO
+    ================================================= -->
+
+    <div
+      class="journey-info"
+      id="journeyInfo"
+    >
+
+      <div
+        class="journey-info-step"
+        id="journeyInfoStep"
+      >
+        TODAY
+      </div>
+
+      <h3
+        class="journey-info-title"
+        id="journeyInfoTitle"
+      >
+        START HERE
+      </h3>
+
+      <p
+        class="journey-info-text"
+        id="journeyInfoText"
+      >
+        Get clear on where you are going and what you need to learn next.
+      </p>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<script>
+
+/* =====================================================
+   ELEMENTS
+===================================================== */
+
+const journey =
+  document.getElementById("journey");
+
+const wrapper =
+  document.getElementById("pathWrapper");
+
+const path =
+  document.getElementById("journeyPath");
+
+const progressPath =
+  document.getElementById("journeyProgress");
+
+const character =
+  document.getElementById("character");
+
+const milestones =
+  document.querySelectorAll(".milestone");
+
+
+/* =====================================================
+   INFO
+===================================================== */
+
+const journeyInfoStep =
+  document.getElementById("journeyInfoStep");
+
+const journeyInfoTitle =
+  document.getElementById("journeyInfoTitle");
+
+const journeyInfoText =
+  document.getElementById("journeyInfoText");
+
+
+/* =====================================================
+   PATH LENGTH
+===================================================== */
+
+const totalLength =
+  path.getTotalLength();
+
+progressPath.style.strokeDasharray =
+  totalLength;
+
+progressPath.style.strokeDashoffset =
+  totalLength;
+
+
+/* =====================================================
+   STATE
+===================================================== */
+
+let targetProgress = 0;
+
+let currentProgress = 0;
+
+let ticking = false;
+
+let currentInfoState = "";
+
+
+/* =====================================================
+   SCROLL PROGRESS
+===================================================== */
+
+function calculateJourneyProgress() {
+
+  const rect =
+    journey.getBoundingClientRect();
+
+  const scrollable =
+    journey.offsetHeight -
+    window.innerHeight;
+
+
+  if (scrollable <= 0) {
+
+    targetProgress = 1;
+
+    return;
+  }
+
+
+  let progress =
+    -rect.top / scrollable;
+
+
+  targetProgress =
+    Math.max(
+      0,
+      Math.min(
+        1,
+        progress
+      )
+    );
+}
+
+
+/* =====================================================
+   CHARACTER
+===================================================== */
+
+function updateCharacter(progress) {
+
+  const point =
+    path.getPointAtLength(
+      totalLength * progress
+    );
+
+
+  const scaleX =
+    wrapper.clientWidth / 1600;
+
+  const scaleY =
+    wrapper.clientHeight / 410;
+
+
+  let x =
+    point.x * scaleX;
+
+  let y =
+    point.y * scaleY;
+
+
+  const characterWidth =
+    character.offsetWidth || 32;
+
+  const halfCharacter =
+    characterWidth / 2;
+
+
+  x =
+    Math.max(
+      halfCharacter,
+      Math.min(
+        wrapper.clientWidth -
+        halfCharacter,
+        x
+      )
+    );
+
+
+  const ahead =
+    Math.min(
+      totalLength,
+      totalLength * progress + 8
+    );
+
+
+  const nextPoint =
+    path.getPointAtLength(ahead);
+
+
+  const dx =
+    nextPoint.x - point.x;
+
+  const dy =
+    nextPoint.y - point.y;
+
+
+  const angle =
+    Math.atan2(dy, dx) *
+    180 /
+    Math.PI;
+
+
+  character.style.left =
+    `${x}px`;
+
+  character.style.top =
+    `${y}px`;
+
+  character.style.transform =
+    `
+      translate(-50%, -100%)
+      rotate(${angle * 0.15}deg)
+    `;
+}
+
+
+/* =====================================================
+   MILESTONES
+===================================================== */
+
+function updateMilestones(progress) {
+
+  milestones.forEach(
+    milestone => {
+
+      const milestoneProgress =
+        parseFloat(
+          milestone.dataset.progress
+        );
+
+
+      milestone.classList.toggle(
+        "completed",
+        progress >= milestoneProgress
+      );
+
+
+      milestone.classList.toggle(
+        "active",
+        Math.abs(
+          progress -
+          milestoneProgress
+        ) < 0.035
+      );
+
+    }
+  );
+}
+
+
+/* =====================================================
+   JOURNEY INFO
+===================================================== */
+
+function updateJourneyInfo(progress) {
+
+  let status = "";
+  let title = "";
+  let description = "";
+
+
+  if (progress < 0.125) {
+
+    status = "TODAY";
+
+    title = "START HERE";
+
+    description =
+      "Get clear on where you are going and what you need to learn next.";
+
+  }
+
+  else if (progress < 0.375) {
+
+    status = "WEEK 1";
+
+    title = "CORE SKILLS";
+
+    description =
+      "Build your fundamentals while solving problems and getting feedback along the way.";
+
+  }
+
+  else if (progress < 0.625) {
+
+    status = "WEEK 2";
+
+    title = "BUILDING SKILLS";
+
+    description =
+      "Take on harder problems and start connecting concepts on your own.";
+
+  }
+
+  else if (progress < 0.875) {
+
+    status = "WEEK 3";
+
+    title = "APPLYING SKILLS";
+
+    description =
+      "Work through realistic challenges that require you to combine what you've learned.";
+
+  }
+
+  else {
+
+    status = "WEEK 4";
+
+    title = "REAL-WORLD READY";
+
+    description =
+      "Build, practice, and test yourself so you know what you can do and what's next.";
+
+  }
+
+
+  const newState =
+    status +
+    "|" +
+    title +
+    "|" +
+    description;
+
+
+  if (
+    newState ===
+    currentInfoState
+  ) {
+    return;
+  }
+
+
+  currentInfoState =
+    newState;
+
+
+  journeyInfoStep.textContent =
+    status;
+
+  journeyInfoTitle.textContent =
+    title;
+
+  journeyInfoText.textContent =
+    description;
+}
+
+
+/* =====================================================
+   POSITION MILESTONES
+===================================================== */
+
+function positionMilestones() {
+
+  const scaleX =
+    wrapper.clientWidth / 1600;
+
+  const scaleY =
+    wrapper.clientHeight / 410;
+
+
+  milestones.forEach(
+    milestone => {
+
+      const x =
+        parseFloat(
+          milestone.dataset.x
+        );
+
+      const y =
+        parseFloat(
+          milestone.dataset.y
+        );
+
+
+      milestone.style.left =
+        `${x * scaleX}px`;
+
+      milestone.style.top =
+        `${y * scaleY}px`;
+
+    }
+  );
+}
+
+
+/* =====================================================
+   ANIMATION
+===================================================== */
+
+function animateJourney() {
+
+  const difference =
+    targetProgress -
+    currentProgress;
+
+
+  currentProgress +=
+    difference * 0.065;
+
+
+  if (
+    Math.abs(difference) <
+    0.00005
+  ) {
+
+    currentProgress =
+      targetProgress;
+  }
+
+
+  progressPath.style.strokeDashoffset =
+    totalLength *
+    (
+      1 -
+      currentProgress
+    );
+
+
+  updateCharacter(
+    currentProgress
+  );
+
+  updateMilestones(
+    currentProgress
+  );
+
+  updateJourneyInfo(
+    currentProgress
+  );
+
+
+  requestAnimationFrame(
+    animateJourney
+  );
+}
+
+
+/* =====================================================
+   SCROLL
+===================================================== */
+
+function onScroll() {
+
+  if (ticking) {
+    return;
+  }
+
+
+  requestAnimationFrame(
+    () => {
+
+      calculateJourneyProgress();
+
+      ticking = false;
+
+    }
+  );
+
+
+  ticking = true;
+}
+
+
+window.addEventListener(
+  "scroll",
+  onScroll,
+  {
+    passive: true
+  }
+);
+
+
+/* =====================================================
+   RESIZE
+===================================================== */
+
+let resizeTimer;
+
+window.addEventListener(
+  "resize",
+  () => {
+
+    clearTimeout(resizeTimer);
+
+
+    resizeTimer =
+      setTimeout(
+        () => {
+
+          positionMilestones();
+
+          calculateJourneyProgress();
+
+          updateCharacter(
+            currentProgress
+          );
+
+        },
+        80
+      );
+
+  }
+);
+
+
+/* =====================================================
+   ORIENTATION
+===================================================== */
+
+window.addEventListener(
+  "orientationchange",
+  () => {
+
+    setTimeout(
+      () => {
+
+        positionMilestones();
+
+        calculateJourneyProgress();
+
+        updateCharacter(
+          currentProgress
+        );
+
+      },
+      150
+    );
+
+  }
+);
+
+
+/* =====================================================
+   INITIALISE
+===================================================== */
+
+positionMilestones();
+
+calculateJourneyProgress();
+
+updateCharacter(0);
+
+updateMilestones(0);
+
+updateJourneyInfo(0);
+
+animateJourney();
+
+</script>
+
+</body>
+</html>

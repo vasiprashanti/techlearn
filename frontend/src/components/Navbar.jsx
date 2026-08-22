@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, User } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useAuthModalContext } from '../context/AuthModalContext';
@@ -15,9 +15,41 @@ export default function Navbar() {
   const isDarkMode = theme === 'dark';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
 
   const accountRef = useRef(null);
   const mobileMenuRef = useRef(null);
+
+  const [isDarkHeader, setIsDarkHeader] = useState(true);
+
+  useEffect(() => {
+    const checkDarkSection = () => {
+      // Check all dark sections: Hero (#start, .tl-hero), Pricing (#pricing, .tl-pricing-section)
+      const darkSections = document.querySelectorAll('#start, #pricing, .tl-pricing-section, .tl-hero');
+      let isOverDark = false;
+
+      darkSections.forEach((section) => {
+        const rect = section.getBoundingClientRect();
+        // Navbar is at top 0-72px; detect if section intersects with navbar
+        if (rect.top <= 65 && rect.bottom >= 35) {
+          isOverDark = true;
+        }
+      });
+
+      setIsDarkHeader(isOverDark);
+    };
+
+    window.addEventListener('scroll', checkDarkSection, { passive: true });
+    window.addEventListener('resize', checkDarkSection);
+    checkDarkSection();
+
+    return () => {
+      window.removeEventListener('scroll', checkDarkSection);
+      window.removeEventListener('resize', checkDarkSection);
+    };
+  }, [location.pathname]);
+
+  const isDarkNav = isDarkMode || isDarkHeader;
 
   // Close menus on outside click
   useEffect(() => {
@@ -93,9 +125,9 @@ export default function Navbar() {
           --green: #b2e96a;
           --green-text: #04103d;
           --heading: #00113b;
-          --text: rgba(0, 17, 59, 0.78);
+          --text: rgba(0, 17, 59, 0.88);
           --text-hover: #00113b;
-          --muted: rgba(0, 17, 59, 0.55);
+          --muted: rgba(0, 17, 59, 0.6);
           --border: rgba(0, 17, 59, 0.12);
           --dropdown-bg: rgba(255, 255, 255, 0.98);
           --dropdown-border: rgba(0, 17, 59, 0.12);
@@ -111,28 +143,29 @@ export default function Navbar() {
           --theme-btn-color: #00113b;
         }
 
-        /* Dark Mode Overrides */
+        /* Dark Mode or Hero Section Active */
+        .tl-navbar-root.dark-theme,
         .dark .tl-navbar-root {
           --navy: #04103d;
           --green: #b2e96a;
           --green-text: #04103d;
           --heading: #ffffff;
-          --text: rgba(255, 255, 255, 0.72);
+          --text: rgba(255, 255, 255, 0.92);
           --text-hover: #ffffff;
-          --muted: rgba(255, 255, 255, 0.48);
-          --border: rgba(255, 255, 255, 0.10);
+          --muted: rgba(255, 255, 255, 0.65);
+          --border: rgba(255, 255, 255, 0.12);
           --dropdown-bg: rgba(4, 16, 61, 0.98);
-          --dropdown-border: rgba(255, 255, 255, 0.10);
+          --dropdown-border: rgba(255, 255, 255, 0.12);
           --dropdown-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
-          --dropdown-action-bg: rgba(255, 255, 255, 0.025);
-          --dropdown-action-hover: rgba(255, 255, 255, 0.055);
-          --dropdown-action-border: rgba(255, 255, 255, 0.10);
-          --dropdown-action-text: rgba(255, 255, 255, 0.72);
+          --dropdown-action-bg: rgba(255, 255, 255, 0.04);
+          --dropdown-action-hover: rgba(255, 255, 255, 0.08);
+          --dropdown-action-border: rgba(255, 255, 255, 0.12);
+          --dropdown-action-text: rgba(255, 255, 255, 0.85);
           --dropdown-action-hover-text: #ffffff;
-          --hamburger-color: rgba(255, 255, 255, 0.75);
-          --theme-btn-bg: rgba(255, 255, 255, 0.04);
-          --theme-btn-hover: rgba(255, 255, 255, 0.08);
-          --theme-btn-color: rgba(255, 255, 255, 0.75);
+          --hamburger-color: #ffffff;
+          --theme-btn-bg: rgba(255, 255, 255, 0.06);
+          --theme-btn-hover: rgba(255, 255, 255, 0.12);
+          --theme-btn-color: #ffffff;
         }
 
         .tl-nav {
@@ -523,7 +556,7 @@ export default function Navbar() {
         }
       `}</style>
 
-      <div className="tl-navbar-root">
+      <div className={`tl-navbar-root ${isDarkNav ? 'dark-theme' : ''} ${scrollY > 30 ? 'scrolled' : ''}`}>
         <nav className="tl-nav">
           {/* BRAND */}
           <Link
@@ -532,11 +565,11 @@ export default function Navbar() {
             aria-label="TechLearn"
           >
             <img
-              src={isDarkMode ? "/logoo2.png" : "/logoo-small.webp"}
+              src={isDarkNav ? "/logoo2.png" : "/logoo-small.webp"}
               alt="TechLearn"
               onError={(e) => {
                 e.target.onerror = null;
-                e.target.src = isDarkMode ? "/logoo2-small.webp" : "/logoo-small.webp";
+                e.target.src = isDarkNav ? "/logoo2-small.webp" : "/logoo-small.webp";
               }}
             />
           </Link>
@@ -562,16 +595,6 @@ export default function Navbar() {
                 </li>
               )}
             </ul>
-
-            {/* THEME TOGGLE BUTTON */}
-            <button
-              onClick={toggleTheme}
-              className="tl-theme-toggle-btn"
-              aria-label="Toggle theme"
-              type="button"
-            >
-              {isDarkMode ? <Sun size={17} /> : <Moon size={17} />}
-            </button>
 
             {/* LOGGED OUT STATE */}
             {!isAuthenticated ? (
@@ -629,24 +652,29 @@ export default function Navbar() {
                     <div className="tl-profile-email">{userEmail}</div>
                   </div>
 
-                  {/* MANAGE PROFILE */}
+                  {/* MANAGE PROFILE (Logo removed) */}
                   <Link
                     to="/dashboard/profile"
                     className="tl-profile-action tl-manage-profile"
                     onClick={() => setAccountMenuOpen(false)}
                   >
-                    <span className="tl-manage-logo">
-                      <img
-                        src={isDarkMode ? "/logoo2.png" : "/logoo-small.webp"}
-                        alt="TechLearn"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = "/logoo2-small.webp";
-                        }}
-                      />
-                    </span>
+                    <User size={16} />
                     <span>Manage your profile</span>
                   </Link>
+
+                  {/* THEME TOGGLE INSIDE DROPDOWN FOR LOGGED IN USERS */}
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    className="tl-profile-action"
+                    style={{ marginTop: '8px', padding: '0 12px', justifyContent: 'space-between' }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+                      <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
+                    </span>
+                    <span style={{ fontSize: '11px', opacity: 0.65 }}>Switch</span>
+                  </button>
 
                   {/* SIGN OUT */}
                   <button

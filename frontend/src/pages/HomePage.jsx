@@ -4,6 +4,8 @@ import { Moon, Sun } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import FreeAssessmentModal from '../components/Learn/FreeAssessmentModal'
+import JourneyPath from '../components/JourneyPath'
+import ProblemSection from '../components/ProblemSection'
 
 const codeFragments = [
   "DSA.solve(problem)",
@@ -103,37 +105,12 @@ const faqsData = [
   }
 ]
 
-const milestonesData = [
-  { label: "START", progress: 0.0, x: 80, y: 70, position: "above start-node" },
-  { label: "FOUNDATION", progress: 0.20, x: 760, y: 70, position: "above" },
-  { label: "PRACTICE", progress: 0.36, x: 1280, y: 170, position: "above" },
-  { label: "REAL ROUNDS", progress: 0.65, x: 500, y: 270, position: "above" },
-  { label: "INTERVIEW READY", progress: 1.0, x: 1520, y: 350, position: "above end-node" }
-]
-
-const pathD = "M 80 70 L 760 70 C 850 70, 850 170, 940 170 L 1280 170 C 1370 170, 1370 270, 1280 270 L 500 270 C 410 270, 410 350, 500 350 L 1520 350"
-
 const HomePage = () => {
   const { theme, toggleTheme } = useTheme()
   const isDarkMode = theme === 'dark'
 
   // Code line animation state
   const codeFieldRef = useRef(null)
-
-  // Journey animation state
-  const journeySectionRef = useRef(null)
-  const pathWrapperRef = useRef(null)
-  const pathRef = useRef(null)
-  const progressPathRef = useRef(null)
-  const characterRef = useRef(null)
-  const [journeyStatusText, setJourneyStatusText] = useState("START · BUILD YOUR FOUNDATION")
-  const [milestonesState, setMilestonesState] = useState([
-    { completed: true, active: true },
-    { completed: false, active: false },
-    { completed: false, active: false },
-    { completed: false, active: false },
-    { completed: false, active: false }
-  ])
 
   // Review carousel state
   const [currentReview, setCurrentReview] = useState(1)
@@ -234,103 +211,7 @@ const HomePage = () => {
 
 
 
-  // --- 3. Interactive Roadmap Animation (Sticky scroll + SVG path character tracking) ---
-  useEffect(() => {
-    const journey = journeySectionRef.current
-    const wrapper = pathWrapperRef.current
-    const path = pathRef.current
-    const progressPath = progressPathRef.current
-    const charElem = characterRef.current
-    if (!journey || !wrapper || !path || !progressPath || !charElem) return
 
-    let totalLength = 0
-    try {
-      totalLength = path.getTotalLength()
-    } catch {
-      totalLength = 2000
-    }
-
-    progressPath.style.strokeDasharray = `${totalLength}`
-    progressPath.style.strokeDashoffset = `${totalLength}`
-
-    let targetProgress = 0
-    let currentProgress = 0
-    let animFrameId
-
-    const calculateProgress = () => {
-      const rect = journey.getBoundingClientRect()
-      const scrollDistance = journey.offsetHeight - window.innerHeight
-      if (scrollDistance <= 0) {
-        targetProgress = 1
-        return
-      }
-      // When the journey section pins at top: 0, -rect.top advances from 0 to scrollDistance
-      let progress = -rect.top / scrollDistance
-      progress = Math.max(0, Math.min(1, progress))
-      targetProgress = progress
-    }
-
-    const updateCharacterAndMilestones = (progress) => {
-      try {
-        const point = path.getPointAtLength(totalLength * progress)
-        const scaleX = wrapper.clientWidth / 1600
-        const scaleY = wrapper.clientHeight / 410
-
-        const x = point.x * scaleX
-        const y = point.y * scaleY
-
-        const ahead = Math.min(totalLength, totalLength * progress + 8)
-        const nextPoint = path.getPointAtLength(ahead)
-        const dx = nextPoint.x - point.x
-        const dy = nextPoint.y - point.y
-        const angle = (Math.atan2(dy, dx) * 180) / Math.PI
-
-        charElem.style.left = `${x}px`
-        charElem.style.top = `${y}px`
-        charElem.style.transform = `translate(-50%, -100%) rotate(${angle * 0.15}deg)`
-      } catch (err) {
-        // fallback
-      }
-
-      setMilestonesState(
-        milestonesData.map((m, idx) => ({
-          completed: progress >= m.progress || (idx === 0),
-          active: Math.abs(progress - m.progress) < 0.05 || (idx === 0 && progress < 0.05) || (idx === 4 && progress > 0.95)
-        }))
-      )
-
-      if (progress < 0.10) {
-        setJourneyStatusText("START · BUILD YOUR FOUNDATION")
-      } else if (progress < 0.28) {
-        setJourneyStatusText("FOUNDATION · BUILD THE SKILLS")
-      } else if (progress < 0.50) {
-        setJourneyStatusText("PRACTICE · TRAIN WITH PURPOSE")
-      } else if (progress < 0.82) {
-        setJourneyStatusText("REAL ROUNDS · PREPARE FOR THE INTERVIEW")
-      } else {
-        setJourneyStatusText("INTERVIEW READY · YOU KNOW WHAT'S NEXT")
-      }
-    }
-
-    const animateJourneyLoop = () => {
-      currentProgress += (targetProgress - currentProgress) * 0.04
-      progressPath.style.strokeDashoffset = `${totalLength * (1 - currentProgress)}`
-      updateCharacterAndMilestones(currentProgress)
-      animFrameId = requestAnimationFrame(animateJourneyLoop)
-    }
-
-    calculateProgress()
-    animateJourneyLoop()
-
-    window.addEventListener("scroll", calculateProgress, { passive: true })
-    window.addEventListener("resize", calculateProgress)
-
-    return () => {
-      window.removeEventListener("scroll", calculateProgress)
-      window.removeEventListener("resize", calculateProgress)
-      cancelAnimationFrame(animFrameId)
-    }
-  }, [])
 
   // --- 4. Review Carousel Auto-play ---
   useEffect(() => {
@@ -390,94 +271,60 @@ const HomePage = () => {
         <div className="tl-code-field" ref={codeFieldRef}></div>
 
         <main className="tl-hero-content">
-          <h1 className="tl-hero-title">
-            <span>Where Placement Preparation</span>
-            <span>Meets Company Patterns</span>
-          </h1>
+          {isAuthenticated ? (
+            <>
+              <h1 className="tl-hero-title">
+                Choose <i>your</i>&nbsp;&nbsp;move.
+              </h1>
 
-          <p className="tl-hero-description">
-            Know what to do every day. Practice real interview questions.<br />
-            Stay on track for your dream job.
-          </p>
+              <p className="tl-hero-description">
+                Code on your own, or pick up where you left off.
+              </p>
 
-          <div className="tl-hero-actions">
-            <Link to="/signup" className="tl-primary-button">
-              START NOW →
-            </Link>
-          </div>
+              <div className="tl-hero-actions">
+                <Link to="/compiler" className="tl-primary-button">
+                  START CODING
+                </Link>
+                <Link to="/dashboard" className="tl-secondary-button">
+                  RESUME LEARNING
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <h1 className="tl-hero-title">
+                Choose <i>your</i>&nbsp;&nbsp;next move.
+              </h1>
+
+              <p className="tl-hero-description">
+                Pick a direction. Build what it takes to get there.
+              </p>
+
+              <div className="tl-hero-actions">
+                <Link to="/signup?goal=job" className="tl-primary-button">
+                  GET JOB-READY
+                </Link>
+                <Link to="/signup?goal=skill" className="tl-secondary-button">
+                  LEARN A SKILL
+                </Link>
+              </div>
+            </>
+          )}
         </main>
       </section>
 
-
-
       {/* =========================================================
-           03 — CLEAR PATH (Interactive Roadmap Animation)
+           02 — THE PROBLEM (from Index.html)
       ========================================================= */}
-      <section className="tl-journey-scroll" id="journey" ref={journeySectionRef}>
-        <div className="tl-journey-sticky">
-          <div className="tl-journey-header">
-            <div className="tl-journey-eyebrow">
-              NO MORE "WHAT SHOULD I STUDY?"
-            </div>
-            <h2 className="tl-journey-title">
-              ONE CLEAR<br />PATH.
-            </h2>
-          </div>
-
-          <div className="tl-path-wrapper" ref={pathWrapperRef}>
-            <svg
-              className="tl-journey-svg"
-              viewBox="0 0 1600 410"
-              preserveAspectRatio="none"
-            >
-              <path
-                ref={pathRef}
-                className="tl-path-base"
-                d={pathD}
-              />
-              <path
-                ref={progressPathRef}
-                className="tl-path-progress"
-                d={pathD}
-              />
-            </svg>
-
-            {milestonesData.map((m, idx) => {
-              const state = milestonesState[idx] || { completed: false, active: false }
-              return (
-                <div
-                  key={idx}
-                  className={`tl-milestone ${m.position} ${state.completed ? 'completed' : ''} ${state.active ? 'active' : ''}`}
-                  style={{
-                    left: `${(m.x / 1600) * 100}%`,
-                    top: `${(m.y / 410) * 100}%`
-                  }}
-                >
-                  <div className="tl-milestone-dot"></div>
-                  <div className="tl-milestone-label">{m.label}</div>
-                </div>
-              )
-            })}
-
-            <div className="tl-character" ref={characterRef}>
-              <div className="tl-character-head"></div>
-              <div className="tl-character-body"></div>
-              <div className="tl-character-leg left"></div>
-              <div className="tl-character-leg right"></div>
-            </div>
-          </div>
-
-          <div className="tl-journey-footer-bar">
-            <span className="tl-journey-checkpoint-chip">
-              <span className="tl-chip-dot"></span>
-              {journeyStatusText}
-            </span>
-          </div>
-        </div>
-      </section>
+      <ProblemSection />
 
       {/* =========================================================
-           04 — RESULTS / REVIEWS
+           03 — CLEAR PATH (from Path.html)
+      ========================================================= */}
+      <JourneyPath />
+
+      {/* =========================================================
+           04 — REVIEWS / FROM THE COMMUNITY (Light mode)
       ========================================================= */}
       <section className="tl-results" id="results" ref={resultsSectionRef}>
         <div className="section-inner">
@@ -536,25 +383,21 @@ const HomePage = () => {
       </section>
 
       {/* =========================================================
-           05 — PRICING
+           05 — PRICING (from Index.html / screenshot)
       ========================================================= */}
       <section className="tl-pricing-section" id="pricing">
         <div className="tl-pricing-inner">
           <div className="tl-pricing-header">
+            <span className="tl-pricing-eyebrow">THE NEXT STEP</span>
             <h2 className="tl-pricing-title">
-              PICK YOUR PATH.
+              Choose <i>your</i>&nbsp;&nbsp;path
             </h2>
-            <p className="tl-pricing-description">
-              Build a real technical skill or prepare specifically for placements. One focused program, structured practice, and a clear path forward.
-            </p>
           </div>
 
           <div className="tl-pricing-grid">
             {/* Skill Program */}
             <article className="tl-price-card">
-              <div className="tl-price-name">
-                Build real technical skills.
-              </div>
+              <div className="tl-price-badge secondary-badge">BEGINNER FRIENDLY</div>
               <h3 className="tl-price-card-title">SKILL PROGRAM</h3>
               <p className="tl-price-subtitle">
                 Pick a skill and build real ability through structured learning, daily practice and hands-on work.
@@ -578,12 +421,7 @@ const HomePage = () => {
 
             {/* Placement Program (Featured) */}
             <article className="tl-price-card featured">
-              <div className="tl-price-badge">
-                MOST POPULAR
-              </div>
-              <div className="tl-price-name">
-                Prepare for your placement.
-              </div>
+              <div className="tl-price-badge">MOST POPULAR</div>
               <h3 className="tl-price-card-title">PLACEMENT PROGRAM</h3>
               <p className="tl-price-subtitle">
                 A focused preparation system for students who want to become interview-ready and improve their chances of landing a job.
@@ -609,11 +447,12 @@ const HomePage = () => {
       </section>
 
       {/* =========================================================
-           06 — FAQ
+           06 — FAQS (Light mode)
       ========================================================= */}
       <section className="tl-faq-section" id="faqs">
         <div className="tl-faq-inner">
           <div className="tl-faq-header">
+            <span className="tl-faq-eyebrow">GOT QUESTIONS?</span>
             <h2 className="tl-faq-title">
               QUESTIONS? WE GOT YOU.
             </h2>
@@ -646,17 +485,18 @@ const HomePage = () => {
       </section>
 
       {/* =========================================================
-           07 — FINAL CTA (hero.html exact specifications)
+           05 — FINAL CTA (from Index.html / screenshot)
       ========================================================= */}
       <section className="tl-search-section" id="start-program">
         <div className="tl-search-content">
           <div className="tl-search-eyebrow">
-            TIRED OF FIGURING IT OUT?
+            SEARCH RESULTS <span>≠</span> YOUR RESULTS.
           </div>
 
           <h2 className="tl-search-title">
-            <span className="tl-cta-line1">YOU SEARCH.</span>
-            <span className="tl-cta-line2">WE MAP IT OUT.</span>
+            <span>
+              <u><i>stop</i></u> guessing
+            </span>
           </h2>
 
           <div className="tl-search-box">
@@ -668,7 +508,7 @@ const HomePage = () => {
           </div>
 
           <Link to="/signup" className="tl-search-button">
-            BUILD MY ROADMAP →
+            FIND YOUR PATH
           </Link>
         </div>
       </section>

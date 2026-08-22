@@ -1,0 +1,497 @@
+/* =====================================================
+   JOURNEY PATH COMPONENT STYLES (from Path.html)
+===================================================== */
+
+.journey-scroll {
+  position: relative;
+  height: 320vh;
+  background: #e0eef4;
+  transition: background 0.3s ease;
+}
+
+.dark .journey-scroll {
+  background: #060d1f;
+}
+
+.journey-sticky {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+  min-height: 520px;
+  overflow: hidden;
+  background: #e0eef4;
+  color: #04103d;
+  isolation: isolate;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.dark .journey-sticky {
+  background: #060d1f;
+  color: #f1f5f9;
+}
+
+/* GRID PINNED WITH STICKY SECTION */
+.journey-sticky::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(4, 16, 61, 0.055) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(4, 16, 61, 0.055) 1px,
+      transparent 1px
+    );
+  background-size: 75px 75px;
+  background-position: center center;
+}
+
+.dark .journey-sticky::before {
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.04) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.04) 1px,
+      transparent 1px
+    );
+}
+
+/* HEADER */
+.journey-header {
+  position: absolute;
+  top: clamp(65px, 12vh, 125px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(750px, calc(100% - 40px));
+  z-index: 30;
+  text-align: center;
+  font-family: "Inter", sans-serif;
+}
+
+.journey-eyebrow {
+  margin: 0 0 clamp(10px, 1.5vh, 16px);
+  color: rgba(4, 16, 61, 0.88);
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(7px, 0.65vw, 10px);
+  line-height: 1.5;
+}
+
+.dark .journey-eyebrow {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.journey-title {
+  margin: 0;
+  color: #04103d;
+  font-family: "Inter", sans-serif;
+  font-size: clamp(38px, 4.5vw, 62px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.055em;
+}
+
+.dark .journey-title {
+  color: #ffffff;
+}
+
+.journey-title i {
+  font-style: italic;
+}
+
+/* PATH AREA */
+.path-wrapper {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(1050px, calc(100% - 70px));
+  height: clamp(240px, 38vh, 380px);
+  overflow: visible;
+  z-index: 5;
+}
+
+.journey-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  display: block;
+}
+
+.path-base {
+  fill: none;
+  stroke: rgba(4, 16, 61, 0.18);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dark .path-base {
+  stroke: rgba(255, 255, 255, 0.18);
+}
+
+.path-progress {
+  fill: none;
+  stroke: #b9ec77;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* MILESTONES */
+.milestone {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  text-align: center;
+  pointer-events: none;
+}
+
+.milestone-dot {
+  width: 13px;
+  height: 13px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: #e0eef4;
+  border: 3px solid rgba(4, 16, 61, 0.28);
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease,
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.dark .milestone-dot {
+  background: #060d1f;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.milestone-label {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(6px, 0.6vw, 8px);
+  line-height: 1.5;
+  color: rgba(4, 16, 61, 0.5);
+  transition: color 0.3s ease;
+}
+
+.dark .milestone-label {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.milestone.above .milestone-label {
+  bottom: clamp(19px, 2.5vh, 25px);
+}
+
+.milestone.below .milestone-label {
+  top: clamp(19px, 2.5vh, 25px);
+}
+
+.milestone.active .milestone-dot {
+  background: #b9ec77;
+  border-color: #04103d;
+  transform: scale(1.35);
+  box-shadow: 0 0 0 7px rgba(185, 236, 119, 0.18);
+}
+
+.dark .milestone.active .milestone-dot {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 7px rgba(185, 236, 119, 0.25);
+}
+
+.milestone.active .milestone-label {
+  color: #04103d;
+}
+
+.dark .milestone.active .milestone-label {
+  color: #ffffff;
+}
+
+.milestone.completed .milestone-dot {
+  background: #b9ec77;
+  border-color: #b9ec77;
+}
+
+/* CHARACTER */
+.character {
+  position: absolute;
+  width: 38px;
+  height: 52px;
+  z-index: 20;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  transform-origin: center bottom;
+  will-change: left, top, transform;
+}
+
+.character-head {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 17px;
+  height: 17px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: #04103d;
+}
+
+.dark .character-head {
+  background: #ffffff;
+}
+
+.character-body {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  width: 21px;
+  height: 24px;
+  transform: translateX(-50%);
+  border-radius: 9px 9px 5px 5px;
+  background: #04103d;
+}
+
+.dark .character-body {
+  background: #ffffff;
+}
+
+.character-leg {
+  position: absolute;
+  top: 37px;
+  width: 6px;
+  height: 15px;
+  border-radius: 5px;
+  background: #04103d;
+}
+
+.dark .character-leg {
+  background: #ffffff;
+}
+
+.character-leg.left {
+  left: 10px;
+  transform: rotate(8deg);
+}
+
+.character-leg.right {
+  right: 10px;
+  transform: rotate(-8deg);
+}
+
+/* JOURNEY INFO */
+.journey-info {
+  position: absolute;
+  right: clamp(30px, 7vw, 110px);
+  bottom: clamp(35px, 7vh, 75px);
+  width: min(330px, 28vw);
+  z-index: 25;
+  text-align: right;
+  font-family: "Inter", sans-serif;
+}
+
+.journey-info-step {
+  margin: 0 0 12px auto;
+  color: rgba(3, 12, 46, 0.608);
+  font-family: "Press Start 2P", monospace;
+  font-size: 8px;
+  text-align: right;
+  line-height: 1.5;
+}
+
+.dark .journey-info-step {
+  color: #b9ec77;
+}
+
+.journey-info-title {
+  margin: 0 0 10px auto;
+  text-align: right;
+  color: #04103d;
+  font-size: clamp(20px, 2vw, 24px);
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+}
+
+.dark .journey-info-title {
+  color: #ffffff;
+}
+
+.journey-info-text {
+  margin: 0 0 0 auto;
+  text-align: right;
+  max-width: 310px;
+  color: rgba(4, 16, 61, 0.62);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.dark .journey-info-text {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* TABLETS */
+@media (min-width: 701px) and (max-width: 1100px) {
+  .path-wrapper {
+    width: calc(100% - 60px);
+    height: clamp(220px, 32vh, 310px);
+  }
+
+  .journey-info {
+    right: 35px;
+    width: 270px;
+  }
+}
+
+/* MOBILE */
+@media (max-width: 700px) {
+  .journey-scroll {
+    height: 300vh;
+  }
+
+  .journey-sticky {
+    min-height: 500px;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .journey-sticky::before {
+    background-size: 40px 40px;
+    background-position: center center;
+  }
+
+  .journey-header {
+    top: max(45px, calc(env(safe-area-inset-top) + 36px));
+    width: calc(100% - 32px);
+    max-width: 520px;
+  }
+
+  .journey-eyebrow {
+    margin-bottom: 10px;
+    font-size: clamp(5px, 1.6vw, 7px);
+    line-height: 1.5;
+  }
+
+  .journey-title {
+    font-size: clamp(29px, 9.5vw, 48px);
+    line-height: 1.02;
+  }
+
+  .path-wrapper {
+    top: 48%;
+    width: calc(100% - 24px);
+    max-width: 620px;
+    height: clamp(170px, 27vh, 230px);
+  }
+
+  .path-base {
+    stroke-width: 3;
+  }
+
+  .path-progress {
+    stroke-width: 4;
+  }
+
+  .milestone-dot {
+    width: 11px;
+    height: 11px;
+    border-width: 2.5px;
+  }
+
+  .milestone-label {
+    font-size: clamp(4px, 1.4vw, 6px);
+    line-height: 1.4;
+  }
+
+  .milestone.above .milestone-label {
+    bottom: 16px;
+  }
+
+  .milestone.below .milestone-label {
+    top: 16px;
+  }
+
+  .character {
+    width: 31px;
+    height: 44px;
+  }
+
+  .character-head {
+    width: 14px;
+    height: 14px;
+  }
+
+  .character-body {
+    top: 13px;
+    width: 18px;
+    height: 21px;
+    border-radius: 8px 8px 5px 5px;
+  }
+
+  .character-leg {
+    top: 33px;
+    width: 5px;
+    height: 12px;
+  }
+
+  .character-leg.left {
+    left: 8px;
+  }
+
+  .character-leg.right {
+    right: 8px;
+  }
+
+  .journey-info {
+    left: 20px;
+    right: 20px;
+    bottom: max(20px, calc(env(safe-area-inset-bottom) + 16px));
+    width: auto;
+    max-width: 390px;
+    margin: 0 auto;
+  }
+
+  .journey-info-step {
+    margin: 0 10px 7px;
+    font-size: 5px;
+    line-height: 1.4;
+  }
+
+  .journey-info-title {
+    margin: 0 10px 7px;
+    font-size: clamp(17px, 5.5vw, 23px);
+    line-height: 1;
+  }
+
+  .journey-info-text {
+    max-width: 350px;
+    font-size: clamp(9px, 2.8vw, 11px);
+    line-height: 1.45;
+  }
+}
+
+/* REDUCED MOTION */
+@media (prefers-reduced-motion: reduce) {
+  .path-progress {
+    transition: none;
+  }
+
+  .milestone-dot,
+  .milestone-label {
+    transition: none;
+  }
+}
