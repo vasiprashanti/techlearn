@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import Job from "../models/Job.js";
-
+import User from "../models/User.js";
 /*
  * Escape special regex characters.
  * This prevents user input from being treated as regex syntax.
@@ -364,12 +364,23 @@ export const getActiveJobById = async (req, res) => {
  */
 export const listRecommendedJobs = async (req, res) => {
   try {
-    const user = req.user;
-
-    if (!user) {
+    if (!req.user?._id) {
       return res.status(401).json({
         success: false,
         message: "Not authorized",
+      });
+    }
+
+    /*
+     * Fetch the latest User document so recommendation
+     * preferences are always up to date.
+     */
+    const user = await User.findById(req.user._id).lean();
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User profile not found",
       });
     }
 
@@ -389,18 +400,50 @@ export const listRecommendedJobs = async (req, res) => {
     );
 
     /*
-     * User profile values.
+     * --------------------------------------------------------
+     * USER PROFILE VALUES
+     * --------------------------------------------------------
      */
-    const degreeBranch = user.degreeBranch?.trim() || "";
+
+    const degreeBranch =
+      user.degreeBranch?.trim() || "";
+
     const graduationYear = user.graduationYear
       ? String(user.graduationYear)
       : "";
 
+    const targetRole =
+      user.targetRole?.trim() || "";
+
+    const otherTargetRole =
+      user.otherTargetRole?.trim() || "";
+
+    const targetCompanies = Array.isArray(
+      user.targetCompanies
+    )
+      ? user.targetCompanies
+          .map((company) => String(company).trim())
+          .filter(Boolean)
+      : [];
+
+    const studentSkills = Array.isArray(user.skills)
+      ? user.skills
+          .map((skill) => String(skill).trim())
+          .filter(Boolean)
+      : [];
+
     /*
      * If the user has no recommendation information,
-     * do NOT return every published job.
+     * do not return every published job.
      */
-    if (!degreeBranch && !graduationYear) {
+    if (
+      !degreeBranch &&
+      !graduationYear &&
+      !targetRole &&
+      !otherTargetRole &&
+      targetCompanies.length === 0 &&
+      studentSkills.length === 0
+    ) {
       return res.status(200).json({
         success: true,
         data: [],
@@ -415,6 +458,10 @@ export const listRecommendedJobs = async (req, res) => {
         recommendationCriteria: {
           degreeBranch: null,
           graduationYear: null,
+          targetRole: null,
+          otherTargetRole: null,
+          targetCompanies: [],
+          skills: [],
         },
         message:
           "Complete your profile to get personalized job recommendations",
@@ -422,25 +469,21 @@ export const listRecommendedJobs = async (req, res) => {
     }
 
     /*
-     * Base filter.
+     * --------------------------------------------------------
+     * BASE FILTER
+     * --------------------------------------------------------
      */
+
     const filter = {
       status: "Published",
     };
 
     /*
      * --------------------------------------------------------
-     * BRANCH MATCHING
+     * BRANCH ELIGIBILITY
      * --------------------------------------------------------
-     *
-     * Example:
-     *
-     * User:
-     * degreeBranch = "AI/ML"
-     *
-     * Job:
-     * eligibleBranches = ["AI/ML", "CSE"]
      */
+
     if (degreeBranch) {
       filter.eligibleBranches = {
         $regex: `^${escapeRegex(degreeBranch)}$`,
@@ -450,9 +493,10 @@ export const listRecommendedJobs = async (req, res) => {
 
     /*
      * --------------------------------------------------------
-     * GRADUATION YEAR MATCHING
+     * GRADUATION YEAR ELIGIBILITY
      * --------------------------------------------------------
      */
+
     if (graduationYear) {
       filter.graduationYear = graduationYear;
     }
@@ -462,6 +506,7 @@ export const listRecommendedJobs = async (req, res) => {
      * SEARCH
      * --------------------------------------------------------
      */
+
     if (search.trim()) {
       const searchRegex = createRegex(search);
 
@@ -478,6 +523,7 @@ export const listRecommendedJobs = async (req, res) => {
      * JOB TYPE
      * --------------------------------------------------------
      */
+
     if (jobType.trim()) {
       filter.jobType = new RegExp(
         `^${escapeRegex(jobType.trim())}$`,
@@ -490,6 +536,7 @@ export const listRecommendedJobs = async (req, res) => {
      * LOCATION
      * --------------------------------------------------------
      */
+
     if (location.trim()) {
       filter.location = createRegex(location);
     }
@@ -499,6 +546,7 @@ export const listRecommendedJobs = async (req, res) => {
      * EXPERIENCE
      * --------------------------------------------------------
      */
+
     if (experience.trim()) {
       filter.experience = createRegex(experience);
     }
@@ -508,60 +556,238 @@ export const listRecommendedJobs = async (req, res) => {
      * WORK MODE
      * --------------------------------------------------------
      */
+
     if (workMode.trim()) {
       filter.workMode = createRegex(workMode);
     }
 
     /*
      * --------------------------------------------------------
-     * FETCH + COUNT TOGETHER
+     * FETCH ELIGIBLE JOBS
+     * --------------------------------------------------------
+     *
+     * We fetch all eligible jobs first because personalization
+     * needs to happen BEFORE pagination.
+     */
+
+    const jobs = await Job.find(filter)
+      .select(`${jobListFields} roleId`)
+      .populate("roleId", "roleName")
+      .lean();
+
+    /*
+     * --------------------------------------------------------
+     * PERSONALIZATION SCORING
+     * --------------------------------------------------------
+     *
+     * Target Role       = +5
+     * Other Target Role = +5
+     * Target Company    = +4
+     * Matching Skill    = +2 each
+     *
+     * Graduation year and branch are already used as
+     * eligibility filters above.
+     */
+
+    const normalizedTargetRole =
+      targetRole.toLowerCase();
+
+    const normalizedOtherTargetRole =
+      otherTargetRole.toLowerCase();
+
+    const normalizedTargetCompanies =
+      targetCompanies.map((company) =>
+        company.toLowerCase()
+      );
+
+    const normalizedStudentSkills =
+      studentSkills.map((skill) =>
+        skill.toLowerCase()
+      );
+
+    const scoredJobs = jobs.map((job) => {
+      let recommendationScore = 0;
+
+      const jobTitle =
+        String(job.title || "").toLowerCase();
+
+      const roleName =
+        String(
+          job.roleId?.roleName || ""
+        ).toLowerCase();
+
+      const companyName =
+        String(
+          job.companyName || ""
+        ).toLowerCase();
+
+      const jobSkills = Array.isArray(job.skills)
+        ? job.skills.map((skill) =>
+            String(skill).toLowerCase()
+          )
+        : [];
+
+      /*
+       * Target role
+       */
+      if (
+        normalizedTargetRole &&
+        (
+          jobTitle.includes(normalizedTargetRole) ||
+          roleName.includes(normalizedTargetRole)
+        )
+      ) {
+        recommendationScore += 5;
+      }
+
+      /*
+       * Other target role
+       */
+      if (
+        normalizedOtherTargetRole &&
+        (
+          jobTitle.includes(
+            normalizedOtherTargetRole
+          ) ||
+          roleName.includes(
+            normalizedOtherTargetRole
+          )
+        )
+      ) {
+        recommendationScore += 5;
+      }
+
+      /*
+       * Target company
+       */
+      if (
+        normalizedTargetCompanies.some(
+          (company) =>
+            companyName === company ||
+            companyName.includes(company)
+        )
+      ) {
+        recommendationScore += 4;
+      }
+
+      /*
+       * Skills
+       */
+      const matchingSkills =
+        normalizedStudentSkills.filter(
+          (studentSkill) =>
+            jobSkills.some(
+              (jobSkill) =>
+                jobSkill === studentSkill ||
+                jobSkill.includes(studentSkill) ||
+                studentSkill.includes(jobSkill)
+            )
+        );
+
+      recommendationScore += Math.min(
+        matchingSkills.length * 2,
+        10
+      );
+
+      return {
+        ...job,
+        recommendationScore,
+      };
+    });
+
+    /*
+     * --------------------------------------------------------
+     * SORT BY PERSONALIZATION
+     * --------------------------------------------------------
+     *
+     * Highest recommendation score first.
+     * If scores are equal, newest jobs first.
+     */
+
+    scoredJobs.sort((a, b) => {
+      if (
+        b.recommendationScore !==
+        a.recommendationScore
+      ) {
+        return (
+          b.recommendationScore -
+          a.recommendationScore
+        );
+      }
+
+      return (
+        new Date(
+          b.publishedAt || b.createdAt
+        ) -
+        new Date(
+          a.publishedAt || a.createdAt
+        )
+      );
+    });
+
+    /*
+     * --------------------------------------------------------
+     * PAGINATION
      * --------------------------------------------------------
      */
-    const [jobs, total] = await Promise.all([
-      Job.find(filter)
-        .select(jobListFields)
-        .sort({
-          publishedAt: -1,
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(itemsPerPage)
-        .lean(),
 
-      Job.countDocuments(filter),
-    ]);
+    const total = scoredJobs.length;
 
-    const totalPages = Math.ceil(total / itemsPerPage) || 1;
+    const paginatedJobs = scoredJobs.slice(
+      skip,
+      skip + itemsPerPage
+    );
+
+    const totalPages =
+      Math.ceil(total / itemsPerPage) || 1;
 
     return res.status(200).json({
       success: true,
-      data: jobs,
+      data: paginatedJobs,
       pagination: {
         page: currentPage,
         limit: itemsPerPage,
         total,
         totalPages,
-        hasNextPage: currentPage < totalPages,
-        hasPreviousPage: currentPage > 1,
+        hasNextPage:
+          currentPage < totalPages,
+        hasPreviousPage:
+          currentPage > 1,
       },
       recommendationCriteria: {
-        degreeBranch: degreeBranch || null,
-        graduationYear: graduationYear
-          ? Number(graduationYear)
-          : null,
+        degreeBranch:
+          degreeBranch || null,
+
+        graduationYear:
+          graduationYear
+            ? Number(graduationYear)
+            : null,
+
+        targetRole:
+          targetRole || null,
+
+        otherTargetRole:
+          otherTargetRole || null,
+
+        targetCompanies,
+
+        skills: studentSkills,
       },
     });
   } catch (error) {
-    console.error("Error fetching recommended jobs:", error);
+    console.error(
+      "Error fetching recommended jobs:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
       message:
-        error.message || "Failed to fetch recommended jobs",
+        error.message ||
+        "Failed to fetch recommended jobs",
     });
   }
 };
-
 
 /*
  * ============================================================
@@ -887,6 +1113,77 @@ export const getJobApplicationUrl = async (req, res) => {
       message:
         error.message ||
         "Failed to fetch application URL",
+    });
+  }
+};
+/**
+ * GET /api/jobs/categories
+ *
+ * Get role categories that have at least one Published job.
+ */
+export const getJobCategories = async (req, res) => {
+  try {
+    const categories = await Job.aggregate([
+      // Only consider Published jobs
+      {
+        $match: {
+          status: "Published",
+          roleId: { $ne: null },
+        },
+      },
+
+      // Group jobs by role
+      {
+        $group: {
+          _id: "$roleId",
+          publishedJobCount: {
+            $sum: 1,
+          },
+        },
+      },
+
+      // Get role information
+      {
+        $lookup: {
+          from: "roles",
+          localField: "_id",
+          foreignField: "_id",
+          as: "role",
+        },
+      },
+
+      // Convert role array into object
+      {
+        $unwind: "$role",
+      },
+
+      // Return the required response fields
+      {
+        $project: {
+          _id: "$role._id",
+          roleName: "$role.roleName",
+          publishedJobCount: 1,
+        },
+      },
+
+      // Sort alphabetically
+      {
+        $sort: {
+          roleName: 1,
+        },
+      },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: categories,
+    });
+  } catch (error) {
+    console.error("Error fetching job categories:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch job categories",
     });
   }
 };

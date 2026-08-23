@@ -7,9 +7,12 @@ import {
   getJobFilters,
   getHiringCalendar,
   getJobApplicationUrl,
+  getJobCategories,
 } from "../controllers/hiringController.js";
-
-import { protect } from "../middleware/authMiddleware.js";
+import {
+  protect,
+  isAdmin,
+} from "../middleware/authMiddleware.js";
 
 import {
   createRole,
@@ -39,31 +42,43 @@ const router = express.Router();
 
 router.post(
   "/admin/jobs",
+  protect,
+  isAdmin,
   createJob
 );
 
 router.get(
   "/admin/jobs",
+  protect,
+  isAdmin,
   listJobs
 );
 
 router.get(
   "/admin/jobs/:jobId",
+  protect,
+  isAdmin,
   getJobById
 );
 
 router.put(
   "/admin/jobs/:jobId",
+  protect,
+  isAdmin,
   updateJob
 );
 
 router.patch(
   "/admin/jobs/:jobId/status",
+  protect,
+  isAdmin,
   updateJobStatus
 );
 
 router.delete(
   "/admin/jobs/:jobId",
+  protect,
+  isAdmin,
   deleteJob
 );
 
@@ -119,6 +134,10 @@ router.get(
   getHiringCalendar
 );
 
+router.get(
+  "/jobs/categories",
+  getJobCategories
+);
 /*
  * Get application URL.
  */
@@ -145,29 +164,38 @@ router.get(
 
 router.post(
   "/admin/roles",
+  protect,
+  isAdmin,
   createRole
 );
 
 router.get(
   "/admin/roles",
+  protect,
+  isAdmin,
   listRoles
 );
 
 router.get(
   "/admin/roles/:roleId",
+  protect,
+  isAdmin,
   getRoleById
 );
 
 router.put(
   "/admin/roles/:roleId",
+  protect,
+  isAdmin,
   updateRole
 );
 
 router.delete(
   "/admin/roles/:roleId",
+  protect,
+  isAdmin,
   deleteRole
 );
-
 /*
  * ============================================================
  * ADMIN JOB LOGO UPLOAD
@@ -176,8 +204,18 @@ router.delete(
 
 router.post(
   "/admin/jobs/logo",
+  protect,
+  isAdmin,
   upload.single("logo"),
   uploadJobLogoFile
+);
+
+router.post(
+  "/admin/jobs/parse-markdown",
+  protect,
+  isAdmin,
+  upload.single("file"),
+  parseJobMarkdown
 );
 
 export default router;

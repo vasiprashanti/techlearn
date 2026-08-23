@@ -333,7 +333,20 @@ export const loginUser = async (req, res) => {
 // 📌 PUT /api/user/:id
 export const updateUserProfile = async (req, res) => {
   const { id } = req.params;
-  const { photoUrl, firstName, lastName, dateOfBirth, gender } = req.body;
+
+  const {
+    photoUrl,
+    firstName,
+    lastName,
+    dateOfBirth,
+    gender,
+    degreeBranch,
+    graduationYear,
+    targetRole,
+    otherTargetRole,
+    targetCompanies,
+    skills,
+  } = req.body;
 
   try {
     const updatedFields = {};
@@ -342,20 +355,57 @@ export const updateUserProfile = async (req, res) => {
       updatedFields.photoUrl = photoUrl;
       updatedFields.avatar = photoUrl;
     }
+
     if (firstName) updatedFields.firstName = firstName;
     if (lastName) updatedFields.lastName = lastName;
     if (dateOfBirth) updatedFields.dateOfBirth = dateOfBirth;
     if (gender) updatedFields.gender = gender;
 
-    const updatedUser = await User.findByIdAndUpdate(id, updatedFields, {
-      new: true,
-    });
-
-    if (!updatedUser) {
-      return res.status(404).json({ error: "User not found" });
+    if (degreeBranch !== undefined) {
+      updatedFields.degreeBranch = degreeBranch;
     }
 
-    // Invalidate dashboard cache for this user so they get the fresh profile avatar
+    if (graduationYear !== undefined) {
+      updatedFields.graduationYear =
+        graduationYear === "" || graduationYear === null
+          ? null
+          : Number(graduationYear);
+    }
+
+    if (targetRole !== undefined) {
+      updatedFields.targetRole = targetRole;
+    }
+
+    if (otherTargetRole !== undefined) {
+      updatedFields.otherTargetRole = otherTargetRole;
+    }
+
+    if (targetCompanies !== undefined) {
+      updatedFields.targetCompanies = Array.isArray(targetCompanies)
+        ? targetCompanies
+        : [];
+    }
+
+    if (skills !== undefined) {
+      updatedFields.skills = Array.isArray(skills)
+        ? skills
+        : [];
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      updatedFields,
+      {
+        new: true,
+      }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        error: "User not found",
+      });
+    }
+
     invalidateDashboardCache(id);
 
     res.json({
@@ -364,6 +414,8 @@ export const updateUserProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("Update Error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({
+      error: "Internal server error",
+    });
   }
 };

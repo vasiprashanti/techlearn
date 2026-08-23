@@ -85,6 +85,27 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    targetRole: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    otherTargetRole: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    targetCompanies: {
+      type: [String],
+      default: [],
+    },
+
+    skills: {
+      type: [String],
+      default: [],
+    },
     programSelection: {
       type: String,
       enum: ["Placement Sprint", "Full Stack Project Program", "Both"],

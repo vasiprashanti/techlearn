@@ -5,7 +5,7 @@ import Role from "../../models/Role.js";
 import fs from "fs";
 import sharp from "sharp";
 import path from "path";
-const ALLOWED_STATUS = ["Draft", "Published", "Closed"];
+const ALLOWED_STATUS = ["Draft","Published","Closed","Archived",];
 const ALLOWED_ROLE_STATUS = ["Active", "Archived"];
 /**
  * GET /api/admin/jobs
