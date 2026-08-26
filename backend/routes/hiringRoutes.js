@@ -42,6 +42,12 @@ router.post(
   createJob
 );
 
+router.post(
+  "/admin/jobs/parse-markdown",
+  upload.single("file"),
+  parseJobMarkdown
+);
+
 router.get(
   "/admin/jobs",
   listJobs

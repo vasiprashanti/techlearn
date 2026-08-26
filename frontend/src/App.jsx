@@ -10,10 +10,11 @@ import { AuthModalProvider } from './context/AuthModalContext'
 import { UserProvider } from './context/UserContext'
 import PrivateRoute from './Routes/PrivateRoute'
 import AdminPrivateRoute from './Routes/AdminPrivateRoute'
-import FloatingCodeWords from './components/FloatingCodeWords'
-import Hiring from "./pages/AdminDashbaord/Hiring.jsx";
+import FloatingCodeWords from './components/FloatingCodeWords';
+import EditHiringJob from "./pages/AdminDashbaord/EditHiringJob";
 
 const Jobs = lazy(() => import('./pages/Jobs'));
+const Hiring = lazy(() => import("./pages/AdminDashbaord/Hiring.jsx"));
 const HomePage = lazy(() => import('./pages/HomePage'))
 const Signup = lazy(() => import('./pages/Auth/Signup'))
 const ResetPassword = lazy(() => import('./components/auth/ResetPassword'))
@@ -281,7 +282,7 @@ function LayoutWrapper() {
             <Route path="/dashboard/performance" element={<Performance />} />
             <Route path="/dashboard/reports" element={<LearnerReports />} />
             <Route path="/dashboard/leaderboard" element={<Leaderboard />} />
-             <Route path="/dashboard/resources" element={<ResourcesHub />} />
+            <Route path="/dashboard/resources" element={<ResourcesHub />} />
             <Route path="/dashboard/resources/free-courses" element={<Navigate to="/learn" replace />} />
             <Route path="/dashboard/resources/important-concepts" element={<Concepts />} />
             <Route path="/dashboard/resources/important-concepts/:conceptId" element={<ImportantConceptDetail />} />
@@ -291,6 +292,7 @@ function LayoutWrapper() {
             <Route path="/dashboard/profile/settings" element={<DashboardSettings />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />
+            <Route path="/jobs" element={<Jobs />} />
           </Route>
           
           <Route path="/dashboard/profile" element={<Profile />} />
@@ -359,6 +361,7 @@ function LayoutWrapper() {
             <Route path="/admin/hiring" element={<Hiring />} />
             <Route path="/admin/hiring/:roleId" element={<HiringRoleJobs />} />
             <Route path="/admin/hiring/:roleId/jobs/create" element={<CreateHiringJob />}/>
+            <Route path="/admin/hiring/:roleId/jobs/:jobId/edit" element={<EditHiringJob />}/>
             <Route path="/admin/projects" element={<ProjectsList />} />
             <Route path="/admin/projects/edit/:projectId" element={<EditProject />} />
             <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />
@@ -369,7 +372,6 @@ function LayoutWrapper() {
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/system-health" element={<SystemHealth />} />
             <Route path="/colleges" element={<Colleges />} />
-            <Route path="/jobs" element={<Jobs />} />
 <Route path="/colleges/:collegeId" element={<CollegeDetails />} />
 <Route path="/batches" element={<Batches />} />
 <Route path="/batches/:batchId" element={<BatchDetails />} />

@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import { FiPlus, FiEye, FiSearch, FiEdit2, FiTrash2 } from "react-icons/fi";
 import { useTheme } from "../../context/ThemeContext";
 import HiringRoleCard from "../../components/AdminDashbaord/HiringRoleCard";
+import { adminAPI } from "../../services/adminApi";
 
 export default function Hiring() {
   const { theme } = useTheme();
@@ -14,47 +15,97 @@ export default function Hiring() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showRoleForm, setShowRoleForm] = useState(false);
 
+  const [editingRole, setEditingRole] = useState(null);
+  const [roleError, setRoleError] = useState("");
+
+  const [creatingRole, setCreatingRole] = useState(false);
   const [roleForm, setRoleForm] = useState({
     name: "",
     description: "",
   });
 
-  // Temporary data for UI testing
-  // We will connect this to the backend after the page is working.
-  const [roles] = useState([
-  {
-    id: 1,
-    name: "Software Development",
-    description: "Software development and engineering roles",
-    jobs: 24,
-    activeJobs: 24,
-    status: "Active",
-  },
-  {
-    id: 2,
-    name: "Frontend Development",
-    description: "Frontend and UI development opportunities",
-    jobs: 12,
-    activeJobs: 12,
-    status: "Active",
-  },
-  {
-    id: 3,
-    name: "Data Analytics",
-    description: "Data analytics and business intelligence roles",
-    jobs: 8,
-    activeJobs: 8,
-    status: "Active",
-  },
-  {
-    id: 4,
-    name: "AI / Machine Learning",
-    description: "Artificial intelligence and machine learning opportunities",
-    jobs: 0,
-    activeJobs: 0,
-    status: "Draft",
-  },
-]);
+  const [roles, setRoles] = useState([]);
+  const [loadingRoles, setLoadingRoles] = useState(true);
+
+  const normalizeRole = (role) => ({
+  id: role._id || role.id,
+  name: role.roleName || role.name || "",
+  description: role.description || "",
+  status: role.status || "Active",
+  jobs: role.jobs || 0,
+  activeJobs: role.activeJobs || 0,
+  });
+
+  useEffect(() => {
+  const fetchRoles = async () => {
+    try {
+      setLoadingRoles(true);
+      setRoleError("");
+
+      const response = await adminAPI.getRoles();
+
+      setRoles((response || []).map(normalizeRole));
+    } catch (error) {
+      console.error("Failed to fetch hiring roles:", error);
+      setRoleError(error.message || "Failed to load hiring roles.");
+    } finally {
+      setLoadingRoles(false);
+    }
+  
+  };
+
+  fetchRoles();
+}, []);
+
+const handleSaveRole = async () => {
+  if (!roleForm.name.trim()) return;
+
+  try {
+    setCreatingRole(true);
+    setRoleError("");
+
+    const payload = {
+      roleName: roleForm.name.trim(),
+      description: roleForm.description.trim(),
+    };
+
+    if (editingRole) {
+      // EDIT EXISTING ROLE
+      const roleId = editingRole.id || editingRole._id;
+
+      const updatedRole = await adminAPI.updateRole(roleId, payload);
+
+      setRoles((prevRoles) =>
+        prevRoles.map((role) =>
+          (role.id || role._id) === roleId
+            ? normalizeRole(updatedRole)
+            : role
+        )
+      );
+    } else {
+      // CREATE NEW ROLE
+      const newRole = await adminAPI.createRole(payload);
+
+      setRoles((prevRoles) => [
+        ...prevRoles,
+        normalizeRole(newRole),
+      ]);
+    }
+
+    setRoleForm({
+      name: "",
+      description: "",
+    });
+
+    setEditingRole(null);
+    setShowRoleForm(false);
+  } catch (error) {
+    console.error("Failed to save hiring role:", error);
+    setRoleError(error.message || "Failed to save hiring role.");
+  } finally {
+    setCreatingRole(false);
+  }
+};
 
 const filteredRoles = roles.filter((role) => {
   const query = searchQuery.toLowerCase();
@@ -158,11 +209,32 @@ const filteredRoles = roles.filter((role) => {
             selected={false}
             onSelectToggle={() => {}}
             onEdit={(selectedRole) => {
-            console.log("Edit role:", selectedRole);
-          }}
-          onDelete={(selectedRole) => {
-            console.log("Delete role:", selectedRole);
-          }}
+              setEditingRole(selectedRole);
+              setRoleForm({
+                name: selectedRole.name || selectedRole.roleName || "",
+                description: selectedRole.description || "",
+              });
+            setShowRoleForm(true);
+            }}
+            onDelete={async (selectedRole) => {
+              const roleId = selectedRole.id || selectedRole._id;
+              if (!roleId) return;
+              const confirmed = window.confirm(
+              `Delete "${selectedRole.name || selectedRole.roleName}"?`
+            );
+            if (!confirmed) return;
+            try {
+              await adminAPI.deleteRole(roleId);
+              setRoles((currentRoles) =>
+                currentRoles.filter(
+                (role) => (role.id || role._id) !== roleId
+                )
+              );
+            } catch (error) {
+          console.error("Failed to delete role:", error);
+          alert(error.message || "Failed to delete role.");
+         }
+        }}
           onView={(selectedRole) => {
             navigate(`/admin/hiring/${selectedRole.id}`);
           }}
@@ -179,17 +251,27 @@ const filteredRoles = roles.filter((role) => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-            Create Role
+           {editingRole ? "Edit Role" : "Create Role"}
           </h2>
 
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Create a new hiring category.
+            {editingRole
+              ? "Update the hiring role details."
+              : "Create a new hiring category."}
           </p>
         </div>
 
         <button
           type="button"
-          onClick={() => setShowRoleForm(false)}
+          onClick={() => {
+            setShowRoleForm(false);
+            setEditingRole(null);
+            setRoleError("");
+            setRoleForm({
+              name: "",
+              description: "",
+            });
+          }}
           className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xl"
         >
           ×
@@ -240,7 +322,15 @@ const filteredRoles = roles.filter((role) => {
 
           <button
             type="button"
-            onClick={() => setShowRoleForm(false)}
+            onClick={() => {
+              setShowRoleForm(false);
+              setEditingRole(null);
+              setRoleError("");
+              setRoleForm({
+                name: "",
+                description: "",
+              });
+            }}
             className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 text-sm font-semibold text-slate-600 dark:text-slate-300"
           >
             Cancel
@@ -248,14 +338,11 @@ const filteredRoles = roles.filter((role) => {
 
           <button
             type="button"
-            onClick={() => {
-              console.log("Role to create:", roleForm);
-              setShowRoleForm(false);
-            }}
+            onClick={handleSaveRole}
             disabled={!roleForm.name.trim()}
             className="px-5 py-2.5 rounded-xl bg-[#3C83F6] text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Create Role
+            {editingRole ? "Update Role" : "Create Role"}
           </button>
 
         </div>
