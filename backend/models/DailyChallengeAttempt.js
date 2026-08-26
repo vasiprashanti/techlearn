@@ -17,7 +17,13 @@ const dailyChallengeAttemptSchema = new mongoose.Schema(
     batchId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Batch",
-      required: true,
+      default: null,
+      index: true,
+    },
+    programId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Program",
+      default: null,
       index: true,
     },
     trackId: {
@@ -113,6 +119,6 @@ const dailyChallengeAttemptSchema = new mongoose.Schema(
 );
 
 dailyChallengeAttemptSchema.index({ codingRoundId: 1, studentEmail: 1 }, { unique: true });
-dailyChallengeAttemptSchema.index({ batchId: 1, trackId: 1, questionId: 1 });
+dailyChallengeAttemptSchema.index({ programId: 1, batchId: 1, trackId: 1, questionId: 1 });
 
 export default mongoose.model("DailyChallengeAttempt", dailyChallengeAttemptSchema);

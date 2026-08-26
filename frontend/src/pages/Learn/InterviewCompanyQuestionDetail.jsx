@@ -361,11 +361,11 @@ export default function InterviewCompanyQuestionDetail() {
     // Coding UI rendering
     return (
       <UserSidebarLayout maxWidthClass="max-w-[1400px]">
-        <div className="min-h-[calc(100vh-12rem)] lg:h-[calc(100vh-10rem)] flex flex-col lg:overflow-hidden w-full">
+        <div className="min-h-[calc(100vh-10rem)] lg:h-[calc(100vh-9rem)] flex flex-col overflow-visible lg:overflow-hidden w-full pb-4 lg:pb-0">
           {/* Workspace Body split */}
           <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden gap-4">
             {/* Left Panel */}
-            <aside className="w-full lg:w-[35%] xl:w-[40%] h-[300px] lg:h-auto flex flex-col shrink-0 overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
+            <aside className="w-full lg:w-[35%] xl:w-[40%] min-h-[380px] lg:h-full flex flex-col shrink-0 overflow-y-auto rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
               {/* Header inside Left Card */}
               <div className="p-4 border-b border-black/5 dark:border-white/5 shrink-0">
                 <button

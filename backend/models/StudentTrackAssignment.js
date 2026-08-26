@@ -6,7 +6,6 @@ const studentTrackAssignmentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Student",
       required: true,
-      index: true,
     },
     batchId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -18,13 +17,11 @@ const studentTrackAssignmentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "TrackTemplate",
       required: true,
-      index: true,
     },
     status: {
       type: String,
       enum: ["Active", "Draft"],
       default: "Active",
-      index: true,
     },
     assignedAt: {
       type: Date,

@@ -695,8 +695,6 @@ export default function Dashboard() {
           }`}
         >
           <div className="w-full max-w-[1400px] space-y-8">
-
-
             <div className="flex flex-col lg:grid lg:grid-cols-8 gap-8 items-stretch w-full">
               
               {/* Daily Challenge Card / Project Hero - Spans 5/8 width on lg */}

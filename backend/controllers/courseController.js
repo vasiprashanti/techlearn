@@ -5,6 +5,8 @@ import Notes from "../models/Notes.js";
 import Exercise from "../models/Exercise.js";
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
+import Program from "../models/Program.js";
+import { calculateProgramDayNumber, resolveProgramSchedule } from "../utils/programSchedule.js";
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 import {
@@ -476,56 +478,44 @@ export const getAllCourses = async (req, res) => {
           ],
         }).lean();
 
-        if (student?.batchId) {
-          // Fetch the batch to get primary + supporting course IDs
-          const batch = await Batch.findById(student.batchId)
-            .select("attachedCourse supportingCourses status")
-            .lean();
+        const schedule = await resolveProgramSchedule({ user: req.user, student });
+        if (schedule.batchExpired) {
+          return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+        }
+        const batch = schedule.batchId
+          ? await Batch.findById(schedule.batchId).select("attachedCourse supportingCourses status").lean()
+          : null;
+        const program = schedule.programId
+          ? await Program.findById(schedule.programId).select("courseIds status").lean()
+          : null;
+        const publicConditions = [
+          { assignedBatchIds: { $size: 0 } },
+          { assignedBatchIds: { $exists: false } },
+        ];
+        const programCourseIds = (program?.courseIds || []).map(String);
 
-          if (batch && batch.status === "Active") {
-            const primaryCourseId = batch.attachedCourse;
-            const supportingCourseIds = (batch.supportingCourses || []).map(id => id.toString());
+        if (batch && batch.status === "Active") {
+          const primaryCourseId = batch.attachedCourse;
+          const supportingCourseIds = (batch.supportingCourses || []).map(String);
+          const conditions = [
+            ...publicConditions,
+            { assignedBatchIds: batch._id },
+            ...(primaryCourseId ? [{ _id: primaryCourseId }] : []),
+            ...(programCourseIds.length ? [{ _id: { $in: programCourseIds } }] : []),
+          ];
 
-            // Build filter:
-            // Show: courses with no batch assignment (public) OR the primary course
-            // Hide: supporting courses (even though they're assigned to this batch)
-            const conditions = [
-              { assignedBatchIds: { $size: 0 } },
-              { assignedBatchIds: { $exists: false } },
-              { assignedBatchIds: batch._id },
-            ];
-
-            // Include primary course if it exists
-            if (primaryCourseId) {
-              conditions.push({ _id: primaryCourseId });
-            }
-
-            filter = {
-              $and: [
-                { $or: conditions },
-                // Explicitly exclude all supporting courses
-                ...(supportingCourseIds.length > 0
-                  ? [{ _id: { $nin: supportingCourseIds } }]
-                  : []),
-              ],
-            };
-          } else {
-            // Batch inactive or not found — show only public courses
-            filter = {
-              $or: [
-                { assignedBatchIds: { $size: 0 } },
-                { assignedBatchIds: { $exists: false } },
-              ],
-            };
-          }
-        } else {
-          // Student has no batch — show only public courses
           filter = {
-            $or: [
-              { assignedBatchIds: { $size: 0 } },
-              { assignedBatchIds: { $exists: false } },
+            $and: [
+              { $or: conditions },
+              ...(supportingCourseIds.length > 0
+                ? [{ _id: { $nin: supportingCourseIds } }]
+                : []),
             ],
           };
+        } else if (programCourseIds.length > 0) {
+          filter = { $or: [...publicConditions, { _id: { $in: programCourseIds } }] };
+        } else {
+          filter = { $or: publicConditions };
         }
       }
     } else {
@@ -555,53 +545,58 @@ export const getCourseById = async (req, res) => {
       return res.status(404).json({ message: "Course not found" });
     }
 
-    let studentBatchId = null;
+    let schedule = null;
+    let batch = null;
+    let program = null;
+    let student = null;
     if (req.user) {
       if (req.user.role !== "admin") {
         const email = String(req.user.email || "").trim().toLowerCase();
-        const student = await Student.findOne({
+        student = await Student.findOne({
           $or: [
             { userId: req.user._id },
             ...(email ? [{ email }] : []),
           ],
         }).lean();
-        if (student?.batchId) {
-          studentBatchId = student.batchId;
+        if (student) {
+          schedule = await resolveProgramSchedule({ user: req.user, student });
+          if (schedule.batchExpired) {
+            return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+          }
+          batch = schedule.batchId ? await Batch.findById(schedule.batchId).lean() : null;
+          program = schedule.programId ? await Program.findById(schedule.programId).lean() : null;
         }
       }
     }
 
     let currentDay = null;
-    let isBatchActive = false;
+    let isScheduleActive = false;
     let isPlacementPrimary = false;
 
-    if (studentBatchId) {
-      const batch = await Batch.findById(studentBatchId).lean();
-      if (batch) {
-        const courseIdStr = String(courseId);
-        const primaryId = batch.attachedCourse ? String(batch.attachedCourse) : null;
-        const supportingIds = (batch.supportingCourses || []).map(String);
-        const assignedIds = (course.assignedBatchIds || []).map(String);
+    if (student && schedule) {
+      const courseIdStr = String(courseId);
+      const primaryId = batch?.attachedCourse ? String(batch.attachedCourse) : null;
+      const supportingIds = (batch?.supportingCourses || []).map(String);
+      const assignedIds = (course.assignedBatchIds || []).map(String);
+      const programCourseIds = (program?.courseIds || []).map(String);
+      const isAttached =
+        primaryId === courseIdStr ||
+        supportingIds.includes(courseIdStr) ||
+        (batch && assignedIds.includes(String(batch._id))) ||
+        programCourseIds.includes(courseIdStr);
 
-        const isAttached =
-          primaryId === courseIdStr ||
-          supportingIds.includes(courseIdStr) ||
-          assignedIds.includes(String(batch._id));
-
-        if (batch.status === "Active" && isAttached) {
-          const assignmentDate = batch.startDate || new Date();
-          const releaseTime = batch.releaseTime || "00:00";
-          const [hours = "0", minutes = "0"] = releaseTime.split(":");
-          const releaseStart = new Date(assignmentDate);
-          releaseStart.setHours(Number(hours) || 0, Number(minutes) || 0, 0, 0);
-          const elapsedDays = Math.floor((Date.now() - releaseStart.getTime()) / (24 * 60 * 60 * 1000));
-          currentDay = Math.max(1, elapsedDays + 1);
-          isBatchActive = true;
-        }
-
-        // This course is the primary placement course if it's the batch's attachedCourse
-        isPlacementPrimary = primaryId === courseIdStr;
+      const scheduleOwnerIsActive = batch ? batch.status === "Active" : program?.status === "Active";
+      if (scheduleOwnerIsActive && isAttached) {
+        currentDay = calculateProgramDayNumber({
+          batch,
+          individualStartDate: schedule.individualStartDate,
+        });
+        isScheduleActive = true;
       }
+
+      // The first program course is the individual learner's primary course;
+      // a batch attachedCourse remains authoritative for cohort learners.
+      isPlacementPrimary = primaryId === courseIdStr || (!primaryId && String(programCourseIds[0] || "") === courseIdStr);
     }
 
     // Fetch topics using topicIds array and populate notesId
@@ -611,7 +606,7 @@ export const getCourseById = async (req, res) => {
 
     const formattedTopics = topics.map((topic, idx) => {
       const day = idx + 1;
-      const isLocked = isBatchActive && day > currentDay;
+      const isLocked = isScheduleActive && day > currentDay;
       return {
         topicId: topic._id,
         title: topic.title,
@@ -632,6 +627,8 @@ export const getCourseById = async (req, res) => {
       description: course.description,
       level: course.level,
       isPlacementPrimary,          // ← true only when this is the batch's primary course
+      programId: schedule?.programId || null,
+      scheduleType: schedule?.scheduleType || null,
       exerciseIds: course.exerciseIds || [],
       topics: formattedTopics,
     });

@@ -52,6 +52,12 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin"],
       default: "user",
     },
+    // Server-managed permissions used by admin APIs. The browser never gets
+    // to choose these values; they are read from the authenticated User row.
+    permissions: {
+      type: [String],
+      default: [],
+    },
     isClub: {
       type: Boolean,
       default: false,
@@ -126,6 +132,63 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
+    degree: {
+      type: String,
+      default: "",
+    },
+    branch: {
+      type: String,
+      default: "",
+    },
+    learningGoal: {
+      type: String,
+      default: "",
+    },
+    skills: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    targetRole: {
+      type: String,
+      default: "",
+    },
+    otherTargetRole: {
+      type: String,
+      default: "",
+    },
+    placementCategory: {
+      type: String,
+      default: "",
+    },
+    targetCompanies: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    placementTimeline: {
+      type: String,
+      default: "",
+    },
+    learningPath: {
+      type: String,
+      default: "",
+    },
+    personalizedDetail: {
+      type: String,
+      default: "",
+    },
+    onboardingCompleted: {
+      type: Boolean,
+      default: false,
+    },
+    onboardingCompletedAt: {
+      type: Date,
+      default: null,
+    },
+
     resetPasswordToken: String,
     resetPasswordExpires: Date,
   },
@@ -136,6 +199,7 @@ const userSchema = new mongoose.Schema(
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   if (!this.password) return next();
+  if (this.password.startsWith("$2a$") || this.password.startsWith("$2b$") || this.password.startsWith("$2y$")) return next();
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });

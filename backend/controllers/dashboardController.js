@@ -10,6 +10,8 @@ import Program from "../models/Program.js";
 import mongoose from "mongoose";
 
 import { updateStudentStreak } from "../utils/streakUtil.js";
+import { resolveDashboardProgramAccess } from "../utils/dashboardProgramAccess.js";
+import { buildUnifiedProfile } from "../utils/userProfile.js";
 
 const DASHBOARD_CACHE_TTL_MS = 30 * 1000;
 const dashboardCache = new Map();
@@ -39,7 +41,7 @@ const setCachedDashboard = (userId, payload) => {
   });
 };
 
-const buildDashboardUserPayload = (user, linkedStudent) => {
+const buildDashboardUserPayload = (user, linkedStudent, programAccess = null) => {
   const userFullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
   const studentName = String(linkedStudent?.name || "").trim();
   const legacyName = String(user?.name || "").trim();
@@ -61,6 +63,19 @@ const buildDashboardUserPayload = (user, linkedStudent) => {
     .filter(Boolean);
   const fallbackLastName = remainingParts.join(" ");
 
+  const profile = buildUnifiedProfile({
+    user,
+    student: linkedStudent,
+    enrollment: programAccess?.available
+      ? {
+          batchId: programAccess.batchId || null,
+          programId: programAccess.programId || null,
+          individualStartDate: programAccess.individualStartDate || programAccess.assignedAt || null,
+          status: programAccess.enrollmentStatus || null,
+        }
+      : null,
+  });
+
   return {
     id: user?._id || null,
     firstName: String(user?.firstName || "").trim() || fallbackFirstName,
@@ -70,9 +85,37 @@ const buildDashboardUserPayload = (user, linkedStudent) => {
     avatar: user?.avatar || user?.photoUrl || "",
     photoUrl: user?.photoUrl || user?.avatar || "",
     role: user?.role || "student",
+    collegeName: linkedStudent?.collegeId?.name || linkedStudent?.collegeName || user?.collegeName || "",
+    degree: linkedStudent?.degree || user?.degree || "",
+    branch: linkedStudent?.branch || user?.branch || "",
+    graduationYear: linkedStudent?.graduationYear || user?.graduationYear || null,
     programSelection: linkedStudent?.programSelection || user?.programSelection || "Placement Sprint",
-    programId: user?.programId || linkedStudent?.programId || null,
+    // Only expose a program pointer when the enrollment has been verified.
+    // The legacy User/Student pointers remain available in the database for
+    // migration compatibility, but they are not access grants.
+    programId: programAccess?.programId || null,
+    batchId: programAccess?.batchId || null,
+    programAccess: programAccess || {
+      available: false,
+      programId: null,
+      programName: null,
+      programType: null,
+      enrollmentStatus: null,
+      scheduleType: null,
+      batchId: null,
+    },
     streak: linkedStudent?.streak || 0,
+    learningGoal: linkedStudent?.learningGoal || user?.learningGoal || "",
+    targetRole: linkedStudent?.targetRole || user?.targetRole || "",
+    otherTargetRole: linkedStudent?.otherTargetRole || user?.otherTargetRole || "",
+    placementCategory: linkedStudent?.placementCategory || user?.placementCategory || "",
+    targetCompanies: linkedStudent?.targetCompanies?.length ? linkedStudent.targetCompanies : (user?.targetCompanies || []),
+    placementTimeline: linkedStudent?.placementTimeline || user?.placementTimeline || "",
+    learningPath: linkedStudent?.learningPath || user?.learningPath || "",
+    skills: linkedStudent?.skills?.length ? linkedStudent.skills : (user?.skills || []),
+    onboardingCompleted: user?.onboardingCompleted || linkedStudent?.onboardingCompleted || false,
+    onboardingCompletedAt: user?.onboardingCompletedAt || linkedStudent?.onboardingCompletedAt || null,
+    profile,
   };
 };
 
@@ -90,7 +133,7 @@ export const getDashboardData = async (req, res) => {
     }
 
     const [user, progress, totalExercises, notesMcqCounts] = await Promise.all([
-      User.findById(userId).select("avatar photoUrl email firstName lastName name role programSelection programId").lean(),
+      User.findById(userId).select("avatar photoUrl email firstName lastName name role collegeName degree branch graduationYear programSelection programId batchId learningGoal targetRole otherTargetRole placementCategory targetCompanies placementTimeline learningPath skills onboardingCompleted onboardingCompletedAt").lean(),
       UserProgress.findOne({ userId })
         .select("courseXP exerciseXP projectXP completedExercises answeredCheckpointMcqs createdAt")
         .populate({
@@ -131,11 +174,19 @@ export const getDashboardData = async (req, res) => {
     }
 
     const linkedStudent = normalizedEmail
-      ? await Student.findOne({ email: normalizedEmail }).select("_id name streak programSelection programId batchId").lean()
+      ? await Student.findOne({ email: normalizedEmail }).populate("collegeId", "name").select("_id name streak programSelection programId batchId collegeId degree branch graduationYear learningGoal targetRole otherTargetRole placementCategory targetCompanies placementTimeline learningPath skills onboardingCompleted onboardingCompletedAt").lean()
       : null;
 
+    const programAccess = await resolveDashboardProgramAccess({
+      userId,
+      studentId: linkedStudent?._id || null,
+      preferredProgramId: user?.programId || linkedStudent?.programId || null,
+      userBatchId: user?.batchId || null,
+      studentBatchId: linkedStudent?.batchId || null,
+    });
+
     const selectedProgram = linkedStudent?.programSelection || user?.programSelection;
-    const directProgramId = user?.programId || linkedStudent?.programId;
+    const directProgramId = programAccess?.programId || null;
     let program = directProgramId
       ? await Program.findOne({ _id: directProgramId, status: { $ne: "Archived" } })
           .populate("courseIds", "_id title description level courseType numTopics")
@@ -180,7 +231,7 @@ export const getDashboardData = async (req, res) => {
           projects: program.projectIds || [],
         }
       : null;
-    const dashboardUser = buildDashboardUserPayload(user, linkedStudent);
+    const dashboardUser = buildDashboardUserPayload(user, linkedStudent, programAccess);
     const latestDailyChallenge = linkedStudent?._id
       ? await Submission.findOne({
           studentId: linkedStudent._id,

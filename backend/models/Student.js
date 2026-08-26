@@ -43,6 +43,18 @@ const studentSchema = new mongoose.Schema(
     rollNo: {
       type: String,
     },
+    degree: {
+      type: String,
+      default: "",
+    },
+    branch: {
+      type: String,
+      default: "",
+    },
+    graduationYear: {
+      type: Number,
+      default: null,
+    },
 
     primaryTrack: {
       type: String,
@@ -55,12 +67,56 @@ const studentSchema = new mongoose.Schema(
       default: "Placement Sprint",
     },
 
+    learningGoal: {
+      type: String,
+      default: "",
+    },
+    skills: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    targetRole: {
+      type: String,
+      default: "",
+    },
+    otherTargetRole: {
+      type: String,
+      default: "",
+    },
+    placementCategory: {
+      type: String,
+      default: "",
+    },
+    targetCompanies: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    placementTimeline: {
+      type: String,
+      default: "",
+    },
+    learningPath: {
+      type: String,
+      default: "",
+    },
+    onboardingCompleted: {
+      type: Boolean,
+      default: false,
+    },
+    onboardingCompletedAt: {
+      type: Date,
+      default: null,
+    },
+
     status: {
       type: String,
       enum: ["Active", "Inactive", "Suspended"],
       default: "Active",
     },
-
     streak: {
       type: Number,
       default: 0,

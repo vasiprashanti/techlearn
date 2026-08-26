@@ -31,6 +31,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
   const [batchTracks, setBatchTracks] = useState([]);
   const [selectedDay, setSelectedDay] = useState(1);
   const [expandedMcqId, setExpandedMcqId] = useState(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleViewCode = async (sub) => {
     setLoadingCode(true);
@@ -171,6 +172,13 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
     : (batchStudentData?.leaderboardRank || '_');
   const totalXp = batchStudentData?.totalXp || studentBasic?.score || 0;
   const track = studentDetails?.track || studentBasic?.track || 'General Track';
+  const canonicalProfile = studentDetails?.profile || {};
+  const legacyProfile = studentDetails?.userProfile || {};
+  const profileAccount = canonicalProfile.account || {};
+  const profileEducation = canonicalProfile.education || {};
+  const profileEnrollment = canonicalProfile.enrollment || {};
+  const profileGoals = canonicalProfile.goals || {};
+  const profileSkills = canonicalProfile.skills || {};
 
   // Compute strong & weak topics from dayWiseHistoryTasksDetail
   const strongTopics = [];
@@ -224,6 +232,21 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
     return track?.days?.find(d => Number(d.dayNumber) === Number(dayNum))?.mcq || [];
   };
 
+  const handleResetStudentXp = async () => {
+    if (!studentId) return;
+    setActionLoading(true);
+    try {
+      await adminAPI.resetStudentXp(studentId);
+      setBatchStudentData(prev => prev ? { ...prev, totalXp: 0 } : prev);
+      if (studentBasic) studentBasic.score = 0;
+      setShowResetConfirm(false);
+    } catch (err) {
+      alert("Failed to reset student XP: " + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[140] flex items-center justify-center px-4 font-sans text-slate-900 dark:text-slate-100">
       <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={onClose} />
@@ -243,9 +266,20 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
               <p className="text-xs text-slate-500 dark:text-white/60 truncate mt-0.5">{email}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:text-white/60 dark:hover:text-white text-lg w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-            <FiX />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowResetConfirm(true)}
+              disabled={actionLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/40 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50"
+              title="Reset Student XP to 0"
+            >
+              <FiRefreshCw className={`w-3.5 h-3.5 ${actionLoading ? 'animate-spin' : ''}`} />
+              Reset XP
+            </button>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:text-white/60 dark:hover:text-white text-lg w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+              <FiX />
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -307,7 +341,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
 
               {/* Sub-tabs selection row */}
               <div className="flex -mb-3 pt-1 overflow-x-auto minimal-scrollbar gap-1">
-                {['Overview', 'Day-wise Report', 'Coding Submissions', 'MCQ Summary', 'Day-wise Performance'].map(tab => (
+                {['Overview', 'Profile', 'Day-wise Report', 'Coding Submissions', 'MCQ Summary', 'Day-wise Performance'].map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -374,6 +408,123 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                           </div>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB: PROFILE */}
+              {activeTab === 'Profile' && (
+                <div className="space-y-6 text-xs">
+                  {/* Account Section */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">Account Profile</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Full Name</span>
+                        <span className="font-semibold text-sm mt-0.5 block truncate">{profileAccount.name || legacyProfile.name || name}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Email Address</span>
+                        <span className="font-semibold text-sm mt-0.5 block truncate">{profileAccount.email || legacyProfile.email || email}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Account Role</span>
+                        <span className="font-semibold text-sm mt-0.5 block capitalize">{profileAccount.role || legacyProfile.role || 'user'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Education Section */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">Education Details</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">College</span>
+                        <span className="font-semibold mt-0.5 block truncate">{profileEducation.college || legacyProfile.college || college}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Degree</span>
+                        <span className="font-semibold mt-0.5 block truncate">{profileEducation.degree || legacyProfile.degree || 'Not specified'}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Branch / Stream</span>
+                        <span className="font-semibold mt-0.5 block truncate">{profileEducation.branch || legacyProfile.branch || 'Not specified'}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Graduation Year</span>
+                        <span className="font-semibold mt-0.5 block">{profileEducation.graduationYear || legacyProfile.graduationYear || 'Not specified'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Enrollment Section */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">Enrollment Info</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Batch</span>
+                        <span className="font-semibold mt-0.5 block">{profileEnrollment.batch?.name || legacyProfile.batch || batch}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Program</span>
+                        <span className="font-bold text-blue-600 dark:text-blue-400 mt-0.5 block">{profileEnrollment.program?.name || legacyProfile.program || track}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Placement Goals Section */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">Goals & Preferences</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Learning Goal</span>
+                        <span className="font-semibold mt-0.5 block">{profileGoals.learningGoal || legacyProfile.learningGoal || 'Not specified'}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Target Role</span>
+                        <span className="font-semibold mt-0.5 block">{profileGoals.targetRole || profileGoals.otherTargetRole || legacyProfile.targetRole || legacyProfile.otherTargetRole || 'Not specified'}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Opportunity Type</span>
+                        <span className="font-semibold mt-0.5 block">{profileGoals.opportunityType || legacyProfile.placementCategory || 'Not specified'}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Placement Timeline</span>
+                        <span className="font-semibold mt-0.5 block">{profileGoals.placementTimeline || legacyProfile.placementTimeline || 'Not specified'}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5 sm:col-span-2">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Selected Companies</span>
+                        <span className="font-semibold mt-0.5 block">
+                          {Array.isArray(profileGoals.companies) && profileGoals.companies.length > 0
+                            ? profileGoals.companies.join(', ')
+                            : Array.isArray(legacyProfile.targetCompanies) && legacyProfile.targetCompanies.length > 0
+                              ? legacyProfile.targetCompanies.join(', ')
+                            : 'None selected'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Skills & Interests Section */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">Skills & Interests</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {Array.isArray(profileSkills.selectedSkills) && profileSkills.selectedSkills.length > 0 ? (
+                        profileSkills.selectedSkills.map((s, i) => (
+                          <span key={i} className="inline-flex rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs px-3 py-1 font-semibold">
+                            {s}
+                          </span>
+                        ))
+                      ) : Array.isArray(legacyProfile.skills) && legacyProfile.skills.length > 0 ? (
+                        legacyProfile.skills.map((s, i) => (
+                          <span key={i} className="inline-flex rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs px-3 py-1 font-semibold">
+                            {s}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs italic text-slate-400">No skills selected</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1145,6 +1296,47 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal for Reset XP */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-[#0c1938] border border-black/10 dark:border-white/10 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 text-lg font-bold">
+                <FiAlertCircle />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Reset Student XP</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">This action cannot be undone.</p>
+              </div>
+            </div>
+            
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Are you sure you want to reset <span className="font-semibold text-slate-900 dark:text-white">{name}</span>'s total XP to 0 in the database?
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(false)}
+                disabled={actionLoading}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-white rounded-lg border border-black/10 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleResetStudentXp}
+                disabled={actionLoading}
+                className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 rounded-lg shadow transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {actionLoading && <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                Confirm Reset
+              </button>
             </div>
           </div>
         </div>

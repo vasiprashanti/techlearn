@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Award,
+  Briefcase,
+  BarChart3,
   LayoutDashboard,
   Map,
   PlayCircle,
@@ -16,9 +18,11 @@ const menuGroups = [
     title: "MAIN",
     items: [
       { id: "dashboard", title: "Dashboard", icon: <LayoutDashboard className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "dashboard/reports", title: "Reports", icon: <BarChart3 className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/roadmap", title: "Roadmaps", icon: <Map className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/practice", title: "Practice", icon: <PlayCircle className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/leaderboard", title: "Leaderboard", icon: <Award className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "jobs", title: "Jobs", icon: <Briefcase className="w-[18px] h-[18px] md:w-5 md:h-5" />,},
       { id: "dashboard/profile", title: "Profile", icon: <User className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
     ]
   }
@@ -37,6 +41,8 @@ const Sidebar = () => {
     location.pathname.startsWith('/demo') ||
     location.pathname.startsWith('/dashboard/') ||
     location.pathname.startsWith('/resources/roadmaps') ||
+    location.pathname.startsWith('/learn/program/') ||
+    location.pathname.startsWith('/jobs') ||
     location.pathname === '/dashboard/profile' ||
     location.pathname.startsWith('/dashboard/profile/');
   const isProfileRoute = location.pathname.startsWith('/dashboard/profile');
@@ -85,13 +91,13 @@ const Sidebar = () => {
             return `flex flex-col items-center justify-center gap-1.5 w-[3.65rem] h-[3.65rem] md:w-[4.15rem] md:h-[4.15rem] rounded-[1.1rem] transition-all duration-300 ease-out select-none
             ${
               isCurrent
-                ? "bg-[#e4f6ff] text-[#00113b] font-semibold shadow-md shadow-blue-600/10 border border-[#7ec9ff]/35 dark:bg-[#2563eb] dark:text-white dark:shadow-md dark:shadow-blue-600/20 dark:border-blue-400/20"
-                : "text-[#00113b]/70 dark:text-slate-400 hover:text-[#00113b] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 font-normal border border-transparent"
+                ? "bg-[#9ad975] text-[#00113b] font-semibold shadow-md shadow-green-500/20 border border-[#a3e635]/60 dark:bg-[#a3e635] dark:text-[#00113b] dark:shadow-md dark:shadow-green-500/20 dark:border-[#a3e635]/60"
+                : "text-[#00113b]/70 dark:text-slate-400 hover:text-[#00113b] dark:hover:text-white hover:bg-[#a3e635]/20 dark:hover:bg-[#a3e635]/15 font-normal border border-transparent"
             }`;
           }}
         >
           <div className="shrink-0">{item.icon}</div>
-          <span className="text-[8px] md:text-[9.5px] font-medium tracking-wide text-center max-w-[80px] truncate leading-none">
+          <span className="text-[8px] md:text-[9.5px] font-semibold tracking-wide text-center max-w-[80px] truncate leading-none">
             {item.title}
           </span>
         </NavLink>
@@ -115,7 +121,7 @@ const Sidebar = () => {
       `}</style>
 
       {/* Slim vertical desktop sidebar with vertically centered navigation */}
-      <div className={`hidden lg:flex flex-col fixed left-0 top-0 bottom-0 bg-[#bceaff] dark:bg-[#020b23] border-r border-[#1e2d5a]/10 dark:border-white/5 z-40 h-screen overflow-hidden w-[90px] pt-6 ${sidebarShadowClass} justify-between items-center pb-6`}>
+      <div className={`hidden lg:flex flex-col fixed left-0 top-0 bottom-0 bg-[#d5f1f8] dark:bg-[#020b23] border-r border-[#1e2d5a]/10 dark:border-white/5 z-40 h-screen overflow-hidden w-[90px] pt-6 ${sidebarShadowClass} justify-between items-center pb-6`}>
         {/* Adjusted top padding/spacer to push buttons slightly down */}
         <div className="h-14 shrink-0"></div>
 
@@ -154,7 +160,7 @@ const Sidebar = () => {
             onClick={() => setMobileMenuOpen(false)}
             className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
           />
-          <div className={`lg:hidden fixed left-0 top-0 bottom-0 w-24 bg-[#bceaff] dark:bg-[#020b23] border-r border-white/5 z-50 ${mobileSidebarShadowClass} flex flex-col pt-6 transition-transform duration-200 ease-out`}>
+          <div className={`lg:hidden fixed left-0 top-0 bottom-0 w-24 bg-[#c8effa] dark:bg-[#020b23] border-r border-white/5 z-50 ${mobileSidebarShadowClass} flex flex-col pt-6 transition-transform duration-200 ease-out`}>
               <div className="flex items-center justify-end shrink-0 relative px-2 h-8">
                 <button
                   onClick={() => setMobileMenuOpen(false)}

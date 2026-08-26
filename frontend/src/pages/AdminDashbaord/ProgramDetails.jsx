@@ -1,15 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, createElement } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
+import StudentReportModal from '../../components/AdminDashbaord/StudentReportModal';
+import ProgramBlueprintsPanel from './ProgramBlueprintsPanel';
 import { adminAPI } from '../../services/adminApi';
 import {
   FiArrowLeft,
-  FiEdit2,
   FiPlus,
   FiTrash2,
-  FiFolder,
   FiUsers,
   FiLayers,
   FiBookOpen,
@@ -18,25 +18,542 @@ import {
   FiAward,
   FiClipboard,
   FiCheckCircle,
+  FiActivity,
+  FiBarChart2,
   FiSearch,
+  FiFilter,
   FiX,
   FiExternalLink,
-  FiChevronRight,
   FiAlertCircle,
   FiTag,
   FiClock,
-  FiDollarSign,
+  FiEye,
 } from 'react-icons/fi';
 
 const SECTIONS = [
-  { key: 'batches', label: 'Batches', icon: FiLayers, field: 'batchIds', route: '/batches' },
   { key: 'students', label: 'Students', icon: FiUsers, field: 'studentIds', route: '/students' },
+  { key: 'blueprints', label: 'Blueprints', icon: FiLayers, field: null, route: null },
+  { key: 'batches', label: 'Batches', icon: FiLayers, field: 'batchIds', route: '/batches' },
   { key: 'courses', label: 'Courses', icon: FiBookOpen, field: 'courseIds', route: '/admin/courses' },
   { key: 'roadmaps', label: 'Roadmaps', icon: FiFileText, field: 'roadmapIds', route: '/admin/roadmaps' },
   { key: 'track-templates', label: 'Track Templates', icon: FiGitCommit, field: 'trackTemplateIds', route: '/track-templates' },
   { key: 'certificates', label: 'Certificates', icon: FiAward, field: 'certificateTemplateIds', route: '/certificates' },
   { key: 'projects', label: 'Projects', icon: FiClipboard, field: 'projectIds', route: '/admin/projects' },
+  { key: 'analytics', label: 'Analytics', icon: FiBarChart2, field: null, route: null },
 ];
+
+const getProgramType = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'placement' || normalized.includes('placement') ? 'Placement' : 'Skill';
+};
+
+const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
+
+const toValidDate = (value) => {
+  if (!value) return null;
+  const date = value instanceof Date ? new Date(value) : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const startOfDay = (value) => {
+  const date = toValidDate(value);
+  if (!date) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const formatCompactDate = (value) => {
+  const date = toValidDate(value);
+  return date
+    ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '—';
+};
+
+const parseDurationDays = (duration) => {
+  if (typeof duration === 'number' && Number.isFinite(duration)) return Math.max(1, Math.round(duration));
+
+  const match = String(duration || '').match(/(\d+(?:\.\d+)?)\s*-?\s*(day|days|week|weeks|month|months|year|years)/i);
+  if (!match) return null;
+
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount)) return null;
+
+  const unit = match[2].toLowerCase();
+  const multiplier = unit.startsWith('year')
+    ? 365
+    : unit.startsWith('month')
+    ? 30
+    : unit.startsWith('week')
+    ? 7
+    : 1;
+
+  return Math.max(1, Math.round(amount * multiplier));
+};
+
+const findStudentBatch = (student, enrollment, program) => {
+  const enrollmentBatch = enrollment?.batchId;
+  if (enrollmentBatch && typeof enrollmentBatch === 'object') return enrollmentBatch;
+  if (enrollment && !enrollmentBatch) return null;
+
+  const batchId = enrollmentBatch || student?.batchId?._id || student?.batchId;
+  return (program?.batchIds || []).find((batch) => String(batch?._id || batch) === String(batchId)) || null;
+};
+
+const buildStudentTableRow = (student, program) => {
+  const enrollment = student?.enrollment || null;
+  const batch = findStudentBatch(student, enrollment, program);
+  const started = toValidDate(
+    student?.scheduleStartDate
+      || student?.programStartDate
+      || batch?.startDate
+      || enrollment?.individualStartDate
+      || enrollment?.assignedAt
+      || student?.createdAt
+  );
+  const totalDays = parseDurationDays(program?.duration);
+  const startDay = startOfDay(started);
+  const today = startOfDay(new Date());
+  const rawDayNumber = startDay && today
+    ? Math.floor((today.getTime() - startDay.getTime()) / DAY_IN_MILLISECONDS) + 1
+    : null;
+  const dayNumber = Number.isFinite(student?.programDayNumber)
+    ? (totalDays ? Math.min(totalDays, Math.max(0, student.programDayNumber)) : student.programDayNumber)
+    : (rawDayNumber && totalDays
+      ? Math.min(totalDays, Math.max(1, rawDayNumber))
+      : rawDayNumber);
+  const expires = toValidDate(batch?.expiryDate)
+    || toValidDate(student?.scheduleExpiryDate)
+    || toValidDate(student?.programExpiryDate)
+    || (started && totalDays
+      ? new Date(startOfDay(started).getTime() + ((totalDays - 1) * DAY_IN_MILLISECONDS))
+      : null);
+  const isPaid = student?.programAccess
+    ? student.programAccess === 'Paid'
+    : enrollment?.accessTier === 'Member' || program?.pricingType === 'Paid';
+  const fee = Number(program?.programFee);
+  const feeLabel = Number.isFinite(fee) && fee > 0 ? ` ₹${fee.toLocaleString('en-IN')}` : '';
+  const configuredPlan = String(student?.programPlan || '').trim();
+  const planBase = configuredPlan || (isPaid
+    ? 'Paid'
+    : (totalDays ? `${totalDays}-Day Trial` : 'Free Access'));
+
+  return {
+    access: isPaid ? 'Paid' : 'Trial',
+    plan: isPaid && feeLabel && !planBase.includes('₹') ? `${planBase}${feeLabel}` : planBase,
+    started,
+    expires,
+    progress: dayNumber
+      ? (totalDays ? `Day ${dayNumber} / ${totalDays}` : `Day ${dayNumber}`)
+      : '—',
+    status: student?.programStatus || student?.status || enrollment?.status || 'Active',
+  };
+};
+
+const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach }) => (
+  <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] overflow-hidden">
+    <div className="overflow-x-auto">
+      <table className="min-w-[860px] w-full text-left">
+        <caption className="sr-only">Students enrolled in this program</caption>
+        <thead className="bg-black/[0.03] dark:bg-white/[0.04]">
+          <tr className="border-b border-black/10 dark:border-white/10">
+            {[
+              { label: '#', width: 'w-12 min-w-12' },
+              { label: 'Student', width: 'w-44 min-w-44' },
+              { label: 'Access', width: 'w-20 min-w-20' },
+              { label: 'Plan', width: 'w-28 min-w-28' },
+              { label: 'Started', width: 'w-24 min-w-24' },
+              { label: 'Expires', width: 'w-24 min-w-24' },
+              { label: 'Progress', width: 'w-28 min-w-28' },
+              { label: 'Status', width: 'w-28 min-w-28' },
+            ].map(({ label, width }) => (
+              <th
+                key={label}
+                scope="col"
+                className={`${width} px-3 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45 whitespace-nowrap`}
+              >
+                {label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {students.length === 0 ? (
+            <tr>
+              <td colSpan={8} className="px-6 py-12 text-center text-sm text-black/45 dark:text-white/45">
+                No students match the current search and filters.
+              </td>
+            </tr>
+          ) : students.map((student, index) => {
+            const row = buildStudentTableRow(student, program);
+            const isActive = row.status === 'Active';
+
+            return (
+              <tr
+                key={student._id}
+                onClick={() => onOpenStudent(student)}
+                className="group border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-[#3C83F6]/[0.04] dark:hover:bg-white/[0.04] cursor-pointer transition-colors"
+              >
+                <td className="w-12 min-w-12 px-3 py-3.5 text-xs font-semibold tabular-nums text-black/45 dark:text-white/45">
+                  {String(index + 1).padStart(3, '0')}
+                </td>
+                <td className="w-44 min-w-44 px-3 py-3.5">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpenStudent(student);
+                    }}
+                    className="text-left group/student"
+                  >
+                    <span className="block max-w-[150px] truncate text-sm font-bold text-slate-800 dark:text-white group-hover/student:text-[#3C83F6] dark:group-hover/student:text-[#bceaff] transition-colors whitespace-nowrap">
+                      {student.name || student.email || 'Unnamed Student'}
+                    </span>
+                    {student.email && (
+                      <span className="block max-w-[150px] truncate text-[11px] text-black/40 dark:text-white/40 mt-0.5">
+                        {student.email}
+                      </span>
+                    )}
+                  </button>
+                </td>
+                <td className="px-4 py-3.5">
+                  <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                    row.access === 'Paid'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                      : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'
+                  }`}>
+                    {row.access}
+                  </span>
+                </td>
+                <td className="px-4 py-3.5 text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">
+                  {row.plan}
+                </td>
+                <td className="px-4 py-3.5 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                  {formatCompactDate(row.started)}
+                </td>
+                <td className="px-4 py-3.5 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                  {formatCompactDate(row.expires)}
+                </td>
+                <td className="px-4 py-3.5 text-xs font-semibold tabular-nums text-slate-700 dark:text-slate-200 whitespace-nowrap">
+                  {row.progress}
+                </td>
+                <td className="px-4 py-3.5">
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                      isActive
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300'
+                    }`}>
+                      {row.status}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onDetach(student);
+                      }}
+                      title="Detach from Program"
+                      aria-label={`Detach ${student.name || 'student'} from Program`}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    >
+                      <FiTrash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
+const ReportActivity = ({ label, activity, tone }) => (
+  <div className="flex items-center justify-between gap-2 text-[10px] leading-tight">
+    <span className={`font-bold ${tone}`}>{label}</span>
+    <span className={`text-right ${activity?.attempted ? 'text-slate-700 dark:text-slate-200' : 'text-black/35 dark:text-white/35'}`}>
+      {activity?.attempted ? `${activity.status} · ${activity.result}` : 'N/A'}
+    </span>
+  </div>
+);
+
+const ProgramReportsTable = ({ students, program, onOpenStudent }) => {
+  const reportDays = Math.max(1, Number(program?.programReports?.days) || 30);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3 px-1">
+        <p className="text-xs text-black/45 dark:text-white/45">
+          Program Day is anchored to each learner&apos;s original enrollment date. Each day shows Daily Task and Daily Challenge activity.
+        </p>
+        <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-black/40 dark:text-white/40">
+          Day 1–{reportDays}
+        </span>
+      </div>
+      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-[3300px] w-full text-left">
+            <caption className="sr-only">Day-wise program reports for enrolled students</caption>
+            <thead className="bg-black/[0.03] dark:bg-white/[0.04]">
+              <tr className="border-b border-black/10 dark:border-white/10">
+                <th scope="col" className="sticky left-0 z-20 w-12 min-w-12 px-2.5 py-3 bg-[#f9fbfd] dark:bg-[#12244a] text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45">#</th>
+                <th scope="col" className="sticky left-12 z-20 w-44 min-w-44 px-2.5 py-3 bg-[#f9fbfd] dark:bg-[#12244a] text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45">Student</th>
+                {Array.from({ length: reportDays }, (_, index) => (
+                  <th key={index + 1} scope="col" className="w-28 min-w-28 px-2 py-3 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45">
+                    Day {index + 1}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((student, index) => {
+                const report = student.programReport || {};
+                const days = report.days || [];
+                return (
+                  <tr
+                    key={student._id}
+                    className="group border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-[#3C83F6]/[0.04] dark:hover:bg-white/[0.04] transition-colors"
+                  >
+                    <td className="sticky left-0 z-10 w-12 min-w-12 px-2.5 py-3.5 bg-white/95 dark:bg-[#0f1f43]/95 text-xs font-semibold tabular-nums text-black/45 dark:text-white/45">
+                      {String(index + 1).padStart(3, '0')}
+                    </td>
+                    <td className="sticky left-12 z-10 w-44 min-w-44 px-2.5 py-3.5 bg-white/95 dark:bg-[#0f1f43]/95">
+                      <button
+                        type="button"
+                        onClick={() => onOpenStudent(student)}
+                        className="text-left group/student"
+                      >
+                        <span className="block max-w-[150px] truncate text-sm font-bold text-slate-800 dark:text-white group-hover/student:text-[#3C83F6] dark:group-hover/student:text-[#bceaff] transition-colors">
+                          {student.name || student.email || 'Unnamed Student'}
+                        </span>
+                        <span className="block max-w-[150px] truncate text-[11px] text-black/40 dark:text-white/40 mt-0.5">
+                          {student.email || student.rollNo || '—'}
+                        </span>
+                      </button>
+                    </td>
+                    {Array.from({ length: reportDays }, (_, index) => {
+                      const day = days[index] || {};
+                      return (
+                        <td key={index + 1} className="w-28 min-w-28 px-2 py-2.5 align-top border-l border-black/5 dark:border-white/5">
+                          <div className="space-y-1.5">
+                            <ReportActivity label="Task" activity={day.dailyTask} tone="text-emerald-600 dark:text-emerald-300" />
+                            <ReportActivity label="Challenge" activity={day.dailyChallenge} tone="text-blue-600 dark:text-blue-300" />
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {students.length === 0 && (
+          <div className="px-6 py-12 text-center text-sm text-black/45 dark:text-white/45">
+            No students match the current search and filters.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const ProgramAnalyticsPanel = ({ program, readinessLeads = [], readinessLoading = false }) => {
+  const stats = program?.programStats || {};
+  const enrolledStudents = Array.isArray(program?.studentIds) ? program.studentIds : [];
+  const metrics = [
+    { label: 'Total Enrolled', value: stats.totalEnrolled ?? enrolledStudents.length },
+    { label: 'Current Enrolled', value: stats.currentEnrolled ?? 0 },
+    { label: 'Active Today', value: stats.activeToday ?? 0 },
+    { label: 'Completed', value: stats.completed ?? 0 },
+    { label: 'Accuracy', value: stats.accuracy === null || stats.accuracy === undefined ? '—' : `${stats.accuracy}%` },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        {metrics.map((metric) => (
+          <div key={metric.label} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] px-4 py-3">
+            <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{metric.value}</p>
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">{metric.label}</p>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] px-4 py-4">
+        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Program performance</h3>
+        <p className="mt-1 text-xs text-black/45 dark:text-white/45">
+          Analytics are calculated from the learners enrolled in this program and their day-wise activity.
+        </p>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-black/10 bg-white/80 dark:border-white/10 dark:bg-[#0f1f43]">
+        <div className="flex items-center justify-between gap-3 border-b border-black/5 px-4 py-3 dark:border-white/5">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Readiness leads</h3>
+            <p className="mt-1 text-xs text-black/45 dark:text-white/45">Learners who started Day 0 before enrolling in this program.</p>
+          </div>
+          <span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-700 dark:text-violet-300">{readinessLeads.length}</span>
+        </div>
+        {readinessLoading ? (
+          <div className="px-4 py-6 text-center text-xs text-black/45 dark:text-white/45">Loading readiness leads…</div>
+        ) : readinessLeads.length === 0 ? (
+          <div className="px-4 py-6 text-center text-xs text-black/45 dark:text-white/45">No readiness leads yet.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-[680px] w-full text-left">
+              <thead className="bg-black/[0.03] dark:bg-white/[0.04]">
+                <tr className="border-b border-black/10 dark:border-white/10">
+                  {['Learner', 'Role', 'Companies', 'Status', 'Score'].map((label) => (
+                    <th key={label} className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">{label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {readinessLeads.map((lead) => {
+                  const user = lead.userId || {};
+                  const name = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.name || user.email || 'Learner';
+                  return (
+                    <tr key={lead._id} className="border-b border-black/5 last:border-b-0 dark:border-white/5">
+                      <td className="px-4 py-3 text-xs font-semibold text-slate-800 dark:text-white">
+                        {name}<span className="mt-0.5 block text-[11px] font-normal text-black/40 dark:text-white/40">{user.email || '—'}</span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">{lead.targetRole || user.targetRole || '—'}</td>
+                      <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">{(lead.targetCompanies || user.targetCompanies || []).join(', ') || '—'}</td>
+                      <td className="px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-200">{lead.status}</td>
+                      <td className="px-4 py-3 text-xs font-semibold tabular-nums text-slate-700 dark:text-slate-200">{lead.accuracy === null || lead.accuracy === undefined ? '—' : `${Math.round(Number(lead.accuracy))}%`}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const performanceClassificationClass = (classification) => {
+  if (classification === 'Strong') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
+  if (classification === 'Average') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300';
+  if (classification === 'Weak') return 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300';
+  return 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300';
+};
+
+const formatPerformanceAccuracy = (value) => (
+  value === null || value === undefined ? '—' : `${Math.round(Number(value))}%`
+);
+
+const ProgramPerformancePanel = ({ performance, loading, error }) => {
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] px-4 py-8 text-center text-sm text-black/45 dark:text-white/45">
+        Generating performance report from student attempts…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50/80 dark:bg-red-500/10 px-4 py-4 text-sm text-red-700 dark:text-red-300">
+        {error}
+      </div>
+    );
+  }
+
+  const stats = performance?.stats || {};
+  const students = performance?.students || [];
+  const topics = performance?.topics || [];
+  const studentNames = new Map(students.map((student) => [String(student.studentId), student.name || student.email || 'Unnamed Student']));
+  const classifications = stats.classificationCounts || {};
+  const metrics = [
+    { label: 'Questions Attempted', value: stats.questionsAttempted ?? 0 },
+    { label: 'Correct Answers', value: stats.correctAnswers ?? 0 },
+    { label: 'Accuracy', value: formatPerformanceAccuracy(stats.accuracy) },
+    { label: 'Weak Topics', value: classifications.Weak ?? 0 },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+        <div>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Performance profile</h3>
+          <p className="mt-1 text-xs text-black/45 dark:text-white/45">
+            Generated from Daily Task, Daily Challenge, and dynamic program assignment attempts. Topic summaries feed the revision engine.
+          </p>
+        </div>
+        {performance?.generatedAt && (
+          <span className="text-[10px] font-semibold text-black/40 dark:text-white/40">
+            Updated {new Date(performance.generatedAt).toLocaleString()}
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {metrics.map((metric) => (
+          <div key={metric.label} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] px-4 py-3">
+            <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{metric.value}</p>
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">{metric.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-[980px] w-full text-left">
+            <caption className="sr-only">Program topic performance summaries</caption>
+            <thead className="bg-black/[0.03] dark:bg-white/[0.04]">
+              <tr className="border-b border-black/10 dark:border-white/10">
+                {['Student', 'Day', 'Subject', 'Topic', 'Subtopic', 'Attempted', 'Correct', 'Accuracy', 'Status'].map((label) => (
+                  <th key={label} scope="col" className="px-3 py-3 text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45 whitespace-nowrap">
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {topics.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-6 py-10 text-center text-sm text-black/45 dark:text-white/45">
+                    No completed question attempts have been recorded for this program yet.
+                  </td>
+                </tr>
+              ) : topics.map((topic) => (
+                <tr key={`${topic.studentId}-${topic.programDay}-${topic.subject}-${topic.topic}-${topic.subtopic}`} className="border-b border-black/5 dark:border-white/5 last:border-b-0">
+                  <td className="px-3 py-3 text-xs font-semibold text-slate-800 dark:text-white whitespace-nowrap">
+                    {studentNames.get(String(topic.studentId)) || 'Unnamed Student'}
+                  </td>
+                  <td className="px-3 py-3 text-xs font-semibold tabular-nums text-slate-600 dark:text-slate-300">Day {topic.programDay}</td>
+                  <td className="px-3 py-3 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">{topic.subject}</td>
+                  <td className="px-3 py-3 text-xs font-semibold text-slate-800 dark:text-white whitespace-nowrap">{topic.topic}</td>
+                  <td className="px-3 py-3 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">{topic.subtopic}</td>
+                  <td className="px-3 py-3 text-xs tabular-nums text-slate-600 dark:text-slate-300">{topic.questionsAttempted}</td>
+                  <td className="px-3 py-3 text-xs tabular-nums text-slate-600 dark:text-slate-300">{topic.correctAnswers}</td>
+                  <td className="px-3 py-3 text-xs font-semibold tabular-nums text-slate-800 dark:text-white">{formatPerformanceAccuracy(topic.accuracy)}</td>
+                  <td className="px-3 py-3">
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${performanceClassificationClass(topic.classification)}`}>
+                      {topic.classification}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const statusBadgeClass = (status) => {
+  if (status === 'Active' || status === 'Published')
+    return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
+  if (status === 'Draft')
+    return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300';
+  if (status === 'Archived')
+    return 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300';
+  return 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300';
+};
 
 export default function ProgramDetails() {
   const { programId } = useParams();
@@ -45,28 +562,53 @@ export default function ProgramDetails() {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
 
-  // State
   const [program, setProgram] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState(searchParams.get('attachType') || 'batches');
+  const [activeTab, setActiveTab] = useState(() => {
+    const requestedSection = searchParams.get('attachType');
+    return SECTIONS.some((section) => section.key === requestedSection) ? requestedSection : 'students';
+  });
+  const [studentsSubTab, setStudentsSubTab] = useState('students');
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentPeriodFilter, setStudentPeriodFilter] = useState('current');
+  const [studentStatusFilter, setStudentStatusFilter] = useState('Active');
+  const [studentAccessFilter, setStudentAccessFilter] = useState('all');
+  const [studentPlanFilter, setStudentPlanFilter] = useState('all');
+  const [studentSort, setStudentSort] = useState('latest');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [performance, setPerformance] = useState(null);
+  const [performanceLoading, setPerformanceLoading] = useState(false);
+  const [performanceError, setPerformanceError] = useState('');
+  const [readinessLeads, setReadinessLeads] = useState([]);
+  const [readinessLeadsLoading, setReadinessLeadsLoading] = useState(false);
 
-  // Attach Modal State
   const [attachModalType, setAttachModalType] = useState(null);
   const [availableItems, setAvailableItems] = useState([]);
   const [availableLoading, setAvailableLoading] = useState(false);
   const [availableSearch, setAvailableSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [colleges, setColleges] = useState([]);
+  const [selectedBatchId, setSelectedBatchId] = useState('');
+  const [studentAddMode, setStudentAddMode] = useState('existing');
+  const [newStudentForm, setNewStudentForm] = useState({
+    name: '',
+    email: '',
+    collegeId: '',
+    primaryTrack: 'General Track',
+    status: 'Active',
+  });
+  const [studentFormError, setStudentFormError] = useState('');
+  const [savingNewStudent, setSavingNewStudent] = useState(false);
   const [attaching, setAttaching] = useState(false);
 
-  // Detach Confirmation State
-  const [detachItem, setDetachItem] = useState(null); // { typeKey, item }
+  const [detachItem, setDetachItem] = useState(null);
   const [detaching, setDetaching] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
 
-  // Success Notification
   const [toastMessage, setToastMessage] = useState(searchParams.get('msg') || '');
 
-  // Fetch Program Details
   const fetchProgramDetail = useCallback(async () => {
     try {
       setLoading(true);
@@ -89,31 +631,149 @@ export default function ProgramDetails() {
     fetchProgramDetail();
   }, [fetchProgramDetail]);
 
-  // Handle return parameters from Cross-Module Navigation
+  useEffect(() => {
+    if (activeTab !== 'students' || studentsSubTab !== 'reports') return undefined;
+
+    let cancelled = false;
+    setPerformanceLoading(true);
+    setPerformanceError('');
+    adminAPI
+      .getProgramPerformance(programId)
+      .then((response) => {
+        if (cancelled) return;
+        if (!response?.performance) {
+          setPerformanceError('Performance report data was not returned.');
+          return;
+        }
+        setPerformance(response.performance);
+      })
+      .catch((err) => {
+        if (!cancelled) setPerformanceError(err.message || 'Failed to generate performance report.');
+      })
+      .finally(() => {
+        if (!cancelled) setPerformanceLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, studentsSubTab, programId]);
+
+  useEffect(() => {
+    if (activeTab !== 'analytics') return undefined;
+    let cancelled = false;
+    setReadinessLeadsLoading(true);
+    adminAPI.getProgramReadinessLeads(programId)
+      .then((response) => {
+        if (!cancelled) setReadinessLeads(response?.leads || []);
+      })
+      .catch((err) => {
+        if (!cancelled) console.error('Error fetching readiness leads:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setReadinessLeadsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [activeTab, programId]);
+
+  const handleBlueprintCountChange = useCallback((count) => {
+    setProgram((current) => (current ? { ...current, blueprintCount: count } : current));
+  }, []);
+
   useEffect(() => {
     const returnType = searchParams.get('attachType');
     const autoAttachId = searchParams.get('newId');
 
     if (returnType && SECTIONS.some((s) => s.key === returnType)) {
       setActiveTab(returnType);
-
       if (autoAttachId) {
-        // Auto attach newly created entity
         adminAPI
           .attachProgramEntities(programId, returnType, [autoAttachId])
           .then(() => {
-            setToastMessage(`Newly created item was automatically attached to Program!`);
+            setToastMessage('Newly created item was automatically attached to Program!');
             fetchProgramDetail();
           })
           .catch((err) => console.error('Auto-attach error:', err));
       }
-
-      // Clear search params
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, programId, fetchProgramDetail, setSearchParams]);
 
-  // Fetch Available Entities for Attach Modal
+  // Auto-hide toast
+  useEffect(() => {
+    if (toastMessage) {
+      const t = setTimeout(() => setToastMessage(''), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [toastMessage]);
+
+  const visibleStudentItems = useMemo(() => {
+    const students = Array.isArray(program?.studentIds) ? program.studentIds : [];
+    const search = studentSearch.trim().toLowerCase();
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const getStartedTime = (student) => {
+      const row = buildStudentTableRow(student, program);
+      return row.started ? row.started.getTime() : 0;
+    };
+    const getStatusPriority = (status) => ({ Active: 0, Completed: 1, Expired: 2 }[status] ?? 3);
+    const getProgressValue = (student) => {
+      if (Number.isFinite(student?.programDayNumber)) return Number(student.programDayNumber);
+      const match = String(buildStudentTableRow(student, program).progress || '').match(/Day\s+(\d+)/i);
+      return match ? Number(match[1]) : 0;
+    };
+
+    const filtered = students.filter((student) => {
+      const row = buildStudentTableRow(student, program);
+      const searchable = [student.name, student.email, student.rollNo, student._id, student.userId]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      if (search && !searchable.includes(search)) return false;
+
+      if (studentPeriodFilter === 'current') {
+        const started = toValidDate(student.programStartDate) || row.started;
+        if (!started || started.getFullYear() !== currentYear || started.getMonth() !== currentMonth) return false;
+      }
+
+      if (studentStatusFilter !== 'all' && row.status !== studentStatusFilter) return false;
+      if (studentAccessFilter !== 'all' && row.access !== studentAccessFilter) return false;
+
+      if (studentPlanFilter !== 'all') {
+        const plan = String(row.plan || '').toLowerCase();
+        const matchesPlan = studentPlanFilter === 'trial'
+          ? row.access === 'Trial' || plan.includes('trial')
+          : plan.includes(studentPlanFilter);
+        if (!matchesPlan) return false;
+      }
+
+      return true;
+    });
+
+    return filtered.sort((first, second) => {
+      const firstRow = buildStudentTableRow(first, program);
+      const secondRow = buildStudentTableRow(second, program);
+      if (studentSort === 'name-asc' || studentSort === 'name-desc') {
+        const comparison = String(first.name || first.email || '').localeCompare(String(second.name || second.email || ''), undefined, { sensitivity: 'base' });
+        return studentSort === 'name-asc' ? comparison : -comparison;
+      }
+      if (studentSort === 'progress-high' || studentSort === 'progress-low') {
+        const comparison = getProgressValue(first) - getProgressValue(second);
+        return studentSort === 'progress-high' ? -comparison : comparison;
+      }
+
+      const firstTime = getStartedTime(first);
+      const secondTime = getStartedTime(second);
+      if (studentSort === 'oldest') return firstTime - secondTime;
+
+      const statusComparison = getStatusPriority(firstRow.status) - getStatusPriority(secondRow.status);
+      if (statusComparison !== 0) return statusComparison;
+      return secondTime - firstTime;
+    });
+  }, [program, studentSearch, studentPeriodFilter, studentStatusFilter, studentAccessFilter, studentPlanFilter, studentSort]);
+
   const fetchAvailableEntities = async (entityType, search = '') => {
     try {
       setAvailableLoading(true);
@@ -128,27 +788,94 @@ export default function ProgramDetails() {
     }
   };
 
-  // Open Attach Modal
   const handleOpenAttachModal = (entityType) => {
     setAttachModalType(entityType);
     setSelectedIds([]);
+    setSelectedBatchId('');
     setAvailableSearch('');
+    setStudentAddMode('existing');
+    setStudentFormError('');
+    setNewStudentForm({ name: '', email: '', collegeId: '', primaryTrack: 'General Track', status: 'Active' });
     fetchAvailableEntities(entityType, '');
+    if (entityType === 'students') {
+      Promise.all([adminAPI.getBatches(), adminAPI.getColleges()])
+        .then(([batchResponse, collegeResponse]) => {
+          const batchItems = Array.isArray(batchResponse)
+            ? batchResponse
+            : (batchResponse?.batches || batchResponse?.items || batchResponse?.data || []);
+          const collegeItems = Array.isArray(collegeResponse)
+            ? collegeResponse
+            : (collegeResponse?.colleges || collegeResponse?.items || collegeResponse?.data || []);
+          setBatches(batchItems.map((batch) => ({
+            id: batch.id || batch._id,
+            name: batch.name || batch.id || 'Untitled Batch',
+          })).filter((batch) => batch.id));
+          setColleges(collegeItems.map((college) => ({
+            id: college.id || college._id,
+            name: college.name || 'Untitled College',
+          })).filter((college) => college.id));
+        })
+        .catch((err) => {
+          console.error('Error fetching student metadata for program enrollment:', err);
+          setBatches([]);
+          setColleges([]);
+        });
+    }
   };
 
-  // Toggle selection
   const handleToggleSelect = (id) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]);
   };
 
-  // Confirm Attachment
   const handleConfirmAttach = async () => {
-    if (selectedIds.length === 0 || !attachModalType) return;
+    if (!attachModalType) return;
+
+    if (attachModalType === 'students' && studentAddMode === 'new') {
+      if (!newStudentForm.name.trim()) {
+        setStudentFormError('Name is required.');
+        return;
+      }
+      if (!newStudentForm.email.trim()) {
+        setStudentFormError('Email is required.');
+        return;
+      }
+      if (!newStudentForm.collegeId) {
+        setStudentFormError('College is required.');
+        return;
+      }
+
+      try {
+        setSavingNewStudent(true);
+        setStudentFormError('');
+        await adminAPI.createStudent({
+          name: newStudentForm.name.trim(),
+          email: newStudentForm.email.trim().toLowerCase(),
+          collegeId: newStudentForm.collegeId,
+          batchId: selectedBatchId || null,
+          programId,
+          primaryTrack: newStudentForm.primaryTrack.trim() || 'General Track',
+          status: newStudentForm.status,
+        });
+        setAttachModalType(null);
+        setToastMessage('Student added to Program successfully.');
+        fetchProgramDetail();
+      } catch (err) {
+        setStudentFormError(err.message || 'Failed to add student.');
+      } finally {
+        setSavingNewStudent(false);
+      }
+      return;
+    }
+
+    if (selectedIds.length === 0) return;
     try {
       setAttaching(true);
-      await adminAPI.attachProgramEntities(programId, attachModalType, selectedIds);
+      await adminAPI.attachProgramEntities(
+        programId,
+        attachModalType,
+        selectedIds,
+        attachModalType === 'students' ? { batchId: selectedBatchId || null } : {}
+      );
       setAttachModalType(null);
       setSelectedIds([]);
       setToastMessage(`Successfully attached ${selectedIds.length} item(s) to Program!`);
@@ -161,14 +888,13 @@ export default function ProgramDetails() {
     }
   };
 
-  // Confirm Detach
   const handleConfirmDetach = async () => {
     if (!detachItem) return;
     try {
       setDetaching(true);
       await adminAPI.detachProgramEntity(programId, detachItem.typeKey, detachItem.item._id);
       setDetachItem(null);
-      setToastMessage(`Successfully detached item from Program.`);
+      setToastMessage('Successfully detached item from Program.');
       fetchProgramDetail();
     } catch (err) {
       console.error('Error detaching entity:', err);
@@ -178,13 +904,11 @@ export default function ProgramDetails() {
     }
   };
 
-  // Create New Resource Redirect
   const handleCreateNewResource = (section) => {
     const returnUrl = encodeURIComponent(`/programs/${programId}?attachType=${section.key}`);
     navigate(`${section.route}?returnTo=${returnUrl}&programId=${programId}&attachType=${section.key}`);
   };
 
-  // Item Title Helper
   const getItemTitle = (item, typeKey) => {
     if (typeKey === 'students') return item.name || item.email || 'Unnamed Student';
     if (typeKey === 'courses') return item.title || 'Untitled Course';
@@ -195,7 +919,6 @@ export default function ProgramDetails() {
     return item.name || item.title || 'Untitled Item';
   };
 
-  // Item Detail Subtitle Helper
   const getItemSubtitle = (item, typeKey) => {
     if (typeKey === 'students') return `${item.email || ''} ${item.rollNo ? `(${item.rollNo})` : ''}`;
     if (typeKey === 'batches') return `Start: ${item.startDate ? new Date(item.startDate).toLocaleDateString() : 'N/A'}`;
@@ -206,7 +929,6 @@ export default function ProgramDetails() {
     return item.description || '';
   };
 
-  // Item Detail Link Helper
   const getItemLink = (item, typeKey) => {
     if (typeKey === 'batches') return `/batches/${item._id}`;
     if (typeKey === 'students') return `/students`;
@@ -218,9 +940,11 @@ export default function ProgramDetails() {
     return null;
   };
 
+  // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className={`min-h-screen flex ${isDarkMode ? 'bg-[#00113b]' : 'bg-slate-50'}`}>
+      <div className={`flex min-h-screen w-full font-sans antialiased ${isDarkMode ? 'dark' : 'light'}`}>
+        <div className={`fixed inset-0 -z-10 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
         <Sidebar />
         <div className="flex-1 flex justify-center items-center">
           <LoadingScreen />
@@ -229,16 +953,18 @@ export default function ProgramDetails() {
     );
   }
 
+  // ── Error ────────────────────────────────────────────────────────────────────
   if (error || !program) {
     return (
-      <div className={`min-h-screen flex ${isDarkMode ? 'bg-[#00113b] text-white' : 'bg-slate-50 text-slate-900'}`}>
+      <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+        <div className={`fixed inset-0 -z-10 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
         <Sidebar />
-        <div className="flex-1 p-8 flex flex-col justify-center items-center">
-          <FiAlertCircle className="w-12 h-12 text-red-500 mb-4" />
-          <h2 className="text-xl font-bold mb-2">{error || 'Program Not Found'}</h2>
+        <div className="flex-1 lg:ml-64 flex flex-col justify-center items-center gap-4">
+          <FiAlertCircle className="w-12 h-12 text-red-500" />
+          <h2 className="text-xl font-bold">{error || 'Program Not Found'}</h2>
           <button
             onClick={() => navigate('/programs')}
-            className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            className="px-5 py-2.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-sm font-semibold transition-colors"
           >
             Back to Programs
           </button>
@@ -250,302 +976,222 @@ export default function ProgramDetails() {
   const currentSection = SECTIONS.find((s) => s.key === activeTab) || SECTIONS[0];
   const CurrentSectionIcon = currentSection.icon;
   const attachedItems = program[currentSection.field] || [];
+  const programStats = program.programStats || {};
+  const totalEnrolled = Number.isFinite(Number(programStats.totalEnrolled))
+    ? Number(programStats.totalEnrolled)
+    : attachedItems.length;
+  const programPrice = program.pricingType === 'Paid'
+    ? `₹${Number(program.programFee || 0).toLocaleString('en-IN')}`
+    : 'Free';
+  const activeStudentFilterCount = [studentStatusFilter, studentAccessFilter, studentPlanFilter]
+    .filter((value) => value !== 'all').length;
+  const studentFilterGroups = [
+    {
+      label: 'Status',
+      value: studentStatusFilter,
+      onChange: setStudentStatusFilter,
+      options: [
+        { label: 'All', value: 'all' },
+        { label: 'Active', value: 'Active' },
+        { label: 'Completed', value: 'Completed' },
+        { label: 'Expired', value: 'Expired' },
+      ],
+    },
+    {
+      label: 'Access',
+      value: studentAccessFilter,
+      onChange: setStudentAccessFilter,
+      options: [
+        { label: 'All', value: 'all' },
+        { label: 'Trial', value: 'Trial' },
+        { label: 'Paid', value: 'Paid' },
+      ],
+    },
+    {
+      label: 'Plan',
+      value: studentPlanFilter,
+      onChange: setStudentPlanFilter,
+      options: [
+        { label: 'All', value: 'all' },
+        { label: 'Trial', value: 'trial' },
+        { label: 'Basic', value: 'basic' },
+        { label: 'Pro', value: 'pro' },
+      ],
+    },
+  ];
 
   return (
-    <div className={`min-h-screen flex ${isDarkMode ? 'bg-[#00113b] text-white' : 'bg-slate-50 text-slate-900'}`}>
+    <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+      {/* Background Gradient — identical to Programs / Question Bank */}
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
+
       <Sidebar />
 
-      <main className="flex-1 min-w-0 lg:ml-64 h-screen pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden">
-        {/* Toast Notification */}
-        {toastMessage && (
-          <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm flex items-center justify-between animate-fadeIn">
-            <div className="flex items-center gap-2">
-              <FiCheckCircle className="w-5 h-5" />
-              <span>{toastMessage}</span>
-            </div>
-            <button onClick={() => setToastMessage('')} className="p-1 hover:bg-emerald-500/20 rounded-lg">
-              <FiX className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+      <StudentReportModal
+        studentId={selectedStudent?._id || selectedStudent?.id}
+        batchId={selectedStudent?.enrollment?.batchId?._id
+          || selectedStudent?.enrollment?.batchId
+          || selectedStudent?.batchId?._id
+          || selectedStudent?.batchId}
+        studentBasic={selectedStudent}
+        onClose={() => setSelectedStudent(null)}
+        isOpen={Boolean(selectedStudent)}
+        context="program"
+      />
 
-        {/* Back Link */}
-        <button
-          onClick={() => navigate('/programs')}
-          className={`flex items-center gap-2 mb-6 text-sm font-medium transition-colors ${
-            isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <FiArrowLeft className="w-4 h-4" />
-          <span>Back to Programs</span>
-        </button>
-
-        {/* Header Hero Card */}
-        <div className={`p-6 md:p-8 rounded-3xl mb-8 border shadow-sm ${
-          isDarkMode ? 'bg-[#0c1a3a]/90 border-slate-800' : 'bg-white border-slate-200'
-        }`}>
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div>
-              <div className="flex flex-wrap items-center gap-3 mb-3">
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  program.status === 'Active'
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : program.status === 'Draft'
-                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                    : 'bg-slate-700/50 text-slate-300'
-                }`}>
-                  {program.status}
-                </span>
-
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  program.visibility === 'Public'
-                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                    : 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                }`}>
-                  {program.visibility}
-                </span>
-              </div>
-
-              <h1 className="text-3xl font-extrabold tracking-tight mb-3">{program.name}</h1>
-              {program.description && (
-                <p className={`text-base max-w-3xl mb-4 ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                  {program.description}
-                </p>
-              )}
-
-              {/* Quick Info Badges */}
-              <div className="flex flex-wrap items-center gap-3 text-sm">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-medium ${
-                  isDarkMode ? 'bg-slate-800/80 text-slate-300' : 'bg-slate-100 text-slate-700'
-                }`}>
-                  <FiTag className="w-4 h-4 text-blue-400" />
-                  <span>Type: {program.programType}</span>
-                </span>
-
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-medium ${
-                  isDarkMode ? 'bg-slate-800/80 text-slate-300' : 'bg-slate-100 text-slate-700'
-                }`}>
-                  <FiClock className="w-4 h-4 text-indigo-400" />
-                  <span>Duration: {program.duration}</span>
-                </span>
-
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-medium ${
-                  program.pricingType === 'Paid'
-                    ? isDarkMode ? 'bg-emerald-950/50 text-emerald-300 border border-emerald-800' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : isDarkMode ? 'bg-slate-800/80 text-slate-300' : 'bg-slate-100 text-slate-700'
-                }`}>
-                  <FiDollarSign className="w-4 h-4 text-emerald-400" />
-                  <span>{program.pricingType === 'Paid' ? `Paid (${program.programFee})` : 'Free Program'}</span>
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 7 Section Navigation Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-6 scrollbar-none border-b border-slate-700/50">
-          {SECTIONS.map((sec) => {
-            const Icon = sec.icon;
-            const count = (program[sec.field] || []).length;
-            const isActive = activeTab === sec.key;
-            return (
-              <button
-                key={sec.key}
-                onClick={() => setActiveTab(sec.key)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
-                  isActive
-                    ? isDarkMode
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                      : 'bg-blue-600 text-white shadow-md'
-                    : isDarkMode
-                    ? 'bg-[#0c1a3a]/60 text-slate-400 hover:text-white hover:bg-[#122449]'
-                    : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{sec.label}</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                  isActive ? 'bg-white/20 text-white' : isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'
-                }`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Section Header Controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <span>Attached {currentSection.label}</span>
-              <span className={`text-sm px-2.5 py-0.5 rounded-full font-semibold ${
-                isDarkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-700'
-              }`}>
-                {attachedItems.length}
-              </span>
-            </h2>
-            <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              Manage attached {currentSection.label.toLowerCase()} or attach new resources
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => handleOpenAttachModal(currentSection.key)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm"
-            >
-              <FiPlus className="w-4 h-4" />
-              <span>Attach Existing</span>
-            </button>
-
-            <button
-              onClick={() => handleCreateNewResource(currentSection)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                isDarkMode
-                  ? 'border-slate-700 hover:bg-slate-800 text-slate-200'
-                  : 'border-slate-300 hover:bg-slate-100 text-slate-700'
-              }`}
-            >
-              <FiExternalLink className="w-4 h-4" />
-              <span>Create New</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Section Attached Items List */}
-        {attachedItems.length === 0 ? (
-          <div className={`p-12 rounded-2xl border text-center ${isDarkMode ? 'bg-[#0c1a3a]/50 border-slate-800' : 'bg-white border-slate-200'}`}>
-            <CurrentSectionIcon className="w-12 h-12 text-slate-500 mx-auto mb-3 opacity-60" />
-            <h3 className="text-lg font-semibold mb-1">No {currentSection.label} Attached</h3>
-            <p className={`text-sm mb-6 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              Attach existing {currentSection.label.toLowerCase()} or create new ones to include in this program.
-            </p>
-            <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={() => handleOpenAttachModal(currentSection.key)}
-                className="px-4 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              >
-                Attach Existing {currentSection.label}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {attachedItems.map((item) => {
-              const link = getItemLink(item, currentSection.key);
-              return (
-                <div
-                  key={item._id}
-                  className={`p-5 rounded-2xl border transition-all duration-200 flex flex-col justify-between ${
-                    isDarkMode
-                      ? 'bg-[#0c1a3a]/80 border-slate-800 hover:border-slate-700'
-                      : 'bg-white border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <h4 className="font-bold text-base line-clamp-1">
-                        {getItemTitle(item, currentSection.key)}
-                      </h4>
-
-                      <button
-                        onClick={() => setDetachItem({ typeKey: currentSection.key, item })}
-                        title="Detach from Program"
-                        className={`p-1.5 rounded-lg transition-colors shrink-0 ${
-                          isDarkMode ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-100 text-red-600'
-                        }`}
-                      >
-                        <FiTrash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <p className={`text-xs mb-4 line-clamp-2 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      {getItemSubtitle(item, currentSection.key)}
-                    </p>
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-700/40 flex items-center justify-between">
-                    <span className={`text-xs px-2 py-0.5 rounded font-medium ${
-                      item.status === 'Active' || item.status === 'Published'
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'bg-slate-700/50 text-slate-300'
-                    }`}>
-                      {item.status || 'Attached'}
-                    </span>
-
-                    {link && (
-                      <button
-                        onClick={() => navigate(link)}
-                        className="text-xs font-semibold text-blue-500 hover:underline flex items-center gap-1"
-                      >
-                        <span>View Details</span>
-                        <FiChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </main>
-
-      {/* ATTACH EXISTING MODAL */}
+      {/* ── Attach Existing Modal ───────────────────────────────────────────── */}
       {attachModalType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div
-            className={`w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl p-6 shadow-2xl border ${
-              isDarkMode ? 'bg-[#0c1a3a] border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'
-            }`}
-          >
-            <div className="flex items-center justify-between pb-4 border-b border-slate-700/50">
+        <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setAttachModalType(null)} />
+          <div className="relative w-full max-w-2xl rounded-xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            {/* Header */}
+            <div className="px-5 py-3.5 border-b border-black/10 dark:border-white/10 flex items-center justify-between shrink-0">
               <div>
-                <h3 className="text-xl font-bold">Attach Existing {currentSection.label}</h3>
-                <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Select entities to attach to this Program
+                <h3 className="text-base font-semibold text-[#3C83F6] dark:text-[#bceaff]">
+                  {attachModalType === 'students' ? 'Add Student' : `Attach Existing ${currentSection.label}`}
+                </h3>
+                <p className="text-[11px] text-black/45 dark:text-white/45 mt-0.5">
+                  {attachModalType === 'students'
+                    ? 'Add an existing learner or create a new learner for this program'
+                    : 'Select items to attach to this program'}
                 </p>
               </div>
               <button
                 onClick={() => setAttachModalType(null)}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  isDarkMode ? 'hover:bg-slate-800 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-500'
-                }`}
+                className="text-sm text-black/40 dark:text-white/40 hover:text-black/60 dark:hover:text-white/60 transition-colors"
               >
-                <FiX className="w-5 h-5" />
+                Close
               </button>
             </div>
 
-            {/* Search Input */}
-            <div className="py-4">
-              <div className="relative">
-                <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder={`Search available ${currentSection.label.toLowerCase()}...`}
-                  value={availableSearch}
-                  onChange={(e) => {
-                    setAvailableSearch(e.target.value);
-                    fetchAvailableEntities(attachModalType, e.target.value);
-                  }}
-                  className={`w-full pl-10 pr-4 py-2 rounded-xl text-sm outline-none transition-all ${
-                    isDarkMode
-                      ? 'bg-[#152449] border-slate-700 text-white focus:border-blue-500 border'
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500 border'
-                  }`}
-                />
+            {attachModalType === 'students' && (
+              <div className="px-5 pt-4 pb-2 shrink-0">
+                <div className="inline-flex rounded-lg border border-black/10 dark:border-white/10 p-1 bg-black/[0.03] dark:bg-white/5">
+                  {[
+                    { key: 'existing', label: 'Existing student' },
+                    { key: 'new', label: 'New student' },
+                  ].map((mode) => (
+                    <button
+                      key={mode.key}
+                      type="button"
+                      onClick={() => {
+                        setStudentAddMode(mode.key);
+                        setStudentFormError('');
+                        setSelectedIds([]);
+                      }}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${studentAddMode === mode.key
+                        ? 'bg-white dark:bg-[#18365f] text-[#3C83F6] dark:text-white shadow-sm'
+                        : 'text-black/55 dark:text-white/60'}`}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Items List */}
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 my-2">
+            {/* Search */}
+            {studentAddMode === 'existing' && (
+              <div className="px-5 pt-4 pb-2 shrink-0">
+                <div className="relative">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/40 dark:text-white/40 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder={`Search available ${currentSection.label.toLowerCase()}...`}
+                    value={availableSearch}
+                    onChange={(e) => {
+                      setAvailableSearch(e.target.value);
+                      fetchAvailableEntities(attachModalType, e.target.value);
+                    }}
+                    className="w-full h-9 pl-9 pr-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-sm text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35"
+                  />
+                </div>
+              </div>
+            )}
+
+            {attachModalType === 'students' && studentAddMode === 'new' && (
+              <div className="px-5 pt-2 pb-3 shrink-0 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-black/50 dark:text-white/50 mb-1.5">Name*</span>
+                    <input
+                      value={newStudentForm.name}
+                      onChange={(event) => setNewStudentForm((current) => ({ ...current, name: event.target.value }))}
+                      placeholder="Student name"
+                      className="w-full h-10 px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-sm text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-black/50 dark:text-white/50 mb-1.5">Email*</span>
+                    <input
+                      type="email"
+                      value={newStudentForm.email}
+                      onChange={(event) => setNewStudentForm((current) => ({ ...current, email: event.target.value }))}
+                      placeholder="student@example.com"
+                      className="w-full h-10 px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-sm text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    />
+                  </label>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-black/50 dark:text-white/50 mb-1.5">College*</span>
+                    <select
+                      value={newStudentForm.collegeId}
+                      onChange={(event) => setNewStudentForm((current) => ({ ...current, collegeId: event.target.value }))}
+                      className="w-full h-10 px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-sm text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    >
+                      <option value="">Select college</option>
+                      {colleges.map((college) => <option key={college.id} value={college.id}>{college.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-black/50 dark:text-white/50 mb-1.5">Status</span>
+                    <select
+                      value={newStudentForm.status}
+                      onChange={(event) => setNewStudentForm((current) => ({ ...current, status: event.target.value }))}
+                      className="w-full h-10 px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-sm text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                      <option value="Suspended">Suspended</option>
+                    </select>
+                  </label>
+                </div>
+                {studentFormError && <p className="text-xs text-red-500">{studentFormError}</p>}
+              </div>
+            )}
+
+            {attachModalType === 'students' && (
+              <div className="px-5 pb-2 shrink-0">
+                <label className="block text-[11px] font-semibold uppercase tracking-wide text-black/50 dark:text-white/50 mb-1.5">
+                  Batch (Optional)
+                </label>
+                <select
+                  value={selectedBatchId}
+                  onChange={(e) => setSelectedBatchId(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-sm text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                >
+                  <option value="">No batch — individual program schedule</option>
+                  {batches.map((batch) => (
+                    <option key={batch.id} value={batch.id}>{batch.name}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-black/45 dark:text-white/45 mt-1.5">
+                  Leave empty for Day 1 to start on the learner's enrollment date.
+                </p>
+              </div>
+            )}
+
+            {/* Item List */}
+            {studentAddMode === 'existing' && (
+              <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2 min-h-0">
               {availableLoading ? (
                 <div className="py-12 flex justify-center">
-                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-6 h-6 border-2 border-[#3C83F6] border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : availableItems.length === 0 ? (
-                <div className={`p-8 text-center rounded-xl border ${isDarkMode ? 'border-slate-800 bg-[#122449]/50' : 'border-slate-200 bg-slate-50'}`}>
-                  <p className="text-sm font-medium">No attachable items found.</p>
+                <div className="p-10 text-center rounded-xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5">
+                  <p className="text-sm font-medium text-black/50 dark:text-white/50">No attachable items found.</p>
                 </div>
               ) : (
                 availableItems.map((item) => {
@@ -554,70 +1200,61 @@ export default function ProgramDetails() {
                     <div
                       key={item._id}
                       onClick={() => !item.isAttached && handleToggleSelect(item._id)}
-                      className={`p-3.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${
+                      className={`p-3 rounded-xl border transition-all flex items-center gap-3 cursor-pointer ${
                         item.isAttached
-                          ? isDarkMode
-                            ? 'bg-slate-800/40 border-slate-800 opacity-60 cursor-not-allowed'
-                            : 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed'
+                          ? 'opacity-50 cursor-not-allowed border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5'
                           : isSelected
-                          ? isDarkMode
-                            ? 'bg-blue-600/20 border-blue-500/60'
-                            : 'bg-blue-50 border-blue-300'
-                          : isDarkMode
-                          ? 'bg-[#152449]/60 border-slate-800 hover:bg-[#152449]'
-                          : 'bg-white border-slate-200 hover:bg-slate-50'
+                          ? 'border-[#3C83F6]/60 bg-[#3C83F6]/8 dark:border-blue-400/50 dark:bg-blue-500/10'
+                          : 'border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 hover:bg-white/90 dark:hover:bg-white/10'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          disabled={item.isAttached}
-                          checked={item.isAttached || isSelected}
-                          onChange={() => {}}
-                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                        />
-                        <div>
-                          <p className="font-semibold text-sm line-clamp-1">
-                            {getItemTitle(item, attachModalType)}
-                          </p>
-                          <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {getItemSubtitle(item, attachModalType)}
-                          </p>
-                        </div>
+                      <input
+                        type="checkbox"
+                        disabled={item.isAttached}
+                        checked={item.isAttached || isSelected}
+                        onChange={() => {}}
+                        className="w-3.5 h-3.5 rounded text-[#3C83F6] focus:ring-[#3C83F6] border-black/15 dark:border-white/20 bg-white dark:bg-black/30 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
+                          {getItemTitle(item, attachModalType)}
+                        </p>
+                        <p className="text-[11px] text-black/45 dark:text-white/45 truncate mt-0.5">
+                          {getItemSubtitle(item, attachModalType)}
+                        </p>
                       </div>
-
                       {item.isAttached && (
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-700/50 text-slate-300">
-                          Already Attached
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-slate-300 whitespace-nowrap">
+                          Attached
                         </span>
                       )}
                     </div>
                   );
                 })
               )}
-            </div>
+              </div>
+            )}
 
-            {/* Footer Submit */}
-            <div className="pt-4 border-t border-slate-700/50 flex items-center justify-between">
-              <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                {selectedIds.length} item(s) selected
+            {/* Footer */}
+            <div className="px-5 py-3.5 border-t border-black/10 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/50 dark:bg-[#0a1737]/50">
+              <span className="text-xs text-black/45 dark:text-white/45">
+                {studentAddMode === 'new' ? 'New student' : `${selectedIds.length} item(s) selected`}
               </span>
-
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setAttachModalType(null)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                    isDarkMode ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-700'
-                  }`}
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-                  disabled={selectedIds.length === 0 || attaching}
+                  disabled={studentAddMode === 'new' ? savingNewStudent : selectedIds.length === 0 || attaching}
                   onClick={handleConfirmAttach}
-                  className="px-5 py-2 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-lg text-sm font-medium bg-[#3C83F6] hover:bg-[#2f73e0] text-white transition-colors disabled:opacity-50 shadow-sm"
                 >
-                  {attaching ? 'Attaching...' : `Attach (${selectedIds.length})`}
+                  {studentAddMode === 'new'
+                    ? (savingNewStudent ? 'Adding...' : 'Add Student')
+                    : (attaching ? 'Attaching...' : `Add (${selectedIds.length})`)}
                 </button>
               </div>
             </div>
@@ -625,44 +1262,447 @@ export default function ProgramDetails() {
         </div>
       )}
 
-      {/* DETACH CONFIRMATION MODAL */}
+      {/* ── Detach Confirmation Modal ───────────────────────────────────────── */}
       {detachItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div
-            className={`w-full max-w-md rounded-2xl p-6 shadow-2xl border ${
-              isDarkMode ? 'bg-[#0c1a3a] border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'
-            }`}
-          >
-            <h3 className="text-lg font-bold mb-2">Detach Item from Program?</h3>
-            <p className={`text-sm mb-4 ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-              Are you sure you want to remove <span className="font-semibold text-white">{getItemTitle(detachItem.item, detachItem.typeKey)}</span> from this Program?
+        <div className="fixed inset-0 z-[145] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setDetachItem(null)} />
+          <div className="relative w-full max-w-md rounded-xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">Detach Item?</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              Remove{' '}
+              <span className="font-semibold text-slate-800 dark:text-slate-200">
+                {getItemTitle(detachItem.item, detachItem.typeKey)}
+              </span>{' '}
+              from this program?
             </p>
-
-            <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs mb-6">
-              This only detaches the relationship from the Program. The underlying resource will not be deleted from the platform.
+            <div className="px-3.5 py-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-300 text-xs mb-5">
+              This only removes the association — the resource itself won't be deleted.
             </div>
-
             <div className="flex items-center justify-end gap-3">
               <button
                 disabled={detaching}
                 onClick={() => setDetachItem(null)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                  isDarkMode ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-700'
-                }`}
+                className="h-10 px-4 rounded-xl border border-black/10 dark:border-white/15 text-sm font-medium text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
               >
                 Cancel
               </button>
               <button
                 disabled={detaching}
                 onClick={handleConfirmDetach}
-                className="px-5 py-2 rounded-xl text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50"
+                className="h-10 px-5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-75 text-white text-sm font-semibold inline-flex items-center gap-2 transition-colors shadow-sm"
               >
-                {detaching ? 'Detaching...' : 'Detach Item'}
+                <FiTrash2 className="w-3.5 h-3.5" />
+                {detaching ? 'Detaching...' : 'Detach'}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* ── Main Content ────────────────────────────────────────────────────── */}
+      <main className="flex-1 h-screen z-10 lg:ml-64 pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden">
+        <div className="max-w-[1400px] mx-auto space-y-4">
+
+          {/* Toast */}
+          {toastMessage && (
+            <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-sm">
+              <div className="flex items-center gap-2">
+                <FiCheckCircle className="w-4 h-4 shrink-0" />
+                <span>{toastMessage}</span>
+              </div>
+              <button onClick={() => setToastMessage('')}>
+                <FiX className="w-3.5 h-3.5 opacity-60 hover:opacity-100" />
+              </button>
+            </div>
+          )}
+
+          {/* Back */}
+          <button
+            onClick={() => navigate('/programs')}
+            className="flex items-center gap-1.5 text-xs font-semibold text-black/50 dark:text-white/50 hover:text-[#3C83F6] dark:hover:text-[#bceaff] transition-colors"
+          >
+            <FiArrowLeft className="w-3.5 h-3.5" />
+            Back to Programs
+          </button>
+
+          {/* ── Compact Program Header ─────────────────────────────────────── */}
+          <div className="rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl px-5 py-4 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${statusBadgeClass(program.status)}`}>
+                    {program.status}
+                  </span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black/40 dark:text-white/40">
+                    Program
+                  </span>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-snug truncate">
+                  {program.name}
+                </h1>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
+                  <FiTag className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
+                  {getProgramType(program.programType)}
+                </span>
+                <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
+                  <FiClock className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
+                  {program.duration || '—'}
+                </span>
+                <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-emerald-300/60 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                  {programPrice}
+                </span>
+                <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
+                  <FiUsers className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
+                  {totalEnrolled} Students
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Program Monitoring Stats ───────────────────────────────────── */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            {[
+              { label: 'Total Enrolled', value: totalEnrolled, icon: FiUsers },
+              { label: 'Current Enrolled', value: programStats.currentEnrolled ?? 0, icon: FiClock },
+              { label: 'Active Today', value: programStats.activeToday ?? 0, icon: FiActivity },
+              { label: 'Completed', value: programStats.completed ?? 0, icon: FiCheckCircle },
+              { label: 'Accuracy', value: programStats.accuracy === null || programStats.accuracy === undefined ? '—' : `${programStats.accuracy}%`, icon: FiBarChart2 },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/75 dark:bg-[#0f1f43] px-4 py-3 shadow-[0_3px_10px_rgba(15,23,42,0.03)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.12)]">
+                <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{stat.value}</p>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">{stat.label}</span>
+                  {createElement(stat.icon, { className: 'w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]' })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ── Section Navigation Tabs ──────────────────────────────────────── */}
+          <div className="-mt-1 flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+            {SECTIONS.map((sec) => {
+              const Icon = sec.icon;
+              const count = sec.key === 'blueprints'
+                ? Number(program.blueprintCount || 0)
+                : sec.field
+                  ? (program[sec.field] || []).length
+                  : null;
+              const isActive = activeTab === sec.key;
+              return (
+                <button
+                  key={sec.key}
+                  onClick={() => setActiveTab(sec.key)}
+                  className={`flex items-center gap-1.5 h-8 px-3 rounded-xl font-bold text-[11px] transition-all whitespace-nowrap shrink-0 ${
+                    isActive
+                      ? 'bg-[#3C83F6] dark:bg-[#bceaff] text-white dark:text-[#06224d] shadow-sm'
+                      : 'border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-white/90 dark:hover:bg-white/10'
+                  }`}
+                >
+                  <Icon className="w-3 h-3" />
+                  <span>{sec.label}</span>
+                  {count !== null && (
+                    <span className={`px-1.5 py-0 rounded-full text-[10px] font-bold ${
+                      isActive
+                        ? 'bg-white/25 dark:bg-black/20 text-white dark:text-[#06224d]'
+                        : 'bg-black/8 dark:bg-white/10 text-slate-600 dark:text-slate-300'
+                    }`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ── Section Panel ─────────────────────────────────────────────────── */}
+          <section className="space-y-3">
+            {/* Section Header */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 dark:border-white/5 pb-3">
+              <div>
+                <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                  {currentSection.key === 'students'
+                    ? 'Students'
+                    : currentSection.key === 'blueprints'
+                    ? 'Blueprints'
+                    : currentSection.key === 'analytics'
+                    ? 'Analytics'
+                    : `Attached ${currentSection.label}`}
+                  {currentSection.key !== 'analytics' && currentSection.key !== 'blueprints' && (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[#3C83F6]/10 dark:bg-[#bceaff]/15 text-[#3C83F6] dark:text-[#bceaff]">
+                      {attachedItems.length}
+                    </span>
+                  )}
+                </h2>
+                {currentSection.key !== 'students' && currentSection.key !== 'blueprints' && (
+                  <p className="text-xs text-black/45 dark:text-white/45 mt-0.5">
+                    {currentSection.key === 'analytics'
+                      ? 'Program performance overview'
+                      : `Manage attached ${currentSection.label.toLowerCase()} or add new resources`}
+                  </p>
+                )}
+                {currentSection.key === 'blueprints' && (
+                  <p className="text-xs text-black/45 dark:text-white/45 mt-0.5">
+                    Configure dynamic question mixes for this {getProgramType(program.programType)} program.
+                  </p>
+                )}
+              </div>
+
+              {currentSection.key === 'students' ? (
+                <button
+                  onClick={() => handleOpenAttachModal('students')}
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white px-4 text-xs font-bold transition-colors shadow-sm"
+                >
+                  <FiPlus className="w-3.5 h-3.5" />
+                  Add Student
+                </button>
+              ) : currentSection.key !== 'analytics' && currentSection.key !== 'blueprints' ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleCreateNewResource(currentSection)}
+                    className="h-9 px-3.5 rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 hover:bg-white/90 dark:hover:bg-white/10 transition-colors"
+                  >
+                    <FiExternalLink className="w-3.5 h-3.5" />
+                    Create New
+                  </button>
+                  <button
+                    onClick={() => handleOpenAttachModal(currentSection.key)}
+                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white px-4 text-xs font-bold transition-colors shadow-sm"
+                  >
+                    <FiPlus className="w-3.5 h-3.5" />
+                    Attach Existing
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Attached Items */}
+            {currentSection.key === 'blueprints' ? (
+              <ProgramBlueprintsPanel
+                programId={programId}
+                programType={getProgramType(program.programType)}
+                onCountChange={handleBlueprintCountChange}
+              />
+            ) : currentSection.key === 'analytics' ? (
+              <ProgramAnalyticsPanel program={program} readinessLeads={readinessLeads} readinessLoading={readinessLeadsLoading} />
+            ) : currentSection.key === 'students' ? (
+              <>
+                <div className="flex items-center gap-1 border-b border-black/5 dark:border-white/5">
+                  {[
+                    { key: 'students', label: 'Students' },
+                    { key: 'reports', label: 'Reports' },
+                  ].map((subTab) => (
+                    <button
+                      key={subTab.key}
+                      type="button"
+                      onClick={() => setStudentsSubTab(subTab.key)}
+                      className={`px-3 py-2 text-xs font-bold border-b-2 transition-colors ${
+                        studentsSubTab === subTab.key
+                          ? 'border-[#3C83F6] text-[#3C83F6] dark:border-[#bceaff] dark:text-[#bceaff]'
+                          : 'border-transparent text-black/45 dark:text-white/45 hover:text-black/70 dark:hover:text-white/70'
+                      }`}
+                    >
+                      {subTab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/80 p-3 shadow-[0_3px_10px_rgba(15,23,42,0.03)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.1)]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative min-w-[220px] flex-1">
+                      <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/40 dark:text-white/40 pointer-events-none" />
+                      <input
+                        type="search"
+                        value={studentSearch}
+                        onChange={(event) => setStudentSearch(event.target.value)}
+                        placeholder="Search students..."
+                        aria-label="Search students"
+                        className="w-full h-9 pl-9 pr-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                      />
+                    </div>
+                    <select
+                      value={studentSort}
+                      onChange={(event) => setStudentSort(event.target.value)}
+                      aria-label="Sort students"
+                      className="h-9 min-w-[155px] px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    >
+                      <option value="latest">Latest Joined</option>
+                      <option value="oldest">Oldest Joined</option>
+                      <option value="name-asc">Name A–Z</option>
+                      <option value="name-desc">Name Z–A</option>
+                      <option value="progress-high">Progress Highest</option>
+                      <option value="progress-low">Progress Lowest</option>
+                    </select>
+                    <select
+                      value={studentPeriodFilter}
+                      onChange={(event) => setStudentPeriodFilter(event.target.value)}
+                      aria-label="Student period filter"
+                      className="h-9 min-w-[125px] px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    >
+                      <option value="current">Current Month</option>
+                      <option value="all">All Time</option>
+                    </select>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        aria-expanded={filtersOpen}
+                        aria-haspopup="true"
+                        onClick={() => setFiltersOpen((open) => !open)}
+                        className="inline-flex h-9 min-w-[105px] items-center justify-center gap-1.5 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none hover:bg-white dark:hover:bg-white/10 focus:ring-2 focus:ring-[#3C83F6]/30"
+                      >
+                        <FiFilter className="w-3.5 h-3.5" />
+                        Filter
+                        {activeStudentFilterCount > 0 && (
+                          <span className="inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-[#3C83F6] px-1 text-[10px] font-bold text-white dark:bg-[#bceaff] dark:text-[#06224d]">
+                            {activeStudentFilterCount}
+                          </span>
+                        )}
+                      </button>
+
+                      {filtersOpen && (
+                        <div className="absolute right-0 z-40 mt-2 w-[min(92vw,360px)] rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] p-3 shadow-2xl">
+                          <div className="flex items-center justify-between gap-3 border-b border-black/5 dark:border-white/10 pb-2">
+                            <p className="text-xs font-bold text-slate-800 dark:text-white">Filter students</p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStudentStatusFilter('all');
+                                setStudentAccessFilter('all');
+                                setStudentPlanFilter('all');
+                              }}
+                              className="text-[11px] font-semibold text-[#3C83F6] dark:text-[#bceaff] hover:underline"
+                            >
+                              Clear all
+                            </button>
+                          </div>
+                          <div className="space-y-3 pt-3">
+                            {studentFilterGroups.map((group) => (
+                              <div key={group.label}>
+                                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">
+                                  {group.label}
+                                </p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {group.options.map((option) => (
+                                    <button
+                                      key={option.value}
+                                      type="button"
+                                      aria-pressed={group.value === option.value}
+                                      onClick={() => group.onChange(option.value)}
+                                      className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
+                                        group.value === option.value
+                                          ? 'border-[#3C83F6] bg-[#3C83F6]/10 text-[#3C83F6] dark:border-[#bceaff] dark:bg-[#bceaff]/10 dark:text-[#bceaff]'
+                                          : 'border-black/10 bg-black/[0.02] text-slate-600 hover:bg-black/[0.05] dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.08]'
+                                      }`}
+                                    >
+                                      {option.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {studentsSubTab === 'reports' ? (
+                  <>
+                    <ProgramPerformancePanel
+                      performance={performance}
+                      loading={performanceLoading}
+                      error={performanceError}
+                    />
+                    <ProgramReportsTable
+                      students={visibleStudentItems}
+                      program={program}
+                      onOpenStudent={setSelectedStudent}
+                    />
+                  </>
+                ) : (
+                  <StudentDatabaseTable
+                    students={visibleStudentItems}
+                    program={program}
+                    onOpenStudent={setSelectedStudent}
+                    onDetach={(student) => setDetachItem({ typeKey: currentSection.key, item: student })}
+                  />
+                )}
+              </>
+            ) : attachedItems.length === 0 ? (
+              <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl p-16 text-center shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
+                <div className="w-14 h-14 rounded-xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center mx-auto mb-4">
+                  <CurrentSectionIcon className="w-7 h-7" />
+                </div>
+                <h3 className="text-base font-bold text-slate-800 dark:text-white mb-1">
+                  No {currentSection.label} Attached
+                </h3>
+                <p className="text-sm text-black/45 dark:text-white/45 mb-6">
+                  Attach existing {currentSection.label.toLowerCase()} or create new ones to include in this program.
+                </p>
+                <button
+                  onClick={() => handleOpenAttachModal(currentSection.key)}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white px-5 text-xs font-bold transition-colors shadow-sm"
+                >
+                  <FiPlus className="w-3.5 h-3.5" />
+                  Attach {currentSection.label}
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {attachedItems.map((item) => {
+                  const link = getItemLink(item, currentSection.key);
+                  const statusClass = statusBadgeClass(item.status);
+                  return (
+                    <article
+                      key={item._id}
+                      className="rounded-xl overflow-hidden border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-200"
+                    >
+                      {/* Tinted top */}
+                      <div className="px-4 pt-4 pb-3 bg-[#d8e6ef] dark:bg-[#24384e] border-b border-black/10 dark:border-white/10">
+                        {item.status && (
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase mb-1.5 ${statusClass}`}>
+                            {item.status}
+                          </span>
+                        )}
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-1">
+                          {getItemTitle(item, currentSection.key)}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                          {getItemSubtitle(item, currentSection.key)}
+                        </p>
+                      </div>
+
+                      {/* Bottom actions */}
+                      <div className="px-4 py-3 flex items-center justify-between gap-2 bg-white/70 dark:bg-transparent">
+                        {link ? (
+                          <button
+                            onClick={() => navigate(link)}
+                            className="text-xs font-semibold text-[#3C83F6] dark:text-[#bceaff] hover:underline flex items-center gap-1"
+                          >
+                            <FiEye className="w-3.5 h-3.5" />
+                            View Details
+                          </button>
+                        ) : (
+                          <span />
+                        )}
+                        <button
+                          onClick={() => setDetachItem({ typeKey: currentSection.key, item })}
+                          title="Detach from Program"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                        >
+                          <FiTrash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </div>
+      </main>
     </div>
   );
 }

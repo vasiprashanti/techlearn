@@ -2,9 +2,11 @@ import Question from "../models/Questions.js";
 import PracticeSubmission from "../models/PracticeSubmission.js";
 import Student from "../models/Student.js";
 import mongoose from "mongoose";
-import { getTrackAssignmentDate } from "../utils/trackAssignmentSchedule.js";
+import { getTrackAssignmentDate, calculateCurrentDayNumber } from "../utils/trackAssignmentSchedule.js";
+import { resolveProgramSchedule } from "../utils/programSchedule.js";
 import { normalizeCategoryType } from "../utils/questionBank.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
+import { recordProgramPerformanceAttempt } from "../services/programPerformanceService.js";
 
 const TRACKS = ["DSA", "Core CS", "SQL", "Aptitude", "Company Based"];
 const PRACTICE_DAILY_RUN_LIMIT = Math.max(1, Number(process.env.PRACTICE_DAILY_RUN_LIMIT || 50));
@@ -142,7 +144,13 @@ export const listPracticeQuestions = async (req, res) => {
     if (!student && req.user?._id) {
       student = await Student.findOne({ userId: req.user._id });
     }
-    const studentBatchId = student?.batchId;
+    const schedule = student
+      ? await resolveProgramSchedule({ user: req.user, student })
+      : null;
+    if (schedule?.batchExpired) {
+      return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+    }
+    const studentBatchId = schedule?.batchId || null;
 
     // 1. Fetch categories marked "Practice" or "Both" matching batch or global
     const Category = mongoose.model("Category");
@@ -199,6 +207,19 @@ export const recordPracticeSubmission = async (req, res) => {
 
     if (!TRACKS.includes(track)) {
       return res.status(400).json({ success: false, message: "track must be one of DSA, Core CS, SQL, Aptitude, or Company Based." });
+    }
+
+    const practiceStudent = await Student.findOne({
+      $or: [
+        ...(req.user?.email ? [{ email: String(req.user.email).trim().toLowerCase() }] : []),
+        ...(req.user?._id ? [{ userId: req.user._id }] : []),
+      ],
+    }).lean();
+    if (practiceStudent) {
+      const schedule = await resolveProgramSchedule({ user: req.user, student: practiceStudent });
+      if (schedule.batchExpired) {
+        return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+      }
     }
 
     const source = ["track_template", "daily_challenge"].includes(req.body.source)
@@ -438,11 +459,28 @@ export const recordPracticeSubmission = async (req, res) => {
     try {
       const email = req.user.email.toLowerCase().trim();
       const student = await mongoose.model("Student").findOne({ email });
-      if (student && student.batchId) {
-        const batch = await mongoose.model("Batch").findById(student.batchId);
-        if (batch && batch.assignedDailyTaskTrack) {
-          const trackTemplate = await mongoose.model("TrackTemplate").findById(batch.assignedDailyTaskTrack);
-          if (trackTemplate) {
+      if (student) {
+        const schedule = await resolveProgramSchedule({ user: req.user, student });
+        if (schedule.batchExpired) {
+          return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+        }
+        const batch = schedule.batchId
+          ? await mongoose.model("Batch").findById(schedule.batchId)
+          : null;
+        let trackTemplate = batch?.assignedDailyTaskTrack
+          ? await mongoose.model("TrackTemplate").findById(batch.assignedDailyTaskTrack)
+          : null;
+        if (!trackTemplate && schedule.programId) {
+          const program = await mongoose.model("Program").findById(schedule.programId).select("trackTemplateIds").lean();
+          if (program?.trackTemplateIds?.length) {
+            trackTemplate = await mongoose.model("TrackTemplate").findOne({
+              _id: { $in: program.trackTemplateIds },
+              trackType: "Daily Task",
+              status: "Active",
+            });
+          }
+        }
+        if (trackTemplate) {
             const getISTDateParts = (date) => {
               const d = new Date(date);
               const istDate = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
@@ -460,12 +498,17 @@ export const recordPracticeSubmission = async (req, res) => {
               const utcTime = Date.UTC(year, month, day, hours, minutes, 0, 0);
               return new Date(utcTime - 5.5 * 60 * 60 * 1000);
             };
-            const releaseStart = combineDateAndTime(getTrackAssignmentDate(batch, "Daily Task"), batch.releaseTime || "00:00");
-            const dayNumber = Math.floor((new Date().getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+            const dayNumber = calculateCurrentDayNumber(
+              batch,
+              trackTemplate,
+              "Daily Task",
+              batch ? null : schedule.individualStartDate
+            );
             
             let attempt = await mongoose.model("DailyTaskAttempt").findOne({
               userId: req.user._id,
-              batchId: batch._id,
+              programId: schedule.programId || null,
+              batchId: batch?._id || null,
               trackId: trackTemplate._id,
               dayNumber,
             });
@@ -486,7 +529,7 @@ export const recordPracticeSubmission = async (req, res) => {
                 const dayAssignment = (trackTemplate.dayAssignments || []).find((assignment) => Number(assignment.dayNumber) === Number(dayNumber));
                 const tasksAssigned = dayAssignment ? (dayAssignment.tasks || []).filter((task) =>
                   (task.status || "Published") === "Published" &&
-                  (!task.batchId || String(task.batchId) === String(batch._id))
+                  (!task.batchId || (batch && String(task.batchId) === String(batch._id)))
                 ) : [];
 
                 const defaultProgress = tasksAssigned.map((t) => ({
@@ -500,7 +543,8 @@ export const recordPracticeSubmission = async (req, res) => {
 
                 attempt = new (mongoose.model("DailyTaskAttempt"))({
                   userId: req.user._id,
-                  batchId: batch._id,
+                  programId: schedule.programId || null,
+                  batchId: batch?._id || null,
                   trackId: trackTemplate._id,
                   dayNumber,
                   tasksProgress: defaultProgress,
@@ -528,6 +572,23 @@ export const recordPracticeSubmission = async (req, res) => {
                     task.attempted = true;
                     task.status = "In Progress";
                     await attempt.save();
+                    await recordProgramPerformanceAttempt({
+                      programId: schedule.programId,
+                      studentId: student._id,
+                      userId: req.user._id,
+                      programDay: dayNumber,
+                      source: "Daily Task",
+                      sourceKey: "daily-task:" + String(attempt._id) + ":" + String(task.questionId) + ":" + String(task.taskType || "Unknown"),
+                      sourceRecordId: attempt._id,
+                      taskType: task.taskType,
+                      questionId: task.questionId,
+                      question: canonicalQuestion,
+                      attempted: true,
+                      correct: task.isCorrect,
+                      score: accuracy,
+                      accuracy,
+                      attemptedAt: new Date(),
+                    });
                   } else {
                     // MCQ, Aptitude, Core CS
                     task.status = "In Progress";
@@ -536,6 +597,23 @@ export const recordPracticeSubmission = async (req, res) => {
                     task.attempted = true;
                     task.completedAt = new Date();
                     await attempt.save();
+                    await recordProgramPerformanceAttempt({
+                      programId: schedule.programId,
+                      studentId: student._id,
+                      userId: req.user._id,
+                      programDay: dayNumber,
+                      source: "Daily Task",
+                      sourceKey: "daily-task:" + String(attempt._id) + ":" + String(task.questionId) + ":" + String(task.taskType || "Unknown"),
+                      sourceRecordId: attempt._id,
+                      taskType: task.taskType,
+                      questionId: task.questionId,
+                      question: canonicalQuestion,
+                      attempted: true,
+                      correct: task.isCorrect,
+                      score: task.isCorrect === true ? 100 : task.isCorrect === false ? 0 : null,
+                      accuracy: task.isCorrect === true ? 100 : task.isCorrect === false ? 0 : null,
+                      attemptedAt: task.completedAt,
+                    });
                   }
                 } else {
                   // When final Finish is clicked (finalize: true)
@@ -599,10 +677,37 @@ export const recordPracticeSubmission = async (req, res) => {
                   const trackedTasks = attempt.tasksProgress.filter((progressTask) => isSameTrack(progressTask.taskType));
                   const trackedQuestions = await Question.find({
                     _id: { $in: trackedTasks.map((progressTask) => progressTask.questionId).filter(Boolean) },
-                  }).select("_id difficulty").lean();
+                  }).select("_id categoryId categoryType categoryTitle categorySlug trackType tags difficulty title subject topic subtopic content").lean();
                   const difficultyByQuestionId = new Map(
                     trackedQuestions.map((trackedQuestion) => [String(trackedQuestion._id), trackedQuestion.difficulty || "Easy"])
                   );
+                  const questionById = new Map(
+                    trackedQuestions.map((trackedQuestion) => [String(trackedQuestion._id), trackedQuestion])
+                  );
+
+                  for (const progressTask of trackedTasks) {
+                    const trackedQuestion = questionById.get(String(progressTask.questionId)) || null;
+                    const trackedAccuracy = typeof progressTask.accuracy === "number"
+                      ? progressTask.accuracy
+                      : (typeof progressTask.isCorrect === "boolean" ? (progressTask.isCorrect ? 100 : 0) : null);
+                    await recordProgramPerformanceAttempt({
+                      programId: schedule.programId,
+                      studentId: student._id,
+                      userId: req.user._id,
+                      programDay: dayNumber,
+                      source: "Daily Task",
+                      sourceKey: "daily-task:" + String(attempt._id) + ":" + String(progressTask.questionId) + ":" + String(progressTask.taskType || "Unknown"),
+                      sourceRecordId: attempt._id,
+                      taskType: progressTask.taskType,
+                      questionId: progressTask.questionId,
+                      question: trackedQuestion,
+                      attempted: progressTask.attempted,
+                      correct: progressTask.isCorrect,
+                      score: trackedAccuracy,
+                      accuracy: trackedAccuracy,
+                      attemptedAt: progressTask.completedAt,
+                    });
+                  }
                   
                   attempt.tasksProgress.forEach((t) => {
                     if (isSameTrack(t.taskType)) {
@@ -657,7 +762,6 @@ export const recordPracticeSubmission = async (req, res) => {
             }
           }
         }
-      }
     } catch (dtError) {
       console.error("Daily task automatic submission completion failed:", dtError);
     }
@@ -691,7 +795,13 @@ export const getPracticeStats = async (req, res) => {
     if (!student && req.user?._id) {
       student = await Student.findOne({ userId: req.user._id });
     }
-    const studentBatchId = student?.batchId;
+    const schedule = student
+      ? await resolveProgramSchedule({ user: req.user, student })
+      : null;
+    if (schedule?.batchExpired) {
+      return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+    }
+    const studentBatchId = schedule?.batchId || null;
 
     const Category = mongoose.model("Category");
     const activeCategories = await Category.find({
@@ -782,7 +892,13 @@ export const listPracticeCategoriesForStudent = async (req, res) => {
     if (!student && req.user?._id) {
       student = await Student.findOne({ userId: req.user._id });
     }
-    const studentBatchId = student?.batchId;
+    const schedule = student
+      ? await resolveProgramSchedule({ user: req.user, student })
+      : null;
+    if (schedule?.batchExpired) {
+      return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+    }
+    const studentBatchId = schedule?.batchId || null;
 
     const Category = mongoose.model("Category");
     const categories = await Category.find({

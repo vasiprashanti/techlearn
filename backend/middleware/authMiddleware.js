@@ -1,6 +1,5 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
-import { isAdminEmail } from "../utils/adminAccess.js";
 
 export const protect = async (req, res, next) => {
   let token;
@@ -75,18 +74,7 @@ export const isAdmin = async (req, res, next) => {
     return next();
   }
 
-  if (isAdminEmail(req.user.email)) {
-    try {
-      req.user.role = "admin";
-      await req.user.save();
-      return next();
-    } catch (error) {
-      console.error("authMiddleware - failed to synchronize admin role:", error.message);
-      return res.status(500).json({ error: "Unable to synchronize admin access" });
-    }
-  }
-
-  return res.status(401).json({ error: "Not authorized, not an admin" });
+  return res.status(403).json({ error: "Forbidden, administrator access is required" });
 };
 
 // Optional protect: if Authorization header present and valid, set req.user, otherwise continue as guest
@@ -123,6 +111,8 @@ export const optionalProtect = async (req, res, next) => {
     return next();
   }
 };
+
+export const protectOptional = optionalProtect;
 
 export const requirePlacementProgram = (req, res, next) => {
   if (["Placement Sprint", "Both"].includes(req.user?.programSelection)) {

@@ -28,6 +28,7 @@ import {
 import { invalidateDashboardCache } from "./dashboardController.js";
 import UserProgress from "../models/UserProgress.js";
 import { calculateChallengeXP } from "../services/xpService.js";
+import { syncProgramPerformanceForUser } from "../services/programPerformanceService.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
 
 export const mergeCodingRoundQuestionsData = async (codingRound) => {
@@ -509,6 +510,21 @@ const finalizeDailyChallengeAttempt = async ({
 
   await updateStudentChallengeStats({ student, submission });
 
+  // Persist the finalized Daily Challenge into the program performance layer
+  // immediately. The admin sync endpoint remains available as a reconciliation
+  // path, but learner submissions should be visible without waiting for it.
+  try {
+    const programId = codingRound?.programId || submission?.programId || attempt?.programId;
+    if (programId) {
+      await syncProgramPerformanceForUser({
+        programId,
+        userId: student?.userId || null,
+      });
+    }
+  } catch (performanceError) {
+    console.error("Daily Challenge performance capture failed:", performanceError);
+  }
+
   return { attempt, linkedSubmission };
 };
 
@@ -853,6 +869,7 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
         codingRoundId: codingRound._id,
         studentId: participant?.student?._id || null,
         batchId: codingRound.batchId || null,
+        programId: codingRound.programId || null,
         trackId: codingRound.trackId || null,
         questionId: codingRound.questionId || null,
         studentEmail: normalizedEmail,
@@ -1304,6 +1321,7 @@ export const submitCodingRoundAnswers = async (req, res) => {
         codingRoundId: codingRound._id,
         studentId: participant?.student?._id || null,
         batchId: challengeAttempt?.batchId || codingRound.batchId || null,
+        programId: codingRound.programId || null,
         trackId: challengeAttempt?.trackId || codingRound.trackId || null,
         questionId: codingRound.questionId || null,
         attemptId: challengeAttempt?._id || null,
@@ -1867,6 +1885,7 @@ export const runCodingRoundAnswers = async (req, res) => {
         codingRoundId: codingRound._id,
         studentId: participant?.student?._id || null,
         batchId: codingRound.batchId || null,
+        programId: codingRound.programId || null,
         trackId: codingRound.trackId || null,
         questionId: codingRound.questionId || null,
         attemptId: challengeAttempt?._id || null,
@@ -2143,6 +2162,7 @@ export const endCodingRound = async (req, res) => {
         codingRoundId: codingRound._id,
         studentId: participant?.student?._id || null,
         batchId: codingRound.batchId || null,
+        programId: codingRound.programId || null,
         trackId: codingRound.trackId || null,
         questionId: codingRound.questionId || null,
         attemptId: challengeAttempt?._id || null,
@@ -2320,6 +2340,7 @@ export const autoSubmitRound = async (req, res) => {
         codingRoundId: codingRound._id,
         studentId: participant?.student?._id || null,
         batchId: codingRound.batchId || null,
+        programId: codingRound.programId || null,
         trackId: codingRound.trackId || null,
         questionId: codingRound.questionId || null,
         attemptId: challengeAttempt?._id || null,

@@ -257,8 +257,9 @@ async function request(path, options = {}) {
       }
 
       const payload = await response.json().catch(() => null);
-      const unwrapped = unwrapData(payload);
-
+      const unwrapped = options.rawResponse
+      ? payload
+      : unwrapData(payload);
       if (isGet && !options.noCache) {
         requestCache.set(path, unwrapped);
       } else {
@@ -306,6 +307,10 @@ export const adminAPI = {
   bulkDeleteBatches: (batchIds) => request('/admin/batches/bulk-delete', { method: 'POST', body: JSON.stringify({ batchIds }) }),
 
   getStudents: () => request('/admin/students'),
+  getGlobalStudents: (params = {}) => {
+    const query = new URLSearchParams(params);
+    return request(`/admin/students/global?${query.toString()}`, { noCache: true });
+  },
   searchExistingStudents: (params = {}) => {
     const query = new URLSearchParams(params);
     return request(`/admin/students/search?${query.toString()}`);
@@ -313,30 +318,21 @@ export const adminAPI = {
   getStudent: (studentId) => request(`/admin/students/${studentId}`),
   createStudent: (body) => request('/admin/students', { method: 'POST', body: JSON.stringify(body) }),
   updateStudent: (studentId, body) => request(`/admin/students/${studentId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  resetStudentXp: (studentId) => request(`/admin/students/${studentId}/reset-xp`, { method: 'POST' }),
   removeStudentFromBatch: (studentId, batchId) => request(`/admin/students/${studentId}/remove-batch`, { method: 'PATCH', body: JSON.stringify({ batchId }) }),
   deleteStudent: (studentId) => request(`/admin/students/${studentId}`, { method: 'DELETE' }),
-  bulkUploadStudents: async ({ file, collegeId, batchId, primaryTrack, status = 'Active' }) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('collegeId', collegeId);
-    formData.append('batchId', batchId);
-    formData.append('primaryTrack', primaryTrack || 'General Track');
-    formData.append('status', status);
-
-    const response = await adminFetch(`${API_BASE}/admin/students/bulk-upload`, {
-      method: 'POST',
-      headers: buildAuthHeaders(),
-      body: formData,
-    });
-
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(getErrorMessage(payload, 'Bulk student import failed.'));
+  bulkUploadStudents: async (payload) => {
+    if (payload instanceof FormData) {
+      const response = await adminFetch(`${API_BASE}/admin/students/bulk-upload`, {
+        method: 'POST',
+        headers: buildAuthHeaders(),
+        body: payload,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(getErrorMessage(data, 'Bulk student import failed.'));
+      return unwrapData(data);
     }
-
-    invalidateCacheForPath('/admin/students');
-    invalidateAdminSessionCacheForPath('/admin/students');
-    return unwrapData(payload);
+    return request('/admin/students/bulk-upload', { method: 'POST', body: JSON.stringify(payload) });
   },
 
   getQuestionCategories: (params = {}) => {
@@ -520,6 +516,31 @@ export const adminAPI = {
   getProgramById: (id) => request(`/admin/programs/${id}`),
   updateProgram: (id, body) => request(`/admin/programs/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteProgram: (id) => request(`/admin/programs/${id}`, { method: 'DELETE' }),
+  getProgramBlueprints: (programId) => request(`/admin/programs/${programId}/blueprints`),
+  createProgramBlueprint: (programId, body) => request(`/admin/programs/${programId}/blueprints`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  }),
+  updateProgramBlueprint: (programId, blueprintId, body) => request(`/admin/programs/${programId}/blueprints/${blueprintId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  }),
+  deleteProgramBlueprint: (programId, blueprintId) => request(`/admin/programs/${programId}/blueprints/${blueprintId}`, {
+    method: 'DELETE',
+  }),
+  getProgramPerformance: (programId, options = {}) => {
+    const query = new URLSearchParams();
+    if (options.includeRecords) query.set('includeRecords', 'true');
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return request(`/admin/programs/${programId}/performance${suffix}`, { noCache: true });
+  },
+  getProgramReadinessLeads: (programId) => request(`/admin/programs/${programId}/readiness-leads`, { noCache: true }),
+  syncProgramPerformance: (programId, options = {}) => {
+    const query = new URLSearchParams();
+    if (options.includeRecords) query.set('includeRecords', 'true');
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return request(`/admin/programs/${programId}/performance/sync${suffix}`, { method: 'POST' });
+  },
   getAvailableProgramEntities: (programId, entityType, params = {}) => {
     const query = new URLSearchParams();
     if (params.search) query.set('search', params.search);
@@ -527,8 +548,115 @@ export const adminAPI = {
     if (params.limit) query.set('limit', params.limit);
     return request(`/admin/programs/${programId}/available/${entityType}?${query.toString()}`);
   },
-  attachProgramEntities: (programId, entityType, ids) =>
-    request(`/admin/programs/${programId}/attachments/${entityType}`, { method: 'POST', body: JSON.stringify({ ids }) }),
+  attachProgramEntities: (programId, entityType, ids, options = {}) =>
+    request(`/admin/programs/${programId}/attachments/${entityType}`, {
+      method: 'POST',
+      body: JSON.stringify({ ids, ...options }),
+    }),
   detachProgramEntity: (programId, entityType, entityId) =>
     request(`/admin/programs/${programId}/attachments/${entityType}/${entityId}`, { method: 'DELETE' }),
+
+  // Hiring Jobs API
+getJobs: (params = {}) => {
+  const query = new URLSearchParams();
+
+  if (params.search) query.set("search", params.search);
+  if (params.status) query.set("status", params.status);
+  if (params.roleId) query.set("roleId", params.roleId);
+  if (params.companyName) query.set("companyName", params.companyName);
+  if (params.companyType) query.set("companyType", params.companyType);
+  if (params.experience) query.set("experience", params.experience);
+  if (params.location) query.set("location", params.location);
+  if (params.jobType) query.set("jobType", params.jobType);
+  if (params.workMode) query.set("workMode", params.workMode);
+  if (params.sortBy) query.set("sortBy", params.sortBy);
+  if (params.sortOrder) query.set("sortOrder", params.sortOrder);
+  if (params.page) query.set("page", params.page);
+  if (params.limit) query.set("limit", params.limit);
+
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+
+  return request(`/admin/jobs${suffix}`, {
+  rawResponse: true,
+});
+},
+
+getJobById: (jobId) =>
+  request(`/admin/jobs/${jobId}`),
+
+createJob: (body) =>
+  request("/admin/jobs", {
+    method: "POST",
+    body: JSON.stringify(body),
+  }),
+
+parseJobMarkdown: (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return request("/admin/jobs/parse-markdown", {
+    method: "POST",
+    body: formData,
+  });
+},
+
+uploadJobLogo: (file) => {
+  const formData = new FormData();
+  formData.append("logo", file);
+
+  return request("/admin/jobs/logo", {
+    method: "POST",
+    body: formData,
+  });
+},
+
+updateJob: (jobId, body) =>
+  request(`/admin/jobs/${jobId}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  }),
+
+updateJobStatus: (jobId, status) =>
+  request(`/admin/jobs/${jobId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  }),
+
+deleteJob: (jobId) =>
+  request(`/admin/jobs/${jobId}`, {
+    method: "DELETE",
+  }),
+
+    // Hiring Roles API
+  getRoles: (params = {}) => {
+    const query = new URLSearchParams();
+
+    if (params.search) query.set('search', params.search);
+    if (params.page) query.set('page', params.page);
+    if (params.limit) query.set('limit', params.limit);
+
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+
+    return request(`/admin/roles${suffix}`);
+  },
+
+  createRole: (body) =>
+    request('/admin/roles', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  getRoleById: (roleId) =>
+    request(`/admin/roles/${roleId}`),
+
+  updateRole: (roleId, body) =>
+    request(`/admin/roles/${roleId}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+
+  deleteRole: (roleId) =>
+    request(`/admin/roles/${roleId}`, {
+      method: 'DELETE',
+    }),
 };

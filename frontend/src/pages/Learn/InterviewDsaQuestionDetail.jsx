@@ -531,12 +531,12 @@ export default function InterviewDsaQuestionDetail() {
           </button>
         </div>
       )}
-      <div className="h-[calc(100vh-8rem)] flex flex-col overflow-hidden w-full">
+      <div className="min-h-[calc(100vh-10rem)] lg:h-[calc(100vh-9rem)] flex flex-col overflow-visible lg:overflow-hidden w-full pb-4 lg:pb-0">
         {/* Workspace Body split */}
-        <div className="flex flex-col lg:flex-row flex-1 overflow-hidden gap-4">
+        <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden gap-4">
           {/* Left Panel - Contains ALL content inside the card */}
           <aside 
-            className="w-full lg:w-[35%] xl:w-[40%] h-[360px] lg:h-full flex flex-col shrink-0 overflow-y-auto scroll-pb-10 rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 pb-10 gap-3 minimal-scrollbar"
+            className="w-full lg:w-[35%] xl:w-[40%] min-h-[380px] lg:h-full flex flex-col shrink-0 overflow-y-auto scroll-pb-10 rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 pb-10 gap-3 minimal-scrollbar"
           >
             {/* Header Card (Top 15%) */}
             <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/45 dark:bg-[#001233]/60 p-3 rounded-xl shrink-0 lg:h-[15%] lg:min-h-[15%] flex flex-col justify-center items-start text-left gap-1.5">
@@ -637,7 +637,7 @@ export default function InterviewDsaQuestionDetail() {
           </aside>
 
           {/* Right Panel - Divided into 2 cards (ratio 2:1, outer cards rounded, inner modules sharp) */}
-          <div className="flex-grow flex-1 w-full lg:w-[65%] xl:w-[60%] flex flex-col gap-4 lg:overflow-hidden">
+          <div className="flex-grow flex-1 w-full lg:w-[65%] xl:w-[60%] flex flex-col gap-4 lg:overflow-hidden min-h-[500px] lg:min-h-0">
             {/* Card 1: Coding Space (outer rounded-xl, inner editor sharp) */}
             <section className="h-[450px] lg:h-auto lg:flex-[2] flex flex-col overflow-hidden rounded-xl border border-[#2563eb]/15 bg-white/20 p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 shrink-0 border-b border-black/5 dark:border-white/5 pb-2">

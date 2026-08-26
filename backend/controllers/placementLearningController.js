@@ -2,29 +2,9 @@ import Batch from "../models/Batch.js";
 import Course from "../models/Course.js";
 import Student from "../models/Student.js";
 import Topic from "../models/Topic.js";
-import { getTrackAssignmentDate } from "../utils/trackAssignmentSchedule.js";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-const combineDateAndTime = (dateValue, timeValue = "00:00") => {
-  const date = dateValue ? new Date(dateValue) : new Date();
-  if (Number.isNaN(date.getTime())) return new Date();
-
-  const [hours = "0", minutes = "0"] = String(timeValue || "00:00").split(":");
-  date.setHours(Number(hours) || 0, Number(minutes) || 0, 0, 0);
-  return date;
-};
-
-const getCurrentBatchDay = (batch) => {
-  const assignmentDate =
-    getTrackAssignmentDate(batch, "Daily Task") ||
-    getTrackAssignmentDate(batch, "Daily Challenge") ||
-    batch.startDate ||
-    new Date();
-  const releaseStart = combineDateAndTime(assignmentDate, batch.releaseTime || "00:00");
-  const elapsedDays = Math.floor((Date.now() - releaseStart.getTime()) / DAY_MS);
-  return Math.max(1, elapsedDays + 1);
-};
+import Program from "../models/Program.js";
+import { calculateProgramDayNumber } from "../utils/programSchedule.js";
+import { resolveProgramSchedule } from "../utils/programSchedule.js";
 
 const buildTopicPayload = (topic, index, currentDay, courseId) => {
   const day = index + 1;
@@ -54,37 +34,62 @@ export const getPlacementLearningDashboard = async (req, res) => {
       ],
     }).lean();
 
-    if (!student?.batchId) {
+    if (!student) {
       return res.status(200).json({
         success: true,
         hasPlacementLearning: false,
-        message: "No active placement batch found.",
+        message: "No student record found.",
       });
     }
 
-    const batch = await Batch.findById(student.batchId).lean();
-    if (!batch || batch.status !== "Active") {
+    const schedule = await resolveProgramSchedule({ user: req.user, student });
+    if (schedule.batchExpired) {
+      return res.status(403).json({
+        success: false,
+        message: "This batch has ended and program access has been revoked.",
+      });
+    }
+    const batch = schedule.batchId ? await Batch.findById(schedule.batchId).lean() : null;
+    if (schedule.batchId && !batch) {
+      return res.status(403).json({
+        success: false,
+        message: "The assigned batch could not be found.",
+      });
+    }
+
+    let targetCourseId = batch?.attachedCourse || null;
+    let program = schedule.programId ? await Program.findById(schedule.programId).lean() : null;
+
+    if (!targetCourseId) {
+      if (!program && student.programSelection) {
+        program = await Program.findOne({ programType: student.programSelection, status: "Active" }).sort({ createdAt: -1 }).lean();
+      }
+      if (program?.courseIds?.length) {
+        targetCourseId = program.courseIds[0];
+      }
+    }
+
+    if (!targetCourseId) {
+      const fallbackCourse = await Course.findOne({ status: "Active" }).sort({ createdAt: -1 }).lean();
+      if (fallbackCourse) {
+        targetCourseId = fallbackCourse._id;
+      }
+    }
+
+    if (!targetCourseId) {
       return res.status(200).json({
         success: true,
         hasPlacementLearning: false,
-        message: "No active placement batch found.",
+        message: "No course is assigned yet.",
       });
     }
 
-    if (!batch.attachedCourse) {
-      return res.status(200).json({
-        success: true,
-        hasPlacementLearning: false,
-        message: "No course is attached to this batch yet.",
-      });
-    }
-
-    const course = await Course.findById(batch.attachedCourse).lean();
+    const course = await Course.findById(targetCourseId).lean();
     if (!course) {
       return res.status(200).json({
         success: true,
         hasPlacementLearning: false,
-        message: "The attached course is not available yet.",
+        message: "The assigned course is not available yet.",
       });
     }
 
@@ -93,7 +98,10 @@ export const getPlacementLearningDashboard = async (req, res) => {
       .sort({ index: 1, createdAt: 1 })
       .lean();
 
-    const currentDay = getCurrentBatchDay(batch);
+    const currentDay = calculateProgramDayNumber({
+      batch,
+      individualStartDate: schedule.individualStartDate,
+    });
     const totalDays = topics.length;
     const currentTopicIndex = Math.min(Math.max(currentDay - 1, 0), Math.max(totalDays - 1, 0));
     const currentTopic = totalDays > 0 ? topics[currentTopicIndex] : null;
@@ -112,8 +120,11 @@ export const getPlacementLearningDashboard = async (req, res) => {
       return acc;
     }, []);
 
-    // Fetch supporting courses directly from batch.supportingCourses field (source of truth)
-    const supportingCourseIds = batch.supportingCourses || [];
+    // Batch supporting courses are cohort-specific. Individual learners use
+    // the remaining courses attached to their program.
+    const supportingCourseIds = batch?.supportingCourses?.length
+      ? batch.supportingCourses
+      : (program?.courseIds || []).filter((id) => String(id) !== String(targetCourseId));
     const supportingCourses = supportingCourseIds.length > 0
       ? await Course.find({ _id: { $in: supportingCourseIds } }).select("title topicIds").lean()
       : [];
@@ -121,12 +132,18 @@ export const getPlacementLearningDashboard = async (req, res) => {
     return res.status(200).json({
       success: true,
       hasPlacementLearning: true,
-      batch: {
+      scheduleType: schedule.scheduleType,
+      program: program
+        ? { id: program._id, name: program.name, programType: program.programType }
+        : null,
+      batch: batch
+        ? {
         id: batch._id,
         name: batch.name,
         currentDay,
         releaseTime: batch.releaseTime || "00:00",
-      },
+          }
+        : null,
       course: {
         id: course._id,
         title: course.title,

@@ -1,7 +1,7 @@
 // API Service Layer for TechLearn Solutions
 // This handles all communication with the backend
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 
 
@@ -140,6 +140,127 @@ export const placementLearningAPI = {
     const response = await fetch(`${API_BASE}/placement-learning/dashboard`, {
       headers: getAuthHeaders(),
     });
+    return handleResponse(response);
+  },
+};
+
+// Hiring / Jobs API
+export const hiringAPI = {
+  // Get published jobs
+  getJobs: async ({
+    search = '',
+    category = '',
+    jobType = '',
+    location = '',
+    experience = '',
+    workMode = '',
+    sort = 'newest',
+    page = 1,
+    limit = 10,
+  } = {}) => {
+    const params = new URLSearchParams();
+
+    if (search) params.set('search', search);
+    if (category) params.set('category', category);
+    if (jobType) params.set('jobType', jobType);
+    if (location) params.set('location', location);
+    if (experience) params.set('experience', experience);
+    if (workMode) params.set('workMode', workMode);
+
+    params.set('sort', sort);
+    params.set('page', page);
+    params.set('limit', limit);
+
+    const response = await fetch(
+      `${API_BASE}/jobs?${params.toString()}`,
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+
+    return handleResponse(response);
+  },
+
+  // Get personalized jobs
+  getRecommendedJobs: async ({
+    search = '',
+    jobType = '',
+    location = '',
+    experience = '',
+    workMode = '',
+    page = 1,
+    limit = 10,
+  } = {}) => {
+    const params = new URLSearchParams();
+
+    if (search) params.set('search', search);
+    if (jobType) params.set('jobType', jobType);
+    if (location) params.set('location', location);
+    if (experience) params.set('experience', experience);
+    if (workMode) params.set('workMode', workMode);
+
+    params.set('page', page);
+    params.set('limit', limit);
+
+    const response = await fetch(
+      `${API_BASE}/jobs/for-you?${params.toString()}`,
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+
+    return handleResponse(response);
+  },
+
+  // Get available filter values
+  getFilters: async () => {
+    const response = await fetch(
+      `${API_BASE}/jobs/filters`,
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+
+    return handleResponse(response);
+  },
+
+  // Get job details
+  getJob: async (jobId) => {
+    const response = await fetch(
+      `${API_BASE}/jobs/${jobId}`,
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+
+    return handleResponse(response);
+  },
+
+  // Get application URL
+  getApplicationUrl: async (jobId) => {
+    const response = await fetch(
+      `${API_BASE}/jobs/${jobId}/apply`,
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+
+    return handleResponse(response);
+  },
+
+  // Get hiring calendar
+  getCalendar: async (month) => {
+    const params = month
+      ? `?month=${encodeURIComponent(month)}`
+      : '';
+
+    const response = await fetch(
+      `${API_BASE}/jobs/calendar${params}`,
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+
     return handleResponse(response);
   },
 };

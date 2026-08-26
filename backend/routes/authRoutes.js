@@ -10,8 +10,11 @@ import User from "../models/User.js";
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import { syncProgramEnrollment } from "../utils/programEnrollment.js";
+import { resolveProgramSchedule } from "../utils/programSchedule.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { isAdminIdentity } from "../utils/adminAccess.js";
+import { registerUser } from "../controllers/userController.js";
+import { buildUnifiedProfile } from "../utils/userProfile.js";
 
 const router = express.Router();
 const client = new OAuth2Client();
@@ -25,29 +28,59 @@ function generateToken(id) {
 const normalizeEmail = (email = "") => String(email).trim().toLowerCase();
 
 const mapUserToStudentCohort = async (user) => {
-  if (!user?.email) return { user, student: null, batch: null };
+  if (!user?.email) return { user, student: null, batch: null, schedule: null };
 
-  const student = await Student.findOne({ email: normalizeEmail(user.email) });
-  if (!student) return { user, student: null, batch: null };
+  const student = await Student.findOne({ email: normalizeEmail(user.email) }).populate("collegeId", "name").populate("batchId", "name");
+  if (!student) return { user, student: null, batch: null, schedule: null };
 
-  const batch = await Batch.findById(student.batchId).lean();
-  if (!batch) {
+  const batch = (student.batchId && typeof student.batchId === "object" && student.batchId._id) ? student.batchId : (await Batch.findById(student.batchId).lean());
+  if (student.batchId && !batch) {
     console.warn(`Warning: Batch ID ${student.batchId} not found for student ${student.email}`);
   }
 
-  let changed = false;
+  let studentChanged = false;
   if (!student.userId || String(student.userId) !== String(user._id)) {
     student.userId = user._id;
+    studentChanged = true;
+  }
+  // Imported/admin enrollment fields on Student are authoritative. Never
+  // copy a stale legacy User.batchId back onto the Student during login.
+  if (user.onboardingCompleted && !student.onboardingCompleted) {
+    student.onboardingCompleted = true;
+    student.onboardingCompletedAt = user.onboardingCompletedAt || new Date();
+    studentChanged = true;
+  }
+  if (studentChanged) {
     await student.save();
   }
 
-  if (!user.batchId || String(user.batchId) !== String(student.batchId)) {
-    user.batchId = student.batchId;
+  let changed = false;
+  if (!user.batchId || String(user.batchId) !== String(student.batchId?._id || student.batchId)) {
+    user.batchId = student.batchId?._id || student.batchId;
     changed = true;
   }
 
-  if (batch && batch.startDate && (!user.startDate || new Date(user.startDate).getTime() !== new Date(batch.startDate).getTime())) {
-    user.startDate = batch.startDate;
+  const schedule = await resolveProgramSchedule({
+    user,
+    student,
+    programId: student.programId || user.programId,
+  });
+
+  const scheduleStartDate = schedule.scheduleType === "batch" && batch
+    ? batch.startDate
+    : schedule.individualStartDate;
+  if (scheduleStartDate && (!user.startDate || new Date(user.startDate).getTime() !== new Date(scheduleStartDate).getTime())) {
+    user.startDate = scheduleStartDate;
+    changed = true;
+  }
+
+  // Pre-fill user college and degree from imported student if missing on user
+  if (!user.collegeName && student.collegeId?.name) {
+    user.collegeName = student.collegeId.name;
+    changed = true;
+  }
+  if (!user.degree && student.degree) {
+    user.degree = student.degree;
     changed = true;
   }
 
@@ -55,85 +88,74 @@ const mapUserToStudentCohort = async (user) => {
     await user.save();
   }
 
-  await syncProgramEnrollment({
-    user,
-    student,
-    batchId: student.batchId,
-    programSelection: student.programSelection || user.programSelection,
-  });
+  if (user.onboardingCompleted || student.onboardingCompleted) {
+    await syncProgramEnrollment({
+      user,
+      student,
+      batchId: schedule?.scheduleType === "batch" ? (schedule.batchId || student.batchId?._id || student.batchId) : null,
+      programId: student.programId || user.programId,
+      programSelection: student.programSelection || user.programSelection,
+    });
+  }
 
-  return { user, student, batch };
+  return { user, student, batch, schedule };
 };
 
-const formatAuthUser = (user, student = null, batch = null) => ({
-  id: user._id,
-  firstName: user.firstName,
-  lastName: user.lastName,
-  email: user.email,
-  photoUrl: user.photoUrl || "",
-  role: user.role,
-  isClub: user.isClub,
-  batchId: user.batchId || student?.batchId || null,
-  startDate: user.startDate || batch?.startDate || null,
-  programSelection: user.programSelection,
-  programId: user.programId || student?.programId || null,
-});
+const formatAuthUser = (user, student = null, batch = null, schedule = null) => {
+  const isProfileComplete = Boolean(
+    user.onboardingCompleted ||
+    student?.onboardingCompleted
+  );
+  const profile = buildUnifiedProfile({
+    user,
+    student,
+    enrollment: schedule
+      ? {
+          batchId: schedule.scheduleType === "batch" ? schedule.batchId || batch || null : null,
+          programId: schedule.programId || user.programId || student?.programId || null,
+          individualStartDate: schedule.individualStartDate || null,
+          status: isProfileComplete ? "Active" : null,
+        }
+      : null,
+  });
+
+  return {
+    id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    authProvider: user.authProvider || "local",
+    photoUrl: user.photoUrl || "",
+    role: user.role,
+    permissions: user.permissions || [],
+    isClub: user.isClub,
+    batchId: schedule ? schedule.batchId || null : (user.batchId || student?.batchId?._id || student?.batchId || null),
+    startDate: schedule?.scheduleType === "batch"
+      ? batch?.startDate || user.startDate || null
+      : schedule?.individualStartDate || user.startDate || null,
+    programSelection: user.programSelection,
+    programId: user.programId || student?.programId || null,
+    scheduleType: schedule?.scheduleType || ((user.batchId || student?.batchId || batch?._id) ? "batch" : "individual"),
+    isEnrolledStudent: !!student || user.isClub || Boolean(user.batchId) || Boolean(schedule?.programId),
+    targetRole: student?.targetRole || user.targetRole || student?.otherTargetRole || user.otherTargetRole || "",
+    otherTargetRole: student?.otherTargetRole || user.otherTargetRole || "",
+    learningGoal: student?.learningGoal || user.learningGoal || "",
+    collegeName: (student?.collegeId && typeof student.collegeId === 'object' ? student.collegeId.name : "") || student?.collegeName || user.collegeName || "",
+    degree: student?.degree || user.degree || "",
+    branch: student?.branch || user.branch || "",
+    graduationYear: student?.graduationYear || user.graduationYear || null,
+    placementCategory: student?.placementCategory || user.placementCategory || "",
+    targetCompanies: student?.targetCompanies?.length ? student.targetCompanies : (user.targetCompanies || []),
+    placementTimeline: student?.placementTimeline || user.placementTimeline || "",
+    skills: student?.skills?.length ? student.skills : (user.skills || []),
+    onboardingCompleted: isProfileComplete,
+    onboardingCompletedAt: user.onboardingCompletedAt || student?.onboardingCompletedAt || (isProfileComplete ? user.updatedAt : null),
+    profile,
+  };
+};
 
 /* ========== REGISTER ========== */
-router.post("/register", async function register(req, res) {
-  try {
-    const { firstName, lastName, fullName, email, password, confirmPassword } = req.body;
-
-    let finalFirstName = firstName;
-    let finalLastName = lastName;
-
-    if (fullName) {
-      const parts = fullName.trim().split(" ");
-      finalFirstName = parts[0];
-      finalLastName = parts.slice(1).join(" ") || ".";
-    }
-
-    if (!finalFirstName || !finalLastName || !email || !password || !confirmPassword) {
-      return res.status(400).json({ message: "Please fill all fields" });
-    }
-
-    const formattedEmail = normalizeEmail(email);
-    const emailRegex = /^[\w.-]+@(gmail|outlook|yahoo)\.com$/;
-    if (!emailRegex.test(formattedEmail)) {
-      return res
-        .status(400)
-        .json({ message: "Please enter a valid email account" });
-    }
-
-    if (password !== confirmPassword) {
-      return res.status(400).json({ message: "Passwords do not match" });
-    }
-
-    const emailExists = await User.findOne({ email: formattedEmail });
-    if (emailExists) {
-      return res.status(400).json({ message: "User already exists" });
-    }
-
-    const newUser = await User.create({
-      firstName: finalFirstName,
-      lastName: finalLastName,
-      email: formattedEmail,
-      password,
-    });
-
-    const mapped = await mapUserToStudentCohort(newUser);
-    const token = generateToken(mapped.user._id);
-    return res.status(201).json({
-      message: "User registered successfully",
-      user: formatAuthUser(mapped.user, mapped.student, mapped.batch),
-      token,
-    });
-  } catch (err) {
-    console.error("Register error:", err);
-    return res.status(500).json({ message: "Server error" });
-  }
-});
-//Tested and working fine
+router.post("/register", registerUser);
 
 /* ========== LOGIN ========== */
 router.post("/login", async function login(req, res) {
@@ -146,7 +168,7 @@ router.post("/login", async function login(req, res) {
     }
 
     const formattedEmail = normalizeEmail(email);
-    const emailRegex = /^[\w.-]+@(gmail|outlook|yahoo)\.com$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formattedEmail)) {
       return res.status(400).json({ message: "Invalid email format" });
     }
@@ -169,7 +191,7 @@ router.post("/login", async function login(req, res) {
     const token = generateToken(mapped.user._id);
     return res.status(200).json({
       message: "Login successful",
-      user: formatAuthUser(mapped.user, mapped.student, mapped.batch),
+      user: formatAuthUser(mapped.user, mapped.student, mapped.batch, mapped.schedule),
       token,
     });
   } catch (err) {
@@ -179,9 +201,59 @@ router.post("/login", async function login(req, res) {
 });
 //Tested and working fine
 
+/* ========== GOOGLE OAUTH CHECK ========== */
+router.post("/google-check", async function checkGoogleUser(req, res) {
+  const { token } = req.body;
+  try {
+    if (!token) {
+      return res.status(400).json({ message: "Missing Google token." });
+    }
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const { email, name } = ticket.getPayload();
+    const formattedEmail = normalizeEmail(email);
+    const user = await User.findOne({ email: formattedEmail });
+
+    if (user) {
+      const mapped = await mapUserToStudentCohort(user);
+      const jwtToken = generateToken(mapped.user._id);
+      return res.status(200).json({
+        isExisting: true,
+        token: jwtToken,
+        user: formatAuthUser(mapped.user, mapped.student, mapped.batch, mapped.schedule),
+      });
+    }
+
+    return res.status(200).json({
+      isExisting: false,
+      email: formattedEmail,
+      name: name || formattedEmail.split("@")[0]
+    });
+  } catch (err) {
+    console.error("Google check error:", err);
+    return res.status(401).json({ message: "Invalid Google token." });
+  }
+});
+
 /* ========== GOOGLE OAUTH ========== */
 router.post("/google", async function googleLogin(req, res) {
-  const { token } = req.body;
+  const { 
+    token, 
+    mobileNumber,
+    collegeName,
+    degree,
+    branch,
+    degreeBranch,
+    graduationYear,
+    learningGoal,
+    personalizedDetail,
+    programSelection,
+    placementReadiness,
+    dailyCommitment 
+  } = req.body;
+
   try {
     if (!token) {
       return res.status(400).json({ message: "Google login failed: missing Google token." });
@@ -212,6 +284,17 @@ router.post("/google", async function googleLogin(req, res) {
           authProvider: "google",
           photoUrl: "/profile_avatars/nobackgroundavatar1.png",
           avatar: "/profile_avatars/nobackgroundavatar1.png",
+          mobileNumber: mobileNumber || "",
+          collegeName: collegeName || "",
+          degree: degree || "",
+          branch: branch || "",
+          degreeBranch: degreeBranch || "",
+          graduationYear: graduationYear || null,
+          learningGoal: learningGoal || "",
+          personalizedDetail: personalizedDetail || "",
+          programSelection: programSelection || "Placement Sprint",
+          placementReadiness: placementReadiness || "",
+          dailyCommitment: dailyCommitment || "",
         });
       } catch (error) {
         if (error?.code === 11000) {
@@ -228,6 +311,17 @@ router.post("/google", async function googleLogin(req, res) {
       if (!user.avatar || !user.avatar.includes("/profile_avatars/")) {
         user.avatar = "/profile_avatars/nobackgroundavatar1.png";
       }
+      if (mobileNumber) user.mobileNumber = mobileNumber;
+      if (collegeName) user.collegeName = collegeName;
+      if (degree) user.degree = degree;
+      if (branch) user.branch = branch;
+      if (degreeBranch) user.degreeBranch = degreeBranch;
+      if (graduationYear) user.graduationYear = graduationYear;
+      if (learningGoal) user.learningGoal = learningGoal;
+      if (personalizedDetail) user.personalizedDetail = personalizedDetail;
+      if (programSelection) user.programSelection = programSelection;
+      if (placementReadiness) user.placementReadiness = placementReadiness;
+      if (dailyCommitment) user.dailyCommitment = dailyCommitment;
       await user.save();
     }
 
@@ -236,7 +330,7 @@ router.post("/google", async function googleLogin(req, res) {
     return res.status(200).json({
       message: "Google login successful",
       token: jwtToken,
-      user: formatAuthUser(mapped.user, mapped.student, mapped.batch),
+      user: formatAuthUser(mapped.user, mapped.student, mapped.batch, mapped.schedule),
     });
   } catch (err) {
     console.error("Google login error:", err);
@@ -303,7 +397,7 @@ router.post("/firebase", async (req, res) => {
     return res.status(200).json({
       message: "Firebase login successful",
       token,
-      user: formatAuthUser(mapped.user, mapped.student, mapped.batch),
+      user: formatAuthUser(mapped.user, mapped.student, mapped.batch, mapped.schedule),
     });
   } catch (err) {
     console.error("Firebase login error: ", err);
@@ -322,6 +416,8 @@ router.get("/me", protect, async function getMe(req, res) {
       firstName: req.user.firstName,
       lastName: req.user.lastName,
       email: req.user.email,
+      role: req.user.role,
+      permissions: req.user.permissions || [],
     });
   } catch (err) {
     console.error("Fetch user error:", err);

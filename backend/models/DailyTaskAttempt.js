@@ -73,7 +73,14 @@ const dailyTaskAttemptSchema = new mongoose.Schema(
     batchId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Batch",
-      required: true,
+      default: null,
+      index: true,
+    },
+    programId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Program",
+      default: null,
+      index: true,
     },
     trackId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -100,6 +107,6 @@ const dailyTaskAttemptSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-dailyTaskAttemptSchema.index({ userId: 1, batchId: 1, trackId: 1, dayNumber: 1 }, { unique: true });
+dailyTaskAttemptSchema.index({ userId: 1, programId: 1, batchId: 1, trackId: 1, dayNumber: 1 }, { unique: true });
 
 export default mongoose.model("DailyTaskAttempt", dailyTaskAttemptSchema);

@@ -48,7 +48,12 @@ import analyticsRoutes from "./routes/analyticsRoutes.js";
 import resourceRoutes from "./routes/resourceRoutes.js";
 import leaderboardRoutes from "./routes/leaderboardRoutes.js";
 import practiceRoutes from "./routes/practiceRoutes.js";
+
+import programRoutes from "./routes/programRoutes.js";
+import learnerReportRoutes from "./routes/learnerReportRoutes.js";
+
 import testimonialRoutes from "./routes/testimonialRoutes.js";
+
 
 dotenv.config();
 const app = express();
@@ -102,8 +107,11 @@ app.use("/api/exercises", exerciseRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/programs", programRoutes);
+app.use("/api/reports", learnerReportRoutes);
 app.use("/api/user-progress", userProgressRoutes);
 app.use("/api/certificate", paymentRoutes);
+app.use("/api/payments", paymentRoutes);
 app.use("/api/certification", certificationRoutes);
 app.use("/api/compiler", compilerRoutes);
 app.use("/api/xp", xpRoutes);
@@ -207,7 +215,7 @@ export default app;
 
 // Local Development Server (only runs when not in Vercel)
 if (process.env.NODE_ENV !== "production") {
-  const PORT = process.env.PORT || 3001;
+  const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);

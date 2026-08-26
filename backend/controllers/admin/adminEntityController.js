@@ -7,6 +7,7 @@ import College from "../../models/College.js";
 import Batch, { BATCH_STATUS } from "../../models/Batch.js";
 import Course from "../../models/Course.js";
 import Student from "../../models/Student.js";
+import Program from "../../models/Program.js";
 import Submission from "../../models/Submission.js";
 import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import StudentMcqSubmission from "../../models/StudentMcqSubmission.js";
@@ -18,8 +19,22 @@ import StudentProject from "../../models/StudentProject.js";
 import Project from "../../models/Project.js";
 import StudentTaskProgress from "../../models/StudentTaskProgress.js";
 import StudentTrackAssignment from "../../models/StudentTrackAssignment.js";
+import ProgramEnrollment from "../../models/ProgramEnrollment.js";
+import Payment from "../../models/Payment.js";
+import PricingExitFeedback from "../../models/PricingExitFeedback.js";
 import { writeAuditLog } from "../../utils/auditLogger.js";
 import { assertObjectId, formatDateLabel } from "./adminCommon.js";
+import {
+  resolveProgramForSelection,
+  setBatchScheduleForStudent,
+  pauseProgramEnrollment,
+  syncPrimaryProgramPointers,
+  upsertProgramEnrollment,
+} from "../../utils/programEnrollment.js";
+import { expireAllActiveBatches, expireBatchIfNeeded, isBatchExpired } from "../../utils/batchLifecycle.js";
+import { buildUnifiedProfile } from "../../utils/userProfile.js";
+
+const LEGACY_PROGRAM_SELECTIONS = ["Placement Sprint", "Full Stack Project Program", "Both"];
 
 const deleteStudentProjectProgress = async (studentIds) => {
   if (!studentIds || studentIds.length === 0) return;
@@ -608,6 +623,7 @@ export const bulkDeleteCollegesAdmin = async (req, res) => {
 
 export const listBatches = async (req, res) => {
   try {
+    await expireAllActiveBatches();
     const batches = await Batch.find()
       .sort({ createdAt: -1 })
       .populate("collegeId", "name")
@@ -810,6 +826,8 @@ export const getBatchDetail = async (req, res) => {
   try {
     const { batchId } = req.params;
     if (!assertObjectId(batchId, "batchId", res)) return;
+
+    await expireBatchIfNeeded(batchId);
 
     const batch = await Batch.findById(batchId)
       .populate("collegeId", "name")
@@ -2943,6 +2961,14 @@ export const activateBatchAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
 
+    if (isBatchExpired(batch)) {
+      await expireBatchIfNeeded(batch);
+      return res.status(400).json({
+        success: false,
+        message: "This batch has already ended and cannot be activated.",
+      });
+    }
+
     batch.status = BATCH_STATUS.ACTIVE;
     await batch.save();
     await ensureDefaultBatchTracks(batchId);
@@ -2981,6 +3007,7 @@ export const listStudentsAdmin = async (req, res) => {
       .sort({ createdAt: -1 })
       .populate("collegeId", "name")
       .populate("batchId", "name")
+      .populate("programId", "name programType")
       .lean();
 
     const studentIds = students.map((student) => student._id);
@@ -3010,8 +3037,11 @@ export const listStudentsAdmin = async (req, res) => {
       email: student.email,
       collegeId: student.collegeId?._id || student.collegeId,
       batchId: student.batchId?._id || student.batchId,
+      programId: student.programId?._id || student.programId || null,
+      programName: student.programId?.name || null,
+      programType: student.programId?.programType || null,
       college: student.collegeId?.name || "Unknown College",
-      batch: student.batchId?.name || "Unknown Batch",
+      batch: student.batchId?.name || "No Batch (Individual)",
       track: student.primaryTrack || "General Track",
       programSelection: student.programSelection || "Placement Sprint",
       accuracy: typeof student.overallAccuracy === 'number'
@@ -3067,9 +3097,10 @@ export const searchExistingStudentsAdmin = async (req, res) => {
 
     const [students, total] = await Promise.all([
       Student.find(query)
-        .select("name email rollNo collegeId batchId primaryTrack programSelection status")
+        .select("name email rollNo collegeId batchId programId primaryTrack programSelection status")
         .populate("collegeId", "name")
         .populate("batchId", "name")
+        .populate("programId", "name programType")
         .sort(sort)
         .skip((page - 1) * limit)
         .limit(limit)
@@ -3085,7 +3116,10 @@ export const searchExistingStudentsAdmin = async (req, res) => {
       collegeId: student.collegeId?._id || student.collegeId,
       college: student.collegeId?.name || "Unknown College",
       batchId: student.batchId?._id || student.batchId,
-      batch: student.batchId?.name || "Unknown Batch",
+      programId: student.programId?._id || student.programId || null,
+      programName: student.programId?.name || null,
+      programType: student.programId?.programType || null,
+      batch: student.batchId?.name || "No Batch (Individual)",
       track: student.primaryTrack || "General Track",
       programSelection: student.programSelection || "Placement Sprint",
       status: student.status || "Active",
@@ -3100,51 +3134,95 @@ export const searchExistingStudentsAdmin = async (req, res) => {
 
 export const createStudentAdmin = async (req, res) => {
   try {
-    const { name, email, rollNo, collegeId, batchId, primaryTrack, status, programSelection } = req.body;
-    if (!name || !email || !collegeId || !batchId) {
-      return res.status(400).json({ success: false, message: "name, email, collegeId and batchId are required." });
+    const { name, email, rollNo, collegeId, batchId, primaryTrack, status, programSelection, programId } = req.body;
+    if (!name || !email || !collegeId) {
+      return res.status(400).json({ success: false, message: "name, email, and collegeId are required." });
     }
-    if (!assertObjectId(collegeId, "collegeId", res) || !assertObjectId(batchId, "batchId", res)) return;
+    if (!assertObjectId(collegeId, "collegeId", res)) return;
+    if (batchId && !assertObjectId(batchId, "batchId", res)) return;
 
     const normalizedEmail = email.trim().toLowerCase();
-    const [batch, existingStudent, linkedUser] = await Promise.all([
-      Batch.findById(batchId).lean(),
+    if (programId && !assertObjectId(programId, "programId", res)) return;
+
+    const [batch, existingStudent, linkedUser, requestedProgram] = await Promise.all([
+      batchId ? Batch.findById(batchId).lean() : Promise.resolve(null),
       Student.findOne({ email: normalizedEmail }).lean(),
       User.findOne({ email: normalizedEmail }).select("_id").lean(),
+      programId ? Program.findById(programId).lean() : Promise.resolve(null),
     ]);
 
-    if (!batch) {
+    if (batchId && !batch) {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
 
-    if (String(batch.collegeId) !== String(collegeId)) {
+    if (batch && String(batch.collegeId) !== String(collegeId)) {
       return res.status(400).json({ success: false, message: "Selected batch does not belong to the selected college." });
+    }
+
+    if (programId && !requestedProgram) {
+      return res.status(404).json({ success: false, message: "Program not found." });
     }
 
     if (existingStudent) {
       return res.status(409).json({ success: false, message: "A student with this email already exists." });
     }
 
+    const resolvedProgram = requestedProgram || (
+      linkedUser
+        ? await resolveProgramForSelection(programSelection || batch?.programSelection)
+        : null
+    );
+    const resolvedProgramType = LEGACY_PROGRAM_SELECTIONS.includes(resolvedProgram?.programType)
+      ? resolvedProgram.programType
+      : (LEGACY_PROGRAM_SELECTIONS.includes(programSelection)
+        ? programSelection
+        : (LEGACY_PROGRAM_SELECTIONS.includes(batch?.programSelection) ? batch.programSelection : "Placement Sprint"));
+
     const student = await Student.create({
       name: name.trim(),
       email: normalizedEmail,
       rollNo: rollNo?.trim() || "",
       collegeId,
-      batchId,
+      batchId: batch ? batch._id : null,
+      programId: resolvedProgram?._id || null,
       userId: linkedUser?._id || null,
       primaryTrack: primaryTrack?.trim() || "General Track",
-      programSelection: programSelection || batch.programSelection || "Placement Sprint",
+      programSelection: resolvedProgramType,
       status: status || "Active",
     });
 
     if (linkedUser?._id) {
-      await User.findByIdAndUpdate(linkedUser._id, {
-        $set: {
-          batchId,
-          startDate: batch.startDate,
-          programSelection: programSelection || batch.programSelection || "Placement Sprint",
-        },
-      });
+      const userUpdate = {
+        batchId: batch ? batch._id : null,
+        programSelection: student.programSelection,
+        programId: resolvedProgram?._id || null,
+      };
+      if (batch?.startDate) {
+        userUpdate.startDate = batch.startDate;
+      } else {
+        userUpdate.startDate = student.createdAt;
+      }
+      await User.findByIdAndUpdate(linkedUser._id, { $set: userUpdate });
+
+      if (resolvedProgram) {
+        await upsertProgramEnrollment({
+          user: linkedUser,
+          student,
+          program: resolvedProgram,
+          batchId: batch?._id || null,
+          source: "admin",
+        });
+      }
+    } else if (resolvedProgram) {
+      await Program.updateOne(
+        { _id: resolvedProgram._id },
+        {
+          $addToSet: {
+            studentIds: student._id,
+            ...(batch?._id ? { batchIds: batch._id } : {}),
+          },
+        }
+      );
     }
 
     await writeAuditLog({
@@ -3171,13 +3249,35 @@ export const getStudentDetailAdmin = async (req, res) => {
     const student = await Student.findById(studentId)
       .populate("collegeId", "name")
       .populate("batchId", "name")
+      .populate("programId", "name programType")
       .lean();
 
     if (!student) {
       return res.status(404).json({ success: false, message: "Student not found." });
     }
 
+    let user = null;
+    if (student.userId) {
+      user = await User.findById(student.userId).lean();
+    }
+    if (!user && student.email) {
+      user = await User.findOne({ email: student.email.toLowerCase() }).lean();
+    }
+
     const submissions = await Submission.find({ studentId }).sort({ submittedAt: -1 }).lean();
+    const enrollment = await ProgramEnrollment.findOne({
+      $or: [
+        student.userId ? { userId: student.userId } : null,
+        { studentId: student._id },
+      ].filter(Boolean),
+      ...(student.programId ? { programId: student.programId?._id || student.programId } : {}),
+      status: { $in: ["Active", "Completed"] },
+    })
+      .sort({ assignedAt: -1, createdAt: -1 })
+      .populate("programId", "name programType")
+      .populate("batchId", "name startDate expiryDate status")
+      .lean();
+    const unifiedProfile = buildUnifiedProfile({ user, student, enrollment });
     const score =
       submissions.length > 0
         ? Number(
@@ -3194,10 +3294,14 @@ export const getStudentDetailAdmin = async (req, res) => {
         id: student._id,
         name: student.name,
         email: student.email,
-        college: student.collegeId?.name || "Unknown College",
-        batch: student.batchId?.name || "Unknown Batch",
+        college: user?.collegeName || student.collegeId?.name || "Unknown College",
+        batch: student.batchId?.name || "No Batch (Individual)",
         track: student.primaryTrack || "General Track",
         programSelection: student.programSelection || "Placement Sprint",
+        programId: student.programId?._id || student.programId || null,
+        programName: student.programId?.name || null,
+        programType: student.programId?.programType || null,
+        profile: unifiedProfile,
         accuracy: score,
         score,
         streak: student.streak || 0,
@@ -3205,6 +3309,29 @@ export const getStudentDetailAdmin = async (req, res) => {
         lastActive: submissions[0]?.submittedAt || student.lastActiveAt,
         status: student.status,
         joined: student.createdAt,
+        userProfile: {
+          id: user?._id || student.userId || student._id,
+          name: user?.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : student.name,
+          firstName: user?.firstName || student.name.split(" ")[0] || "",
+          lastName: user?.lastName || student.name.split(" ").slice(1).join(" ") || "",
+          email: user?.email || student.email,
+          role: user?.role || "user",
+          college: user?.collegeName || student.collegeId?.name || "",
+          degree: user?.degree || student.degree || "",
+          branch: user?.branch || student.branch || "",
+          graduationYear: user?.graduationYear || student.graduationYear || null,
+          batch: student.batchId?.name || "",
+          program: student.programSelection || user?.programSelection || "Placement Sprint",
+          learningGoal: user?.learningGoal || student.learningGoal || "",
+          targetRole: user?.targetRole || student.targetRole || "",
+          otherTargetRole: user?.otherTargetRole || student.otherTargetRole || "",
+          placementCategory: user?.placementCategory || student.placementCategory || "",
+          targetCompanies: user?.targetCompanies?.length ? user.targetCompanies : (student.targetCompanies || []),
+          placementTimeline: user?.placementTimeline || student.placementTimeline || "",
+          skills: user?.skills?.length ? user.skills : (student.skills || []),
+          onboardingCompleted: Boolean(user?.onboardingCompleted || student.onboardingCompleted),
+          onboardingCompletedAt: user?.onboardingCompletedAt || student.onboardingCompletedAt || null,
+        },
       },
     });
   } catch (error) {
@@ -3227,34 +3354,65 @@ export const updateStudentAdmin = async (req, res) => {
       email: req.body.email?.trim()?.toLowerCase(),
       rollNo: req.body.rollNo?.trim(),
       primaryTrack: req.body.primaryTrack?.trim() || req.body.track?.trim() || "General Track",
-      programSelection: req.body.programSelection || "Placement Sprint",
+      programSelection: LEGACY_PROGRAM_SELECTIONS.includes(req.body.programSelection)
+        ? req.body.programSelection
+        : (existingStudent.programSelection || "Placement Sprint"),
       status: req.body.status,
     };
+
+    const hasProgramId = Object.prototype.hasOwnProperty.call(req.body, "programId");
+    let nextProgramId = existingStudent.programId || null;
+    if (hasProgramId) {
+      const rawProgramId = req.body.programId;
+      if (rawProgramId && rawProgramId !== "" && rawProgramId !== "null") {
+        if (!assertObjectId(rawProgramId, "programId", res)) return;
+        nextProgramId = rawProgramId;
+        update.programId = rawProgramId;
+      } else {
+        nextProgramId = null;
+        update.programId = null;
+      }
+    }
+    const previousProgramId = existingStudent.programId || null;
 
     if (req.body.collegeId) {
       if (!assertObjectId(req.body.collegeId, "collegeId", res)) return;
       update.collegeId = req.body.collegeId;
     }
-    if (req.body.batchId) {
-      if (!assertObjectId(req.body.batchId, "batchId", res)) return;
-      update.batchId = req.body.batchId;
+
+    const hasBatchId = Object.prototype.hasOwnProperty.call(req.body, "batchId");
+    let nextBatchId = existingStudent.batchId;
+    if (hasBatchId) {
+      const rawBatchId = req.body.batchId;
+      if (rawBatchId && rawBatchId !== "" && rawBatchId !== "null") {
+        if (!assertObjectId(rawBatchId, "batchId", res)) return;
+        nextBatchId = rawBatchId;
+        update.batchId = rawBatchId;
+      } else {
+        nextBatchId = null;
+        update.batchId = null;
+      }
     }
 
     const nextCollegeId = update.collegeId || existingStudent.collegeId;
-    const nextBatchId = update.batchId || existingStudent.batchId;
     const nextEmail = update.email || existingStudent.email;
 
-    const [batch, duplicateStudent, linkedUser] = await Promise.all([
-      Batch.findById(nextBatchId).lean(),
+    const [batch, duplicateStudent, linkedUser, requestedProgram] = await Promise.all([
+      nextBatchId ? Batch.findById(nextBatchId).lean() : Promise.resolve(null),
       Student.findOne({ _id: { $ne: studentId }, email: nextEmail }).select("_id").lean(),
       User.findOne({ email: nextEmail }).select("_id").lean(),
+      nextProgramId ? Program.findById(nextProgramId).lean() : Promise.resolve(null),
     ]);
 
-    if (!batch) {
+    if (nextBatchId && !batch) {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
 
-    if (String(batch.collegeId) !== String(nextCollegeId)) {
+    if (nextProgramId && !requestedProgram) {
+      return res.status(404).json({ success: false, message: "Program not found." });
+    }
+
+    if (batch && String(batch.collegeId) !== String(nextCollegeId)) {
       return res.status(400).json({ success: false, message: "Selected batch does not belong to the selected college." });
     }
 
@@ -3267,16 +3425,44 @@ export const updateStudentAdmin = async (req, res) => {
     const student = await Student.findByIdAndUpdate(studentId, { $set: update }, { new: true, runValidators: true });
 
     if (linkedUser?._id) {
-      await User.findByIdAndUpdate(linkedUser._id, {
-        $set: {
+      const userUpdate = {
+        batchId: nextBatchId,
+        programSelection: update.programSelection,
+        programId: nextProgramId,
+      };
+      if (batch?.startDate) {
+        userUpdate.startDate = batch.startDate;
+      } else if (!nextBatchId) {
+        userUpdate.startDate = student.createdAt;
+      }
+      await User.findByIdAndUpdate(linkedUser._id, { $set: userUpdate });
+
+      if (hasBatchId) {
+        await setBatchScheduleForStudent({
+          student,
+          user: linkedUser,
           batchId: nextBatchId,
-          startDate: batch.startDate,
-          programSelection: update.programSelection,
-        },
-      });
+        });
+      }
+
+      const programChanged = String(previousProgramId || "") !== String(nextProgramId || "");
+      if (hasProgramId && requestedProgram && (programChanged || hasBatchId)) {
+        await upsertProgramEnrollment({
+          user: linkedUser,
+          student,
+          program: requestedProgram,
+          batchId: hasBatchId ? nextBatchId : null,
+          source: "admin",
+        });
+      }
+
+      if (hasProgramId && !requestedProgram && previousProgramId) {
+        await pauseProgramEnrollment({ student, user: linkedUser, programId: previousProgramId });
+      }
+      if (hasProgramId) {
+        await syncPrimaryProgramPointers({ student, user: linkedUser });
+      }
     }
-
-
 
     await writeAuditLog({
       verb: "Updated",
@@ -3293,6 +3479,52 @@ export const updateStudentAdmin = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to update student.", error: error.message });
   }
 };
+
+export const resetStudentXpAdmin = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    if (!assertObjectId(studentId, "studentId", res)) return;
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found." });
+    }
+
+    // Reset XP in UserProgress model if userId exists
+    if (student.userId) {
+      await UserProgress.findOneAndUpdate(
+        { userId: student.userId },
+        {
+          $set: {
+            courseXP: {},
+            exerciseXP: {},
+            projectXP: {},
+            totalCourseXP: {},
+            totalExerciseXP: {},
+          },
+        }
+      );
+    }
+
+    await writeAuditLog({
+      verb: "Updated",
+      entityType: "Student",
+      entityId: student._id,
+      action: "Reset student XP",
+      detail: `Reset XP for student ${student.name}`,
+      actor: req.user,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `XP for student ${student.name} has been reset to 0.`,
+    });
+  } catch (error) {
+    console.error("resetStudentXpAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Failed to reset student XP.", error: error.message });
+  }
+};
+
 
 export const removeStudentFromBatchAdmin = async (req, res) => {
   try {
@@ -3321,6 +3553,11 @@ export const removeStudentFromBatchAdmin = async (req, res) => {
         { studentId: student._id, batchId, status: "Active" },
         { $set: { status: "Inactive", deactivatedAt: new Date() } }
       ),
+      setBatchScheduleForStudent({
+        student,
+        user: student.userId ? { _id: student.userId } : null,
+        batchId: null,
+      }),
     ]);
 
     await writeAuditLog({
@@ -3344,6 +3581,284 @@ export const removeStudentFromBatchAdmin = async (req, res) => {
   }
 };
 
+
+export const getGlobalStudentsAdmin = async (req, res) => {
+  try {
+    const tab = String(req.query.tab || "enrolled").toLowerCase();
+    const month = String(req.query.month || "").trim(); // "YYYY-MM" or "all"
+    const accessFilter = String(req.query.access || "all").toLowerCase();
+    const statusFilter = String(req.query.status || "all").toLowerCase();
+    const programIdFilter = req.query.programId || "";
+    const collegeIdFilter = req.query.collegeId || "";
+    const search = String(req.query.search || req.query.q || "").trim();
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(5, Number.parseInt(req.query.limit, 10) || 25));
+
+    // Fetch all reference data needed for dynamic classification and filters
+    const [allColleges, allPrograms, allEnrollments, allPayments, allExitFeedbacks, allUsers] = await Promise.all([
+      College.find().select("_id name").lean(),
+      Program.find().select("_id name programType").lean(),
+      ProgramEnrollment.find().populate("programId", "name programType").lean(),
+      Payment.find({ status: "captured" }).lean(),
+      PricingExitFeedback.find().sort({ createdAt: -1 }).lean(),
+      User.find().select("_id email collegeName customCollege goal targetRole targetCompanies onboardingCompleted onboardingCompletedAt createdAt").lean(),
+    ]);
+
+    const collegeMap = new Map(allColleges.map((c) => [String(c._id), c.name]));
+    const programMap = new Map(allPrograms.map((p) => [String(p._id), p]));
+    const userMapByEmail = new Map(allUsers.map((u) => [String(u.email || "").toLowerCase(), u]));
+    const userMapById = new Map(allUsers.map((u) => [String(u._id), u]));
+
+    // Map user enrollments: userId -> array of enrollments
+    const enrollmentsByUser = new Map();
+    allEnrollments.forEach((e) => {
+      const uKey = String(e.userId || e.studentId || "");
+      if (!enrollmentsByUser.has(uKey)) enrollmentsByUser.set(uKey, []);
+      enrollmentsByUser.get(uKey).push(e);
+    });
+
+    // Map paid payments: userId -> boolean/list
+    const paidUsersSet = new Set(allPayments.map((p) => String(p.userId)));
+
+    // Map pricing exit feedback by student/user ID
+    const exitFeedbackMap = new Map();
+    allExitFeedbacks.forEach((fb) => {
+      const key = String(fb.userId || fb.studentId || "");
+      if (!exitFeedbackMap.has(key)) {
+        exitFeedbackMap.set(key, fb.customReason || fb.reason || "Viewed pricing — didn't enroll");
+      }
+    });
+
+    // Query all students
+    const allStudents = await Student.find()
+      .populate("collegeId", "name")
+      .populate("batchId", "name startDate")
+      .populate("programId", "name programType")
+      .lean();
+
+    // Map stats metrics dynamically
+    let totalEnrolled = 0;
+    let activeThisMonth = 0;
+    let collegeCount = 0;
+    let individualCount = 0;
+    let completedCount = 0;
+
+    const now = new Date();
+    const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+    // Process & Classify Students
+    const processedStudents = allStudents.map((student) => {
+      const sId = String(student._id);
+      const email = String(student.email || "").toLowerCase();
+      const user = userMapByEmail.get(email) || (student.userId ? userMapById.get(String(student.userId)) : null);
+      const uId = user ? String(user._id) : sId;
+
+      const userEnrollments = enrollmentsByUser.get(uId) || enrollmentsByUser.get(sId) || [];
+      const hasPaidPayment = paidUsersSet.has(uId) || paidUsersSet.has(sId);
+      const hasPaidEnrollment = userEnrollments.some(
+        (e) => e.accessTier === "Member" || (e.programId && e.programId.programType === "Skill" && hasPaidPayment)
+      );
+
+      const hasCollegeBatch = Boolean(student.batchId || student.collegeId);
+      const isEnrolled = hasPaidPayment || hasPaidEnrollment || hasCollegeBatch;
+
+      // Access tier computation
+      let accessType = "Free";
+      if (hasPaidPayment || hasPaidEnrollment) {
+        accessType = "Paid";
+      } else if (hasCollegeBatch) {
+        accessType = "College";
+      }
+
+      // College Name Resolution
+      let collegeName = "Individual";
+      if (student.collegeId?.name) {
+        collegeName = student.collegeId.name;
+      } else if (student.collegeId && collegeMap.has(String(student.collegeId))) {
+        collegeName = collegeMap.get(String(student.collegeId));
+      } else if (user?.collegeName && user.collegeName.toLowerCase() !== "other") {
+        collegeName = user.collegeName;
+      } else if (user?.customCollege) {
+        collegeName = user.customCollege;
+      }
+
+      // Programs associated with student
+      const programNamesList = [];
+      if (student.programId?.name) programNamesList.push(student.programId.name);
+      userEnrollments.forEach((e) => {
+        if (e.programId?.name && !programNamesList.includes(e.programId.name)) {
+          programNamesList.push(e.programId.name);
+        }
+      });
+      if (programNamesList.length === 0 && student.programSelection) {
+        programNamesList.push(student.programSelection);
+      }
+
+      // Enrolled On Date
+      const enrolledOnDate = student.createdAt || user?.createdAt || new Date();
+      const enrolledOnStr = enrolledOnDate.toISOString().slice(0, 10);
+
+      // Status
+      let statusStr = student.status || "Active";
+      if (userEnrollments.some((e) => e.status === "Completed")) {
+        statusStr = "Completed";
+      }
+
+      // Is Active This Month
+      const isLastActiveThisMonth = student.lastActiveAt
+        ? new Date(student.lastActiveAt).toISOString().slice(0, 7) === currentMonthPrefix
+        : enrolledOnStr.slice(0, 7) === currentMonthPrefix;
+
+      // Update Global Dynamic Stats if enrolled
+      if (isEnrolled) {
+        totalEnrolled++;
+        if (isLastActiveThisMonth) activeThisMonth++;
+        if (accessType === "College") collegeCount++;
+        else individualCount++;
+        if (statusStr === "Completed") completedCount++;
+      }
+
+      // Skill Relationship
+      const hasSkillProgram =
+        (student.programId?.programType === "Skill" ||
+          student.primaryTrack?.toLowerCase().includes("skill") ||
+          userEnrollments.some((e) => e.programId?.programType === "Skill")) ||
+        false;
+
+      // Classification Flags
+      const goal = user?.goal || student.learningGoal || "";
+      const isExploring =
+        goal.toLowerCase().includes("exploring") ||
+        (student.programSelection || "").toLowerCase().includes("exploring");
+
+      const isLead = !isEnrolled && !isExploring && (user?.onboardingCompleted || Boolean(student.targetRole || goal));
+
+      // Lead Source
+      let leadSource = "Signup / Onboarding";
+      const exitReason = exitFeedbackMap.get(uId) || exitFeedbackMap.get(sId);
+      if (exitReason) {
+        leadSource = "Viewed Pricing";
+      } else if (student.testsTaken && student.testsTaken > 0) {
+        leadSource = "Placement Readiness Assessment";
+      } else if (programNamesList.length > 0) {
+        leadSource = "Free Program";
+      }
+
+      return {
+        id: student._id,
+        name: student.name,
+        email: student.email,
+        studentIdStr: student.rollNo || String(student._id).slice(-6),
+        college: collegeName,
+        access: accessType,
+        programs: programNamesList,
+        programId: student.programId?._id || null,
+        collegeId: student.collegeId?._id || student.collegeId || null,
+        enrolledOn: enrolledOnDate,
+        enrolledOnStr,
+        status: statusStr,
+        lastActive: student.lastActiveAt || enrolledOnDate,
+        // Lead specific fields
+        goal: goal || (isExploring ? "Just Exploring" : "Get Placed"),
+        targetRole: student.targetRole || user?.targetRole || student.otherTargetRole || "Full Stack Developer",
+        targetCompanies: student.targetCompanies || user?.targetCompanies || [],
+        source: leadSource,
+        pricingExitReason: exitReason || null,
+        lastActivity: student.lastActiveAt ? "Assessment completed" : "Onboarding completed",
+        // Skill specific
+        hasSkill: hasSkillProgram,
+        skillAccess: hasPaidPayment ? "Paid" : "Free",
+        // Flags
+        isEnrolled,
+        isLead,
+        isExploring,
+      };
+    });
+
+    // Filter by Tab
+    let tabStudents = processedStudents.filter((s) => {
+      if (tab === "enrolled") return s.isEnrolled;
+      if (tab === "leads") return s.isLead;
+      if (tab === "skill") return s.hasSkill;
+      if (tab === "exploring") return s.isExploring;
+      return s.isEnrolled;
+    });
+
+    // Apply Month Filter
+    if (month && month !== "all") {
+      tabStudents = tabStudents.filter((s) => {
+        const d = new Date(s.enrolledOn);
+        if (Number.isNaN(d.getTime())) return true;
+        const studentMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        return studentMonth === month;
+      });
+    }
+
+    // Apply Access Filter
+    if (accessFilter !== "all") {
+      tabStudents = tabStudents.filter((s) => s.access.toLowerCase() === accessFilter);
+    }
+
+    // Apply Status Filter
+    if (statusFilter !== "all") {
+      tabStudents = tabStudents.filter((s) => s.status.toLowerCase() === statusFilter);
+    }
+
+    // Apply Program Filter
+    if (programIdFilter) {
+      tabStudents = tabStudents.filter((s) => String(s.programId) === String(programIdFilter));
+    }
+
+    // Apply College Filter
+    if (collegeIdFilter) {
+      tabStudents = tabStudents.filter((s) => String(s.collegeId) === String(collegeIdFilter));
+    }
+
+    // Apply Search Filter
+    if (search) {
+      const q = search.toLowerCase();
+      tabStudents = tabStudents.filter(
+        (s) =>
+          s.name.toLowerCase().includes(q) ||
+          s.email.toLowerCase().includes(q) ||
+          s.studentIdStr.toLowerCase().includes(q)
+      );
+    }
+
+    // Default Sorting: Latest Added / Enrolled First (Newest -> Oldest)
+    tabStudents.sort((a, b) => new Date(b.enrolledOn).getTime() - new Date(a.enrolledOn).getTime());
+
+    // Pagination
+    const total = tabStudents.length;
+    const paginatedItems = tabStudents.slice((page - 1) * limit, page * limit);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        stats: {
+          totalEnrolled,
+          activeThisMonth,
+          collegeCount,
+          individualCount,
+          completedCount,
+        },
+        items: paginatedItems,
+        page,
+        limit,
+        total,
+        hasMore: page * limit < total,
+        filterOptions: {
+          colleges: allColleges,
+          programs: allPrograms,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("getGlobalStudentsAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch global students.", error: error.message, stack: error.stack });
+  }
+};
+
 export const deleteStudentAdmin = async (req, res) => {
   try {
     const { studentId } = req.params;
@@ -3355,13 +3870,23 @@ export const deleteStudentAdmin = async (req, res) => {
     }
 
     const studentEmail = String(student.email || "").trim().toLowerCase();
+    const userId = student.userId || null;
 
+    // Perform complete cascading deletion across all models
     await Promise.all([
-      Submission.deleteMany({ studentId }),
+      Submission.deleteMany({ $or: [{ studentId }, ...(userId ? [{ userId }] : [])] }),
       studentEmail ? StudentCodingSubmission.deleteMany({ studentEmail }) : Promise.resolve(),
       studentEmail ? StudentMcqSubmission.deleteMany({ studentEmail }) : Promise.resolve(),
+      DailyChallengeAttempt.deleteMany({ $or: [{ studentId }, ...(userId ? [{ userId }] : [])] }),
+      DailyTaskAttempt.deleteMany({ $or: [{ studentId }, ...(userId ? [{ userId }] : [])] }),
+      PracticeSubmission.deleteMany({ $or: [{ studentId }, ...(userId ? [{ userId }] : [])] }),
+      ProgramEnrollment.deleteMany({ $or: [{ studentId }, ...(userId ? [{ userId }] : [])] }),
       StudentTrackAssignment.deleteMany({ studentId }),
+      userId ? UserProgress.deleteMany({ userId }) : Promise.resolve(),
+      userId ? PricingExitFeedback.deleteMany({ userId }) : Promise.resolve(),
       deleteStudentProjectProgress([studentId]),
+      userId ? User.findByIdAndDelete(userId) : Promise.resolve(),
+      studentEmail ? User.deleteMany({ email: studentEmail }) : Promise.resolve(),
     ]);
 
     await Student.findByIdAndDelete(studentId);
@@ -3370,12 +3895,12 @@ export const deleteStudentAdmin = async (req, res) => {
       verb: "Deleted",
       entityType: "Student",
       entityId: student._id,
-      action: "Deleted student",
-      detail: student.name,
+      action: "Permanently deleted student and cascading records",
+      detail: `${student.name} (${student.email})`,
       actor: req.user,
     });
 
-    return res.status(200).json({ success: true, message: "Student deleted successfully." });
+    return res.status(200).json({ success: true, message: "Student and associated records permanently deleted." });
   } catch (error) {
     console.error("deleteStudentAdmin error:", error);
     return res.status(500).json({ success: false, message: "Failed to delete student." });
@@ -3445,5 +3970,76 @@ export const bulkDeleteBatchesAdmin = async (req, res) => {
   } catch (error) {
     console.error("bulkDeleteBatchesAdmin error:", error);
     return res.status(500).json({ success: false, message: "Failed to bulk delete batches." });
+  }
+};
+
+export const bulkUploadStudentsAdmin = async (req, res) => {
+  try {
+    const { students, collegeId, batchId, programId, programSelection, status } = req.body;
+    if (!Array.isArray(students) || students.length === 0) {
+      return res.status(400).json({ success: false, message: "students array is required." });
+    }
+
+    let createdCount = 0;
+    let skippedCount = 0;
+    const errors = [];
+
+    const college = collegeId ? await College.findById(collegeId).lean() : null;
+    const batch = batchId ? await Batch.findById(batchId).lean() : null;
+    const program = programId ? await Program.findById(programId).lean() : null;
+
+    for (let i = 0; i < students.length; i++) {
+      const item = students[i];
+      const name = String(item.name || "").trim();
+      const email = String(item.email || "").trim().toLowerCase();
+      const rollNo = String(item.rollNo || item.studentId || "").trim();
+
+      if (!name || !email) {
+        errors.push(`Row ${i + 1}: Name and Email are required.`);
+        skippedCount++;
+        continue;
+      }
+
+      const existingStudent = await Student.findOne({ email }).lean();
+      if (existingStudent) {
+        skippedCount++;
+        continue;
+      }
+
+      const linkedUser = await User.findOne({ email }).select("_id").lean();
+
+      const student = await Student.create({
+        name,
+        email,
+        rollNo,
+        collegeId: college ? college._id : (linkedUser?.collegeId || null),
+        batchId: batch ? batch._id : null,
+        programId: program ? program._id : null,
+        userId: linkedUser ? linkedUser._id : null,
+        programSelection: programSelection || batch?.programSelection || "Placement Sprint",
+        status: status || "Active",
+      });
+
+      if (linkedUser?._id && program) {
+        await upsertProgramEnrollment({
+          user: linkedUser,
+          student,
+          program,
+          batchId: batch?._id || null,
+          source: "admin_bulk",
+        });
+      }
+
+      createdCount++;
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Bulk import completed. ${createdCount} created, ${skippedCount} skipped.`,
+      data: { createdCount, skippedCount, errors },
+    });
+  } catch (error) {
+    console.error("bulkUploadStudentsAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Bulk upload failed.", error: error.message });
   }
 };

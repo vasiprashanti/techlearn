@@ -1,462 +1,685 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Moon, Sun } from 'lucide-react'
+import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
+import FreeAssessmentModal from '../components/Learn/FreeAssessmentModal'
 
-const FloatingCodeWords = lazy(() => import('../components/FloatingCodeWords'))
+const codeFragments = [
+  "DSA.solve(problem)",
+  "SQL.query()",
+  "OOPS.inheritance",
+  "DBMS.normalize()",
+  "CN.protocols",
+  "aptitude.score++",
+  "array.search()",
+  "binarySearch(target)",
+  "sort(array)",
+  "recursion.solve()",
+  "JOIN users ON users.id",
+  "SELECT * FROM candidates",
+  "assessment.complete()",
+  "technical_round.prepare()",
+  "mock_interview.start()",
+  "target_company = 'YOUR COMPANY'",
+  "placement.ready = true",
+  "candidate.progress += 1",
+  "interview.confidence++",
+  "coding.solve()",
+  "dsa.practice()",
+  "sql.optimize(query)",
+  "technical.skills.build()",
+  "30_days.start()",
+  "array.reverse()",
+  "stack.push(element)",
+  "queue.offer(candidate)",
+  "tree.traverse()",
+  "graph.shortestPath()",
+  "company.questions()",
+  "interview.evaluate()",
+  "feedback.generate()",
+  "weakAreas.identify()",
+  "practice.again()",
+  "candidate.score++"
+]
 
-// Homepage component
+const searchQueries = [
+  "best roadmap for TCS placements",
+  "how to prepare for campus placements",
+  "DSA roadmap for SDE roles",
+  "SQL questions asked in interviews",
+  "how to crack Infosys interview",
+  "Java interview questions for freshers",
+  "best placement preparation strategy",
+  "what to study for online assessments",
+  "how to prepare for my target company"
+]
+
+const reviewsData = [
+  {
+    quote: "“The daily plan made my preparation much less overwhelming.”",
+    name: "Ananya K.",
+    role: "College Student · Placement Program",
+    avatar: "AK"
+  },
+  {
+    quote: "“I finally knew what I was supposed to study every day instead of jumping between random resources.”",
+    name: "Tanvika V.",
+    role: "College Student · Placement Program",
+    avatar: "TV"
+  },
+  {
+    quote: "“The company-focused questions helped me feel much more confident before my interview.”",
+    name: "Rahul S.",
+    role: "College Student · Placement Program",
+    avatar: "RS"
+  }
+]
+
+const faqsData = [
+  {
+    question: "Is TechLearn only for coding students?",
+    answer: "TechLearn is designed around placement preparation, including technical preparation, aptitude, coding, company-focused practice and interview readiness."
+  },
+  {
+    question: "What happens during the 30 days?",
+    answer: "You follow a structured path with daily tasks, practice, challenges and preparation that progressively moves you toward real placement rounds."
+  },
+  {
+    question: "Do I need to know DSA before joining?",
+    answer: "No. The roadmap is designed to give you a clear progression rather than assuming you already know everything."
+  },
+  {
+    question: "Is this a course or a placement preparation platform?",
+    answer: "TechLearn is built as a placement preparation platform. The focus is not just consuming lessons — it is knowing what to practice and completing the work that moves you forward."
+  },
+  {
+    question: "Is the payment recurring?",
+    answer: "No. Both plans are one-time purchases. There is no monthly subscription."
+  },
+  {
+    question: "Can I change my target company later?",
+    answer: "Your preparation can adapt as your placement goals change. Your target companies can be updated as you progress."
+  }
+]
+
+const milestonesData = [
+  { label: "START", progress: 0.0, x: 80, y: 70, position: "above start-node" },
+  { label: "FOUNDATION", progress: 0.20, x: 760, y: 70, position: "above" },
+  { label: "PRACTICE", progress: 0.36, x: 1280, y: 170, position: "above" },
+  { label: "REAL ROUNDS", progress: 0.65, x: 500, y: 270, position: "above" },
+  { label: "INTERVIEW READY", progress: 1.0, x: 1520, y: 350, position: "above end-node" }
+]
+
+const pathD = "M 80 70 L 760 70 C 850 70, 850 170, 940 170 L 1280 170 C 1370 170, 1370 270, 1280 270 L 500 270 C 410 270, 410 350, 500 350 L 1520 350"
+
 const HomePage = () => {
-  const navigate = useNavigate()
-  // Typewriter effect state
-  const [displayedText, setDisplayedText] = useState("")
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isTyping, setIsTyping] = useState(false)
-  const fullText = "Techlearn;"
-  const headingRef = useRef(null)
+  const { theme, toggleTheme } = useTheme()
+  const isDarkMode = theme === 'dark'
 
-  // Stats animation state
-  const statsRef = useRef(null)
-  const [animatedStats, setAnimatedStats] = useState({
-    courses: 0,
-    batches: 0,
-    students: 0,
-    rating: 0
-  })
+  // Code line animation state
+  const codeFieldRef = useRef(null)
 
-  // Marquee refs for intersection observer
-  const marqueeRefs = useRef([])
+  // Journey animation state
+  const journeySectionRef = useRef(null)
+  const pathWrapperRef = useRef(null)
+  const pathRef = useRef(null)
+  const progressPathRef = useRef(null)
+  const characterRef = useRef(null)
+  const [journeyStatusText, setJourneyStatusText] = useState("START · BUILD YOUR FOUNDATION")
+  const [milestonesState, setMilestonesState] = useState([
+    { completed: true, active: true },
+    { completed: false, active: false },
+    { completed: false, active: false },
+    { completed: false, active: false },
+    { completed: false, active: false }
+  ])
 
-  // Stats data
-  const statsData = [
-    { target: 10, label: "Courses Offered", suffix: "+" },
-    { target: 400, label: "Batches Completed", suffix: "+" },
-    { target: 5101, label: "Students Trained", suffix: "+" },
-    { target: 4.6, label: "Google Rating", isDecimal: true }
-  ]
+  // Review carousel state
+  const [currentReview, setCurrentReview] = useState(1)
 
-  // Marquee sections data
-  const marqueeData = [
-    {
-      title: "tech PREP",
-      subtitle: "Struggling with technical rounds or job interviews?",
-      description: "Tech Prep is your comprehensive solution for mastering technical interviews and landing your dream job. Our carefully curated curriculum covers data structures, algorithms, system design, and behavioral interview techniques. With real-world coding challenges, mock interviews, and personalized feedback from industry experts, you'll build the confidence and skills needed to excel in any technical interview. From FAANG companies to startups, our proven methodology has helped thousands of students secure positions at top tech companies.",
-      features: ["Placement-focused courses with 90% success rate", "Live classes with real hiring patterns from top companies", "1-on-1 mock interviews with industry professionals", "Comprehensive system design workshops"],
-      link: "/learn"
-    },
-    {
-      title: "mini PROJECTS",
-      subtitle: "Mini Projects — because upskilling is what we do.",
-      description: "Transform your learning journey with hands-on mini projects that bridge the gap between theory and practice. Each project is carefully designed to reinforce fundamental concepts while building real-world applications that showcase your skills to potential employers. From simple calculators to complex web applications, you'll progressively build a diverse portfolio that demonstrates your growth as a developer. Our project-based learning approach ensures you not only understand the concepts but can apply them effectively in professional environments.",
-      features: ["20+ guided mini projects across different technologies", "Step-by-step tutorials with code explanations", "Portfolio-ready projects with deployment guides", "Peer code reviews and feedback sessions"],
-      link: "/build",
-      reverse: true
-    },
-    {
-      title: "summer INTERN",
-      subtitle: "Join live internships in Web Dev, UI/UX Design, or Content Creation.",
-      description: "Gain invaluable real-world experience through our comprehensive internship program designed to bridge the gap between academic learning and professional development. Work on live projects with established companies, receive personalized mentorship from industry veterans, and build a professional network that will accelerate your career. Our internships offer hands-on experience in cutting-edge technologies, collaborative team environments, and the opportunity to contribute to meaningful projects that impact real users and businesses.",
-      features: ["3-6 month structured internship programs", "Direct mentorship from senior developers and designers", "Real client projects with measurable impact", "Certificate of completion and LinkedIn recommendations"],
-      note: "Summer positions filled — Winter applications open in November.",
-      link: "/careers"
-    },
-    {
-      title: "design LAB",
-      subtitle: "DesignLab is our open-source UI library with ready-to-use buttons, loaders, forms, toggles, radios, and more.",
-      description: "Revolutionize your development workflow with our comprehensive open-source UI component library, meticulously crafted to accelerate your design and development process. DesignLab provides production-ready, accessible, and customizable components that follow modern design principles and best practices. From elegant buttons and smooth animations to complex form elements and interactive toggles, every component is built with performance, accessibility, and developer experience in mind. Save countless hours of development time while maintaining consistent, professional design standards across all your projects.",
-      features: ["50+ production-ready UI components", "Full accessibility compliance (WCAG 2.1)", "Dark mode support and theme customization", "React, Vue, and vanilla JavaScript versions"],
-      link: "/build",
-      reverse: true
-    }
-  ]
+  // FAQ open index state
+  const [openFaqIndex, setOpenFaqIndex] = useState(null)
 
-  // Custom viewport detection for typewriter - triggers every time
+  // Final CTA typewriter state
+  const [typingText, setTypingText] = useState("")
+
+  // Auth state & user dropdown
+  const { user, isAuthenticated, logout } = useAuth()
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const userMenuRef = useRef(null)
+
+  // Navbar sticky scroll state
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [isOverDarkSection, setIsOverDarkSection] = useState(false)
+  const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false)
+  const resultsSectionRef = useRef(null)
+
   useEffect(() => {
-    const element = headingRef.current
-    if (!element) return
+    if (!isUserMenuOpen) return undefined
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !isTyping) {
-          setIsTyping(true)
-          setDisplayedText("")
-          setCurrentIndex(0)
-        } else if (!entry.isIntersecting && isTyping) {
-          setIsTyping(false)
-          setDisplayedText("")
-          setCurrentIndex(0)
-        }
-      },
-      {
-        threshold: 0.3,
-        rootMargin: '0px'
+    const handleOutsideClick = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false)
       }
-    )
-
-    observer.observe(element)
-    return () => observer.unobserve(element)
-  }, [isTyping])
-
-  // Typewriter animation
-  useEffect(() => {
-    if (isTyping && currentIndex < fullText.length) {
-      const isMobile = window.innerWidth <= 480
-      const charDelay = isMobile ? 220 : 150
-
-      const timeout = setTimeout(() => {
-        setDisplayedText(prev => prev + fullText[currentIndex])
-        setCurrentIndex(prev => prev + 1)
-      }, charDelay)
-
-      return () => clearTimeout(timeout)
     }
-  }, [currentIndex, fullText, isTyping])
 
-  // Custom viewport detection for stats
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setIsUserMenuOpen(false)
+    }
+
+    window.addEventListener('mousedown', handleOutsideClick)
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('mousedown', handleOutsideClick)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [isUserMenuOpen])
+
   useEffect(() => {
-    const element = statsRef.current
-    if (!element) return
+    const handleScroll = () => {
+      const scrollY = window.scrollY
+      setIsScrolled(scrollY > 20)
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setAnimatedStats({ courses: 0, batches: 0, students: 0, rating: 0 })
-
-          statsData.forEach((stat, index) => {
-            const increment = stat.isDecimal ? 0.1 : Math.ceil(stat.target / 50)
-            let count = 0
-
-            const timer = setInterval(() => {
-              count += increment
-              if (count >= stat.target) {
-                count = stat.target
-                clearInterval(timer)
-              }
-
-              setAnimatedStats(prev => ({
-                ...prev,
-                [index === 0 ? 'courses' : index === 1 ? 'batches' : index === 2 ? 'students' : 'rating']: count
-              }))
-            }, 30)
-          })
+      if (resultsSectionRef.current) {
+        const rect = resultsSectionRef.current.getBoundingClientRect()
+        // Navbar is at top 0-84px; detect if results section overlaps top viewport
+        if (rect.top <= 65 && rect.bottom >= 45) {
+          setIsOverDarkSection(true)
         } else {
-          setAnimatedStats({ courses: 0, batches: 0, students: 0, rating: 0 })
+          setIsOverDarkSection(false)
         }
-      },
-      {
-        threshold: 0.3,
-        rootMargin: '0px'
       }
-    )
-
-    observer.observe(element)
-    return () => observer.unobserve(element)
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    handleScroll()
+    return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Marquee animation intersection observer
+  // --- 1. Code Background Particle Generation ---
   useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        const title = entry.target.querySelector('.marquee-title, .marquee-title-2')
-        if (title) {
-          if (entry.isIntersecting) {
-            title.classList.add('animate')
-          } else {
-            title.classList.remove('animate')
-          }
-        }
-      })
-    }, {
-      threshold: 0.3
-    })
+    const codeField = codeFieldRef.current
+    if (!codeField) return
 
-    marqueeRefs.current.forEach(header => {
-      if (header) {
-        observer.observe(header)
+    const createCodeLine = () => {
+      if (!codeField) return
+      const line = document.createElement("div")
+      line.className = "tl-code-line"
+      line.textContent = "> " + codeFragments[Math.floor(Math.random() * codeFragments.length)]
+      const side = Math.random()
+      line.style.left = side < 0.5 ? Math.random() * 30 + "%" : 65 + Math.random() * 30 + "%"
+      line.style.top = 5 + Math.random() * 90 + "%"
+      line.style.animationDuration = 5 + Math.random() * 3 + "s"
+      line.style.animationDelay = Math.random() * -8 + "s"
+
+      if (Math.random() > 0.82) {
+        line.classList.add("highlight")
       }
-    })
+
+      codeField.appendChild(line)
+      setTimeout(() => {
+        if (line.parentNode === codeField) {
+          line.remove()
+        }
+      }, 9000)
+    }
+
+    for (let i = 0; i < 30; i++) {
+      createCodeLine()
+    }
+
+    const interval = setInterval(createCodeLine, 350)
+    return () => clearInterval(interval)
+  }, [])
+
+
+
+  // --- 3. Interactive Roadmap Animation (Sticky scroll + SVG path character tracking) ---
+  useEffect(() => {
+    const journey = journeySectionRef.current
+    const wrapper = pathWrapperRef.current
+    const path = pathRef.current
+    const progressPath = progressPathRef.current
+    const charElem = characterRef.current
+    if (!journey || !wrapper || !path || !progressPath || !charElem) return
+
+    let totalLength = 0
+    try {
+      totalLength = path.getTotalLength()
+    } catch {
+      totalLength = 2000
+    }
+
+    progressPath.style.strokeDasharray = `${totalLength}`
+    progressPath.style.strokeDashoffset = `${totalLength}`
+
+    let targetProgress = 0
+    let currentProgress = 0
+    let animFrameId
+
+    const calculateProgress = () => {
+      const rect = journey.getBoundingClientRect()
+      const scrollDistance = journey.offsetHeight - window.innerHeight
+      if (scrollDistance <= 0) {
+        targetProgress = 1
+        return
+      }
+      // When the journey section pins at top: 0, -rect.top advances from 0 to scrollDistance
+      let progress = -rect.top / scrollDistance
+      progress = Math.max(0, Math.min(1, progress))
+      targetProgress = progress
+    }
+
+    const updateCharacterAndMilestones = (progress) => {
+      try {
+        const point = path.getPointAtLength(totalLength * progress)
+        const scaleX = wrapper.clientWidth / 1600
+        const scaleY = wrapper.clientHeight / 410
+
+        const x = point.x * scaleX
+        const y = point.y * scaleY
+
+        const ahead = Math.min(totalLength, totalLength * progress + 8)
+        const nextPoint = path.getPointAtLength(ahead)
+        const dx = nextPoint.x - point.x
+        const dy = nextPoint.y - point.y
+        const angle = (Math.atan2(dy, dx) * 180) / Math.PI
+
+        charElem.style.left = `${x}px`
+        charElem.style.top = `${y}px`
+        charElem.style.transform = `translate(-50%, -100%) rotate(${angle * 0.15}deg)`
+      } catch (err) {
+        // fallback
+      }
+
+      setMilestonesState(
+        milestonesData.map((m, idx) => ({
+          completed: progress >= m.progress || (idx === 0),
+          active: Math.abs(progress - m.progress) < 0.05 || (idx === 0 && progress < 0.05) || (idx === 4 && progress > 0.95)
+        }))
+      )
+
+      if (progress < 0.10) {
+        setJourneyStatusText("START · BUILD YOUR FOUNDATION")
+      } else if (progress < 0.28) {
+        setJourneyStatusText("FOUNDATION · BUILD THE SKILLS")
+      } else if (progress < 0.50) {
+        setJourneyStatusText("PRACTICE · TRAIN WITH PURPOSE")
+      } else if (progress < 0.82) {
+        setJourneyStatusText("REAL ROUNDS · PREPARE FOR THE INTERVIEW")
+      } else {
+        setJourneyStatusText("INTERVIEW READY · YOU KNOW WHAT'S NEXT")
+      }
+    }
+
+    const animateJourneyLoop = () => {
+      currentProgress += (targetProgress - currentProgress) * 0.04
+      progressPath.style.strokeDashoffset = `${totalLength * (1 - currentProgress)}`
+      updateCharacterAndMilestones(currentProgress)
+      animFrameId = requestAnimationFrame(animateJourneyLoop)
+    }
+
+    calculateProgress()
+    animateJourneyLoop()
+
+    window.addEventListener("scroll", calculateProgress, { passive: true })
+    window.addEventListener("resize", calculateProgress)
 
     return () => {
-      marqueeRefs.current.forEach(header => {
-        if (header) {
-          observer.unobserve(header)
-        }
-      })
+      window.removeEventListener("scroll", calculateProgress)
+      window.removeEventListener("resize", calculateProgress)
+      cancelAnimationFrame(animFrameId)
     }
   }, [])
 
+  // --- 4. Review Carousel Auto-play ---
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentReview((prev) => (prev + 1) % reviewsData.length)
+    }, 7000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // --- 5. Final CTA Typewriter Animation ---
+  useEffect(() => {
+    let qIdx = 0
+    let cIdx = 0
+    let isDeleting = false
+    let timeoutId
+
+    const type = () => {
+      const currentQuery = searchQueries[qIdx]
+      if (!isDeleting) {
+        setTypingText(currentQuery.substring(0, cIdx + 1))
+        cIdx++
+        if (cIdx === currentQuery.length) {
+          isDeleting = true
+          timeoutId = setTimeout(type, 1800)
+          return
+        }
+        timeoutId = setTimeout(type, 55)
+      } else {
+        setTypingText(currentQuery.substring(0, cIdx - 1))
+        cIdx--
+        if (cIdx === 0) {
+          isDeleting = false
+          qIdx = (qIdx + 1) % searchQueries.length
+          timeoutId = setTimeout(type, 400)
+          return
+        }
+        timeoutId = setTimeout(type, 30)
+      }
+    }
+
+    type()
+    return () => clearTimeout(timeoutId)
+  }, [])
+
+  const toggleFaq = (index) => {
+    setOpenFaqIndex((prev) => (prev === index ? null : index))
+  }
+
   return (
-    <div className="bg-transparent dark:bg-transparent relative">
-      {/* Hero Section */}
-      <div className="h-screen flex flex-col items-center justify-center px-6 relative pt-16">
-        {/* Falling Code Words - Hero Section Only */}
-        <Suspense fallback={null}>
-          <FloatingCodeWords />
-        </Suspense>
-        <div className="relative z-10 flex flex-col items-center justify-center text-center">
-          {/* TECHLEARN Heading with Typewriter Effect */}
-          <div className="mb-4">
-            <div
-              ref={headingRef}
-              className="font-bold text-[#001862] dark:text-[#ffffffde] font-poppins relative"
-              style={{
-                fontWeight: 700,
-                lineHeight: 1.2,
-                marginBottom: '10px',
-                marginTop: '10%',
-                fontSize: 'clamp(42px, 8vw, 110px)',
-                textAlign: 'center'
-              }}
+    <div className="tl-landing">
+
+
+      {/* =========================================================
+           01 — HERO (hero.html exact specifications)
+      ========================================================= */}
+      <section className="tl-hero" id="start">
+        <div className="tl-code-field" ref={codeFieldRef}></div>
+
+        <main className="tl-hero-content">
+          <h1 className="tl-hero-title">
+            <span>Where Placement Preparation</span>
+            <span>Meets Company Patterns</span>
+          </h1>
+
+          <p className="tl-hero-description">
+            Know what to do every day. Practice real interview questions.<br />
+            Stay on track for your dream job.
+          </p>
+
+          <div className="tl-hero-actions">
+            <Link to="/signup" className="tl-primary-button">
+              START NOW →
+            </Link>
+          </div>
+        </main>
+      </section>
+
+
+
+      {/* =========================================================
+           03 — CLEAR PATH (Interactive Roadmap Animation)
+      ========================================================= */}
+      <section className="tl-journey-scroll" id="journey" ref={journeySectionRef}>
+        <div className="tl-journey-sticky">
+          <div className="tl-journey-header">
+            <div className="tl-journey-eyebrow">
+              NO MORE "WHAT SHOULD I STUDY?"
+            </div>
+            <h2 className="tl-journey-title">
+              ONE CLEAR<br />PATH.
+            </h2>
+          </div>
+
+          <div className="tl-path-wrapper" ref={pathWrapperRef}>
+            <svg
+              className="tl-journey-svg"
+              viewBox="0 0 1600 410"
+              preserveAspectRatio="none"
             >
-              <span
-                style={{
-                  visibility: 'hidden',
-                  whiteSpace: 'nowrap'
-                }}
-                aria-hidden="true"
-              >
-                {fullText}
-              </span>
-              <span
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  whiteSpace: 'nowrap',
-                  letterSpacing: '0.1em'
-                }}
-              >
-                {displayedText}
-              </span>
+              <path
+                ref={pathRef}
+                className="tl-path-base"
+                d={pathD}
+              />
+              <path
+                ref={progressPathRef}
+                className="tl-path-progress"
+                d={pathD}
+              />
+            </svg>
+
+            {milestonesData.map((m, idx) => {
+              const state = milestonesState[idx] || { completed: false, active: false }
+              return (
+                <div
+                  key={idx}
+                  className={`tl-milestone ${m.position} ${state.completed ? 'completed' : ''} ${state.active ? 'active' : ''}`}
+                  style={{
+                    left: `${(m.x / 1600) * 100}%`,
+                    top: `${(m.y / 410) * 100}%`
+                  }}
+                >
+                  <div className="tl-milestone-dot"></div>
+                  <div className="tl-milestone-label">{m.label}</div>
+                </div>
+              )
+            })}
+
+            <div className="tl-character" ref={characterRef}>
+              <div className="tl-character-head"></div>
+              <div className="tl-character-body"></div>
+              <div className="tl-character-leg left"></div>
+              <div className="tl-character-leg right"></div>
             </div>
-            <h2
-              className="font-medium text-[#002d88] dark:text-[#ffffffde] font-poppins"
-              style={{
-                fontWeight: 500,
-                marginTop: '10px',
-                fontSize: 'clamp(15px, 3vw, 25px)'
-              }}
-            >
-              Don't Just Use Technology, Build It.
-            </h2>
           </div>
 
-          {/* Start Coding Button */}
-          <button
-            onClick={() => navigate('/compiler')}
-            className="inline-block font-poppins font-semibold rounded-lg transition-all duration-300 px-6 py-3 md:px-8 md:py-3 text-sm md:text-base mt-6 md:mt-8"
-            style={{
-              backgroundColor: '#ffffffac',
-              color: '#001242',
-              border: 'none',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#001242'
-              e.target.style.color = '#ffffff'
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = '#ffffffac'
-              e.target.style.color = '#001242'
-            }}
-          >
-            Start Coding
-          </button>
+          <div className="tl-journey-footer-bar">
+            <span className="tl-journey-checkpoint-chip">
+              <span className="tl-chip-dot"></span>
+              {journeyStatusText}
+            </span>
+          </div>
         </div>
-      </div>
+      </section>
 
-      {/* Stats Section */}
-      <div className="flex items-start justify-center px-6 pt-16 pb-8">
-        <div
-          ref={statsRef}
-          className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-16 w-full max-w-4xl"
-        >
-          {statsData.map((stat, index) => (
-            <div key={index} className="text-center">
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-light text-[#000c3e] dark:text-[#ffffffde]">
-                {stat.isDecimal
-                  ? animatedStats.rating.toFixed(1)
-                  : Math.floor(index === 0 ? animatedStats.courses : index === 1 ? animatedStats.batches : animatedStats.students)
-                }{stat.suffix || ''}
-              </h2>
-              <p className="text-sm md:text-base text-[#000234] dark:text-[#ffffff] mt-2 font-inter">
-                {stat.label}
+      {/* =========================================================
+           04 — RESULTS / REVIEWS
+      ========================================================= */}
+      <section className="tl-results" id="results" ref={resultsSectionRef}>
+        <div className="section-inner">
+          <div className="tl-results-header">
+            <h2>
+              FROM THE <br />COMMUNITY
+            </h2>
+            <p>
+              Students who trained with our placement roadmaps share their journey and success.
+            </p>
+          </div>
+
+          <div className="tl-review-carousel">
+            <div className="tl-review-track">
+              {reviewsData.map((review, idx) => {
+                let positionClass = "hidden-card"
+                if (idx === currentReview) {
+                  positionClass = "center"
+                } else if (idx === (currentReview - 1 + reviewsData.length) % reviewsData.length) {
+                  positionClass = "left"
+                } else if (idx === (currentReview + 1) % reviewsData.length) {
+                  positionClass = "right"
+                }
+
+                return (
+                  <article key={idx} className={`tl-review-card ${positionClass}`}>
+                    <div className="tl-review-quote">
+                      {review.quote}
+                    </div>
+                    <div className="tl-review-student">
+                      <div className="tl-review-avatar">
+                        {review.avatar}
+                      </div>
+                      <div>
+                        <strong>{review.name}</strong>
+                        <span>{review.role}</span>
+                      </div>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+
+            <div className="tl-review-dots">
+              {reviewsData.map((_, idx) => (
+                <button
+                  key={idx}
+                  className={`tl-review-dot ${idx === currentReview ? 'active' : ''}`}
+                  onClick={() => setCurrentReview(idx)}
+                  aria-label={`Show review ${idx + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+           05 — PRICING
+      ========================================================= */}
+      <section className="tl-pricing-section" id="pricing">
+        <div className="tl-pricing-inner">
+          <div className="tl-pricing-header">
+            <h2 className="tl-pricing-title">
+              PICK YOUR PATH.
+            </h2>
+            <p className="tl-pricing-description">
+              Build a real technical skill or prepare specifically for placements. One focused program, structured practice, and a clear path forward.
+            </p>
+          </div>
+
+          <div className="tl-pricing-grid">
+            {/* Skill Program */}
+            <article className="tl-price-card">
+              <div className="tl-price-name">
+                Build real technical skills.
+              </div>
+              <h3 className="tl-price-card-title">SKILL PROGRAM</h3>
+              <p className="tl-price-subtitle">
+                Pick a skill and build real ability through structured learning, daily practice and hands-on work.
               </p>
-            </div>
-          ))}
-        </div>
-      </div>
+              <div className="tl-price">
+                ₹399 <small>/year</small>
+              </div>
+              <div className="tl-price-divider"></div>
+              <ul className="tl-price-features">
+                <li>DSA with Java or Python</li>
+                <li>AI, ML & Generative AI</li>
+                <li>Structured roadmap with concept-wise notes</li>
+                <li>Daily tasks, challenges & quizzes</li>
+                <li>Weekly assessments & progress tracking</li>
+                <li>Monthly mini-project ideas + course certificate</li>
+              </ul>
+              <Link to="/signup" className="tl-price-button">
+                START LEARNING →
+              </Link>
+            </article>
 
-      {/* Marquee Sections */}
-      {marqueeData.map((item, index) => (
-        <div
-          key={index}
-          className={item.reverse ? "marquee-header-2" : "marquee-header"}
-          ref={el => marqueeRefs.current[index] = el}
-        >
-          <a
-            href={item.link}
-            className="marquee-link"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate(item.link);
-            }}
-          >
-            <h2 className={item.reverse ? "marquee-title-2" : "marquee-title"}>
-              <span>
-                <i>{item.title.split(' ')[0]}</i> {item.title.split(' ').slice(1).join(' ')}
-              </span>
-            </h2>
-          </a>
-          <div className="w-full max-w-[640px] flex-1 px-1 sm:px-2 md:px-4">
-            <div className="space-y-3 text-[13px] leading-relaxed text-[#355b8f] dark:text-[#b5ddff] sm:text-sm md:text-[15px]">
-              <p className="text-sm font-medium text-[#2b5388] dark:text-[#96d8ff] sm:text-base">
-                {item.subtitle}
+            {/* Placement Program (Featured) */}
+            <article className="tl-price-card featured">
+              <div className="tl-price-badge">
+                MOST POPULAR
+              </div>
+              <div className="tl-price-name">
+                Prepare for your placement.
+              </div>
+              <h3 className="tl-price-card-title">PLACEMENT PROGRAM</h3>
+              <p className="tl-price-subtitle">
+                A focused preparation system for students who want to become interview-ready and improve their chances of landing a job.
               </p>
-
-              <p>{item.description}</p>
-
-              {item.features && item.features.map((feature, idx) => (
-                <p key={idx}>{feature}</p>
-              ))}
-
-              {item.note && (
-                <p className="italic text-[#8b6e12] dark:text-[#ffd778]">
-                  {item.note}
-                </p>
-              )}
-            </div>
+              <div className="tl-price">
+                ₹799 <small>/year</small>
+              </div>
+              <div className="tl-price-divider"></div>
+              <ul className="tl-price-features">
+                <li>Structured DSA practice</li>
+                <li>Aptitude & Core CS preparation</li>
+                <li>Company & role-based interview questions</li>
+                <li>Daily placement tasks & challenges</li>
+                <li>Mock interview + feedback report</li>
+                <li>Jobs & internships board</li>
+              </ul>
+              <Link to="/signup" className="tl-price-button">
+                START PREPARING →
+              </Link>
+            </article>
           </div>
         </div>
-      ))}
+      </section>
 
-      {/* Reviews Section */}
-      <div className="py-2 md:py-16">
-        {/* Desktop: Two column layout with vertical scrolling */}
-        <div className="hidden md:flex h-screen overflow-hidden">
-          {/* Left column scrolling up */}
-          <div className="flex-1 flex flex-col justify-start items-center overflow-hidden relative">
-            <div className="flex flex-col gap-4 animate-scroll-up">
-              {/* First set of reviews */}
-              {[
-                { name: "Daksh Mavani", text: "I had got myself enrolled in C language course as a beginner. We were given enough theory on all aspects of course so that we would be aware of all important concepts." },
-                { name: "Loknath", text: "Through her experience ma'am has explained the concepts in a way in which everyone can understand easily. If one has pure interest in learning, he/she will thoroughly understand." },
-                { name: "Sudhakar Reddy", text: "The tutor was really good and explained each and every topic clearly with personal care." },
-                { name: "Pavan Vinayak", text: "TechLearn Solutions is an exceptional coding institution that provides comprehensive and engaging programming education." },
-                { name: "Prakash", text: "Best institute for beginners to learn any programming language. The faculty was highly knowledgeable with personalized attention." }
-              ].map((review, index) => (
-                <div key={`left-first-${index}`} className="bg-transparent border-none rounded-3xl p-5 min-h-[90px] w-80 max-w-sm mx-auto">
-                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
-                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-2">{review.text}</div>
-                </div>
-              ))}
-              {/* Duplicate set for seamless loop */}
-              {[
-                { name: "Daksh Mavani", text: "I had got myself enrolled in C language course as a beginner. We were given enough theory on all aspects of course so that we would be aware of all important concepts." },
-                { name: "Loknath", text: "Through her experience ma'am has explained the concepts in a way in which everyone can understand easily. If one has pure interest in learning, he/she will thoroughly understand." },
-                { name: "Sudhakar Reddy", text: "The tutor was really good and explained each and every topic clearly with personal care." },
-                { name: "Pavan Vinayak", text: "TechLearn Solutions is an exceptional coding institution that provides comprehensive and engaging programming education." },
-                { name: "Prakash", text: "Best institute for beginners to learn any programming language. The faculty was highly knowledgeable with personalized attention." }
-              ].map((review, index) => (
-                <div key={`left-second-${index}`} className="bg-transparent border-none rounded-3xl p-5 min-h-[90px] w-80 max-w-sm mx-auto">
-                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
-                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-2">{review.text}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Center heading */}
-          <div className="flex-none flex items-center justify-center px-5">
-            <h2 className="text-3xl lg:text-4xl font-bold text-center brand-heading-primary">
-              <span className="italic">learn</span> REVIEWS
+      {/* =========================================================
+           06 — FAQ
+      ========================================================= */}
+      <section className="tl-faq-section" id="faqs">
+        <div className="tl-faq-inner">
+          <div className="tl-faq-header">
+            <h2 className="tl-faq-title">
+              QUESTIONS? WE GOT YOU.
             </h2>
+            <p className="tl-faq-subtitle">
+              These are just the most asked ones so far, feel free to reach out anytime!
+            </p>
           </div>
 
-          {/* Right column scrolling down */}
-          <div className="flex-1 flex flex-col justify-start items-center overflow-hidden relative">
-            <div className="flex flex-col gap-4 animate-scroll-down">
-              {/* First set of reviews */}
-              {[
-                { name: "Samuel Jude Philips", text: "Many people don't know about this centre due to its location but you'll go in as a beginner with zero knowledge and walk out confidently with all the necessary knowledge acquired!" },
-                { name: "Prasanna", text: "Mam explains the class in a very good way. She takes many real-time examples and makes the topic clear to understand so that it makes us easy to take an interview." },
-                { name: "Teja", text: "Very easy to understand the concept and faculty explain doubts very easily. Thank you Techlearn Solutions." },
-                { name: "Rajani", text: "It was a great experience to be back in classroom after almost 25 years. Prashanthi Ma'm is subject expert with good grasp on fundamentals." },
-                { name: "Shradha", text: "Very good learning experience. I have learnt C language in Techlearn Solutions and I feel really confident with the coding part." }
-              ].map((review, index) => (
-                <div key={`right-first-${index}`} className="bg-transparent border-none rounded-3xl p-5 min-h-[90px] w-80 max-w-sm mx-auto">
-                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
-                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-2">{review.text}</div>
+          <div className="tl-faq-list">
+            {faqsData.map((faq, idx) => {
+              const isOpen = openFaqIndex === idx
+              return (
+                <div key={idx} className={`tl-faq-item ${isOpen ? 'open' : ''}`}>
+                  <button
+                    className="tl-faq-question"
+                    type="button"
+                    onClick={() => toggleFaq(idx)}
+                  >
+                    <span>{faq.question}</span>
+                    <span className="tl-faq-plus">+</span>
+                  </button>
+                  <div className="tl-faq-answer">
+                    {faq.answer}
+                  </div>
                 </div>
-              ))}
-              {/* Duplicate set for seamless loop */}
-              {[
-                { name: "Samuel Jude Philips", text: "Many people don't know about this centre due to its location but you'll go in as a beginner with zero knowledge and walk out confidently with all the necessary knowledge acquired!" },
-                { name: "Prasanna", text: "Mam explains the class in a very good way. She takes many real-time examples and makes the topic clear to understand so that it makes us easy to take an interview." },
-                { name: "Teja", text: "Very easy to understand the concept and faculty explain doubts very easily. Thank you Techlearn Solutions." },
-                { name: "Rajani", text: "It was a great experience to be back in classroom after almost 25 years. Prashanthi Ma'm is subject expert with good grasp on fundamentals." },
-                { name: "Shradha", text: "Very good learning experience. I have learnt C language in Techlearn Solutions and I feel really confident with the coding part." }
-              ].map((review, index) => (
-                <div key={`right-second-${index}`} className="bg-transparent border-none rounded-3xl p-5 min-h-[90px] w-80 max-w-sm mx-auto">
-                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
-                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-2">{review.text}</div>
-                </div>
-              ))}
-            </div>
+              )
+            })}
           </div>
         </div>
+      </section>
 
-        {/* Mobile: Horizontal scrolling layout */}
-        <div className="md:hidden">
-          {/* Mobile heading */}
-          <div className="text-center mb-2">
-            <h2 className="text-2xl font-bold brand-heading-primary">
-              <span className="italic">learn</span> REVIEWS
-            </h2>
+      {/* =========================================================
+           07 — FINAL CTA (hero.html exact specifications)
+      ========================================================= */}
+      <section className="tl-search-section" id="start-program">
+        <div className="tl-search-content">
+          <div className="tl-search-eyebrow">
+            TIRED OF FIGURING IT OUT?
           </div>
 
-          {/* Horizontal scrolling reviews */}
-          <div className="overflow-hidden pb-4 w-full">
-            <div className="flex gap-4 animate-scroll-horizontal" style={{width: 'max-content'}}>
-              {[
-                { name: "Daksh Mavani", text: "I had got myself enrolled in C language course as a beginner. We were given enough theory on all aspects of course so that we would be aware of all important concepts." },
-                { name: "Loknath", text: "Through her experience ma'am has explained the concepts in a way in which everyone can understand easily. If one has pure interest in learning, he/she will thoroughly understand." },
-                { name: "Sudhakar Reddy", text: "The tutor was really good and explained each and every topic clearly with personal care." },
-                { name: "Pavan Vinayak", text: "TechLearn Solutions is an exceptional coding institution that provides comprehensive and engaging programming education." },
-                { name: "Prakash", text: "Best institute for beginners to learn any programming language. The faculty was highly knowledgeable with personalized attention." },
-                { name: "Samuel Jude Philips", text: "Many people don't know about this centre due to its location but you'll go in as a beginner with zero knowledge and walk out confidently with all the necessary knowledge acquired!" },
-                { name: "Prasanna", text: "Mam explains the class in a very good way. She takes many real-time examples and makes the topic clear to understand so that it makes us easy to take an interview." },
-                { name: "Teja", text: "Very easy to understand the concept and faculty explain doubts very easily. Thank you Techlearn Solutions." },
-                { name: "Rajani", text: "It was a great experience to be back in classroom after almost 25 years. Prashanthi Ma'm is subject expert with good grasp on fundamentals." },
-                { name: "Shradha", text: "Very good learning experience. I have learnt C language in Techlearn Solutions and I feel really confident with the coding part." }
-              ].map((review, index) => (
-                <div key={`first-${index}`} className="bg-transparent border-none rounded-3xl p-4 min-h-[120px] w-72 flex-shrink-0">
-                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
-                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-3">{review.text}</div>
-                </div>
-              ))}
-              {[
-                { name: "Daksh Mavani", text: "I had got myself enrolled in C language course as a beginner. We were given enough theory on all aspects of course so that we would be aware of all important concepts." },
-                { name: "Loknath", text: "Through her experience ma'am has explained the concepts in a way in which everyone can understand easily. If one has pure interest in learning, he/she will thoroughly understand." },
-                { name: "Sudhakar Reddy", text: "The tutor was really good and explained each and every topic clearly with personal care." },
-                { name: "Pavan Vinayak", text: "TechLearn Solutions is an exceptional coding institution that provides comprehensive and engaging programming education." },
-                { name: "Prakash", text: "Best institute for beginners to learn any programming language. The faculty was highly knowledgeable with personalized attention." },
-                { name: "Samuel Jude Philips", text: "Many people don't know about this centre due to its location but you'll go in as a beginner with zero knowledge and walk out confidently with all the necessary knowledge acquired!" },
-                { name: "Prasanna", text: "Mam explains the class in a very good way. She takes many real-time examples and makes the topic clear to understand so that it makes us easy to take an interview." },
-                { name: "Teja", text: "Very easy to understand the concept and faculty explain doubts very easily. Thank you Techlearn Solutions." },
-                { name: "Rajani", text: "It was a great experience to be back in classroom after almost 25 years. Prashanthi Ma'm is subject expert with good grasp on fundamentals." },
-                { name: "Shradha", text: "Very good learning experience. I have learnt C language in Techlearn Solutions and I feel really confident with the coding part." }
-              ].map((review, index) => (
-                <div key={`second-${index}`} className="bg-transparent border-none rounded-3xl p-4 min-h-[120px] w-72 flex-shrink-0">
-                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
-                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-3">{review.text}</div>
-                </div>
-              ))}
+          <h2 className="tl-search-title">
+            <span className="tl-cta-line1">YOU SEARCH.</span>
+            <span className="tl-cta-line2">WE MAP IT OUT.</span>
+          </h2>
+
+          <div className="tl-search-box">
+            <div className="tl-search-icon">⌕</div>
+            <div className="tl-search-text">
+              <span>{typingText}</span>
+              <span className="tl-typing-cursor"></span>
             </div>
           </div>
+
+          <Link to="/signup" className="tl-search-button">
+            BUILD MY ROADMAP →
+          </Link>
         </div>
-      </div>
+      </section>
+
+      <FreeAssessmentModal
+        isOpen={isAssessmentModalOpen}
+        onClose={() => setIsAssessmentModalOpen(false)}
+      />
     </div>
   )
 }
 
 export default HomePage
+

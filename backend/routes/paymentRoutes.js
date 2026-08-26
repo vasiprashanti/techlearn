@@ -6,19 +6,29 @@ import {
   getAllPayments,
   paymentConfirmation,
 } from "../controllers/paymentController.js";
+import {
+  checkPaymentEligibility,
+  createPaymentOrder,
+  verifyPayment,
+  handleRazorpayWebhook,
+  savePricingExitFeedback,
+} from "../controllers/programPaymentController.js";
 
 const paymentRouter = Router();
 
-// Combined endpoint: Check eligibility and allow payment if eligible
+// Program Razorpay Payment Routes
+paymentRouter.get("/eligibility", protect, checkPaymentEligibility);
+paymentRouter.post("/create-order", protect, createPaymentOrder);
+paymentRouter.post("/verify", protect, verifyPayment);
+paymentRouter.post("/webhook", handleRazorpayWebhook);
+paymentRouter.post("/exit-feedback", protect, savePricingExitFeedback);
+
+// Legacy / Certificate Payment Routes
 paymentRouter.get("/:courseId/initiate", protect, initiatePayment);
-
-// Only after the eligibility is confirmed, this button is enabled
 paymentRouter.post("/Pay", protect, submitPayment);
-
-// Admin routes
-paymentRouter.get("/payments", protect, isAdmin, getAllPayments);
+paymentRouter.get("/all", protect, isAdmin, getAllPayments);
 paymentRouter.patch(
-  "/payments/:paymentId",
+  "/:paymentId/confirm",
   protect,
   isAdmin,
   paymentConfirmation,

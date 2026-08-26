@@ -75,9 +75,67 @@ export default function DashboardSettings() {
     lastName: mergedUser.lastName || "",
     email: mergedUser.email || "",
   });
+
+  // Learning & Program Matching Preferences State
+  const [learningGoal, setLearningGoal] = useState(mergedUser.learningGoal || "Get Placed");
+  const [placementCategory, setPlacementCategory] = useState(mergedUser.placementCategory || "Product Based");
+  const [targetRole, setTargetRole] = useState(mergedUser.targetRole || "SDE / Software Engineer");
+  const [targetCompaniesText, setTargetCompaniesText] = useState(
+    Array.isArray(mergedUser.targetCompanies) ? mergedUser.targetCompanies.join(", ") : mergedUser.targetCompanies || ""
+  );
+  const [skillsText, setSkillsText] = useState(
+    Array.isArray(mergedUser.skills) ? mergedUser.skills.join(", ") : mergedUser.skills || ""
+  );
+  const [learningPath, setLearningPath] = useState(mergedUser.learningPath || "Free");
   
   const [isSaving, setIsSaving] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
+
+  const handlePreferencesSubmit = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setStatus({ type: "", message: "" });
+
+    try {
+      const token = localStorage.getItem('token');
+      const companiesArray = targetCompaniesText.split(",").map((s) => s.trim()).filter(Boolean);
+      const skillsArray = skillsText.split(",").map((s) => s.trim()).filter(Boolean);
+
+      const payload = {
+        learningGoal,
+        placementCategory,
+        targetRole,
+        targetCompanies: companiesArray,
+        skills: skillsArray,
+        learningPath,
+      };
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/users/preferences`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setStatus({
+          type: "success",
+          message: "Learning preferences saved and programs re-matched successfully!",
+        });
+        if (typeof refetchUserData === "function") await refetchUserData();
+      } else {
+        throw new Error(data.message || "Failed to save preferences.");
+      }
+    } catch (err) {
+      console.error("Error saving preferences:", err);
+      setStatus({ type: "error", message: err.message || "Failed to update preferences." });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const inputClass = "dashboard-input-surface mt-2";
 
@@ -288,6 +346,120 @@ export default function DashboardSettings() {
 
               <div className="flex items-center gap-3 mt-8 mb-4">
                 <h2 className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
+                  Learning & Program Matching Preferences
+                </h2>
+                <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
+              </div>
+
+              <form onSubmit={handlePreferencesSubmit} className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">
+                      Primary Learning Goal
+                    </label>
+                    <select
+                      value={learningGoal}
+                      onChange={(e) => setLearningGoal(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="Get Placed">Get Placed</option>
+                      <option value="Learn New Skills">Learn New Skills</option>
+                      <option value="Exploring TechLearn">Exploring TechLearn</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">
+                      Learning Path Access Tier
+                    </label>
+                    <select
+                      value={learningPath}
+                      onChange={(e) => setLearningPath(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="Free">Free Track</option>
+                      <option value="Member">Member Track</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">
+                      Target Company Category
+                    </label>
+                    <select
+                      value={placementCategory}
+                      onChange={(e) => setPlacementCategory(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="Product Based">Product Based Companies</option>
+                      <option value="Service Based">Service Based Companies</option>
+                      <option value="Tech Startups">Tech Startups</option>
+                      <option value="Fintech">Fintech Companies</option>
+                      <option value="FAANG / Tier 1">FAANG / Tier 1</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">
+                      Target Role
+                    </label>
+                    <input
+                      type="text"
+                      value={targetRole}
+                      onChange={(e) => setTargetRole(e.target.value)}
+                      placeholder="e.g. SDE / Software Engineer"
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">
+                      Target Companies (Comma Separated)
+                    </label>
+                    <input
+                      type="text"
+                      value={targetCompaniesText}
+                      onChange={(e) => setTargetCompaniesText(e.target.value)}
+                      placeholder="e.g. Google, Amazon, Microsoft, TCS"
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">
+                      Key Skill Tags (Comma Separated)
+                    </label>
+                    <input
+                      type="text"
+                      value={skillsText}
+                      onChange={(e) => setSkillsText(e.target.value)}
+                      placeholder="e.g. Java, Python, React, SQL, DSA"
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#86c4ff]/30 pt-6 dark:border-[#6bb8ec]/30 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/onboarding/programs')}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-[#2d7fe8] hover:underline"
+                  >
+                    View Assigned Programs Page
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00113b] px-5 py-2.5 text-xs font-semibold text-[#daf0fa] shadow-md shadow-[#00113b]/15 transition hover:bg-[#001b5c] disabled:opacity-60"
+                  >
+                    <Save className="h-4 w-4" />
+                    {isSaving ? "Re-matching..." : "Save & Refresh Program Matching"}
+                  </button>
+                </div>
+              </form>
+
+              <div className="flex items-center gap-3 mt-8 mb-4">
+                <h2 className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
                   Profile Visibility
                 </h2>
                 <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
@@ -311,20 +483,6 @@ export default function DashboardSettings() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#86c4ff]/30 pt-6 dark:border-[#6bb8ec]/30 mt-8">
-                <p className="text-xs text-[#5f82ac] dark:text-[#81bde6]">Saved locally automatically</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatus({ type: "success", message: "Application preferences saved successfully." });
-                    setTimeout(() => setStatus({ type: "", message: "" }), 2500);
-                  }}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00113b] px-5 py-2.5 text-xs font-semibold text-[#daf0fa] shadow-md shadow-[#00113b]/15 transition hover:bg-[#001b5c]"
-                >
-                  Confirm Preferences
-                </button>
-              </div>
-              
               {status.message && (
                 <div className="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700/40 dark:bg-emerald-900/20 dark:text-emerald-300 px-4 py-3 text-sm">
                   {status.message}
