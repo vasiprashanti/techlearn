@@ -263,6 +263,18 @@ export const hiringAPI = {
 
     return handleResponse(response);
   },
+
+  // Get job categories with published count
+  getCategories: async () => {
+    const response = await fetch(
+      `${API_BASE}/jobs/categories`,
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+
+    return handleResponse(response);
+  },
 };
 
 // User Progress API

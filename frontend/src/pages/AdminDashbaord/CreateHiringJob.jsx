@@ -45,6 +45,8 @@ export default function CreateHiringJob() {
   const [uploadingMarkdown, setUploadingMarkdown] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [duplicateWarning, setDuplicateWarning] = useState(null);
+  const [showPreview, setShowPreview] = useState(true);
 
   const updateField = (field, value) => {
     setForm((prev) => ({
@@ -53,59 +55,55 @@ export default function CreateHiringJob() {
     }));
   };
 
-  const handleSubmit = async () => {
-  try {
-    setSubmitting(true);
+  const handleCreateJobWithStatus = async (chosenStatus, allowDuplicate = false) => {
+    try {
+      setSubmitting(true);
+      setSubmitError("");
+      setDuplicateWarning(null);
 
-    const companyLogo = logoUrl || "";
-    const parsedData = parsedJob || {};
-    const jobData = {
-  roleId,
-  companyName: form.companyName.trim(),
-  companyLogo,
-  parsedData: {
-    title: form.roleTitle.trim(),
-    companyType: form.companyType.trim(),
-    jobType: form.jobType,
-    workMode: form.workMode,
-    location: form.location.trim(),
-    experience: form.experience.trim(),
-    salary: form.salary.trim(),
+      const companyLogo = logoUrl || "";
+      const jobData = {
+        roleId,
+        companyName: form.companyName.trim(),
+        companyLogo,
+        allowDuplicate,
+        parsedData: {
+          title: form.roleTitle.trim(),
+          companyType: form.companyType.trim(),
+          jobType: form.jobType,
+          workMode: form.workMode,
+          location: form.location.trim(),
+          experience: form.experience.trim(),
+          salary: form.salary.trim(),
+          skills: form.skills,
+          education: form.education.trim(),
+          eligibleBranches: form.eligibleBranches,
+          graduationYear: form.graduationYear.trim(),
+          eligibility: form.eligibility.trim(),
+          description: form.description.trim(),
+          responsibilities: form.responsibilities,
+          requirements: form.requirements,
+          benefits: form.benefits,
+          applicationUrl: form.applicationUrl.trim(),
+          applicationDeadline: form.applicationDeadline || null,
+        },
+        status: chosenStatus || form.status || "Draft",
+      };
 
-    skills: form.skills,
-    education: form.education.trim(),
-    eligibleBranches: form.eligibleBranches,
-    graduationYear: form.graduationYear.trim(),
-    eligibility: form.eligibility.trim(),
-
-    description: form.description.trim(),
-    responsibilities: form.responsibilities,
-    requirements: form.requirements,
-    benefits: form.benefits,
-
-    applicationUrl: form.applicationUrl.trim(),
-    applicationDeadline: form.applicationDeadline || null,
-  },
-
-  status: form.status,
-};
-
-    await adminAPI.createJob(jobData);
-
-    alert("Job created successfully!");
-
-    navigate(`/admin/hiring/${roleId}`);
-  } catch (error) {
-    console.error("Failed to create job:", error);
-
-    alert(
-      error.message ||
-      "Failed to create job. Please try again."
-    );
-  } finally {
-    setSubmitting(false);
-  }
-};
+      const res = await adminAPI.createJob(jobData);
+      alert(`Job ${chosenStatus === "Published" ? "published" : "saved as draft"} successfully!`);
+      navigate(`/admin/hiring/${roleId}`);
+    } catch (error) {
+      console.error("Failed to create job:", error);
+      if (error.duplicate || error.status === 409 || error.message?.toLowerCase().includes("duplicate")) {
+        setDuplicateWarning(error.existingJob || error.message || "A job with this company, title, and role already exists.");
+      } else {
+        setSubmitError(error.message || "Failed to create job. Please try again.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div
@@ -633,44 +631,72 @@ export default function CreateHiringJob() {
                     accept=".md,text/markdown"
                     className="hidden"
                     onChange={async (e) => {
-  const file = e.target.files?.[0] || null;
+                      const file = e.target.files?.[0] || null;
+                      updateField("markdownFile", file);
+                      if (!file) return;
 
-  updateField("markdownFile", file);
+                      try {
+                        setUploadingMarkdown(true);
+                        setSubmitError("");
 
-  if (!file) return;
+                        const result = await adminAPI.parseJobMarkdown(file);
+                        const data = result?.data || result;
+                        setParsedJob(data);
 
-  try {
-    setUploadingMarkdown(true);
-    setSubmitError("");
-
-    const result = await adminAPI.parseJobMarkdown(file);
-
-    const data = result?.data || result;
-
-    setParsedJob(data);
-  } catch (error) {
-    console.error("Failed to parse Markdown:", error);
-    setParsedJob(null);
-    setSubmitError(
-      error.message || "Failed to parse Markdown file."
-    );
-  } finally {
-    setUploadingMarkdown(false);
-  }
-}}
+                        // Autofill fields from parsed markdown
+                        setForm((prev) => ({
+                          ...prev,
+                          roleTitle: data?.title || prev.roleTitle,
+                          jobType: data?.jobType || prev.jobType,
+                          companyType: data?.companyType || prev.companyType,
+                          workMode: data?.workMode || prev.workMode,
+                          location: data?.location || prev.location,
+                          experience: data?.experience || prev.experience,
+                          salary: data?.salary || prev.salary,
+                          education: data?.education || prev.education,
+                          eligibleBranches: Array.isArray(data?.eligibleBranches)
+                            ? data.eligibleBranches.join(", ")
+                            : (data?.eligibleBranches || prev.eligibleBranches),
+                          graduationYear: data?.graduationYear ? String(data.graduationYear) : prev.graduationYear,
+                          eligibility: data?.eligibility || prev.eligibility,
+                          description: data?.description || prev.description,
+                          skills: Array.isArray(data?.skills)
+                            ? data.skills.join(", ")
+                            : (data?.skills || prev.skills),
+                          responsibilities: Array.isArray(data?.responsibilities)
+                            ? data.responsibilities.join("\n")
+                            : (data?.responsibilities || prev.responsibilities),
+                          requirements: Array.isArray(data?.requirements)
+                            ? data.requirements.join("\n")
+                            : (data?.requirements || prev.requirements),
+                          benefits: Array.isArray(data?.benefits)
+                            ? data.benefits.join("\n")
+                            : (data?.benefits || prev.benefits),
+                          applicationUrl: data?.applicationUrl || prev.applicationUrl,
+                          applicationDeadline: data?.applicationDeadline
+                            ? String(data.applicationDeadline).slice(0, 10)
+                            : prev.applicationDeadline,
+                        }));
+                      } catch (error) {
+                        console.error("Failed to parse Markdown:", error);
+                        setParsedJob(null);
+                        setSubmitError(
+                          error.message || "Failed to parse Markdown file."
+                        );
+                      } finally {
+                        setUploadingMarkdown(false);
+                      }
+                    }}
                   />
                 </label>
 
                 {form.markdownFile && (
                   <div className="mt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                     <span>{form.markdownFile.name}</span>
-
                     <button
                       type="button"
-                      onClick={() =>
-                        updateField("markdownFile", null)
-                      }
-                      className="text-red-500"
+                      onClick={() => updateField("markdownFile", null)}
+                      className="text-red-500 hover:text-red-600"
                     >
                       <FiX />
                     </button>
@@ -678,35 +704,184 @@ export default function CreateHiringJob() {
                 )}
               </div>
 
-              {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-black/10 dark:border-white/10">
+              {/* Submit Error */}
+              {submitError && (
+                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-sm">
+                  {submitError}
+                </div>
+              )}
 
+              {/* Duplicate Warning Prompt */}
+              {duplicateWarning && (
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-sm space-y-3">
+                  <div className="font-bold flex items-center gap-2">
+                    ⚠️ Potential Duplicate Job Found
+                  </div>
+                  <p>
+                    An existing listing already exists for <strong>{form.companyName || "this company"}</strong> — <strong>{form.roleTitle || "this role"}</strong>.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDuplicateWarning(null)}
+                      className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-white/10 text-xs font-semibold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCreateJobWithStatus(form.status || "Published", true)}
+                      className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold"
+                    >
+                      Create Anyway
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Live Preview Section */}
+              <div className="pt-6 border-t border-black/10 dark:border-white/10">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                      Job Preview
+                    </h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Live preview representing the candidate user-facing job card & details.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(!showPreview)}
+                    className="text-xs font-semibold text-[#3C83F6] hover:underline"
+                  >
+                    {showPreview ? "Hide Preview" : "Show Preview"}
+                  </button>
+                </div>
+
+                {showPreview && (
+                  <div className="space-y-4">
+                    {/* User-facing Job Row Preview */}
+                    <div className="rounded-2xl border p-5 bg-[#d9e8ef] dark:bg-[#0b1934] border-[#c0d5e0] dark:border-white/10 shadow-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1.1fr_0.8fr_auto] gap-4 items-center">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-3">
+                            {logoUrl ? (
+                              <img src={logoUrl} alt="Logo" className="w-9 h-9 object-contain rounded-lg bg-white p-1 border" />
+                            ) : (
+                              <div className="w-9 h-9 rounded-lg bg-slate-200 dark:bg-white/10 flex items-center justify-center text-xs font-bold">
+                                {form.companyName ? form.companyName.charAt(0).toUpperCase() : "🏢"}
+                              </div>
+                            )}
+                            <div>
+                              <h3 className="text-base font-bold text-[#17251a] dark:text-white">
+                                {form.roleTitle || "Job Title"}
+                              </h3>
+                              <p className="text-xs text-slate-600 dark:text-slate-400">
+                                {form.location || "Location not set"} • {form.experience || "Fresher"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-sm font-bold text-[#17251a] dark:text-white">
+                            {form.companyName || "Company Name"}
+                          </p>
+                          <div className="flex flex-wrap gap-2 mt-1.5">
+                            {form.workMode && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#eaf7d5] dark:bg-[#a3e635]/15 text-[#5e8d20] dark:text-[#a3e635]">
+                                {form.workMode}
+                              </span>
+                            )}
+                            {form.jobType && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-100 dark:bg-purple-500/15 text-purple-600 dark:text-purple-300">
+                                {form.jobType}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-sm font-bold text-[#17251a] dark:text-white">
+                            {form.salary || "Not Disclosed"}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            {form.applicationDeadline ? `Deadline: ${form.applicationDeadline}` : "Estimated Compensation"}
+                          </p>
+                        </div>
+
+                        <div>
+                          <span className="inline-block px-4 py-2 rounded-xl bg-[#b5e959] text-[#00113b] text-[10px] font-['Press_Start_2P']">
+                            APPLY
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Detailed info breakdown */}
+                    <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#071532] p-4 text-xs space-y-2 text-slate-600 dark:text-slate-300">
+                      {form.description && (
+                        <div>
+                          <strong className="text-slate-800 dark:text-white">Description: </strong>
+                          <p className="mt-0.5 whitespace-pre-line">{form.description}</p>
+                        </div>
+                      )}
+                      {form.skills && (
+                        <div className="mt-2">
+                          <strong className="text-slate-800 dark:text-white">Skills: </strong>
+                          <span>{form.skills}</span>
+                        </div>
+                      )}
+                      {form.requirements && (
+                        <div className="mt-2">
+                          <strong className="text-slate-800 dark:text-white">Requirements: </strong>
+                          <p className="mt-0.5 whitespace-pre-line">{form.requirements}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions: Cancel, Save Draft, and Publish */}
+              <div className="flex flex-wrap justify-end gap-3 pt-6 border-t border-black/10 dark:border-white/10">
                 <button
                   type="button"
-                  onClick={() =>
-                    navigate(`/admin/hiring/${roleId}/jobs`)
-                  }
-                  className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 text-sm font-semibold text-slate-600 dark:text-slate-300"
+                  onClick={() => navigate(`/admin/hiring/${roleId}`)}
+                  className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 transition"
                 >
                   Cancel
                 </button>
 
-               <button
-  type="button"
-  onClick={handleSubmit}
-  disabled={
-    submitting ||
-    !form.companyName.trim() ||
-    !form.roleTitle.trim() ||
-    !form.jobType ||
-    !form.location.trim() ||
-    !form.applicationUrl.trim()
-  }
-  className="dashboard-primary-btn px-5 py-2.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
->
-  {submitting ? "Creating..." : "Create Job"}
-</button>
+                <button
+                  type="button"
+                  onClick={() => handleCreateJobWithStatus("Draft")}
+                  disabled={
+                    submitting ||
+                    !form.companyName.trim() ||
+                    !form.roleTitle.trim()
+                  }
+                  className="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-white/20 bg-white/50 dark:bg-white/10 text-sm font-semibold text-slate-800 dark:text-white hover:bg-white/80 dark:hover:bg-white/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? "Saving..." : "Save Draft"}
+                </button>
 
+                <button
+                  type="button"
+                  onClick={() => handleCreateJobWithStatus("Published")}
+                  disabled={
+                    submitting ||
+                    !form.companyName.trim() ||
+                    !form.roleTitle.trim() ||
+                    !form.jobType ||
+                    !form.location.trim() ||
+                    !form.applicationUrl.trim()
+                  }
+                  className="dashboard-primary-btn px-5 py-2.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? "Publishing..." : "Publish Job"}
+                </button>
               </div>
 
             </div>
