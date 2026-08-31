@@ -1,6 +1,6 @@
 import { auth } from '../config/firebase';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const GET_RETRY_ATTEMPTS = 2;
 const GET_RETRY_DELAY_MS = 250;
 const requestCache = new Map();
@@ -257,8 +257,9 @@ async function request(path, options = {}) {
       }
 
       const payload = await response.json().catch(() => null);
-      const unwrapped = unwrapData(payload);
-
+      const unwrapped = options.rawResponse
+      ? payload
+      : unwrapData(payload);
       if (isGet && !options.noCache) {
         requestCache.set(path, unwrapped);
       } else {
@@ -554,4 +555,108 @@ export const adminAPI = {
     }),
   detachProgramEntity: (programId, entityType, entityId) =>
     request(`/admin/programs/${programId}/attachments/${entityType}/${entityId}`, { method: 'DELETE' }),
+
+  // Hiring Jobs API
+getJobs: (params = {}) => {
+  const query = new URLSearchParams();
+
+  if (params.search) query.set("search", params.search);
+  if (params.status) query.set("status", params.status);
+  if (params.roleId) query.set("roleId", params.roleId);
+  if (params.companyName) query.set("companyName", params.companyName);
+  if (params.companyType) query.set("companyType", params.companyType);
+  if (params.experience) query.set("experience", params.experience);
+  if (params.location) query.set("location", params.location);
+  if (params.jobType) query.set("jobType", params.jobType);
+  if (params.workMode) query.set("workMode", params.workMode);
+  if (params.sortBy) query.set("sortBy", params.sortBy);
+  if (params.sortOrder) query.set("sortOrder", params.sortOrder);
+  if (params.page) query.set("page", params.page);
+  if (params.limit) query.set("limit", params.limit);
+
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+
+  return request(`/admin/jobs${suffix}`, {
+  rawResponse: true,
+});
+},
+
+getJobById: (jobId) =>
+  request(`/admin/jobs/${jobId}`),
+
+createJob: (body) =>
+  request("/admin/jobs", {
+    method: "POST",
+    body: JSON.stringify(body),
+  }),
+
+parseJobMarkdown: (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return request("/admin/jobs/parse-markdown", {
+    method: "POST",
+    body: formData,
+  });
+},
+
+uploadJobLogo: (file) => {
+  const formData = new FormData();
+  formData.append("logo", file);
+
+  return request("/admin/jobs/logo", {
+    method: "POST",
+    body: formData,
+  });
+},
+
+updateJob: (jobId, body) =>
+  request(`/admin/jobs/${jobId}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  }),
+
+updateJobStatus: (jobId, status) =>
+  request(`/admin/jobs/${jobId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  }),
+
+deleteJob: (jobId) =>
+  request(`/admin/jobs/${jobId}`, {
+    method: "DELETE",
+  }),
+
+    // Hiring Roles API
+  getRoles: (params = {}) => {
+    const query = new URLSearchParams();
+
+    if (params.search) query.set('search', params.search);
+    if (params.page) query.set('page', params.page);
+    if (params.limit) query.set('limit', params.limit);
+
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+
+    return request(`/admin/roles${suffix}`);
+  },
+
+  createRole: (body) =>
+    request('/admin/roles', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  getRoleById: (roleId) =>
+    request(`/admin/roles/${roleId}`),
+
+  updateRole: (roleId, body) =>
+    request(`/admin/roles/${roleId}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+
+  deleteRole: (roleId) =>
+    request(`/admin/roles/${roleId}`, {
+      method: 'DELETE',
+    }),
 };

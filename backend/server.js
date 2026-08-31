@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { connectDB } from "./config/db.js";
 
 // Route imports
+import hiringRoutes from "./routes/hiringRoutes.js";
 import exerciseRoutes from "./routes/exerciseRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -47,8 +48,12 @@ import analyticsRoutes from "./routes/analyticsRoutes.js";
 import resourceRoutes from "./routes/resourceRoutes.js";
 import leaderboardRoutes from "./routes/leaderboardRoutes.js";
 import practiceRoutes from "./routes/practiceRoutes.js";
+
 import programRoutes from "./routes/programRoutes.js";
 import learnerReportRoutes from "./routes/learnerReportRoutes.js";
+
+import testimonialRoutes from "./routes/testimonialRoutes.js";
+
 
 dotenv.config();
 const app = express();
@@ -123,7 +128,7 @@ app.use("/api/student/project", studentProjectRoutes);
 app.use("/api/resources", resourceRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/practice", practiceRoutes);
-
+app.use("/api/testimonials", testimonialRoutes);
 // ✅ BUILD PAGE Routes
 app.use("/api/mini-projects", miniRouter);
 app.use("/api/major-projects", majorRouter);
@@ -139,12 +144,15 @@ app.use("/api/admin/projects", projectRoutes);
 app.use("/api/admin/batch", batchRoutes);
 app.use("/api/admin/students", studentRoutes);
 app.use("/api/admin/testing", adminTestingRoutes);
+
+// Hiring routes should come before the generic admin routes
+app.use("/api", hiringRoutes);
+
 app.use("/api/admin", adminPortalRoutes);
 app.use("/api/question-bank", questionBankRoutes);
 app.use("/api/admin", adminRouter);
 app.use("/api/admin/analytics", analyticsRoutes);
 app.use("/api/admin/submission", submissionRoutes);
-
 // 🧪 Health Check
 app.get("/health", (req, res) => {
   res.json({

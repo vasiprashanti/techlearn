@@ -48,7 +48,11 @@
     "nodemailer": "^7.0.5",
     "pdf-lib": "^1.17.1",
     "pdfkit": "^0.17.1",
+
     "razorpay": "^2.9.8",
+
+    "sharp": "^0.35.3",
+
     "uuid": "^11.1.0"
   },
   "devDependencies": {
