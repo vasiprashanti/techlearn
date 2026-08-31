@@ -196,7 +196,7 @@ const ProgramReport = ({ report }) => {
   );
 };
 
-export default function Reports() {
+export default function Performance() {
   const [activeTab, setActiveTab] = useState("program");
   const [data, setData] = useState({ program: [], practice: null, assessments: [] });
   const [loading, setLoading] = useState(true);
@@ -241,17 +241,17 @@ export default function Reports() {
         >
           <h1 className="font-press-start leading-normal">
             <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
-              PERFORMANCE REPORTS
+              PERFORMANCE
             </span>
           </h1>
           <p className="mt-3 text-sm leading-6 text-[#00113b]/65 dark:text-[#afcff1]/70 max-w-xl mx-auto">
-            Review your enrolled program milestones, practice accuracy, and historical assessment transcripts.
+            Review program progress, practice accuracy, assessment results, and improvement over time.
           </p>
         </motion.div>
 
-        {/* Navigation Tabs Pill Container */}
-        <div className="flex justify-center">
-          <div className="dashboard-surface inline-flex items-center gap-1.5 rounded-2xl p-1.5 shadow-sm">
+        {/* Jobs-style tabs keep the performance sections easy to scan. */}
+        <div className="border-b border-black/10 dark:border-white/10">
+          <div className="flex items-center gap-5 overflow-x-auto">
             {reportTabs.map(({ key, label, icon: IconComponent }) => {
               const isActive = activeTab === key;
               return (
@@ -259,10 +259,10 @@ export default function Reports() {
                   key={key}
                   type="button"
                   onClick={() => setActiveTab(key)}
-                  className={`relative inline-flex items-center gap-2 rounded-xl px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-bold transition-all duration-300 ${
+                  className={`relative inline-flex shrink-0 items-center gap-2 border-b-2 px-1 pb-3 pt-1 text-xs sm:text-sm font-bold transition-all duration-300 ${
                     isActive
-                      ? "bg-[#3c83f6] text-white shadow-md shadow-[#3c83f6]/30 dark:bg-[#3c83f6] dark:text-white"
-                      : "text-[#00113b]/70 hover:bg-black/5 hover:text-[#00113b] dark:text-[#afcff1]/70 dark:hover:bg-white/5 dark:hover:text-white"
+                      ? "border-[#3c83f6] text-[#2563eb] dark:text-[#bceaff]"
+                      : "border-transparent text-[#00113b]/65 hover:border-[#3c83f6]/45 hover:text-[#00113b] dark:text-[#afcff1]/70 dark:hover:text-white"
                   }`}
                 >
                   <IconComponent className="h-4 w-4" />
@@ -278,7 +278,7 @@ export default function Reports() {
           <section className="flex min-h-[360px] items-center justify-center">
             <div className="inline-flex items-center gap-3 rounded-full border border-[#86c4ff]/45 bg-white/40 px-5 py-3 text-sm font-medium text-[#00113b] shadow-sm shadow-[#3c83f6]/10 backdrop-blur-xl dark:border-[#6fbfff]/24 dark:bg-[#051738]/75 dark:text-[#8fd9ff]">
               <Loader2 className="h-4 w-4 animate-spin text-[#3c83f6] dark:text-[#8fd9ff]" />
-              Syncing performance reports
+              Syncing performance data
             </div>
           </section>
         ) : error ? (
@@ -286,7 +286,7 @@ export default function Reports() {
             <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-red-200 bg-red-50 text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
               <XCircle className="h-6 w-6" />
             </div>
-            <h2 className="text-xl font-bold text-[#00113b] dark:text-white">Unable to Load Reports</h2>
+            <h2 className="text-xl font-bold text-[#00113b] dark:text-white">Unable to Load Performance</h2>
             <p className="mt-2 text-sm text-[#00113b]/65 dark:text-[#afcff1]/70">{error}</p>
           </section>
         ) : activeTab === "program" ? (

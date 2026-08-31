@@ -49,6 +49,8 @@ import leaderboardRoutes from "./routes/leaderboardRoutes.js";
 import practiceRoutes from "./routes/practiceRoutes.js";
 import programRoutes from "./routes/programRoutes.js";
 import learnerReportRoutes from "./routes/learnerReportRoutes.js";
+import jobRoutes from "./routes/jobRoutes.js";
+import adminJobRoutes from "./routes/adminJobRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -123,6 +125,7 @@ app.use("/api/student/project", studentProjectRoutes);
 app.use("/api/resources", resourceRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/practice", practiceRoutes);
+app.use("/api/jobs", jobRoutes);
 
 // ✅ BUILD PAGE Routes
 app.use("/api/mini-projects", miniRouter);
@@ -142,6 +145,7 @@ app.use("/api/admin/testing", adminTestingRoutes);
 app.use("/api/admin", adminPortalRoutes);
 app.use("/api/question-bank", questionBankRoutes);
 app.use("/api/admin", adminRouter);
+app.use("/api/admin/jobs", adminJobRoutes);
 app.use("/api/admin/analytics", analyticsRoutes);
 app.use("/api/admin/submission", submissionRoutes);
 

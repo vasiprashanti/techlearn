@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Clock, Users, Star, BookOpen, ArrowRight, Play,
+  Clock, BookOpen, ArrowRight, Play,
   CheckCircle, Lock, ChevronLeft
 } from "lucide-react";
 import ScrollProgress from "../../components/ScrollProgress";
@@ -42,97 +42,39 @@ const CourseDetails = () => {
         // The course title should be available directly
         const courseTitle = backendCourse.title || 'Untitled Course';
 
-        // Get course-specific duration based on title
-        const getCourseDuration = (title) => {
-          const titleLower = title.toLowerCase();
-          if (titleLower.includes('java')) return '8 weeks';
-          if (titleLower.includes('python')) return '6 weeks';
-          if (titleLower.includes('data structures')) return '8 weeks';
-          if (titleLower.includes('mysql')) return '3 weeks';
-          return '6 weeks';
-        };
-
-        // Determine course status based on title
-        const getCourseStatus = (title) => {
-          if (!title) {
-            return {
-              status: 'coming_soon',
-              certificationPrice: null,
-              certificationDiscountedPrice: null,
-              xpDiscount: null,
-              requiredXP: null
-            };
-          }
-
-          const titleLower = title.toLowerCase();
-          if (titleLower.includes('java') || titleLower.includes('python')) {
-            return {
-              status: 'available',
-              certificationPrice: 1499,
-              certificationDiscountedPrice: 999,
-              xpDiscount: 500,
-              requiredXP: 1000
-            };
-          } else {
-            return {
-              status: 'coming_soon',
-              certificationPrice: null,
-              certificationDiscountedPrice: null,
-              xpDiscount: null,
-              requiredXP: null
-            };
-          }
-        };
-
-        const courseStatus = getCourseStatus(courseTitle);
-
-        // Create enhanced course object with default values for missing fields
+        // Keep the detail page driven by the course record. Do not invent
+        // duration, enrollment counts, ratings, instructors, or locked topics
+        // from the course title or from random values.
         const enhancedCourse = {
           ...backendCourse,
           id: backendCourse._id,
           title: courseTitle,
-          longDescription: backendCourse.description || 'Learn programming concepts and build practical skills with this comprehensive course.',
+          longDescription: backendCourse.description || 'Course details will be available soon.',
           difficulty: backendCourse.level || 'Beginner',
-          duration: getCourseDuration(courseTitle),
+          duration: backendCourse.duration || (backendCourse.courseType === 'Trainer-led' ? 'Trainer-led' : 'Self-paced'),
           lessons: backendCourse.topics?.length || 0,
-          students: Math.floor(Math.random() * 2000) + 1000, 
-          rating: (4.5 + Math.random() * 0.5).toFixed(1), 
-          status: courseStatus.status,
-          certificationPrice: courseStatus.certificationPrice,
-          certificationDiscountedPrice: courseStatus.certificationDiscountedPrice,
-          xpDiscount: courseStatus.xpDiscount,
-          requiredXP: courseStatus.requiredXP,
+          courseType: backendCourse.courseType || 'Self-paced',
           instructor: {
-            name: 'Prashanti Vasi',
-            bio: 'Experienced developer and educator with years of industry experience in software development and teaching.',
-            avatar: '/api/placeholder/100/100'
+            name: backendCourse.instructor || 'TechLearn team',
+            bio: backendCourse.courseType === 'Trainer-led'
+              ? 'Trainer-led learning provided through the published course schedule.'
+              : 'Self-paced learning material published by TechLearn.',
           },
           curriculum: backendCourse.topics?.map((topic, index) => ({
             id: index + 1,
             title: topic.title,
-            lessons: Math.floor(Math.random() * 3) + 3, 
-            duration: `${Math.floor(Math.random() * 2) + 1}-${Math.floor(Math.random() * 2) + 2} hours`, 
+            lessons: topic.lessonCount || topic.lessons || 1,
+            duration: topic.duration || '',
             topics: [topic.title],
             completed: false,
-            locked: index > 2, 
+            locked: Boolean(topic.isLocked),
             quizId: topic.quizId,
             exerciseId: topic.exerciseId,
             notesId: topic.notesId
           })) || [],
-          prerequisites: [
-            'Basic computer skills',
-            'Text editor knowledge',
-            'Understanding of basic programming concepts'
-          ],
-          learningOutcomes: [
-            `Master ${courseTitle} fundamentals`,
-            'Build practical projects',
-            'Understand core programming concepts',
-            'Apply knowledge in real-world scenarios',
-            'Gain confidence in programming',
-            'Prepare for advanced topics'
-          ],
-          tags: [courseTitle, 'Programming', 'Beginner-Friendly']
+          prerequisites: Array.isArray(backendCourse.prerequisites) ? backendCourse.prerequisites : [],
+          learningOutcomes: Array.isArray(backendCourse.learningOutcomes) ? backendCourse.learningOutcomes : [],
+          tags: Array.isArray(backendCourse.tags) ? backendCourse.tags : []
         };
 
         setCourse(enhancedCourse);
@@ -220,8 +162,6 @@ const CourseDetails = () => {
 
           {/* Hero Section */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="dashboard-surface p-8 md:p-12 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[#3C83F6]/10 to-transparent dark:from-white/5 rounded-full blur-3xl -mr-20 -mt-20"></div>
-            
             <div className="relative z-10 max-w-4xl">
               <div className="flex items-center gap-4 mb-6">
                 <span className="text-[9px] uppercase tracking-widest px-3 py-1 bg-[#dff1ff] dark:bg-[#0d366f] rounded-full text-[#4f719c] dark:text-[#8ac7f3] border border-[#9fd3ff]/60 dark:border-[#79c5ff]/40 font-medium">
@@ -248,7 +188,7 @@ const CourseDetails = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee]" />
-                  <span>Lifetime access</span>
+                  <span>Public preview</span>
                 </div>
               </div>
 
@@ -301,12 +241,12 @@ const CourseDetails = () => {
                       What you'll learn
                     </h3>
                     <ul className="space-y-4">
-                      {course.learningOutcomes.map((outcome, index) => (
+                      {course.learningOutcomes.length ? course.learningOutcomes.map((outcome, index) => (
                         <li key={index} className="flex items-start gap-4 text-sm text-[#4c6f9a] dark:text-[#7fb8e2] font-light leading-relaxed">
                           <CheckCircle className="w-5 h-5 text-[#4f7fb7] dark:text-[#7cc3ee] flex-shrink-0" />
                           <span>{outcome}</span>
                         </li>
-                      ))}
+                      )) : <li className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">No learning outcomes have been published for this course yet.</li>}
                     </ul>
                   </div>
                   
@@ -315,12 +255,12 @@ const CourseDetails = () => {
                       Prerequisites
                     </h3>
                     <ul className="space-y-4">
-                      {course.prerequisites.map((prereq, index) => (
+                      {course.prerequisites.length ? course.prerequisites.map((prereq, index) => (
                         <li key={index} className="flex items-center gap-4 text-sm text-[#4c6f9a] dark:text-[#7fb8e2] font-light">
                           <div className="w-1.5 h-1.5 bg-[#4f7fb7] dark:bg-[#7cc3ee] rounded-full flex-shrink-0" />
                           <span>{prereq}</span>
                         </li>
-                      ))}
+                      )) : <li className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">No prerequisites have been published.</li>}
                     </ul>
                   </div>
                 </div>
@@ -343,7 +283,7 @@ const CourseDetails = () => {
                               {module.title}
                             </h4>
                             <p className="text-[10px] uppercase tracking-widest text-[#4d6f9c] dark:text-[#7fb9e6]">
-                              {module.lessons} lessons • {module.duration}
+                               {module.lessons} topic{module.lessons === 1 ? '' : 's'}{module.duration ? ` • ${module.duration}` : ''}
                             </p>
                           </div>
                         </div>
@@ -369,7 +309,7 @@ const CourseDetails = () => {
               {activeTab === "instructor" && (
                 <div className="dashboard-surface p-8 md:p-12 max-w-3xl">
                   <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8">
-                    <div className="w-24 h-24 bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] rounded-full flex items-center justify-center flex-shrink-0 shadow-lg border-4 border-[#d9efff] dark:border-[#0d366f]">
+                    <div className="w-24 h-24 bg-[#3c83f6] rounded-full flex items-center justify-center flex-shrink-0 shadow-lg border-4 border-[#d9efff] dark:border-[#0d366f]">
                       <span className="text-3xl font-medium text-[#082a5d]">
                         {course.instructor.name.charAt(0)}
                       </span>
@@ -381,16 +321,11 @@ const CourseDetails = () => {
                       <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2] mb-6 leading-relaxed font-light">
                         {course.instructor.bio}
                       </p>
-                      <div className="dashboard-inner-surface flex flex-wrap justify-center sm:justify-start gap-6 text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] p-4 rounded-xl w-fit">
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee]" />
-                          <span>{course.students} students</span>
-                        </div>
-                        <div className="w-px h-4 bg-[#9fcfff]/60 dark:bg-[#6bb8ec]/55 hidden sm:block"></div>
-                        <div className="flex items-center gap-2">
-                          <Star className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee]" />
-                          <span>{course.rating} rating</span>
-                        </div>
+                        <div className="dashboard-inner-surface flex flex-wrap justify-center sm:justify-start gap-6 text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] p-4 rounded-xl w-fit">
+                          <div className="flex items-center gap-2">
+                            <BookOpen className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee]" />
+                            <span>{course.courseType}</span>
+                          </div>
                       </div>
                     </div>
                   </div>

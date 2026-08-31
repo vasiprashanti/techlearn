@@ -173,6 +173,28 @@ const programAssignmentSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    score: {
+      type: Number,
+      default: null,
+      min: 0,
+      max: 100,
+    },
+    accuracy: {
+      type: Number,
+      default: null,
+      min: 0,
+      max: 100,
+    },
+    answeredQuestions: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    correctAnswers: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     shortfalls: {
       type: [
         new mongoose.Schema(

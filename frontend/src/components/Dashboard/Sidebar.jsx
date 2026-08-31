@@ -3,9 +3,9 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   Award,
   BarChart3,
+  BriefcaseBusiness,
+  BookOpen,
   LayoutDashboard,
-  Map,
-  PlayCircle,
   User,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,10 +17,10 @@ const menuGroups = [
     title: "MAIN",
     items: [
       { id: "dashboard", title: "Dashboard", icon: <LayoutDashboard className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
-      { id: "dashboard/reports", title: "Reports", icon: <BarChart3 className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
-      { id: "dashboard/roadmap", title: "Roadmaps", icon: <Map className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
-      { id: "dashboard/practice", title: "Practice", icon: <PlayCircle className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "learn", title: "Learn", icon: <BookOpen className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "jobs", title: "Hiring", icon: <BriefcaseBusiness className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/leaderboard", title: "Leaderboard", icon: <Award className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "dashboard/performance", title: "Performance", icon: <BarChart3 className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/profile", title: "Profile", icon: <User className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
     ]
   }
@@ -82,8 +82,7 @@ const Sidebar = () => {
           end
           onClick={onClickAction}
           className={({ isActive }) => {
-            const isRoadmapAlias = item.id === 'dashboard/roadmap' && location.pathname.startsWith('/resources/roadmaps');
-            const isCurrent = isActive || isRoadmapAlias;
+            const isCurrent = isActive;
 
             return `flex flex-col items-center justify-center gap-1.5 w-[3.65rem] h-[3.65rem] md:w-[4.15rem] md:h-[4.15rem] rounded-[1.1rem] transition-all duration-300 ease-out select-none
             ${

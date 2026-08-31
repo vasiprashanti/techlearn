@@ -3,6 +3,7 @@ import ProgramAssignment from "../models/ProgramAssignment.js";
 import ProgramPerformanceRecord from "../models/ProgramPerformanceRecord.js";
 import ProgramPerformanceSummary from "../models/ProgramPerformanceSummary.js";
 import Program from "../models/Program.js";
+import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import Student from "../models/Student.js";
 import { assignmentSummary } from "../services/programAssignmentService.js";
 import { serializeAssignment } from "../services/programQuestionEngineService.js";
@@ -128,9 +129,14 @@ export const getAssessmentDetailReport = async (req, res) => {
       score: cat.total > 0 ? Math.round((cat.correct / cat.total) * 100) : 0,
     }));
 
-    // Check if user is guest, free or enrolled
-    const student = await Student.findOne({ userId }).lean();
-    const isEnrolled = Boolean(student?.programId || student?.batchId);
+    // ProgramEnrollment is the source of truth for access. Student-level
+    // pointers are legacy compatibility fields and can refer to another
+    // program (or be empty for an individual enrollment).
+    const isEnrolled = Boolean(await ProgramEnrollment.exists({
+      userId,
+      programId: assignment.programId?._id || assignment.programId,
+      status: { $in: ["Active", "Completed"] },
+    }));
 
     return res.json({
       success: true,

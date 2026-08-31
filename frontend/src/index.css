@@ -75,24 +75,36 @@
   }
 
   .dashboard-surface {
-    @apply rounded-[1.75rem] border backdrop-blur-xl;
+    @apply rounded-2xl border;
     border-color: rgba(0, 0, 0, 0.05);
-    background: rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.62) !important;
+    background-image: none !important;
     box-shadow: 0 12px 34px rgba(60, 131, 246, 0.08);
   }
 
   .dark .dashboard-surface {
     border-color: rgba(21, 54, 111, 0.45);
-    background: linear-gradient(135deg, #020b23 0%, #001233 50%, #0a1128 100%);
+    background-color: #071a3e !important;
+    background-image: none !important;
     box-shadow: 0 12px 34px rgba(0, 0, 0, 0.24);
   }
 
   .dashboard-surface-strong {
-    background: rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.72) !important;
+    background-image: none !important;
   }
 
   .dark .dashboard-surface-strong {
-    background: linear-gradient(135deg, #020b23 0%, #001233 50%, #0a1128 100%);
+    background-color: #071a3e !important;
+    background-image: none !important;
+  }
+
+  /* Keep shared dark cards flat even when an older page still carries the
+     legacy Tailwind gradient utility. Page-level background gradients are not
+     affected because they use light/dark color stops without this class. */
+  .dark [class~="dark:bg-gradient-to-br"] {
+    background-color: #071a3e !important;
+    background-image: none !important;
   }
 
   .dashboard-inner-surface {
@@ -2761,7 +2773,7 @@ html {
 }
 
 .tl-results-eyebrow {
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(4, 16, 61, 0.72);
 }
 
 .tl-results-header h2 {
@@ -3239,6 +3251,17 @@ html {
   box-shadow: 0 4px 20px rgba(4, 16, 61, 0.04);
   overflow: hidden;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tl-faq-item.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.5s ease, transform 0.5s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tl-faq-item.reveal-on-scroll.is-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .tl-faq-item.open {

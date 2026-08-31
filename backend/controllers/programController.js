@@ -18,6 +18,8 @@ import { ensureReadinessLead } from "../services/programAssignmentService.js";
 import { ensureStudentForUser } from "../utils/userProfile.js";
 import { syncPrimaryProgramPointers, upsertProgramEnrollment } from "../utils/programEnrollment.js";
 import { matchProgramsForUser } from "../utils/programMatching.js";
+import { isUserVisibleProgram } from "../utils/programVisibility.js";
+import { isUserVisibleCourse } from "../utils/courseVisibility.js";
 
 /**
  * GET /api/programs/public
@@ -35,15 +37,17 @@ export const getPublicPrograms = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
+    const visiblePrograms = programs.filter(isUserVisibleProgram);
     const readinessIds = await Blueprint.find({
-      programId: { $in: programs.map((p) => p._id) },
+      programId: { $in: visiblePrograms.map((p) => p._id) },
       blueprintType: { $in: ["day_0_readiness", "free_assessment"] },
       status: { $in: ["Active", "Draft"] },
     }).distinct("programId");
     const readinessSet = new Set(readinessIds.map((id) => String(id)));
 
-    const formatted = programs.map((p) => ({
+    const formatted = visiblePrograms.map((p) => ({
       ...p,
+      courseIds: (p.courseIds || []).filter(isUserVisibleCourse),
       hasFreeAssessment: readinessSet.has(String(p._id)),
     }));
 
@@ -68,12 +72,15 @@ export const getProgramCatalog = async (req, res) => {
       .populate("projectIds", "_id title category duration_days status")
       .lean();
 
+    const visiblePrograms = programs.filter(isUserVisibleProgram);
+
     return res.json({
       success: true,
-      programs: programs.map((program) => ({
+      programs: visiblePrograms.map((program) => ({
         ...program,
+        courseIds: (program.courseIds || []).filter(isUserVisibleCourse),
         accessType: program.pricingType === "Free" ? "free" : "trainer-led",
-        courseCount: program.courseIds?.length || 0,
+        courseCount: (program.courseIds || []).filter(isUserVisibleCourse).length,
         roadmapCount: program.roadmapIds?.length || 0,
         trackCount: program.trackTemplateIds?.length || 0,
         projectCount: program.projectIds?.length || 0,
@@ -83,6 +90,100 @@ export const getProgramCatalog = async (req, res) => {
   } catch (error) {
     console.error("Error fetching public program catalog:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch program catalog." });
+  }
+};
+
+/**
+ * GET /api/programs/public/:programId
+ *
+ * Guest-safe preview for a genuinely free Program. The response contains
+ * only published/public material metadata; enrollment and protected program
+ * learning endpoints remain separate.
+ */
+export const getPublicProgramPreview = async (req, res) => {
+  try {
+    const { programId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(programId)) {
+      return res.status(400).json({ success: false, message: "Invalid program ID." });
+    }
+
+    const program = await Program.findOne({
+      _id: programId,
+      status: "Active",
+      visibility: "Public",
+      pricingType: "Free",
+    })
+      .select("_id name description programType duration durationDays phases pricingType courseIds roadmapIds trackTemplateIds projectIds")
+      .populate("courseIds", "_id title description level courseType numTopics assignedBatchIds")
+      .populate("roadmapIds", "_id title description status assignedBatchIds")
+      .populate("trackTemplateIds", "_id name trackType description totalDays status batchId")
+      .populate("projectIds", "_id title description category duration_days status")
+      .lean();
+
+    if (!program || !isUserVisibleProgram(program)) {
+      return res.status(404).json({ success: false, message: "Free program not found." });
+    }
+
+    const materials = [
+      ...(program.courseIds || [])
+        .filter((course) => course && isUserVisibleCourse(course) && !(course.assignedBatchIds || []).length)
+        .map((course) => ({
+          id: course._id,
+          type: "Course",
+          title: course.title,
+          description: course.description || "",
+          href: `/learn/courses/${course._id}/topics`,
+        })),
+      ...(program.roadmapIds || [])
+        .filter((roadmap) => roadmap && roadmap.status === "Active" && !(roadmap.assignedBatchIds || []).length)
+        .map((roadmap) => ({
+          id: roadmap._id,
+          type: "Roadmap",
+          title: roadmap.title,
+          description: roadmap.description || "",
+          href: "/resources/roadmaps",
+        })),
+      ...(program.trackTemplateIds || [])
+        .filter((track) => track && track.status === "Active" && !track.batchId)
+        .map((track) => ({
+          id: track._id,
+          type: track.trackType || "Track",
+          title: track.name,
+          description: track.description || "",
+          href: null,
+        })),
+      ...(program.projectIds || [])
+        .filter((project) => project && project.status === "Published")
+        .map((project) => ({
+          id: project._id,
+          type: "Project",
+          title: project.title,
+          description: project.description || "",
+          href: null,
+        })),
+    ];
+
+    return res.json({
+      success: true,
+      program: {
+        _id: program._id,
+        name: program.name,
+        description: program.description || "",
+        programType: program.programType,
+        duration: program.duration,
+        durationDays: program.durationDays,
+        phases: program.phases || [],
+        pricingType: program.pricingType,
+        materials,
+        courseCount: materials.filter((material) => material.type === "Course").length,
+        roadmapCount: materials.filter((material) => material.type === "Roadmap").length,
+        trackCount: materials.filter((material) => ["Daily Challenge", "Daily Task", "Track"].includes(material.type)).length,
+        projectCount: materials.filter((material) => material.type === "Project").length,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching public program preview:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch program preview." });
   }
 };
 
@@ -147,11 +248,12 @@ export const startFreeAssessment = async (req, res) => {
 
     let programId = requestedProgramId;
     if (!programId) {
-      const publicPlacement = await Program.findOne({
+      const publicPlacements = await Program.find({
         programType: "Placement",
         status: "Active",
         visibility: "Public",
       }).sort({ createdAt: -1 }).lean();
+      const publicPlacement = publicPlacements.find(isUserVisibleProgram);
 
       if (!publicPlacement) {
         return res.status(404).json({ success: false, message: "No active Placement Program available." });
@@ -183,6 +285,10 @@ export const startFreeAssessment = async (req, res) => {
       programId,
       allowUnenrolled: true,
     });
+
+    if (req.user?.role !== "admin" && !isUserVisibleProgram(context.program)) {
+      return res.status(404).json({ success: false, message: "No active Placement Program available." });
+    }
 
     const assignment = await getOrCreateProgramAssignment({
       context,
@@ -448,10 +554,12 @@ export const getReadinessOptions = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    if (!programs.length) return res.json({ success: true, programs: [] });
+    const visiblePrograms = programs.filter(isUserVisibleProgram);
+
+    if (!visiblePrograms.length) return res.json({ success: true, programs: [] });
 
     const configuredIds = await Blueprint.find({
-      programId: { $in: programs.map((program) => program._id) },
+      programId: { $in: visiblePrograms.map((program) => program._id) },
       blueprintType: "day_0_readiness",
       status: "Active",
     }).distinct("programId");
@@ -459,7 +567,7 @@ export const getReadinessOptions = async (req, res) => {
 
     return res.json({
       success: true,
-      programs: programs
+      programs: visiblePrograms
         .filter((program) => configured.has(String(program._id)))
         .map((program) => ({ ...program, readinessAvailable: true })),
     });
@@ -569,6 +677,9 @@ export const getProgramDetailForStudent = async (req, res) => {
       .lean();
 
     if (!program) {
+      return res.status(404).json({ success: false, message: "Program not found or inaccessible" });
+    }
+    if (req.user.role !== "admin" && !isUserVisibleProgram(program)) {
       return res.status(404).json({ success: false, message: "Program not found or inaccessible" });
     }
     if (req.user.role !== "admin" && program.pricingType === "Paid" && (!enrollment || enrollment.accessTier !== "Member")) {

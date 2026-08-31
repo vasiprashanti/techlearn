@@ -1,11 +1,11 @@
-import { lazy, Suspense, useState, useEffect, useMemo } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { BookOpen, CheckCircle, ChevronLeft, ChevronRight, AlertCircle, Lock, Brain, Target, LayoutDashboard } from "lucide-react";
 import ScrollProgress from "../../components/ScrollProgress";
 import { courseAPI, placementLearningAPI } from "../../services/api";
 import { dailyChallengeAPI } from "../../services/dailyChallengeApi";
 import { useTheme } from '../../context/ThemeContext';
-import { readCachedCourseDetails, writeCachedCourseDetails } from '../../utils/courseCache';
+import { writeCachedCourseDetails } from '../../utils/courseCache';
 
 const MarkdownContent = lazy(() => import('./MarkdownContent'));
 
@@ -47,13 +47,14 @@ const CourseTopics = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const cachedCourse = readCachedCourseDetails(courseId);
   
   const [isSyllabusOpen, setIsSyllabusOpen] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState(0);
 
-  const [backendCourse, setBackendCourse] = useState(cachedCourse);
-  const [loading, setLoading] = useState(!cachedCourse);
+  // Cached course data is only a write-through optimization. The server must
+  // authorize the request before any course content is rendered.
+  const [backendCourse, setBackendCourse] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -61,14 +62,9 @@ const CourseTopics = () => {
 
     const fetchCourse = async () => {
       try {
-        const cached = readCachedCourseDetails(courseId);
-        if (cached) {
-          setBackendCourse(cached);
-          setLoading(false);
-        } else {
-          setLoading(true);
-        }
-
+        setLoading(true);
+        setBackendCourse(null);
+        setError(null);
         const response = await courseAPI.getCourse(courseId);
         const courseData = response.course || response;
         writeCachedCourseDetails(courseId, courseData);
@@ -80,9 +76,7 @@ const CourseTopics = () => {
       } catch (err) {
         if (!cancelled) {
           setError(err.message);
-          if (!readCachedCourseDetails(courseId)) {
-            setBackendCourse(null);
-          }
+          setBackendCourse(null);
         }
       } finally {
         if (!cancelled) {
@@ -101,7 +95,7 @@ const CourseTopics = () => {
     if (backendCourse && backendCourse.topics) {
       return {
         title: backendCourse.title,
-        description: `Master ${backendCourse.title} fundamentals.`,
+        description: backendCourse.description || "",
         topics: backendCourse.topics.map((topic, index) => {
           const topicId = topic._id || topic.topicId || topic.id || `topic_${index}`;
           const cleanTitle = (topic.title || '').replace(/^CORE\s+(\w+)\s+NOTES\s*[-–]\s*\d+$/i, '$1').replace(/^\d+\.\s*/, '').replace(/\s*[-–]\s*\d+$/, '');
@@ -109,11 +103,11 @@ const CourseTopics = () => {
           return {
             id: topicId,
             title: cleanTitle,
-            description: `Learn about ${cleanTitle} chapter concepts and applications.`,
+            description: topic.description || "",
             completed: false,
-            hasNotes: !!topic.notesId,
-            notesContent: topic.notes,
-            content: { theory: topic.notes || `Theory content for ${cleanTitle}.` },
+            hasNotes: Boolean(topic.notesId || topic.notes),
+            notesContent: topic.notes || "",
+            content: { theory: topic.notes || "" },
             isLocked: topic.isLocked || false
           };
         })
@@ -346,8 +340,12 @@ const CourseTopics = () => {
                   <p className="text-sm text-[#001862] dark:text-white/50 max-w-sm">The curriculum team is currently writing the detailed reading material for this topic.</p>
                 </div>
               ) : (
-                <div className="text-[#001862] dark:text-white/75 leading-[1.8] font-light text-lg whitespace-pre-line">
-                  {currentTopic?.content.theory}
+                <div className="flex flex-col items-center justify-center py-20 text-center h-full">
+                  <div className="w-16 h-16 rounded-2xl bg-black/5 dark:bg-white/5 flex items-center justify-center mb-5 border border-black/5 dark:border-white/5">
+                    <BookOpen className="w-7 h-7 text-[#001862]/30 dark:text-white/30" />
+                  </div>
+                  <h3 className="text-lg font-medium text-[#001862] dark:text-white mb-2">Notes are not published yet</h3>
+                  <p className="text-sm text-[#001862]/60 dark:text-white/50 max-w-sm">This topic is visible in the catalog, but its reading material has not been published yet.</p>
                 </div>
               )}
               </div>

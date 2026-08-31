@@ -8,7 +8,7 @@ import { useAuthModalContext } from '../context/AuthModalContext';
 export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const { isAuthenticated, user, logout } = useAuth();
-  const { openLogin, openSignup } = useAuthModalContext();
+  const { openLogin } = useAuthModalContext();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -20,10 +20,11 @@ export default function Navbar() {
   const accountRef = useRef(null);
   const mobileMenuRef = useRef(null);
 
-  const [isDarkHeader, setIsDarkHeader] = useState(true);
+  const [isDarkHeader, setIsDarkHeader] = useState(isDarkMode);
 
   useEffect(() => {
     const checkDarkSection = () => {
+      setScrollY(window.scrollY);
       // Check all dark sections: Hero (#start, .tl-hero), Pricing (#pricing, .tl-pricing-section)
       const darkSections = document.querySelectorAll('#start, #pricing, .tl-pricing-section, .tl-hero');
       let isOverDark = false;
@@ -47,7 +48,7 @@ export default function Navbar() {
       window.removeEventListener('scroll', checkDarkSection);
       window.removeEventListener('resize', checkDarkSection);
     };
-  }, [location.pathname]);
+  }, [location.pathname, isDarkMode]);
 
   const isDarkNav = isDarkMode || isDarkHeader;
 
@@ -92,11 +93,7 @@ export default function Navbar() {
 
   const handleGetStartedClick = (e) => {
     e.preventDefault();
-    if (typeof openSignup === 'function') {
-      openSignup();
-    } else {
-      navigate('/signup');
-    }
+    navigate('/onboarding?intent=placement');
   };
 
   const handleLoginClick = (e) => {
@@ -587,7 +584,7 @@ export default function Navbar() {
                 </li>
               )}
               <li>
-                <Link to="/resources/roadmaps">Hiring</Link>
+                <Link to="/jobs">Hiring</Link>
               </li>
               {isAuthenticated && (
                 <li>
@@ -713,7 +710,7 @@ export default function Navbar() {
           >
             <Link to="/learn">Learn</Link>
             <Link to="/roadmaps">Roadmaps</Link>
-            <Link to="/resources/roadmaps">Hiring</Link>
+            <Link to="/jobs">Hiring</Link>
 
             {isAuthenticated ? (
               <>

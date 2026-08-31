@@ -19,8 +19,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'))
 const DemoDashboard = lazy(() => import('./pages/Dashboard/Demo'))
 const ProjectDayNotes = lazy(() => import('./pages/Dashboard/ProjectDayNotes'))
 const ProjectOverview = lazy(() => import('./pages/Dashboard/ProjectOverview'))
-const Performance = lazy(() => import('./pages/Dashboard/Performance'))
-const LearnerReports = lazy(() => import('./pages/Dashboard/Reports'))
+const Performance = lazy(() => import('./pages/Dashboard/Reports'))
 const DashboardSettings = lazy(() => import('./pages/Dashboard/Settings'))
 const OnboardingPrograms = lazy(() => import('./pages/Onboarding/OnboardingPrograms'))
 const Languages = lazy(() => import('./pages/Dashboard/Languages'))
@@ -41,6 +40,7 @@ const LearnMain = lazy(() => import('./pages/Learn/LearnMain'))
 const CourseDetails = lazy(() => import('./pages/Learn/CourseDetails'))
 const CourseQuiz = lazy(() => import('./pages/Learn/CourseQuiz'))
 const CourseTopics = lazy(() => import('./pages/Learn/CourseTopics'))
+const ProgramPreview = lazy(() => import('./pages/Learn/ProgramPreview'))
 const LiveBatchDetails = lazy(() => import('./pages/Learn/LiveBatchDetails'))
 const AllInterviewQuestions = lazy(() => import('./pages/Learn/AllInterviewQuestions'))
 const PracticeHub = lazy(() => import('./pages/Learn/PracticeHub'))
@@ -65,6 +65,9 @@ const DynamicPracticeQuestions = lazy(() => import('./pages/Learn/DynamicPractic
 const ProgramLearningExperience = lazy(() => import('./pages/Learn/ProgramLearningExperience'))
 const FreeAssessmentSetup = lazy(() => import('./pages/Assessment/FreeAssessmentSetup'))
 const FreeAssessmentTest = lazy(() => import('./pages/Assessment/FreeAssessmentTest'))
+const ContextualOnboarding = lazy(() => import('./pages/Onboarding/ContextualOnboarding'))
+const ContextualSignup = lazy(() => import('./pages/Auth/ContextualSignup'))
+const Jobs = lazy(() => import('./pages/Jobs/Jobs'))
 
 const Roadmaps = lazy(() => import('./pages/Resources/Roadmaps'))
 const ResumeTemplates = lazy(() => import('./pages/Resources/ResumeTemplates'))
@@ -243,8 +246,12 @@ function LayoutWrapper() {
       <Suspense fallback={<main className="flex-grow"><RouteFallback /></main>}>
         <main className="flex-grow">
           <Routes>
-          <Route path="/login" element={<Navigate to="/signup" replace />} />
-          <Route path="/signup" element={<Signup />} />
+          <Route path="/login" element={<Signup initialMode="login" />} />
+          {/* New account creation starts with contextual intent questions. The
+              legacy form remains available inside auth modals for compatibility. */}
+          <Route path="/signup" element={<Navigate to="/onboarding?intent=placement" replace />} />
+          <Route path="/signup/contextual" element={<ContextualSignup />} />
+          <Route path="/onboarding" element={<ContextualOnboarding />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           
           <Route element={<PrivateRoute />}>
@@ -275,7 +282,7 @@ function LayoutWrapper() {
             <Route path="/dashboard/practice/company-based/mock/:company/:questionId" element={<CompanyMockQuestionDetail />} />
             <Route path="/dashboard/practice/category/:categorySlug" element={<DynamicPracticeQuestions />} />
             <Route path="/dashboard/performance" element={<Performance />} />
-            <Route path="/dashboard/reports" element={<LearnerReports />} />
+            <Route path="/dashboard/reports" element={<Navigate to="/dashboard/performance" replace />} />
             <Route path="/dashboard/leaderboard" element={<Leaderboard />} />
              <Route path="/dashboard/resources" element={<ResourcesHub />} />
             <Route path="/dashboard/resources/free-courses" element={<Navigate to="/learn" replace />} />
@@ -294,10 +301,12 @@ function LayoutWrapper() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/learn" element={<LearnMain />} />
+          <Route path="/jobs" element={<Jobs />} />
           <Route path="/learn/courses" element={<Navigate to="/learn" replace />} />
           <Route path="/learn/courses/all" element={<Navigate to="/learn" replace />} />
           <Route path="/learn/courses/:courseId" element={<CourseDetails />} />
           <Route path="/learn/courses/:courseId/topics" element={<CourseTopics />} />
+          <Route path="/learn/programs/:programId" element={<ProgramPreview />} />
           <Route path="/learn/courses/:courseId/quiz" element={<CourseQuiz />} />
           <Route path="/learn/batches/:batchId" element={<LiveBatchDetails />} />
           <Route path="/learn/exercises" element={<Exercises />} />

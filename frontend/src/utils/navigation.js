@@ -27,7 +27,7 @@ export const navigateUserByProgram = (user, navigate, options = {}) => {
   // Incomplete accounts must resume the shared onboarding flow. Pricing and
   // program selection are only available after the profile is complete.
   if (options.isNewSignup || !user.onboardingCompleted) {
-    navigate('/signup', { state: { resumeOnboarding: true } });
+    navigate('/onboarding?intent=placement');
     return;
   }
 

@@ -10,7 +10,7 @@
 }
 
 .dark .journey-scroll {
-  background: #060d1f;
+  background: #04083d;
 }
 
 .journey-sticky {
@@ -28,7 +28,7 @@
 }
 
 .dark .journey-sticky {
-  background: #060d1f;
+  background: #04083d;
   color: #f1f5f9;
 }
 
@@ -175,7 +175,7 @@
 }
 
 .dark .milestone-dot {
-  background: #060d1f;
+  background: #04083d;
   border-color: rgba(255, 255, 255, 0.3);
 }
 

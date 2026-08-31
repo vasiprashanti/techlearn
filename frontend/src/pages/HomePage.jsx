@@ -131,6 +131,8 @@ const HomePage = () => {
   const [isOverDarkSection, setIsOverDarkSection] = useState(false)
   const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false)
   const resultsSectionRef = useRef(null)
+  const faqListRef = useRef(null)
+  const [isFaqVisible, setIsFaqVisible] = useState(false)
 
   useEffect(() => {
     if (!isUserMenuOpen) return undefined
@@ -171,6 +173,26 @@ const HomePage = () => {
     window.addEventListener("scroll", handleScroll, { passive: true })
     handleScroll()
     return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  useEffect(() => {
+    const node = faqListRef.current
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      setIsFaqVisible(true)
+      return undefined
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsFaqVisible(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.18 }
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
   }, [])
 
   // --- 1. Code Background Particle Generation ---
@@ -301,10 +323,10 @@ const HomePage = () => {
               </p>
 
               <div className="tl-hero-actions">
-                <Link to="/signup?goal=job" className="tl-primary-button">
+                <Link to="/onboarding?intent=placement" className="tl-primary-button">
                   GET JOB-READY
                 </Link>
-                <Link to="/signup?goal=skill" className="tl-secondary-button">
+                <Link to="/onboarding?intent=skill" className="tl-secondary-button">
                   LEARN A SKILL
                 </Link>
               </div>
@@ -413,7 +435,7 @@ const HomePage = () => {
                 <li>Weekly assessments & progress tracking</li>
                 <li>Monthly mini-project ideas + course certificate</li>
               </ul>
-              <Link to="/signup" className="tl-price-button">
+              <Link to="/onboarding?intent=skill" className="tl-price-button">
                 START LEARNING →
               </Link>
             </article>
@@ -437,7 +459,7 @@ const HomePage = () => {
                 <li>Mock interview + feedback report</li>
                 <li>Jobs & internships board</li>
               </ul>
-              <Link to="/signup" className="tl-price-button">
+              <Link to="/onboarding?intent=placement" className="tl-price-button">
                 START PREPARING →
               </Link>
             </article>
@@ -460,11 +482,15 @@ const HomePage = () => {
             </p>
           </div>
 
-          <div className="tl-faq-list">
+          <div className="tl-faq-list" ref={faqListRef}>
             {faqsData.map((faq, idx) => {
               const isOpen = openFaqIndex === idx
               return (
-                <div key={idx} className={`tl-faq-item ${isOpen ? 'open' : ''}`}>
+                <div
+                  key={idx}
+                  className={`tl-faq-item reveal-on-scroll ${isFaqVisible ? 'is-visible' : ''} ${isOpen ? 'open' : ''}`}
+                  style={{ transitionDelay: isFaqVisible ? `${idx * 90}ms` : '0ms' }}
+                >
                   <button
                     className="tl-faq-question"
                     type="button"
@@ -506,7 +532,7 @@ const HomePage = () => {
             </div>
           </div>
 
-          <Link to="/signup" className="tl-search-button">
+          <Link to="/onboarding?intent=placement" className="tl-search-button">
             FIND YOUR PATH
           </Link>
         </div>

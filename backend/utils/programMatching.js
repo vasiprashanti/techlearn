@@ -1,4 +1,5 @@
 import Program from "../models/Program.js";
+import { isUserVisibleProgram } from "./programVisibility.js";
 
 const escapeRegex = (value = "") =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -43,7 +44,9 @@ export const matchProgramsForUser = async (onboardingData = {}) => {
     .populate("projectIds", "_id title category duration_days status")
     .lean();
 
-  if (!activePrograms || activePrograms.length === 0) {
+  const visiblePrograms = (activePrograms || []).filter(isUserVisibleProgram);
+
+  if (visiblePrograms.length === 0) {
     return [];
   }
 
@@ -56,7 +59,7 @@ export const matchProgramsForUser = async (onboardingData = {}) => {
 
   const scoredCandidates = [];
 
-  for (const program of activePrograms) {
+  for (const program of visiblePrograms) {
     // Access Tier Rule: Free tier users must not receive Paid / Member-only programs
     if (isFreeTier) {
       if (program.pricingType === "Paid") {

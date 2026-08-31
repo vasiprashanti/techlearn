@@ -183,6 +183,9 @@ const Leaderboard = () => {
                 LEADERBOARD
               </span>
             </h1>
+            <p className="mt-3 text-sm text-black/55 dark:text-white/55">
+              {leaderboardData.personalized ? "A benchmark based on your learning direction." : "Global all-time benchmark."}
+            </p>
           </MotionDiv>
 
           <div className="grid gap-4 pt-1 lg:grid-cols-2 lg:items-stretch">
@@ -253,7 +256,7 @@ const Leaderboard = () => {
                       ) : error ? (
                         <div className="px-4 md:px-5 py-8 text-sm text-red-500">{error}</div>
                       ) : entries.length === 0 ? (
-                        <div className="px-4 md:px-5 py-8 text-sm text-black/50 dark:text-white/50">No leaderboard activity yet.</div>
+                        <div className="px-4 md:px-5 py-8 text-sm text-black/50 dark:text-white/50">Your community benchmark is ready. Complete a practice question to build your score.</div>
                       ) : entries.map((entry) => {
                         const avatar = normalizeAvatar(entry.avatar || entry.photoUrl || FALLBACK_AVATAR);
 
