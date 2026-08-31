@@ -1,8 +1,13 @@
-import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, ".env") });
+
+import express from "express";
+import cors from "cors";
 import { connectDB } from "./config/db.js";
 
 // Route imports
@@ -87,12 +92,6 @@ app.use(cors(corsOptions));
 // ...existing code...
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-
-// 🖼️ Static files (Core Java images)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 // 🖼️ Uploaded images — served from the same directory multer writes to
 const uploadsServePath = process.env.VERCEL ? "/tmp" : path.join(process.cwd(), "uploads/temp");
 app.use("/uploads/temp", express.static(uploadsServePath));
