@@ -329,9 +329,8 @@ const HomePage = () => {
       <section className="tl-results" id="results" ref={resultsSectionRef}>
         <div className="section-inner">
           <div className="tl-results-header">
-            <h2>
-              FROM THE <br />COMMUNITY
-            </h2>
+            <div className="tl-results-eyebrow">FROM STUDENTS</div>
+            <h2>What they think.</h2>
             <p>
               Students who trained with our placement roadmaps share their journey and success.
             </p>
@@ -403,7 +402,7 @@ const HomePage = () => {
                 Pick a skill and build real ability through structured learning, daily practice and hands-on work.
               </p>
               <div className="tl-price">
-                ₹399 <small>/year</small>
+                ₹399 <small>one-time</small>
               </div>
               <div className="tl-price-divider"></div>
               <ul className="tl-price-features">
@@ -427,7 +426,7 @@ const HomePage = () => {
                 A focused preparation system for students who want to become interview-ready and improve their chances of landing a job.
               </p>
               <div className="tl-price">
-                ₹799 <small>/year</small>
+                ₹799 <small>one-time</small>
               </div>
               <div className="tl-price-divider"></div>
               <ul className="tl-price-features">
@@ -452,9 +451,9 @@ const HomePage = () => {
       <section className="tl-faq-section" id="faqs">
         <div className="tl-faq-inner">
           <div className="tl-faq-header">
-            <span className="tl-faq-eyebrow">GOT QUESTIONS?</span>
+            <span className="tl-faq-eyebrow">BEFORE YOU START</span>
             <h2 className="tl-faq-title">
-              QUESTIONS? WE GOT YOU.
+              Questions? we got <em>you</em>.
             </h2>
             <p className="tl-faq-subtitle">
               These are just the most asked ones so far, feel free to reach out anytime!
