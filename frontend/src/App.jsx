@@ -10,8 +10,11 @@ import { AuthModalProvider } from './context/AuthModalContext'
 import { UserProvider } from './context/UserContext'
 import PrivateRoute from './Routes/PrivateRoute'
 import AdminPrivateRoute from './Routes/AdminPrivateRoute'
-import FloatingCodeWords from './components/FloatingCodeWords'
+import FloatingCodeWords from './components/FloatingCodeWords';
+import EditHiringJob from "./pages/AdminDashbaord/EditHiringJob";
 
+const Jobs = lazy(() => import('./pages/Jobs'));
+const Hiring = lazy(() => import("./pages/AdminDashbaord/Hiring.jsx"));
 const HomePage = lazy(() => import('./pages/HomePage'))
 const Signup = lazy(() => import('./pages/Auth/Signup'))
 const ResetPassword = lazy(() => import('./components/auth/ResetPassword'))
@@ -67,7 +70,6 @@ const FreeAssessmentSetup = lazy(() => import('./pages/Assessment/FreeAssessment
 const FreeAssessmentTest = lazy(() => import('./pages/Assessment/FreeAssessmentTest'))
 const ContextualOnboarding = lazy(() => import('./pages/Onboarding/ContextualOnboarding'))
 const ContextualSignup = lazy(() => import('./pages/Auth/ContextualSignup'))
-const Jobs = lazy(() => import('./pages/Jobs/Jobs'))
 
 const Roadmaps = lazy(() => import('./pages/Resources/Roadmaps'))
 const ResumeTemplates = lazy(() => import('./pages/Resources/ResumeTemplates'))
@@ -81,32 +83,34 @@ const ProjectPayment = lazy(() => import('./pages/Build/ProjectPayment'))
 const PaymentGateway = lazy(() => import('./pages/Build/PaymentGateway'))
 const UILibrary = lazy(() => import('./pages/Build/UILibrary'))
 
-const AdminDashboard = lazy(() => import('./pages/AdminDashbaord/AdminDashboard'))
-const Courses_Admin = lazy(() => import('./pages/AdminDashbaord/Courses'))
-const ProjectsList = lazy(() => import('./pages/AdminDashbaord/ProjectsList'))
-const EditProject = lazy(() => import('./pages/AdminDashbaord/EditProject'))
-const AdminTopicsList = lazy(() => import('./pages/AdminDashbaord/AdminTopicsList'))
-const EditTopicForm = lazy(() => import('./pages/AdminDashbaord/EditTopicForm'))
-const McqUpload = lazy(() => import('./pages/AdminDashbaord/McqUpload'))
-const UploadExercisesPage = lazy(() => import('./pages/AdminDashbaord/UploadExercisesPage'))
-const CodingRoundUpload = lazy(() => import('./pages/AdminDashbaord/CodingRoundUpload'))
-const Analytics = lazy(() => import('./pages/AdminDashbaord/Analytics'))
-const SystemHealth = lazy(() => import('./pages/AdminDashbaord/SystemHealth'))
-const Colleges = lazy(() => import('./pages/AdminDashbaord/Colleges'))
-const CollegeDetails = lazy(() => import('./pages/AdminDashbaord/CollegeDetails'))
-const Batches = lazy(() => import('./pages/AdminDashbaord/Batches'))
-const BatchDetails = lazy(() => import('./pages/AdminDashbaord/BatchDetails'))
-const Students = lazy(() => import('./pages/AdminDashbaord/Students'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashbaord/AdminDashboard.jsx'))
+const Courses_Admin = lazy(() => import('./pages/AdminDashbaord/Courses.jsx'))
+const ProjectsList = lazy(() => import('./pages/AdminDashbaord/ProjectsList.jsx'))
+const EditProject = lazy(() => import('./pages/AdminDashbaord/EditProject.jsx'))
+const AdminTopicsList = lazy(() => import('./pages/AdminDashbaord/AdminTopicsList.jsx'))
+const EditTopicForm = lazy(() => import('./pages/AdminDashbaord/EditTopicForm.jsx'))
+const McqUpload = lazy(() => import('./pages/AdminDashbaord/McqUpload.jsx'))
+const UploadExercisesPage = lazy(() => import('./pages/AdminDashbaord/UploadExercisesPage.jsx'))
+const CodingRoundUpload = lazy(() => import('./pages/AdminDashbaord/CodingRoundUpload.jsx'))
+const Analytics = lazy(() => import('./pages/AdminDashbaord/Analytics.jsx'))
+const SystemHealth = lazy(() => import('./pages/AdminDashbaord/SystemHealth.jsx'))
+const Colleges = lazy(() => import('./pages/AdminDashbaord/Colleges.jsx'))
+const CollegeDetails = lazy(() => import('./pages/AdminDashbaord/CollegeDetails.jsx'))
+const Batches = lazy(() => import('./pages/AdminDashbaord/Batches.jsx'))
+const BatchDetails = lazy(() => import('./pages/AdminDashbaord/BatchDetails.jsx'))
+const Students = lazy(() => import('./pages/AdminDashbaord/Students.jsx'))
 const QuestionBankAdminPage = lazy(() => import('./pages/Admin/QuestionBankAdminPage'))
 const QuestionBankCategoryDetailPage = lazy(() => import('./pages/Admin/QuestionBankCategoryDetailPage'))
-const Resources = lazy(() => import('./pages/AdminDashbaord/Resources'))
-const Certificates = lazy(() => import('./pages/AdminDashbaord/Certificates'))
-const SubmissionMonitor = lazy(() => import('./pages/AdminDashbaord/SubmissionMonitor'))
-const AuditLogs = lazy(() => import('./pages/AdminDashbaord/AuditLogs'))
-const Reports = lazy(() => import('./pages/AdminDashbaord/Reports'))
-const Settings = lazy(() => import('./pages/AdminDashbaord/Settings'))
-const Programs = lazy(() => import('./pages/AdminDashbaord/Programs'))
-const ProgramDetails = lazy(() => import('./pages/AdminDashbaord/ProgramDetails'))
+const Resources = lazy(() => import('./pages/AdminDashbaord/Resources.jsx'))
+const Certificates = lazy(() => import('./pages/AdminDashbaord/Certificates.jsx'))
+const SubmissionMonitor = lazy(() => import('./pages/AdminDashbaord/SubmissionMonitor.jsx'))
+const AuditLogs = lazy(() => import('./pages/AdminDashbaord/AuditLogs.jsx'))
+const Reports = lazy(() => import('./pages/AdminDashbaord/Reports.jsx'))
+const Settings = lazy(() => import('./pages/AdminDashbaord/Settings.jsx'))
+const Programs = lazy(() => import('./pages/AdminDashbaord/Programs.jsx'))
+const ProgramDetails = lazy(() => import('./pages/AdminDashbaord/ProgramDetails.jsx'))
+const HiringRoleJobs = lazy(() => import("./pages/AdminDashbaord/HiringRoleJobs.jsx"));
+const CreateHiringJob = lazy(() => import("./pages/AdminDashbaord/CreateHiringJob.jsx"));
 
 const Contact = lazy(() => import('./pages/Contact/Contact'))
 const About = lazy(() => import('./pages/About/About'))
@@ -220,7 +224,7 @@ function LayoutWrapper() {
     location.pathname.startsWith('/learn/interview-questions') ||
     location.pathname.startsWith('/core-prep/languages') ||
     location.pathname.startsWith('/core-prep/important-concepts') ||
-    (Boolean(isAuthenticated && user) && (location.pathname.startsWith('/resources/roadmaps') || location.pathname.startsWith('/roadmaps') || location.pathname === '/dashboard/roadmap')) ||
+    (Boolean(isAuthenticated && user) && (location.pathname.startsWith('/resources/roadmaps') || location.pathname.startsWith('/roadmaps') || location.pathname === '/dashboard/roadmap' || location.pathname.startsWith('/jobs'))) ||
     location.pathname.startsWith('/resources/resume-templates') ||
     location.pathname.startsWith('/learn/exercises') ||
     location.pathname.startsWith('/learn/program/') ||
@@ -284,7 +288,7 @@ function LayoutWrapper() {
             <Route path="/dashboard/performance" element={<Performance />} />
             <Route path="/dashboard/reports" element={<Navigate to="/dashboard/performance" replace />} />
             <Route path="/dashboard/leaderboard" element={<Leaderboard />} />
-             <Route path="/dashboard/resources" element={<ResourcesHub />} />
+            <Route path="/dashboard/resources" element={<ResourcesHub />} />
             <Route path="/dashboard/resources/free-courses" element={<Navigate to="/learn" replace />} />
             <Route path="/dashboard/resources/important-concepts" element={<Concepts />} />
             <Route path="/dashboard/resources/important-concepts/:conceptId" element={<ImportantConceptDetail />} />
@@ -296,12 +300,12 @@ function LayoutWrapper() {
             <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />
           </Route>
           
+          <Route path="/jobs" element={<Jobs />} />
           <Route path="/dashboard/profile" element={<Profile />} />
           <Route path="/dashboard/profile/edit" element={<Navigate to="/dashboard/profile/settings" replace />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/learn" element={<LearnMain />} />
-          <Route path="/jobs" element={<Jobs />} />
           <Route path="/learn/courses" element={<Navigate to="/learn" replace />} />
           <Route path="/learn/courses/all" element={<Navigate to="/learn" replace />} />
           <Route path="/learn/courses/:courseId" element={<CourseDetails />} />
@@ -361,6 +365,10 @@ function LayoutWrapper() {
           <Route element={<AdminPrivateRoute />}>
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/courses" element={<Courses_Admin />} />
+            <Route path="/admin/hiring" element={<Hiring />} />
+            <Route path="/admin/hiring/:roleId" element={<HiringRoleJobs />} />
+            <Route path="/admin/hiring/:roleId/jobs/create" element={<CreateHiringJob />}/>
+            <Route path="/admin/hiring/:roleId/jobs/:jobId/edit" element={<EditHiringJob />}/>
             <Route path="/admin/projects" element={<ProjectsList />} />
             <Route path="/admin/projects/edit/:projectId" element={<EditProject />} />
             <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />

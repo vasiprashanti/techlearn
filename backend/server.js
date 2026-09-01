@@ -1,11 +1,17 @@
-import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, ".env") });
+
+import express from "express";
+import cors from "cors";
 import { connectDB } from "./config/db.js";
 
 // Route imports
+import hiringRoutes from "./routes/hiringRoutes.js";
 import exerciseRoutes from "./routes/exerciseRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -47,10 +53,14 @@ import analyticsRoutes from "./routes/analyticsRoutes.js";
 import resourceRoutes from "./routes/resourceRoutes.js";
 import leaderboardRoutes from "./routes/leaderboardRoutes.js";
 import practiceRoutes from "./routes/practiceRoutes.js";
+
 import programRoutes from "./routes/programRoutes.js";
 import learnerReportRoutes from "./routes/learnerReportRoutes.js";
 import jobRoutes from "./routes/jobRoutes.js";
 import adminJobRoutes from "./routes/adminJobRoutes.js";
+
+import testimonialRoutes from "./routes/testimonialRoutes.js";
+
 
 dotenv.config();
 const app = express();
@@ -84,12 +94,6 @@ app.use(cors(corsOptions));
 // ...existing code...
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-
-// 🖼️ Static files (Core Java images)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 // 🖼️ Uploaded images — served from the same directory multer writes to
 const uploadsServePath = process.env.VERCEL ? "/tmp" : path.join(process.cwd(), "uploads/temp");
 app.use("/uploads/temp", express.static(uploadsServePath));
@@ -125,8 +129,8 @@ app.use("/api/student/project", studentProjectRoutes);
 app.use("/api/resources", resourceRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/practice", practiceRoutes);
+app.use("/api/testimonials", testimonialRoutes);
 app.use("/api/jobs", jobRoutes);
-
 // ✅ BUILD PAGE Routes
 app.use("/api/mini-projects", miniRouter);
 app.use("/api/major-projects", majorRouter);
@@ -142,13 +146,16 @@ app.use("/api/admin/projects", projectRoutes);
 app.use("/api/admin/batch", batchRoutes);
 app.use("/api/admin/students", studentRoutes);
 app.use("/api/admin/testing", adminTestingRoutes);
+
+// Hiring routes should come before the generic admin routes
+app.use("/api", hiringRoutes);
+
 app.use("/api/admin", adminPortalRoutes);
 app.use("/api/question-bank", questionBankRoutes);
 app.use("/api/admin", adminRouter);
 app.use("/api/admin/jobs", adminJobRoutes);
 app.use("/api/admin/analytics", analyticsRoutes);
 app.use("/api/admin/submission", submissionRoutes);
-
 // 🧪 Health Check
 app.get("/health", (req, res) => {
   res.json({
