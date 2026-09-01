@@ -587,7 +587,7 @@ export default function Navbar() {
                 </li>
               )}
               <li>
-                <Link to="/resources/roadmaps">Hiring</Link>
+                <Link to="/jobs">Hiring</Link>
               </li>
               {isAuthenticated && (
                 <li>
@@ -713,7 +713,7 @@ export default function Navbar() {
           >
             <Link to="/learn">Learn</Link>
             <Link to="/roadmaps">Roadmaps</Link>
-            <Link to="/resources/roadmaps">Hiring</Link>
+            <Link to="/jobs">Hiring</Link>
 
             {isAuthenticated ? (
               <>

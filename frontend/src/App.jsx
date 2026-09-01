@@ -222,7 +222,7 @@ function LayoutWrapper() {
     location.pathname.startsWith('/learn/interview-questions') ||
     location.pathname.startsWith('/core-prep/languages') ||
     location.pathname.startsWith('/core-prep/important-concepts') ||
-    (Boolean(isAuthenticated && user) && (location.pathname.startsWith('/resources/roadmaps') || location.pathname.startsWith('/roadmaps') || location.pathname === '/dashboard/roadmap')) ||
+    (Boolean(isAuthenticated && user) && (location.pathname.startsWith('/resources/roadmaps') || location.pathname.startsWith('/roadmaps') || location.pathname === '/dashboard/roadmap' || location.pathname.startsWith('/jobs'))) ||
     location.pathname.startsWith('/resources/resume-templates') ||
     location.pathname.startsWith('/learn/exercises') ||
     location.pathname.startsWith('/learn/program/') ||
@@ -292,9 +292,9 @@ function LayoutWrapper() {
             <Route path="/dashboard/profile/settings" element={<DashboardSettings />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />
-            <Route path="/jobs" element={<Jobs />} />
           </Route>
           
+          <Route path="/jobs" element={<Jobs />} />
           <Route path="/dashboard/profile" element={<Profile />} />
           <Route path="/dashboard/profile/edit" element={<Navigate to="/dashboard/profile/settings" replace />} />
           <Route path="/projects" element={<Projects />} />

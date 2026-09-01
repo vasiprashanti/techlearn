@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, Lock } from "lucide-react";
 import Sidebar from "../components/Dashboard/Sidebar";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
@@ -7,10 +9,12 @@ import { hiringAPI } from "../services/api";
 export default function Jobs() {
   const { theme } = useTheme();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isDarkMode = theme === "dark";
+  const isAuthenticated = Boolean(user);
 
-  // Navigation & Category State
-  const [activeTab, setActiveTab] = useState("for-you"); // "for-you", "all", "calendar"
+  // Navigation & Category State: Guests start on "all", authenticated users start on "for-you"
+  const [activeTab, setActiveTab] = useState(isAuthenticated ? "for-you" : "all"); // "for-you", "all", "calendar"
   const [activeType, setActiveType] = useState("all"); // "all", "Internship", "Freelance"
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("newest"); // "newest", "salary", "company", "oldest", "deadline"
@@ -91,6 +95,11 @@ export default function Jobs() {
 
         let response;
         if (activeTab === "for-you") {
+          if (!isAuthenticated) {
+            setJobs([]);
+            setLoading(false);
+            return;
+          }
           response = await hiringAPI.getRecommendedJobs({
             search: searchQuery,
             jobType: activeType !== "all" ? activeType : (selectedJobTypes[0] || ""),
@@ -326,11 +335,30 @@ export default function Jobs() {
         }`}
       />
 
-      <Sidebar />
+      {/* Render Sidebar only for authenticated users */}
+      {isAuthenticated && user && <Sidebar />}
 
-      {/* Main Container */}
-      <main className="min-h-screen lg:ml-[90px] w-full lg:w-[calc(100%-90px)]">
+      {/* Main Container - Full width for guests, with sidebar margin for logged in users */}
+      <main
+        className={`min-h-screen w-full ${
+          isAuthenticated && user
+            ? "lg:ml-[90px] lg:w-[calc(100%-90px)]"
+            : ""
+        }`}
+      >
         <div className="w-full max-w-[1250px] mx-auto px-6 sm:px-12 pt-28 pb-16">
+          {/* Back button for guest users matching Roadmaps page */}
+          {!isAuthenticated && (
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="mb-6 inline-flex items-center gap-2 rounded-xl border border-black/10 dark:border-white/10 bg-white/40 dark:bg-white/5 hover:bg-white/70 dark:hover:bg-white/10 px-4 py-2 text-xs font-bold text-[#00113b] dark:text-[#8fd9ff] shadow-sm transition hover:-translate-x-0.5 cursor-pointer backdrop-blur-md"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back</span>
+            </button>
+          )}
+
           {/* HEADER */}
           <header className="mb-[30px]">
             <h1
@@ -530,18 +558,31 @@ export default function Jobs() {
                       isDarkMode ? "text-white" : "text-[#00113b]"
                     }`}
                   >
-                    No matching jobs
+                    {!isAuthenticated && activeTab === "for-you"
+                      ? "Personalized For You"
+                      : "No matching jobs"}
                   </h3>
-                  <p className="text-[12px]">
-                    {activeTab === "for-you"
+                  <p className="text-[12px] max-w-md mx-auto mb-4">
+                    {!isAuthenticated && activeTab === "for-you"
+                      ? "Log in or sign up to get personalized job opportunities tailored to your skills, target roles, and college stream!"
+                      : activeTab === "for-you"
                       ? "No recommendations found. Try updating your profile or explore All Jobs."
                       : "Try changing your search or filters."}
                   </p>
+                  {!isAuthenticated && activeTab === "for-you" && (
+                    <Link
+                      to="/signup"
+                      className="inline-block px-5 py-2.5 rounded-[8px] font-['Press_Start_2P'] text-[8px] bg-[#b2e96a] text-[#0a1128] font-bold shadow-md hover:bg-[#a6e257] transition-all"
+                    >
+                      Sign In to Personalize
+                    </Link>
+                  )}
                 </div>
               ) : (
                 /* JOB ROWS CONTAINER */
                 <div className="flex flex-col gap-[9px]">
-                  {jobs.map((job) => {
+                  {/* For guests, only show first 12 jobs; remaining are locked */}
+                  {(isAuthenticated ? jobs : jobs.slice(0, 12)).map((job) => {
                     const expired = isJobExpired(job);
                     const tags = [job.workMode, job.jobType].filter(Boolean);
 
@@ -641,6 +682,81 @@ export default function Jobs() {
                       </div>
                     );
                   })}
+
+                  {/* GUEST LOCKED OVERLAY / BANNER */}
+                  {!isAuthenticated && jobs.length > 0 && (
+                    <div className="mt-4 flex flex-col gap-[9px] relative">
+                      {/* Blurred teaser rows */}
+                      {[1, 2, 3].map((placeholderIdx) => (
+                        <div
+                          key={`locked-${placeholderIdx}`}
+                          className={`relative select-none pointer-events-none filter blur-[4px] opacity-40 grid grid-cols-1 md:grid-cols-[minmax(190px,1.1fr)_minmax(280px,1.6fr)_minmax(150px,0.75fr)_105px] items-center min-h-[108px] px-[22px] py-[18px] rounded-[14px] border ${
+                            isDarkMode
+                              ? "bg-white/5 border-white/10"
+                              : "bg-white/60 border-white/80"
+                          }`}
+                        >
+                          <div className="space-y-2">
+                            <div className="h-4 bg-slate-400/40 rounded w-3/4"></div>
+                            <div className="h-3 bg-slate-400/30 rounded w-1/2"></div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="h-4 bg-slate-400/40 rounded w-1/3"></div>
+                            <div className="flex gap-2">
+                              <div className="h-4 bg-slate-400/30 rounded w-12"></div>
+                              <div className="h-4 bg-slate-400/30 rounded w-16"></div>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="h-4 bg-slate-400/40 rounded w-20"></div>
+                            <div className="h-3 bg-slate-400/20 rounded w-28"></div>
+                          </div>
+                          <div>
+                            <div className="h-9 bg-[#b2e96a]/40 rounded-lg"></div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Locked CTA Overlay */}
+                      <div className="my-6 p-8 rounded-[16px] text-center border relative overflow-hidden backdrop-blur-md bg-gradient-to-b from-white/80 to-white/95 dark:from-[#0b1934]/90 dark:to-[#020b23]/95 border-[#00113b]/15 dark:border-white/15 shadow-xl">
+                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#b2e96a]/20 text-[#00113b] dark:text-[#b2e96a] mb-4 border border-[#b2e96a]/40">
+                          <Lock className="w-6 h-6" />
+                        </div>
+                        <h3
+                          className={`font-['Press_Start_2P'] text-[13px] sm:text-[15px] mb-3 leading-relaxed ${
+                            isDarkMode ? "text-white" : "text-[#00113b]"
+                          }`}
+                        >
+                          Unlock All Opportunities
+                        </h3>
+                        <p
+                          className={`max-w-md mx-auto text-[13px] mb-6 ${
+                            isDarkMode ? "text-slate-300" : "text-slate-600"
+                          }`}
+                        >
+                          You are viewing a preview of 12 jobs. Create a free account or log in to explore all hiring opportunities, deadline calendar, and personalized recommendations!
+                        </p>
+                        <div className="flex items-center justify-center gap-3 flex-wrap">
+                          <Link
+                            to="/signup"
+                            className="px-6 py-3 rounded-[10px] font-['Press_Start_2P'] text-[9px] bg-[#b2e96a] text-[#0a1128] font-bold hover:bg-[#a6e257] transition-all shadow-md active:scale-95"
+                          >
+                            Sign Up Free
+                          </Link>
+                          <Link
+                            to="/signup"
+                            className={`px-6 py-3 rounded-[10px] font-['Press_Start_2P'] text-[9px] border font-bold transition-all active:scale-95 ${
+                              isDarkMode
+                                ? "border-white/20 text-white hover:bg-white/10"
+                                : "border-[#00113b]/20 text-[#00113b] hover:bg-[#00113b]/5"
+                            }`}
+                          >
+                            Log In
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </section>
