@@ -22,7 +22,7 @@ const roleSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["Active", "Archived"],
+      enum: ["Active", "Draft", "Archived"],
       default: "Active",
     },
   },

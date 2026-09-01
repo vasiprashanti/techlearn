@@ -577,18 +577,22 @@ getJobs: (params = {}) => {
   const suffix = query.toString() ? `?${query.toString()}` : "";
 
   return request(`/admin/jobs${suffix}`, {
-  rawResponse: true,
-});
+    rawResponse: true,
+    noCache: true,
+  });
 },
 
 getJobById: (jobId) =>
-  request(`/admin/jobs/${jobId}`),
+  request(`/admin/jobs/${jobId}`, { noCache: true }),
 
-createJob: (body) =>
-  request("/admin/jobs", {
+createJob: async (body) => {
+  const res = await request("/admin/jobs", {
     method: "POST",
     body: JSON.stringify(body),
-  }),
+  });
+  invalidateCacheForPath("/admin/roles");
+  return res;
+},
 
 parseJobMarkdown: (file) => {
   const formData = new FormData();
@@ -610,22 +614,31 @@ uploadJobLogo: (file) => {
   });
 },
 
-updateJob: (jobId, body) =>
-  request(`/admin/jobs/${jobId}`, {
+updateJob: async (jobId, body) => {
+  const res = await request(`/admin/jobs/${jobId}`, {
     method: "PUT",
     body: JSON.stringify(body),
-  }),
+  });
+  invalidateCacheForPath("/admin/roles");
+  return res;
+},
 
-updateJobStatus: (jobId, status) =>
-  request(`/admin/jobs/${jobId}/status`, {
+updateJobStatus: async (jobId, status) => {
+  const res = await request(`/admin/jobs/${jobId}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
-  }),
+  });
+  invalidateCacheForPath("/admin/roles");
+  return res;
+},
 
-deleteJob: (jobId) =>
-  request(`/admin/jobs/${jobId}`, {
+deleteJob: async (jobId) => {
+  const res = await request(`/admin/jobs/${jobId}`, {
     method: "DELETE",
-  }),
+  });
+  invalidateCacheForPath("/admin/roles");
+  return res;
+},
 
     // Hiring Roles API
   getRoles: (params = {}) => {
@@ -637,7 +650,7 @@ deleteJob: (jobId) =>
 
     const suffix = query.toString() ? `?${query.toString()}` : '';
 
-    return request(`/admin/roles${suffix}`);
+    return request(`/admin/roles${suffix}`, { noCache: true });
   },
 
   createRole: (body) =>

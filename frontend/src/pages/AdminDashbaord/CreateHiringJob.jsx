@@ -16,6 +16,24 @@ export default function CreateHiringJob() {
   const [submitting, setSubmitting] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  useEffect(() => {
+    const fetchRole = async () => {
+      if (!roleId) return;
+      try {
+        setLoadingRole(true);
+        const res = await adminAPI.getRoleById(roleId);
+        const role = res?.data || res;
+        setRoleName(role?.roleName || role?.name || "Hiring Role");
+      } catch (err) {
+        console.error("Failed to load role details:", err);
+        setRoleName("Hiring Role");
+      } finally {
+        setLoadingRole(false);
+      }
+    };
+    fetchRole();
+  }, [roleId]);
+
   const [form, setForm] = useState({
   companyName: "",
   roleTitle: "",

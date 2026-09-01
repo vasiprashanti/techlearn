@@ -1,6 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FiSearch, FiSliders, FiChevronDown, FiChevronLeft, FiChevronRight, FiMapPin, FiExternalLink, FiX, FiCalendar, FiClock } from "react-icons/fi";
-import { BriefcaseBusiness, CalendarDays, AlertCircle } from "lucide-react";
 import Sidebar from "../components/Dashboard/Sidebar";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
@@ -11,43 +9,63 @@ export default function Jobs() {
   const { user } = useAuth();
   const isDarkMode = theme === "dark";
 
-  const [activeTab, setActiveTab] = useState("For You");
-  const [activeCategory, setActiveCategory] = useState("Jobs");
+  // Navigation & Category State
+  const [activeTab, setActiveTab] = useState("for-you"); // "for-you", "all", "calendar"
+  const [activeType, setActiveType] = useState("all"); // "all", "Internship", "Freelance"
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("Newest");
+  const [sortBy, setSortBy] = useState("newest"); // "newest", "salary", "company", "oldest", "deadline"
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [recommendationCriteria, setRecommendationCriteria] = useState(null);
 
-  // Filters Modal / Drawer
-  const [showFiltersModal, setShowFiltersModal] = useState(false);
+  // Filter Drawer State
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [selectedRoles, setSelectedRoles] = useState([]);
+  const [selectedExperience, setSelectedExperience] = useState([]);
+  const [selectedJobTypes, setSelectedJobTypes] = useState([]);
+  const [selectedWorkModes, setSelectedWorkModes] = useState([]);
+  const [selectedCompanies, setSelectedCompanies] = useState([]);
+
+  // Filter Options
   const [availableFilters, setAvailableFilters] = useState({
     location: [],
     experience: [],
     workMode: [],
     jobType: [],
     companyType: [],
+    roles: [
+      "Frontend Developer",
+      "Full Stack Developer",
+      "Backend Engineer",
+      "Data Analyst",
+      "Software Engineer",
+      "AI Engineer",
+      "UI Developer",
+    ],
+    companies: ["Google", "Razorpay", "Microsoft", "Atlassian", "Startup Labs", "TCS", "Amazon"],
   });
-  const [selectedLocation, setSelectedLocation] = useState("");
-  const [selectedExperience, setSelectedExperience] = useState("");
-  const [selectedWorkMode, setSelectedWorkMode] = useState("");
 
-  // Calendar State
-  const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
+  // Calendar & Deadline State
+  const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth()); // 0-indexed month
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
   const [calendarData, setCalendarData] = useState({});
   const [loadingCalendar, setLoadingCalendar] = useState(false);
-  const [selectedCalendarDay, setSelectedCalendarDay] = useState(null);
+  const [deadlineDrawerOpen, setDeadlineDrawerOpen] = useState(false);
+  const [selectedDeadlineDate, setSelectedDeadlineDate] = useState("");
+  const [selectedDeadlineJobs, setSelectedDeadlineJobs] = useState([]);
 
-  // Fetch Available Filter options once
+  // Fetch filter metadata
   useEffect(() => {
     const fetchFilters = async () => {
       try {
         const res = await hiringAPI.getFilters();
         if (res?.data) {
-          setAvailableFilters(res.data);
+          setAvailableFilters((prev) => ({
+            ...prev,
+            ...res.data,
+          }));
         }
       } catch (err) {
         console.error("Failed to load filters:", err);
@@ -56,9 +74,9 @@ export default function Jobs() {
     fetchFilters();
   }, []);
 
-  // Fetch Jobs for "For You" and "All Jobs"
+  // Fetch Jobs from backend API
   useEffect(() => {
-    if (activeTab === "Calendar") return;
+    if (activeTab === "calendar") return;
 
     let isCancelled = false;
 
@@ -67,39 +85,87 @@ export default function Jobs() {
         setLoading(true);
         setError("");
 
+        let categoryParam = "";
+        if (activeType === "Internship") categoryParam = "internships";
+        else if (activeType === "Freelance") categoryParam = "freelance";
+
         let response;
-        if (activeTab === "For You") {
-          // Call Personalized recommendation endpoint
+        if (activeTab === "for-you") {
           response = await hiringAPI.getRecommendedJobs({
             search: searchQuery,
-            location: selectedLocation,
-            experience: selectedExperience,
-            workMode: selectedWorkMode,
+            jobType: activeType !== "all" ? activeType : (selectedJobTypes[0] || ""),
+            workMode: selectedWorkModes[0] || "",
+            experience: selectedExperience[0] || "",
             page,
-            limit: 10,
+            limit: 50,
           });
-          if (!isCancelled) {
-            setRecommendationCriteria(response?.recommendationCriteria || null);
-          }
         } else {
-          // "All Jobs" Tab
           response = await hiringAPI.getJobs({
             search: searchQuery,
-            category: activeCategory,
-            location: selectedLocation,
-            experience: selectedExperience,
-            workMode: selectedWorkMode,
-            sort: sortBy === "Newest" ? "newest" : sortBy === "Oldest" ? "oldest" : "deadline",
+            category: categoryParam,
+            jobType: activeType === "all" && selectedJobTypes.length ? selectedJobTypes[0] : "",
+            workMode: selectedWorkModes[0] || "",
+            experience: selectedExperience[0] || "",
+            sort: sortBy === "newest" ? "newest" : sortBy === "salary" ? "salary" : sortBy === "company" ? "company" : "newest",
             page,
-            limit: 10,
+            limit: 50,
           });
-          if (!isCancelled) {
-            setRecommendationCriteria(null);
-          }
         }
 
         if (!isCancelled) {
-          setJobs(response?.data || []);
+          let fetchedJobs = response?.data || [];
+
+          // Additional client-side filtering if multiple checkbox filters are applied
+          if (selectedRoles.length > 0) {
+            fetchedJobs = fetchedJobs.filter((job) =>
+              selectedRoles.some(
+                (r) =>
+                  job.title?.toLowerCase().includes(r.toLowerCase()) ||
+                  job.roleId?.roleName?.toLowerCase().includes(r.toLowerCase())
+              )
+            );
+          }
+
+          if (selectedCompanies.length > 0) {
+            fetchedJobs = fetchedJobs.filter((job) =>
+              selectedCompanies.some((c) =>
+                job.companyName?.toLowerCase().includes(c.toLowerCase())
+              )
+            );
+          }
+
+          if (selectedWorkModes.length > 0) {
+            fetchedJobs = fetchedJobs.filter((job) =>
+              selectedWorkModes.some(
+                (m) => job.workMode?.toLowerCase() === m.toLowerCase()
+              )
+            );
+          }
+
+          if (selectedJobTypes.length > 0) {
+            fetchedJobs = fetchedJobs.filter((job) =>
+              selectedJobTypes.some(
+                (t) => job.jobType?.toLowerCase() === t.toLowerCase()
+              )
+            );
+          }
+
+          // Client-side sorting enhancement
+          if (sortBy === "salary") {
+            fetchedJobs.sort((a, b) => {
+              const parseSalary = (val) => {
+                const match = String(val || "").match(/\d+/);
+                return match ? parseInt(match[0], 10) : 0;
+              };
+              return parseSalary(b.salary) - parseSalary(a.salary);
+            });
+          } else if (sortBy === "company") {
+            fetchedJobs.sort((a, b) =>
+              (a.companyName || "").localeCompare(b.companyName || "")
+            );
+          }
+
+          setJobs(fetchedJobs);
           setTotalPages(response?.pagination?.totalPages || 1);
         }
       } catch (err) {
@@ -109,9 +175,7 @@ export default function Jobs() {
           setJobs([]);
         }
       } finally {
-        if (!isCancelled) {
-          setLoading(false);
-        }
+        if (!isCancelled) setLoading(false);
       }
     };
 
@@ -120,36 +184,42 @@ export default function Jobs() {
     return () => {
       isCancelled = true;
     };
-  }, [activeTab, searchQuery, activeCategory, sortBy, page, selectedLocation, selectedExperience, selectedWorkMode]);
+  }, [
+    activeTab,
+    activeType,
+    searchQuery,
+    sortBy,
+    page,
+    selectedRoles,
+    selectedExperience,
+    selectedJobTypes,
+    selectedWorkModes,
+    selectedCompanies,
+  ]);
 
-  // Fetch Calendar Data for Selected Month
-  const currentMonthKey = useMemo(() => {
-    const y = currentCalendarDate.getFullYear();
-    const m = String(currentCalendarDate.getMonth() + 1).padStart(2, "0");
-    return `${y}-${m}`;
-  }, [currentCalendarDate]);
+  // Calendar Month Format Key
+  const calendarMonthKey = useMemo(() => {
+    return `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}`;
+  }, [calendarYear, calendarMonth]);
 
+  // Fetch Calendar Data
   useEffect(() => {
-    if (activeTab !== "Calendar") return;
+    if (activeTab !== "calendar") return;
 
     let isCancelled = false;
 
     const fetchCalendar = async () => {
       try {
         setLoadingCalendar(true);
-        const res = await hiringAPI.getCalendar(currentMonthKey);
+        const res = await hiringAPI.getCalendar(calendarMonthKey);
         if (!isCancelled) {
           setCalendarData(res?.data || {});
         }
       } catch (err) {
         console.error("Failed to fetch calendar jobs:", err);
-        if (!isCancelled) {
-          setCalendarData({});
-        }
+        if (!isCancelled) setCalendarData({});
       } finally {
-        if (!isCancelled) {
-          setLoadingCalendar(false);
-        }
+        if (!isCancelled) setLoadingCalendar(false);
       }
     };
 
@@ -158,18 +228,29 @@ export default function Jobs() {
     return () => {
       isCancelled = true;
     };
-  }, [activeTab, currentMonthKey]);
+  }, [activeTab, calendarMonthKey]);
 
-  // Helper: check if a job is expired
+  // Tag Styling Helper matching jobs.html
+  const getTagClass = (tag = "") => {
+    const value = tag.toLowerCase().trim();
+    if (value === "remote") return "bg-[#d9f4a7] text-[#080830]";
+    if (value === "hybrid") return "bg-[#dceeff] text-[#080830]";
+    if (value === "on-site" || value === "onsite") return "bg-[#ffe3bf] text-[#080830]";
+    if (value === "full-time" || value === "full time") return "bg-[#e8ddff] text-[#080830]";
+    if (value === "internship") return "bg-[#f8dce8] text-[#080830]";
+    if (value === "freelance") return "bg-[#e7eaec] text-[#080830]";
+    return "bg-[#e7eaec] text-[#080830]";
+  };
+
+  // Check if job has expired
   const isJobExpired = (job) => {
     if (!job?.applicationDeadline) return false;
     const deadline = new Date(job.applicationDeadline);
     const now = new Date();
-    // Compare day boundary
     return deadline.setHours(23, 59, 59, 999) < now.getTime();
   };
 
-  // Helper: handle direct application link
+  // Apply Handler
   const handleApply = (job, e) => {
     e?.stopPropagation?.();
     if (isJobExpired(job)) {
@@ -183,24 +264,18 @@ export default function Jobs() {
     }
   };
 
-  // Calendar month days calculation
-  const calendarDays = useMemo(() => {
-    const year = currentCalendarDate.getFullYear();
-    const month = currentCalendarDate.getMonth();
-
-    const firstDayIndex = new Date(year, month, 1).getDay(); // 0 is Sunday
-    const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+  // Calendar Grid Calculation
+  const calendarGridData = useMemo(() => {
+    const firstDayIndex = new Date(calendarYear, calendarMonth, 1).getDay();
+    const totalDaysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
 
     const days = [];
-
-    // Empty lead slots
     for (let i = 0; i < firstDayIndex; i++) {
       days.push({ day: null });
     }
 
-    // Actual days
     for (let d = 1; d <= totalDaysInMonth; d++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       const dayJobs = calendarData[dateStr] || [];
       days.push({
         day: d,
@@ -210,54 +285,87 @@ export default function Jobs() {
     }
 
     return days;
-  }, [currentCalendarDate, calendarData]);
+  }, [calendarYear, calendarMonth, calendarData]);
 
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
+  // Open Deadline Drawer for a Specific Date
+  const openDeadlineDrawer = (dateStr, dayJobs) => {
+    setSelectedDeadlineDate(dateStr);
+    setSelectedDeadlineJobs(dayJobs);
+    setDeadlineDrawerOpen(true);
+  };
+
+  const closeAllDrawers = () => {
+    setFilterDrawerOpen(false);
+    setDeadlineDrawerOpen(false);
+  };
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    setSelectedRoles([]);
+    setSelectedExperience([]);
+    setSelectedJobTypes([]);
+    setSelectedWorkModes([]);
+    setSelectedCompanies([]);
+    setFilterDrawerOpen(false);
+  };
+
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
     <div
       className={`min-h-screen font-sans antialiased ${
-        isDarkMode
-          ? "bg-[#020b23] text-white"
-          : "bg-[#bceaff] text-[#00113b]"
+        isDarkMode ? "text-white" : "text-[#00113b]"
       }`}
     >
+      {/* Background Gradient matching Dashboard */}
+      <div
+        className={`fixed inset-0 -z-10 transition-colors duration-300 ${
+          isDarkMode
+            ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]"
+            : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"
+        }`}
+      />
+
       <Sidebar />
 
-      <main className="min-h-screen lg:ml-[90px] px-5 sm:px-8 lg:px-12 pt-28 pb-10">
-        <div className="max-w-[1250px] mx-auto">
-
-          {/* Header */}
-          <div className="mb-8">
+      {/* Main Container */}
+      <main className="min-h-screen lg:ml-[90px] w-full lg:w-[calc(100%-90px)]">
+        <div className="w-full max-w-[1250px] mx-auto px-6 sm:px-12 pt-28 pb-16">
+          {/* HEADER */}
+          <header className="mb-[30px]">
             <h1
-              className={`font-['Press_Start_2P'] text-2xl sm:text-3xl ${
+              className={`font-['Press_Start_2P'] text-[24px] sm:text-[28px] leading-[1.5] tracking-[-1px] ${
                 isDarkMode ? "text-white" : "text-[#00113b]"
               }`}
             >
               Jobs
             </h1>
-
             <p
-              className={`mt-2 text-sm sm:text-base ${
-                isDarkMode ? "text-slate-400" : "text-slate-500"
+              className={`mt-[10px] text-[13px] ${
+                isDarkMode ? "text-slate-400" : "text-slate-600"
               }`}
             >
               Opportunities matched to your career goals.
             </p>
-          </div>
+          </header>
 
-          {/* Search */}
-          <div className="relative w-full mb-6">
-            <FiSearch
-              className={`absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none ${
-                isDarkMode ? "text-slate-300" : "text-slate-600"
+          {/* SEARCH BOX */}
+          <div
+            className={`h-[52px] w-full flex items-center px-[17px] rounded-[12px] border mb-[18px] transition-colors ${
+              isDarkMode
+                ? "bg-white/5 border-white/10 text-white focus-within:bg-white/10 focus-within:border-white/20"
+                : "bg-white/70 border-[#00113b]/15 text-[#00113b] focus-within:bg-white focus-within:border-[#00113b]/30 shadow-sm"
+            }`}
+          >
+            <span
+              className={`text-[19px] mr-[12px] select-none ${
+                isDarkMode ? "text-slate-400" : "text-slate-500"
               }`}
-            />
-
+            >
+              ⌕
+            </span>
             <input
+              id="searchInput"
               type="text"
               value={searchQuery}
               onChange={(e) => {
@@ -265,597 +373,580 @@ export default function Jobs() {
                 setPage(1);
               }}
               placeholder="Search roles, companies or skills..."
-              className={`w-full h-14 pl-14 pr-5 rounded-[18px] border outline-none transition-all ${
-                isDarkMode
-                  ? "bg-[#0b1934] border-white/15 text-white placeholder:text-slate-300 focus:border-[#a3e635]/60"
-                  : "bg-white/70 border-[#003432]/15 text-[#17251a] placeholder:text-slate-600 focus:border-[#a3e635]/70"
+              className={`w-full border-none outline-none bg-transparent text-[13px] placeholder:text-slate-400 ${
+                isDarkMode ? "text-white" : "text-[#00113b]"
               }`}
             />
           </div>
 
-          {/* Main Tabs */}
+          {/* VIEW TABS */}
           <div
-            className={`flex items-center gap-7 border-b mb-6 ${
-              isDarkMode
-                ? "border-white/10"
-                : "border-slate-200"
+            className={`flex items-center gap-[7px] border-b mb-[16px] ${
+              isDarkMode ? "border-white/10" : "border-[#00113b]/15"
             }`}
           >
-            {["For You", "All Jobs", "Calendar"].map((tab) => (
+            {[
+              { id: "for-you", label: "For You" },
+              { id: "all", label: "All Jobs" },
+              { id: "calendar", label: "Calendar" },
+            ].map((tab) => (
               <button
-                key={tab}
+                key={tab.id}
                 onClick={() => {
-                  setActiveTab(tab);
+                  setActiveTab(tab.id);
                   setPage(1);
                 }}
-                className={`pb-3 text-sm font-semibold transition relative ${
-                  activeTab === tab
+                className={`border-b-2 py-[11px] px-[14px] text-[11px] font-bold cursor-pointer transition-colors -mb-[1px] ${
+                  activeTab === tab.id
                     ? isDarkMode
-                      ? "text-white"
-                      : "text-[#00113b] dark:text-white"
+                      ? "text-white border-white"
+                      : "text-[#00113b] border-[#00113b]"
                     : isDarkMode
-                    ? "text-slate-400 hover:text-white"
-                    : "text-slate-500 hover:text-slate-800"
+                    ? "text-slate-400 border-transparent hover:text-white"
+                    : "text-slate-500 border-transparent hover:text-[#00113b]"
                 }`}
               >
-                {tab}
-
-                {activeTab === tab && (
-                  <span className="absolute left-0 right-0 -bottom-[1px] h-[2px] bg-[#a3e635] rounded-full" />
-                )}
+                {tab.label}
               </button>
             ))}
           </div>
 
-          {/* CALENDAR VIEW */}
-          {activeTab === "Calendar" ? (
-            <div className="space-y-6">
-              {/* Month Selector Bar */}
-              <div
-                className={`flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl border ${
-                  isDarkMode ? "bg-[#0b1934] border-white/10" : "bg-white/80 border-slate-200"
+          {/* TOOL ROW (Chips & Actions) */}
+          <div className="flex justify-between items-center gap-[15px] mb-[24px] flex-wrap md:flex-nowrap">
+            {/* Left Chips */}
+            <div className="flex gap-[7px] overflow-x-auto scrollbar-none max-w-full">
+              {[
+                { id: "all", label: "Jobs" },
+                { id: "Internship", label: "Internships" },
+                { id: "Freelance", label: "Freelance" },
+              ].map((chip) => (
+                <button
+                  key={chip.id}
+                  onClick={() => {
+                    setActiveType(chip.id);
+                    setPage(1);
+                  }}
+                  className={`py-[8px] px-[13px] rounded-[100px] whitespace-nowrap text-[10px] cursor-pointer transition-colors border ${
+                    activeType === chip.id
+                      ? isDarkMode
+                        ? "bg-[#b2e96a] text-[#0a1128] border-[#b2e96a] font-bold"
+                        : "bg-[#00113b] text-white border-[#00113b] font-semibold shadow-sm"
+                      : isDarkMode
+                      ? "bg-white/5 text-slate-300 border-white/10 hover:bg-white/10"
+                      : "bg-white/70 text-[#00113b] border-[#00113b]/15 hover:bg-white shadow-xs"
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Right Tools - Single Line Alignment: Filters -> Sorting -> Date */}
+            <div className="flex items-center gap-[8px] shrink-0 flex-wrap sm:flex-nowrap">
+              {/* 1. Filters Button */}
+              <button
+                onClick={() => setFilterDrawerOpen(true)}
+                className={`h-[36px] px-[12px] rounded-[8px] text-[10px] cursor-pointer border flex items-center gap-1.5 transition-colors ${
+                  selectedRoles.length ||
+                  selectedExperience.length ||
+                  selectedJobTypes.length ||
+                  selectedWorkModes.length ||
+                  selectedCompanies.length
+                    ? isDarkMode
+                      ? "bg-[#b2e96a]/20 text-[#b2e96a] border-[#b2e96a]"
+                      : "bg-[#00113b] text-white border-[#00113b] font-bold shadow-sm"
+                    : isDarkMode
+                    ? "bg-white/5 border-white/10 text-white hover:bg-white/15"
+                    : "bg-white/70 border-[#00113b]/15 text-[#00113b] hover:bg-white shadow-xs"
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <CalendarDays className="w-6 h-6 text-[#8bcf2c]" />
-                  <h2 className="text-lg font-bold">
-                    {monthNames[currentCalendarDate.getMonth()]} {currentCalendarDate.getFullYear()}
-                  </h2>
-                </div>
+                Filters
+                {Boolean(
+                  selectedRoles.length ||
+                    selectedExperience.length ||
+                    selectedJobTypes.length ||
+                    selectedWorkModes.length ||
+                    selectedCompanies.length
+                ) && " •"}
+              </button>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCurrentCalendarDate(
-                        new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth() - 1, 1)
-                      );
-                    }}
-                    className={`p-2 rounded-lg border text-sm font-semibold hover:bg-black/5 dark:hover:bg-white/10 transition ${
-                      isDarkMode ? "border-white/10" : "border-slate-200"
-                    }`}
-                  >
-                    <FiChevronLeft className="w-4 h-4" />
-                  </button>
+              {/* 2. Sorting Dropdown with adjusted icon padding */}
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className={`h-[36px] pl-[10px] pr-[28px] rounded-[8px] text-[10px] cursor-pointer border outline-none transition-colors ${
+                  isDarkMode
+                    ? "bg-[#071532] border-white/10 text-white"
+                    : "bg-white/70 border-[#00113b]/15 text-[#00113b] hover:bg-white shadow-xs"
+                }`}
+              >
+                <option value="newest">Newest</option>
+                <option value="salary">Highest salary</option>
+                <option value="company">Company A–Z</option>
+              </select>
 
-                  <button
-                    type="button"
-                    onClick={() => setCurrentCalendarDate(new Date())}
-                    className={`px-3 py-1.5 rounded-lg border text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/10 transition ${
-                      isDarkMode ? "border-white/10" : "border-slate-200"
-                    }`}
-                  >
-                    Today
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCurrentCalendarDate(
-                        new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth() + 1, 1)
-                      );
-                    }}
-                    className={`p-2 rounded-lg border text-sm font-semibold hover:bg-black/5 dark:hover:bg-white/10 transition ${
-                      isDarkMode ? "border-white/10" : "border-slate-200"
-                    }`}
-                  >
-                    <FiChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Calendar Grid Container */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left 2 Cols: Monthly Calendar Grid */}
-                <div className="lg:col-span-2 space-y-2">
-                  <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold py-2 text-slate-500 uppercase tracking-wider">
-                    <span>Sun</span>
-                    <span>Mon</span>
-                    <span>Tue</span>
-                    <span>Wed</span>
-                    <span>Thu</span>
-                    <span>Fri</span>
-                    <span>Sat</span>
-                  </div>
-
-                  {loadingCalendar ? (
-                    <div className="py-20 text-center text-sm text-slate-500">Loading deadline calendar...</div>
-                  ) : (
-                    <div className="grid grid-cols-7 gap-2">
-                      {calendarDays.map((item, idx) => {
-                        if (!item.day) {
-                          return (
-                            <div
-                              key={`empty-${idx}`}
-                              className="min-h-[90px] rounded-xl border border-transparent bg-transparent"
-                            />
-                          );
-                        }
-
-                        const hasJobs = item.jobs.length > 0;
-                        const isSelected = selectedCalendarDay?.dateStr === item.dateStr;
-
-                        return (
-                          <div
-                            key={item.dateStr}
-                            onClick={() => {
-                              if (hasJobs) setSelectedCalendarDay(item);
-                            }}
-                            className={`min-h-[95px] p-2.5 rounded-xl border transition-all text-left flex flex-col justify-between ${
-                              hasJobs ? "cursor-pointer" : "cursor-default"
-                            } ${
-                              isSelected
-                                ? "border-[#a3e635] ring-2 ring-[#a3e635]/40 bg-[#a3e635]/10"
-                                : hasJobs
-                                ? isDarkMode
-                                  ? "bg-[#0b1934] border-white/15 hover:border-[#a3e635]/50 shadow-sm"
-                                  : "bg-white border-slate-200 hover:border-[#a3e635] shadow-sm"
-                                : isDarkMode
-                                ? "bg-[#081226]/50 border-white/5 opacity-60"
-                                : "bg-white/40 border-slate-200/50 opacity-60"
-                            }`}
-                          >
-                            <span className="text-xs font-bold">{item.day}</span>
-
-                            {hasJobs && (
-                              <div className="space-y-1 mt-1 overflow-hidden">
-                                {item.jobs.slice(0, 2).map((job) => (
-                                  <div
-                                    key={job._id || job.JID}
-                                    className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-[#a3e635]/20 text-[#17251a] dark:text-[#a3e635] truncate"
-                                    title={`${job.companyName} - ${job.title}`}
-                                  >
-                                    {job.companyName}
-                                  </div>
-                                ))}
-                                {item.jobs.length > 2 && (
-                                  <span className="text-[9px] text-slate-400 font-bold block">
-                                    +{item.jobs.length - 2} more
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Right 1 Col: Selected Day Deadline Panel */}
-                <div
-                  className={`rounded-2xl border p-5 h-fit ${
-                    isDarkMode ? "bg-[#0b1934] border-white/10" : "bg-white border-slate-200"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-black/10 dark:border-white/10">
-                    <h3 className="text-sm font-bold flex items-center gap-2">
-                      <FiClock className="w-4 h-4 text-[#8bcf2c]" />
-                      {selectedCalendarDay ? `Deadlines on ${selectedCalendarDay.dateStr}` : "Select a day to view deadlines"}
-                    </h3>
-                    {selectedCalendarDay && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCalendarDay(null)}
-                        className="text-slate-400 hover:text-slate-600 dark:hover:text-white"
-                      >
-                        <FiX />
-                      </button>
-                    )}
-                  </div>
-
-                  {!selectedCalendarDay ? (
-                    <div className="py-12 text-center text-slate-400 text-xs">
-                      Click any highlighted date on the calendar with upcoming deadlines.
-                    </div>
-                  ) : selectedCalendarDay.jobs.length === 0 ? (
-                    <div className="py-12 text-center text-slate-400 text-xs">
-                      No application deadlines on this date.
-                    </div>
-                  ) : (
-                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                      {selectedCalendarDay.jobs.map((job) => {
-                        const expired = isJobExpired(job);
-                        return (
-                          <div
-                            key={job._id || job.JID}
-                            className={`p-3.5 rounded-xl border transition ${
-                              expired
-                                ? "bg-slate-200/50 dark:bg-white/5 border-slate-300 dark:border-white/10 opacity-70"
-                                : isDarkMode
-                                ? "bg-[#071532] border-white/10 hover:border-[#a3e635]/40"
-                                : "bg-slate-50 border-slate-200 hover:border-[#a3e635]"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 mb-1.5">
-                              {job.companyLogo ? (
-                                <img
-                                  src={job.companyLogo}
-                                  alt="Logo"
-                                  className="w-6 h-6 object-contain rounded bg-white p-0.5"
-                                />
-                              ) : (
-                                <div className="w-6 h-6 rounded bg-slate-300 dark:bg-white/10 flex items-center justify-center text-[10px] font-bold">
-                                  {job.companyName?.charAt(0) || "🏢"}
-                                </div>
-                              )}
-                              <div>
-                                <h4 className="text-xs font-bold truncate max-w-[170px]">{job.title}</h4>
-                                <p className="text-[11px] text-slate-500">{job.companyName}</p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between mt-3 pt-2 border-t border-black/5 dark:border-white/5 text-[10px]">
-                              <span className="text-slate-400">{job.location || job.workMode}</span>
-                              <button
-                                type="button"
-                                onClick={(e) => handleApply(job, e)}
-                                disabled={expired}
-                                className={`px-3 py-1 rounded-lg font-['Press_Start_2P'] text-[8px] transition ${
-                                  expired
-                                    ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-                                    : "bg-[#b5e959] text-[#00113b] hover:bg-[#a8dc4d]"
-                                }`}
-                              >
-                                {expired ? "EXPIRED" : "APPLY"}
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* 3. Date Month Dropdown with adjusted icon padding */}
+              <select
+                value={calendarMonth}
+                onChange={(e) => setCalendarMonth(parseInt(e.target.value, 10))}
+                className={`h-[36px] pl-[10px] pr-[28px] rounded-[8px] text-[10px] cursor-pointer border outline-none transition-colors ${
+                  isDarkMode
+                    ? "bg-[#071532] border-white/10 text-white"
+                    : "bg-white/70 border-[#00113b]/15 text-[#00113b] hover:bg-white shadow-xs"
+                }`}
+              >
+                <option value={0}>Jan {calendarYear}</option>
+                <option value={1}>Feb {calendarYear}</option>
+                <option value={2}>Mar {calendarYear}</option>
+                <option value={3}>Apr {calendarYear}</option>
+                <option value={4}>May {calendarYear}</option>
+                <option value={5}>Jun {calendarYear}</option>
+                <option value={6}>Jul {calendarYear}</option>
+                <option value={7}>Aug {calendarYear}</option>
+                <option value={8}>Sep {calendarYear}</option>
+                <option value={9}>Oct {calendarYear}</option>
+                <option value={10}>Nov {calendarYear}</option>
+                <option value={11}>Dec {calendarYear}</option>
+              </select>
             </div>
-          ) : (
-            <>
-              {/* Category + Filters */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {["Jobs", "Internships", "Freelance"].map((category) => (
-                    <button
-                      key={category}
-                      onClick={() => {
-                        setActiveCategory(category);
-                        setPage(1);
-                      }}
-                      className={`px-4 py-2 rounded-full text-xs font-semibold transition ${
-                        activeCategory === category
-                          ? "bg-[#a3e635] text-[#17251a]"
-                          : isDarkMode
-                          ? "bg-white/5 text-slate-400 hover:bg-[#a3e635]/15 hover:text-white"
-                          : "bg-white border border-slate-200 text-slate-500 hover:bg-[#a3e635]/10"
-                      }`}
-                    >
-                      {category}
-                    </button>
-                  ))}
-                </div>
+          </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowFiltersModal(!showFiltersModal)}
-                    className={`h-9 px-3 rounded-lg flex items-center gap-2 text-xs font-semibold border ${
-                      selectedLocation || selectedExperience || selectedWorkMode
-                        ? "border-[#a3e635] bg-[#a3e635]/15 text-[#17251a] dark:text-[#a3e635]"
-                        : isDarkMode
-                        ? "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+          {/* VIEW: FOR YOU & ALL JOBS */}
+          {activeTab !== "calendar" && (
+            <section id="jobsView">
+              {loading ? (
+                <div className="text-center py-[70px] text-slate-500">
+                  <p className="text-[14px]">Loading opportunities...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-[70px] text-red-500">
+                  <p className="text-[14px] font-semibold">{error}</p>
+                </div>
+              ) : jobs.length === 0 ? (
+                /* EMPTY STATE */
+                <div className="text-center py-[70px] text-slate-500">
+                  <h3
+                    className={`text-[16px] font-bold mb-[7px] ${
+                      isDarkMode ? "text-white" : "text-[#00113b]"
                     }`}
                   >
-                    <FiSliders className="w-3.5 h-3.5" />
-                    Filters {Boolean(selectedLocation || selectedExperience || selectedWorkMode) && "•"}
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      setSortBy(
-                        sortBy === "Newest" ? "Oldest" : sortBy === "Oldest" ? "Deadline" : "Newest"
-                      )
-                    }
-                    className={`h-9 px-3 rounded-lg flex items-center gap-2 text-xs font-semibold border ${
-                      isDarkMode
-                        ? "border-white/10 bg-white/5 text-slate-300"
-                        : "border-slate-200 bg-white text-slate-600"
-                    }`}
-                  >
-                    {sortBy}
-                    <FiChevronDown className="w-3.5 h-3.5" />
-                  </button>
+                    No matching jobs
+                  </h3>
+                  <p className="text-[12px]">
+                    {activeTab === "for-you"
+                      ? "No recommendations found. Try updating your profile or explore All Jobs."
+                      : "Try changing your search or filters."}
+                  </p>
                 </div>
-              </div>
-
-              {/* Active Filter Chips bar if any */}
-              {showFiltersModal && (
-                <div
-                  className={`p-4 rounded-2xl border mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4 ${
-                    isDarkMode ? "bg-[#0b1934] border-white/10" : "bg-white border-slate-200 shadow-sm"
-                  }`}
-                >
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-slate-400">Location</label>
-                    <select
-                      value={selectedLocation}
-                      onChange={(e) => {
-                        setSelectedLocation(e.target.value);
-                        setPage(1);
-                      }}
-                      className="w-full text-xs p-2 rounded-lg border dark:bg-[#071532] dark:border-white/10 outline-none"
-                    >
-                      <option value="">All Locations</option>
-                      {availableFilters.location.map((loc) => (
-                        <option key={loc} value={loc}>
-                          {loc}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-slate-400">Experience</label>
-                    <select
-                      value={selectedExperience}
-                      onChange={(e) => {
-                        setSelectedExperience(e.target.value);
-                        setPage(1);
-                      }}
-                      className="w-full text-xs p-2 rounded-lg border dark:bg-[#071532] dark:border-white/10 outline-none"
-                    >
-                      <option value="">All Experience Levels</option>
-                      {availableFilters.experience.map((exp) => (
-                        <option key={exp} value={exp}>
-                          {exp}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-slate-400">Work Mode</label>
-                    <select
-                      value={selectedWorkMode}
-                      onChange={(e) => {
-                        setSelectedWorkMode(e.target.value);
-                        setPage(1);
-                      }}
-                      className="w-full text-xs p-2 rounded-lg border dark:bg-[#071532] dark:border-white/10 outline-none"
-                    >
-                      <option value="">All Modes</option>
-                      {availableFilters.workMode.map((wm) => (
-                        <option key={wm} value={wm}>
-                          {wm}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {/* Results List */}
-              <div className="space-y-4">
-                {loading ? (
-                  <div className="py-12 text-center">
-                    <p className="text-sm text-slate-500">Loading opportunities...</p>
-                  </div>
-                ) : error ? (
-                  <div className="py-12 text-center">
-                    <p className="font-semibold text-red-500">{error}</p>
-                  </div>
-                ) : jobs.length === 0 ? (
-                  <div
-                    className={`rounded-2xl border p-12 text-center ${
-                      isDarkMode
-                        ? "bg-[#0b1934] border-white/10"
-                        : "bg-white border-slate-200"
-                    }`}
-                  >
-                    <BriefcaseBusiness className="w-9 h-9 mx-auto mb-3 text-slate-400" />
-                    <p className="font-semibold">No jobs found</p>
-                    <p className="text-sm text-slate-500 mt-1">
-                      {activeTab === "For You"
-                        ? "No matching jobs found based on your target role / profile. Try updating your profile or explore All Jobs."
-                        : "Try changing your search or category."}
-                    </p>
-                  </div>
-                ) : (
-                  jobs.map((job) => {
+              ) : (
+                /* JOB ROWS CONTAINER */
+                <div className="flex flex-col gap-[9px]">
+                  {jobs.map((job) => {
                     const expired = isJobExpired(job);
+                    const tags = [job.workMode, job.jobType].filter(Boolean);
 
                     return (
-                      <article
-                        key={job._id || job.JID}
-                        className={`rounded-2xl border px-6 py-5 transition-all ${
+                      <div
+                        key={job._id || job.JID || job.id}
+                        className={`grid grid-cols-1 md:grid-cols-[minmax(190px,1.1fr)_minmax(280px,1.6fr)_minmax(150px,0.75fr)_105px] items-center min-h-[108px] px-[22px] py-[18px] rounded-[14px] border transition-all duration-200 gap-4 md:gap-0 ${
                           expired
-                            ? "bg-slate-200/60 dark:bg-[#060e1f] border-slate-300 dark:border-white/5 opacity-75 grayscale-[30%]"
+                            ? isDarkMode
+                              ? "bg-[#060d1f] border-white/5 opacity-60 grayscale-[40%]"
+                              : "bg-white/30 border-[#00113b]/10 opacity-60"
                             : isDarkMode
-                            ? "bg-[#0b1934] border-white/10 hover:border-[#a8e63d]/30"
-                            : "bg-[#d9e8ef] border-[#c0d5e0] hover:border-[#a8e63d]/50 shadow-sm"
+                            ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:-translate-y-[1px]"
+                            : "bg-white/60 border-white/80 hover:bg-white hover:border-[#00113b]/20 hover:-translate-y-[1px] shadow-sm hover:shadow-md"
                         }`}
                       >
-                        <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1.1fr_0.8fr_auto] gap-4 lg:gap-6 items-center">
-                          {/* Role & Company Logo */}
-                          <div className="min-w-0 flex items-center gap-3.5">
-                            {job.companyLogo ? (
-                              <img
-                                src={job.companyLogo}
-                                alt={job.companyName}
-                                className="w-10 h-10 object-contain rounded-xl bg-white p-1 border border-black/5 dark:border-white/10 shrink-0"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-xl bg-slate-300 dark:bg-white/10 flex items-center justify-center font-bold text-sm shrink-0">
-                                {job.companyName?.charAt(0) || "🏢"}
-                              </div>
-                            )}
-
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <h2
-                                  className={`text-base sm:text-lg font-bold truncate ${
-                                    isDarkMode ? "text-white" : "text-[#17251a]"
-                                  }`}
-                                >
-                                  {job.title}
-                                </h2>
-                                {expired && (
-                                  <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-red-500/15 text-red-500 shrink-0">
-                                    Expired
-                                  </span>
-                                )}
-                              </div>
-
-                              <div
-                                className={`mt-0.5 text-xs flex items-center gap-1.5 ${
-                                  isDarkMode ? "text-slate-300" : "text-slate-600"
-                                }`}
-                              >
-                                <span>{job.location}</span>
-                                {job.experience && (
-                                  <>
-                                    <span>•</span>
-                                    <span>{job.experience}</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
+                        {/* COLUMN 1: ROLE */}
+                        <div className="min-w-0 pr-2">
+                          <div
+                            className={`text-[15px] font-bold mb-[6px] leading-[1.35] truncate ${
+                              isDarkMode ? "text-white" : "text-[#00113b]"
+                            }`}
+                          >
+                            {job.title}
                           </div>
-
-                          {/* Company & Tags */}
-                          <div>
-                            <p
-                              className={`text-sm font-bold ${
-                                isDarkMode ? "text-white" : "text-[#17251a]"
-                              }`}
-                            >
-                              {job.companyName}
-                            </p>
-
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {job.workMode && (
-                                <span
-                                  className={`px-2 py-1 rounded-md text-[10px] font-semibold ${
-                                    isDarkMode
-                                      ? "bg-[#a3e635]/15 text-[#a3e635]"
-                                      : "bg-[#eaf7d5] text-[#5e8d20]"
-                                  }`}
-                                >
-                                  {job.workMode}
-                                </span>
-                              )}
-
-                              {job.jobType && (
-                                <span
-                                  className={`px-2 py-1 rounded-md text-[10px] font-semibold ${
-                                    isDarkMode
-                                      ? "bg-purple-500/15 text-purple-300"
-                                      : "bg-purple-100 text-purple-600"
-                                  }`}
-                                >
-                                  {job.jobType}
-                                </span>
-                              )}
-
-                              {job.companyType && (
-                                <span
-                                  className={`px-2 py-1 rounded-md text-[10px] font-semibold ${
-                                    isDarkMode
-                                      ? "bg-blue-500/15 text-blue-300"
-                                      : "bg-blue-100 text-blue-600"
-                                  }`}
-                                >
-                                  {job.companyType}
-                                </span>
-                              )}
-                            </div>
+                          <div
+                            className={`text-[11px] mb-[5px] truncate ${
+                              isDarkMode ? "text-slate-400" : "text-slate-600"
+                            }`}
+                          >
+                            {job.location || "Location not specified"}
                           </div>
-
-                          {/* Salary & Deadline */}
-                          <div>
-                            <p
-                              className={`text-sm sm:text-base font-bold ${
-                                isDarkMode ? "text-white" : "text-[#17251a]"
-                              }`}
-                            >
-                              {job.salary || "Undisclosed"}
-                            </p>
-
-                            <p className="text-[10px] text-slate-400 mt-1">
-                              {job.applicationDeadline
-                                ? `Deadline: ${new Date(job.applicationDeadline).toLocaleDateString("en-IN", {
-                                    day: "numeric",
-                                    month: "short",
-                                  })}`
-                                : "Estimated Salary/Stipend"}
-                            </p>
-                          </div>
-
-                          {/* Apply */}
-                          <div className="lg:text-right">
-                            <button
-                              onClick={(e) => handleApply(job, e)}
-                              disabled={expired}
-                              className={`min-w-[92px] px-5 py-2.5 rounded-xl text-[10px] font-['Press_Start_2P'] transition-all ${
-                                expired
-                                  ? "bg-slate-300 dark:bg-white/10 text-slate-500 dark:text-slate-400 cursor-not-allowed"
-                                  : "bg-[#b5e959] text-[#00113b] hover:bg-[#a8dc4d] cursor-pointer shadow-sm active:scale-95"
-                              }`}
-                            >
-                              {expired ? "EXPIRED" : "APPLY"}
-                            </button>
+                          <div
+                            className={`text-[10px] ${
+                              isDarkMode ? "text-slate-400" : "text-slate-500"
+                            }`}
+                          >
+                            {job.experience || "Fresher"}
                           </div>
                         </div>
-                      </article>
+
+                        {/* COLUMN 2: COMPANY & TAGS */}
+                        <div className="min-w-0 pr-2">
+                          <div
+                            className={`text-[15px] font-bold mb-[9px] leading-[1.35] truncate ${
+                              isDarkMode ? "text-white" : "text-[#00113b]"
+                            }`}
+                          >
+                            {job.companyName || job.company}
+                          </div>
+                          <div className="flex flex-wrap gap-[5px]">
+                            {tags.map((tag, idx) => (
+                              <span
+                                key={idx}
+                                className={`inline-flex items-center px-[8px] py-[5px] rounded-[6px] text-[9px] font-bold whitespace-nowrap ${getTagClass(
+                                  tag
+                                )}`}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* COLUMN 3: SALARY */}
+                        <div>
+                          <div
+                            className={`text-[16px] font-bold leading-[1.4] ${
+                              isDarkMode ? "text-white" : "text-[#00113b]"
+                            }`}
+                          >
+                            {job.salary || "Undisclosed"}
+                          </div>
+                          <span
+                            className={`block text-[9px] font-medium mt-[3px] ${
+                              isDarkMode ? "text-slate-400" : "text-slate-500"
+                            }`}
+                          >
+                            Estimated Salary/Stipend
+                          </span>
+                        </div>
+
+                        {/* COLUMN 4: APPLY BUTTON */}
+                        <div>
+                          <button
+                            onClick={(e) => handleApply(job, e)}
+                            disabled={expired}
+                            className={`inline-flex items-center justify-center w-full font-['Press_Start_2P'] text-[8px] leading-[1.5] border-none py-[13px] px-[10px] rounded-[8px] transition-all ${
+                              expired
+                                ? "bg-slate-300 dark:bg-white/10 text-slate-500 cursor-not-allowed"
+                                : "bg-[#b2e96a] text-[#0a1128] hover:-translate-y-[2px] hover:shadow-[0_5px_0_rgba(0,17,59,0.15)] active:translate-y-0 active:shadow-none cursor-pointer"
+                            }`}
+                          >
+                            {expired ? "EXPIRED" : "APPLY"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* VIEW: CALENDAR */}
+          {activeTab === "calendar" && (
+            <section id="calendarView">
+              <div className="flex items-center justify-between mb-[14px]">
+                <h3
+                  className={`font-['Press_Start_2P'] text-[12px] ${
+                    isDarkMode ? "text-white" : "text-[#00113b]"
+                  }`}
+                >
+                  Job Deadlines
+                </h3>
+              </div>
+
+              {/* CALENDAR GRID */}
+              <div className="grid grid-cols-7 gap-[6px]">
+                {weekdays.map((day) => (
+                  <div
+                    key={day}
+                    className={`text-center text-[10px] font-bold py-[7px] ${
+                      isDarkMode ? "text-slate-400" : "text-[#00113b]/70"
+                    }`}
+                  >
+                    {day}
+                  </div>
+                ))}
+
+                {loadingCalendar ? (
+                  <div className="col-span-7 py-20 text-center text-sm text-slate-500">
+                    Loading calendar deadlines...
+                  </div>
+                ) : (
+                  calendarGridData.map((cell, idx) => {
+                    if (!cell.day) {
+                      return (
+                        <div
+                          key={`empty-${idx}`}
+                          className="min-h-[96px] bg-transparent border border-transparent rounded-[10px]"
+                        />
+                      );
+                    }
+
+                    const hasJobs = cell.jobs.length > 0;
+
+                    return (
+                      <div
+                        key={cell.dateStr}
+                        onClick={() => {
+                          if (hasJobs) openDeadlineDrawer(cell.dateStr, cell.jobs);
+                        }}
+                        className={`min-h-[96px] rounded-[10px] p-[9px] relative transition-all border ${
+                          hasJobs ? "cursor-pointer" : "cursor-default"
+                        } ${
+                          isDarkMode
+                            ? hasJobs
+                              ? "bg-white/10 border-white/20 hover:bg-white/20 shadow-sm"
+                              : "bg-white/5 border-white/5 opacity-60"
+                            : hasJobs
+                            ? "bg-white border-[#00113b]/15 hover:border-[#b2e96a] hover:shadow-md shadow-sm"
+                            : "bg-white/60 border-white/80 opacity-75"
+                        }`}
+                      >
+                        <div
+                          className={`text-[11px] font-bold ${
+                            isDarkMode ? "text-white" : "text-[#00113b]"
+                          }`}
+                        >
+                          {cell.day}
+                        </div>
+
+                        {cell.jobs.slice(0, 2).map((job, jIdx) => (
+                          <div
+                            key={jIdx}
+                            className="mt-[7px] p-[5px] rounded-[6px] bg-[#b2e96a]/75 border border-[#9ed644]/40 overflow-hidden shadow-xs"
+                          >
+                            <span className="block text-[8px] font-extrabold whitespace-nowrap overflow-hidden text-ellipsis text-[#00113b]">
+                              {job.companyName || job.company}
+                            </span>
+                            <span className="block text-[7.5px] text-[#00113b]/80 whitespace-nowrap overflow-hidden text-ellipsis mt-[1px]">
+                              {job.title}
+                            </span>
+                          </div>
+                        ))}
+
+                        {hasJobs && (
+                          <span className="absolute bottom-[7px] right-[7px] w-[6px] h-[6px] rounded-full bg-[#00113b] dark:bg-[#b2e96a] shadow-xs" />
+                        )}
+                      </div>
                     );
                   })
                 )}
               </div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 mt-8">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="px-3 py-1.5 rounded-lg border text-xs font-semibold disabled:opacity-40"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-xs font-bold px-2">
-                    Page {page} of {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="px-3 py-1.5 rounded-lg border text-xs font-semibold disabled:opacity-40"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-            </>
+            </section>
           )}
         </div>
       </main>
+
+      {/* OVERLAY */}
+      <div
+        onClick={closeAllDrawers}
+        className={`fixed inset-0 bg-black/40 backdrop-blur-xs z-[150] transition-opacity duration-250 ${
+          filterDrawerOpen || deadlineDrawerOpen
+            ? "opacity-100 visible"
+            : "opacity-0 invisible pointer-events-none"
+        }`}
+      />
+
+      {/* FILTER DRAWER */}
+      <aside
+        className={`fixed right-0 top-0 bottom-0 w-[390px] max-w-[90%] z-[160] transition-transform duration-300 ease-in-out shadow-2xl flex flex-col ${
+          isDarkMode ? "bg-[#0b1934] text-white" : "bg-[#daf0fa] text-[#00113b]"
+        } ${filterDrawerOpen ? "translate-x-0" : "translate-x-full"}`}
+      >
+        <div className="p-[22px] flex justify-between items-center border-b border-black/10 dark:border-white/10">
+          <h3 className="font-['Press_Start_2P'] text-[11px] leading-[1.6]">Filters</h3>
+          <button
+            onClick={() => setFilterDrawerOpen(false)}
+            className="w-[32px] h-[32px] border-none bg-white/60 dark:bg-white/10 text-[#00113b] dark:text-white rounded-[7px] text-[18px] cursor-pointer flex items-center justify-center shadow-xs"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="p-[22px] overflow-y-auto flex-1 space-y-[27px]">
+          {/* ROLE SECTION */}
+          <div>
+            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[11px]">Role</h4>
+            {availableFilters.roles.map((r) => (
+              <label key={r} className="flex items-center gap-[9px] py-[7px] text-[12px] text-[#00113b]/80 dark:text-slate-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedRoles.includes(r)}
+                  onChange={(e) => {
+                    if (e.target.checked) setSelectedRoles([...selectedRoles, r]);
+                    else setSelectedRoles(selectedRoles.filter((item) => item !== r));
+                  }}
+                  className="accent-[#00113b] dark:accent-[#b2e96a]"
+                />
+                {r}
+              </label>
+            ))}
+          </div>
+
+          {/* EXPERIENCE SECTION */}
+          <div>
+            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[11px]">Experience</h4>
+            {[
+              { id: "Fresher", label: "Fresher" },
+              { id: "0-1", label: "0–1 years" },
+              { id: "1-3", label: "1–3 years" },
+            ].map((exp) => (
+              <label key={exp.id} className="flex items-center gap-[9px] py-[7px] text-[12px] text-[#00113b]/80 dark:text-slate-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedExperience.includes(exp.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) setSelectedExperience([...selectedExperience, exp.id]);
+                    else setSelectedExperience(selectedExperience.filter((item) => item !== exp.id));
+                  }}
+                  className="accent-[#00113b] dark:accent-[#b2e96a]"
+                />
+                {exp.label}
+              </label>
+            ))}
+          </div>
+
+          {/* JOB TYPE SECTION */}
+          <div>
+            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[11px]">Job type</h4>
+            {["Full-time", "Internship", "Freelance"].map((jt) => (
+              <label key={jt} className="flex items-center gap-[9px] py-[7px] text-[12px] text-[#00113b]/80 dark:text-slate-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedJobTypes.includes(jt)}
+                  onChange={(e) => {
+                    if (e.target.checked) setSelectedJobTypes([...selectedJobTypes, jt]);
+                    else setSelectedJobTypes(selectedJobTypes.filter((item) => item !== jt));
+                  }}
+                  className="accent-[#00113b] dark:accent-[#b2e96a]"
+                />
+                {jt}
+              </label>
+            ))}
+          </div>
+
+          {/* WORK MODE SECTION */}
+          <div>
+            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[11px]">Work mode</h4>
+            {["Remote", "Hybrid", "On-site"].map((wm) => (
+              <label key={wm} className="flex items-center gap-[9px] py-[7px] text-[12px] text-[#00113b]/80 dark:text-slate-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedWorkModes.includes(wm)}
+                  onChange={(e) => {
+                    if (e.target.checked) setSelectedWorkModes([...selectedWorkModes, wm]);
+                    else setSelectedWorkModes(selectedWorkModes.filter((item) => item !== wm));
+                  }}
+                  className="accent-[#00113b] dark:accent-[#b2e96a]"
+                />
+                {wm}
+              </label>
+            ))}
+          </div>
+
+          {/* COMPANY SECTION */}
+          <div>
+            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[11px]">Company</h4>
+            {availableFilters.companies.map((comp) => (
+              <label key={comp} className="flex items-center gap-[9px] py-[7px] text-[12px] text-[#00113b]/80 dark:text-slate-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedCompanies.includes(comp)}
+                  onChange={(e) => {
+                    if (e.target.checked) setSelectedCompanies([...selectedCompanies, comp]);
+                    else setSelectedCompanies(selectedCompanies.filter((item) => item !== comp));
+                  }}
+                  className="accent-[#00113b] dark:accent-[#b2e96a]"
+                />
+                {comp}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-[16px_22px] border-t border-black/10 dark:border-white/10 flex gap-[8px]">
+          <button
+            onClick={handleClearFilters}
+            className="flex-1 h-[42px] rounded-[8px] text-[11px] font-bold cursor-pointer bg-white/70 dark:bg-transparent border border-black/15 dark:border-white/10 text-[#00113b] dark:text-white hover:bg-white"
+          >
+            Clear
+          </button>
+          <button
+            onClick={() => setFilterDrawerOpen(false)}
+            className="flex-1 h-[42px] rounded-[8px] text-[11px] font-bold cursor-pointer bg-[#b2e96a] text-[#0a1128] border border-[#b2e96a]/50 shadow-md hover:bg-[#a6e257] active:scale-[0.98] transition-all"
+          >
+            Apply filters
+          </button>
+        </div>
+      </aside>
+
+      {/* DEADLINE DRAWER */}
+      <aside
+        className={`fixed right-0 top-0 bottom-0 w-[410px] max-w-[92%] z-[160] transition-transform duration-300 ease-in-out shadow-2xl flex flex-col ${
+          isDarkMode ? "bg-[#0b1934] text-white" : "bg-[#daf0fa] text-[#00113b]"
+        } ${deadlineDrawerOpen ? "translate-x-0" : "translate-x-full"}`}
+      >
+        <div className="p-[22px] flex justify-between items-center border-b border-black/10 dark:border-white/10">
+          <h3 className="font-['Press_Start_2P'] text-[11px] leading-[1.6]">
+            {selectedDeadlineDate
+              ? new Date(selectedDeadlineDate + "T00:00:00").toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })
+              : "Job deadlines"}
+          </h3>
+          <button
+            onClick={() => setDeadlineDrawerOpen(false)}
+            className="w-[32px] h-[32px] border-none bg-white/60 dark:bg-white/10 text-[#00113b] dark:text-white rounded-[7px] text-[18px] cursor-pointer flex items-center justify-center shadow-xs"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="p-[20px] overflow-y-auto flex-1 space-y-[9px]">
+          {selectedDeadlineJobs.length === 0 ? (
+            <div className="text-center py-12 text-sm text-slate-500">
+              No deadlines on this date.
+            </div>
+          ) : (
+            selectedDeadlineJobs.map((job, idx) => (
+              <div
+                key={job._id || job.JID || idx}
+                className="bg-white/80 dark:bg-white/5 border border-white/90 dark:border-white/10 rounded-[12px] p-[16px] shadow-sm"
+              >
+                <div className="text-[12px] font-bold text-[#00113b] dark:text-white mb-[5px]">
+                  {job.companyName || job.company}
+                </div>
+                <div className="text-[15px] font-bold text-[#00113b] dark:text-white mb-[8px]">
+                  {job.title}
+                </div>
+                <div className="text-[10px] text-slate-600 dark:text-slate-400 mb-[13px]">
+                  {job.location || "India"} · {job.experience || "Fresher"}
+                  <br />
+                  Deadline:{" "}
+                  {new Date(selectedDeadlineDate + "T00:00:00").toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </div>
+                <button
+                  onClick={(e) => handleApply(job, e)}
+                  className="inline-flex items-center justify-center w-full h-[38px] bg-[#b5e959] text-[#00113b] font-['Press_Start_2P'] text-[7px] rounded-[7px] cursor-pointer hover:opacity-90 shadow-sm"
+                >
+                  APPLY
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </aside>
     </div>
   );
 }

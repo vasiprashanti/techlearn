@@ -929,9 +929,54 @@ export const listRoles = async (req, res) => {
       Role.countDocuments(query),
     ]);
 
+    // Count jobs per role — use $toString in aggregation to handle both
+    // ObjectId and string storage of roleId in Job documents
+    const roleIdStrings = roles.map((r) => r._id.toString());
+
+    const jobCountAgg = await Job.aggregate([
+      {
+        $addFields: {
+          roleIdStr: { $toString: "$roleId" },
+        },
+      },
+      {
+        $match: {
+          roleIdStr: { $in: roleIdStrings },
+        },
+      },
+      {
+        $group: {
+          _id: "$roleIdStr",
+          totalJobs: { $sum: 1 },
+          activeJobs: {
+            $sum: { $cond: [{ $eq: ["$status", "Published"] }, 1, 0] },
+          },
+        },
+      },
+    ]);
+
+    const countMap = {};
+    for (const c of jobCountAgg) {
+      if (c._id) {
+        countMap[c._id] = {
+          jobs: c.totalJobs || 0,
+          activeJobs: c.activeJobs || 0,
+        };
+      }
+    }
+
+    const enrichedRoles = roles.map((role) => {
+      const roleKey = role._id.toString();
+      return {
+        ...role,
+        jobs: countMap[roleKey]?.jobs || 0,
+        activeJobs: countMap[roleKey]?.activeJobs || 0,
+      };
+    });
+
     return res.status(200).json({
       success: true,
-      data: roles,
+      data: enrichedRoles,
       pagination: {
         total,
         page: pageNum,
