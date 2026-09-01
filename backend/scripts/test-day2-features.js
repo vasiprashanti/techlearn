@@ -114,6 +114,9 @@ async function runDay2Tests() {
     }),
   });
   Program.findById = () => ({
+    populate() {
+      return this;
+    },
     lean: async () => ({
       _id: mockProgramId,
       name: "Placement Sprint",

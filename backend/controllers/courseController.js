@@ -6,7 +6,10 @@ import Exercise from "../models/Exercise.js";
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import Program from "../models/Program.js";
+import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import { calculateProgramDayNumber, resolveProgramSchedule } from "../utils/programSchedule.js";
+import { expireBatchIfNeeded } from "../utils/batchLifecycle.js";
+import { isUserVisibleCourse } from "../utils/courseVisibility.js";
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 import {
@@ -82,6 +85,37 @@ const uploadCourseBanner = async (file) => {
     console.warn("Course banner Cloudinary upload failed; using database fallback:", error.message);
     return databaseFallback();
   }
+};
+
+const getActiveProgramLinksForCourses = async (courseIds) => {
+  const ids = (courseIds || []).filter(Boolean);
+  if (!ids.length) return [];
+  return Program.find({ courseIds: { $in: ids }, status: "Active" })
+    .select("_id courseIds pricingType visibility")
+    .lean();
+};
+
+const groupProgramLinksByCourse = (programs) => {
+  const links = new Map();
+  for (const program of programs || []) {
+    for (const courseId of program.courseIds || []) {
+      const key = String(courseId);
+      const current = links.get(key) || [];
+      current.push(program);
+      links.set(key, current);
+    }
+  }
+  return links;
+};
+
+const courseRequiresEnrollment = (linkedPrograms = []) => {
+  const hasPublicFreeProgram = linkedPrograms.some(
+    (program) => program.visibility === "Public" && program.pricingType === "Free"
+  );
+  const hasRestrictedProgram = linkedPrograms.some(
+    (program) => program.visibility !== "Public" || program.pricingType === "Paid"
+  );
+  return !hasPublicFreeProgram && hasRestrictedProgram;
 };
 
 // admin specific functions
@@ -439,31 +473,12 @@ export const addMultipleTopics = async (req, res) => {
   }
 };
 
-const seedTrainerLedCoursesIfEmpty = async () => {
-  try {
-    const defaultCourses = [
-      { title: "Python Programming", instructor: "Prashanti Vasi", duration: "4 weeks", schedule: "Mon-Sat", startDate: "In Progress", level: "Beginner", courseType: "Trainer-led", description: "Learn Python programming from basics to advanced concepts", bannerImage: "/expert-led-banner.jpg", numTopics: 5 },
-      { title: "DSA with Java", instructor: "Prashanti Vasi", duration: "4 weeks", schedule: "Mon-Sat", startDate: "In Progress", level: "Intermediate", courseType: "Trainer-led", description: "Master DSA using Java concepts", bannerImage: "/expert-led-banner.jpg", numTopics: 5 },
-      { title: "DSA with Python", instructor: "Prashanti Vasi", duration: "4 weeks", schedule: "Mon-Sat", startDate: "In Progress", level: "Intermediate", courseType: "Trainer-led", description: "Master DSA using Python concepts", bannerImage: "/expert-led-banner.jpg", numTopics: 5 },
-      { title: "Web Development", instructor: "Jyotsna", duration: "3 weeks", schedule: "Mon-Sat", startDate: "In Progress", level: "Beginner", courseType: "Trainer-led", description: "Master HTML, CSS, and modern web development stack", bannerImage: "/expert-led-banner.jpg", numTopics: 5 },
-      { title: "Java (Core)", instructor: "Prashanti Vasi", duration: "TBD", schedule: "Mon-Sat", startDate: "In Progress", level: "Intermediate", courseType: "Trainer-led", description: "Learn core Java object-oriented principles", bannerImage: "/expert-led-banner.jpg", numTopics: 5 }
-    ];
-    for (const c of defaultCourses) {
-      const exists = await Course.findOne({ title: c.title, courseType: "Trainer-led" });
-      if (!exists) {
-        await Course.create(c);
-      }
-    }
-  } catch (error) {
-    console.error("Error seeding trainer-led courses:", error);
-  }
-};
-
 export const getAllCourses = async (req, res) => {
   try {
-    await seedTrainerLedCoursesIfEmpty();
     let filter = {};
     let isAdmin = false;
+    const allowedProgramCourseIds = new Set();
+    const allowedBatchIds = new Set();
 
     if (req.user) {
       if (req.user.role === "admin") {
@@ -486,16 +501,29 @@ export const getAllCourses = async (req, res) => {
           ? await Batch.findById(schedule.batchId).select("attachedCourse supportingCourses status").lean()
           : null;
         const program = schedule.programId
-          ? await Program.findById(schedule.programId).select("courseIds status").lean()
+          ? await Program.findById(schedule.programId).select("courseIds status pricingType visibility").lean()
           : null;
         const publicConditions = [
           { assignedBatchIds: { $size: 0 } },
           { assignedBatchIds: { $exists: false } },
         ];
         const programCourseIds = (program?.courseIds || []).map(String);
+        const hasVerifiedProgramAccess = Boolean(
+          program &&
+          program.status === "Active" &&
+          program.visibility === "Public" &&
+          schedule.enrollment &&
+          (program.pricingType !== "Paid" || schedule.enrollment.accessTier === "Member")
+        );
+        if (hasVerifiedProgramAccess) {
+          programCourseIds.forEach((courseId) => allowedProgramCourseIds.add(courseId));
+        }
 
         if (batch && batch.status === "Active") {
+          allowedBatchIds.add(String(batch._id));
           const primaryCourseId = batch.attachedCourse;
+          if (primaryCourseId) allowedProgramCourseIds.add(String(primaryCourseId));
+          programCourseIds.forEach((courseId) => allowedProgramCourseIds.add(courseId));
           const supportingCourseIds = (batch.supportingCourses || []).map(String);
           const conditions = [
             ...publicConditions,
@@ -529,7 +557,30 @@ export const getAllCourses = async (req, res) => {
     }
 
     const courses = await Course.find(filter);
-    res.status(200).json({ count: courses.length, courses });
+    const linkedPrograms = await getActiveProgramLinksForCourses(courses.map((course) => course._id));
+    const linksByCourse = groupProgramLinksByCourse(linkedPrograms);
+    const visibleCourses = courses.filter((course) => {
+      if (!isUserVisibleCourse(course)) return false;
+
+      const courseId = String(course._id);
+      const assignedBatchIds = Array.isArray(course.assignedBatchIds)
+        ? course.assignedBatchIds.map(String)
+        : [];
+      const linkedCoursePrograms = linksByCourse.get(courseId) || [];
+      const isBatchScoped = assignedBatchIds.length > 0;
+      const requiresEnrollment = isBatchScoped || courseRequiresEnrollment(linkedCoursePrograms);
+
+      if (!requiresEnrollment || isAdmin) return true;
+      if (!req.user) return false;
+
+      // The initial query already limits authenticated learners to their
+      // active program/batch context. Keep a second explicit check here so a
+      // paid course linked to an unassigned program cannot leak into a public
+      // catalog response.
+      return allowedProgramCourseIds.has(courseId)
+        || assignedBatchIds.some((batchId) => allowedBatchIds.has(batchId));
+    });
+    res.status(200).json({ count: visibleCourses.length, courses: visibleCourses });
   } catch (error) {
     return res
       .status(500)
@@ -544,28 +595,120 @@ export const getCourseById = async (req, res) => {
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
     }
+    if (req.user?.role !== "admin" && !isUserVisibleCourse(course)) {
+      return res.status(404).json({ message: "Course not found" });
+    }
 
     let schedule = null;
     let batch = null;
     let program = null;
     let student = null;
+
+    const assignedBatchIds = (course.assignedBatchIds || []).map(String);
+    const linkedPrograms = req.user?.role === "admin"
+      ? []
+      : await getActiveProgramLinksForCourses([course._id]);
+    const linkedProgramIds = linkedPrograms.map((linkedProgram) => String(linkedProgram._id));
+    const requiresEnrollment = assignedBatchIds.length > 0 || courseRequiresEnrollment(linkedPrograms);
+    let courseProgramId = null;
+
+    // Optional authentication keeps the catalog public, but it must not make
+    // batch-scoped or paid-program content public by direct URL.
+    if (requiresEnrollment && req.user?.role !== "admin") {
+      if (!req.user) {
+        return res.status(403).json({ success: false, message: "This course is available to enrolled learners only." });
+      }
+
+      const email = String(req.user.email || "").trim().toLowerCase();
+      student = await Student.findOne({
+        $or: [
+          { userId: req.user._id },
+          ...(email ? [{ email }] : []),
+        ],
+      }).lean();
+
+      const identifiers = [
+        req.user._id ? { userId: req.user._id } : null,
+        student?._id ? { studentId: student._id } : null,
+      ].filter(Boolean);
+
+      const enrollmentAccessConditions = [];
+      if (linkedProgramIds.length > 0) {
+        enrollmentAccessConditions.push({ programId: { $in: linkedProgramIds } });
+      }
+      if (assignedBatchIds.length > 0) {
+        enrollmentAccessConditions.push({ batchId: { $in: assignedBatchIds } });
+      }
+
+      const enrollments = identifiers.length && enrollmentAccessConditions.length
+        ? await ProgramEnrollment.find({
+            status: "Active",
+            $or: identifiers,
+            $and: [{ $or: enrollmentAccessConditions }],
+          }).select("programId batchId accessTier").lean()
+        : [];
+
+      const batchResults = await Promise.all(
+        assignedBatchIds.map((id) => Batch.findById(id).lean().then((assignedBatch) => (
+          assignedBatch ? expireBatchIfNeeded(assignedBatch) : { expired: false, batch: null }
+        )))
+      );
+      const activeBatchIds = new Set(
+        batchResults
+          .map((result) => result.batch)
+          .filter((assignedBatch) => assignedBatch?.status === "Active")
+          .map((assignedBatch) => String(assignedBatch._id))
+      );
+      const hasBatchAccess = Boolean(student?.batchId && activeBatchIds.has(String(student.batchId)))
+        || enrollments.some((enrollment) => enrollment.batchId && activeBatchIds.has(String(enrollment.batchId)));
+      const hasProgramAccess = enrollments.some((enrollment) => {
+        const linkedProgram = linkedPrograms.find((candidate) => String(candidate._id) === String(enrollment.programId));
+        return linkedProgram &&
+          (linkedProgram.pricingType !== "Paid" || enrollment.accessTier === "Member");
+      });
+
+      if (!hasBatchAccess && !hasProgramAccess) {
+        return res.status(403).json({ success: false, message: "You do not have access to this course." });
+      }
+    }
+
     if (req.user) {
       if (req.user.role !== "admin") {
-        const email = String(req.user.email || "").trim().toLowerCase();
-        student = await Student.findOne({
-          $or: [
-            { userId: req.user._id },
-            ...(email ? [{ email }] : []),
-          ],
-        }).lean();
-        if (student) {
-          schedule = await resolveProgramSchedule({ user: req.user, student });
-          if (schedule.batchExpired) {
-            return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
-          }
-          batch = schedule.batchId ? await Batch.findById(schedule.batchId).lean() : null;
-          program = schedule.programId ? await Program.findById(schedule.programId).lean() : null;
+        if (!student) {
+          const email = String(req.user.email || "").trim().toLowerCase();
+          student = await Student.findOne({
+            $or: [
+              { userId: req.user._id },
+              ...(email ? [{ email }] : []),
+            ],
+          }).lean();
         }
+        if (linkedProgramIds.length > 0) {
+          const identifiers = [
+            req.user._id ? { userId: req.user._id } : null,
+            student?._id ? { studentId: student._id } : null,
+          ].filter(Boolean);
+          const courseEnrollment = identifiers.length
+            ? await ProgramEnrollment.findOne({
+                status: { $in: ["Active", "Completed"] },
+                programId: { $in: linkedProgramIds },
+                $or: identifiers,
+              }).sort({ assignedAt: -1, createdAt: -1 }).select("programId").lean()
+            : null;
+          courseProgramId = courseEnrollment?.programId || null;
+        }
+        if (!courseProgramId && student?.programId && linkedProgramIds.includes(String(student.programId))) {
+          courseProgramId = student.programId;
+        }
+
+        // ProgramEnrollment is the source of truth, so a valid user-only
+        // enrollment must receive the same schedule as a legacy Student row.
+        schedule = await resolveProgramSchedule({ user: req.user, student, programId: courseProgramId });
+        if (schedule.batchExpired) {
+          return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
+        }
+        batch = schedule.batchId ? await Batch.findById(schedule.batchId).lean() : null;
+        program = schedule.programId ? await Program.findById(schedule.programId).lean() : null;
       }
     }
 
@@ -573,7 +716,7 @@ export const getCourseById = async (req, res) => {
     let isScheduleActive = false;
     let isPlacementPrimary = false;
 
-    if (student && schedule) {
+    if (schedule) {
       const courseIdStr = String(courseId);
       const primaryId = batch?.attachedCourse ? String(batch.attachedCourse) : null;
       const supportingIds = (batch?.supportingCourses || []).map(String);
@@ -626,6 +769,13 @@ export const getCourseById = async (req, res) => {
       title: course.title,
       description: course.description,
       level: course.level,
+      courseType: course.courseType,
+      duration: course.duration,
+      instructor: course.instructor,
+      schedule: course.schedule,
+      startDate: course.startDate,
+      numTopics: course.numTopics,
+      bannerImage: course.bannerImage,
       isPlacementPrimary,          // ← true only when this is the batch's primary course
       programId: schedule?.programId || null,
       scheduleType: schedule?.scheduleType || null,

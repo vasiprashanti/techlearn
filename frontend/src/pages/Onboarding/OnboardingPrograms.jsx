@@ -6,7 +6,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
 import { useTheme } from '../../context/ThemeContext';
 import API from '../../api/client';
-import { programLearningAPI } from '../../services/programLearningApi';
 import { initiateRazorpayPayment } from '../../utils/razorpayCheckout';
 import PricingExitFeedbackModal from '../../components/PricingExitFeedbackModal';
 
@@ -23,7 +22,6 @@ export default function OnboardingPrograms() {
 
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [readinessPrograms, setReadinessPrograms] = useState([]);
   const [configuredPricingPlans, setConfiguredPricingPlans] = useState([]);
   const [catalogPrograms, setCatalogPrograms] = useState([]);
   const [recommendedPrograms, setRecommendedPrograms] = useState([]);
@@ -60,40 +58,9 @@ export default function OnboardingPrograms() {
   const userSkills = Array.isArray(currentUser?.skills) && currentUser.skills.length > 0 
     ? currentUser.skills 
     : (currentUser?.skill ? [currentUser.skill] : ['Java']);
-  const selectedSkill = userSkills[0];
   const displaySkills = userSkills.join(', ');
 
   const [showExitModal, setShowExitModal] = useState(false);
-  const [isSkillReturningUser, setIsSkillReturningUser] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-    const checkEligibility = async () => {
-      try {
-        const res = await API.get('/api/payments/eligibility?programType=Skill');
-        if (isMounted && res.data?.success) {
-          setIsSkillReturningUser(!!res.data.isReturningUser);
-        }
-      } catch (err) {
-        console.error('Error fetching payment eligibility:', err);
-      }
-    };
-    checkEligibility();
-    return () => { isMounted = false; };
-  }, []);
-
-  useEffect(() => {
-    if (!isPlacement) return undefined;
-    let isMounted = true;
-    programLearningAPI.getReadinessOptions()
-      .then((response) => {
-        if (isMounted) setReadinessPrograms(response?.programs || []);
-      })
-      .catch(() => {
-        if (isMounted) setReadinessPrograms([]);
-      });
-    return () => { isMounted = false; };
-  }, [isPlacement]);
 
   useEffect(() => {
     if (currentUser?.programId) return undefined;
@@ -153,22 +120,25 @@ export default function OnboardingPrograms() {
       user: currentUser,
       onSuccess: async (resData) => {
         console.log('Payment successful & verified:', resData);
+        let enrollmentReady = false;
         try {
-          await API.post('/api/users/update-program-tier', {
-            planId,
-            learningGoal: goal,
-            targetRole,
-            selectedSkill,
-          }).catch(() => {});
+          // Payment verification is the source of truth for paid access. The
+          // backend creates/updates the program enrollment in the same flow;
+          // do not silently fall back to the legacy learningPath-only update.
+          if (!resData?.enrollment) {
+            throw new Error('Payment was verified, but the program enrollment was not created. Please contact support before trying again.');
+          }
 
           if (typeof refetchUserData === 'function') {
             await refetchUserData();
           }
+          enrollmentReady = true;
         } catch (err) {
           console.error('Post-payment sync error:', err);
+          alert(err.message || 'Payment was verified, but access is not ready yet. Please contact support before trying again.');
         } finally {
           setLoading(false);
-          navigate('/dashboard');
+          if (enrollmentReady) navigate('/dashboard');
         }
       },
       onFailure: (error) => {

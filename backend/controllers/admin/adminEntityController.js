@@ -3442,6 +3442,10 @@ export const updateStudentAdmin = async (req, res) => {
           student,
           user: linkedUser,
           batchId: nextBatchId,
+          // Batch membership changes the schedule only for the selected
+          // primary program; other program enrollments remain individual or
+          // retain their own batch assignment.
+          programId: nextProgramId,
         });
       }
 
@@ -3557,6 +3561,9 @@ export const removeStudentFromBatchAdmin = async (req, res) => {
         student,
         user: student.userId ? { _id: student.userId } : null,
         batchId: null,
+        // Clear only enrollments that actually used the removed batch. An
+        // unrelated individual program must keep its own Day 1 anchor.
+        sourceBatchId: batchId,
       }),
     ]);
 

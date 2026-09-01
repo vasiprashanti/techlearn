@@ -429,34 +429,38 @@ export default function FreeAssessmentTest() {
   const handleFinishAssessment = async () => {
     setShowEndModal(false);
     setSubmitting(true);
-    try {
-      localStorage.removeItem(timerStorageKey);
-      localStorage.removeItem(runStorageKey);
-    } catch (e) {}
 
     try {
       // Fetch latest assignment status / report
-      const response = await programLearningAPI.getAssignment(programId);
-      if (response?.assignment) {
-        const ass = response.assignment;
-        const total = ass.questions?.length || 0;
-        const correct = (ass.questions || []).filter((q) => q.correct === true).length;
-        const score = total > 0 ? Math.round((correct / total) * 100) : 0;
-
-        setIsCompleted(true);
-        setFinalResult({
-          score: ass.score ?? ass.accuracy ?? score,
-          accuracy: ass.accuracy ?? score,
-          totalQuestions: total,
-          answeredQuestions: (ass.questions || []).filter((q) => q.attempted).length,
-          correctAnswers: correct,
-        });
-      } else {
-        setIsCompleted(true);
+      const assignmentId = assignment?.id || assignment?._id;
+      const response = assignmentId
+        ? await programLearningAPI.completeAssignment(programId, assignmentId)
+        : await programLearningAPI.getAssignment(programId);
+      if (!response?.assignment) {
+        throw new Error("We couldn't save your assessment result. Please try again.");
       }
+
+      const ass = response.assignment;
+      const total = ass.questions?.length || 0;
+      const correct = (ass.questions || []).filter((q) => q.correct === true).length;
+      const score = total > 0 ? Math.round((correct / total) * 100) : 0;
+
+      try {
+        localStorage.removeItem(timerStorageKey);
+        localStorage.removeItem(runStorageKey);
+      } catch (e) {}
+
+      setIsCompleted(true);
+      setFinalResult({
+        score: ass.score ?? ass.accuracy ?? score,
+        accuracy: ass.accuracy ?? score,
+        totalQuestions: total,
+        answeredQuestions: (ass.questions || []).filter((q) => q.attempted).length,
+        correctAnswers: correct,
+      });
     } catch (err) {
       console.error('Finish assessment error:', err);
-      setIsCompleted(true);
+      setOutput(err.message || "We couldn't save your assessment result. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -503,12 +507,11 @@ export default function FreeAssessmentTest() {
     const totalQuestions = finalResult.totalQuestions || questions.length;
     const answeredCount = finalResult.answeredQuestions ?? (assignment?.questions || []).filter((q) => q.attempted).length;
     const correctCount = finalResult.correctAnswers ?? (assignment?.questions || []).filter((q) => q.correct === true).length;
-    const accuracy = totalQuestions > 0 
-      ? Math.round((correctCount / totalQuestions) * 100) 
-      : (finalResult.accuracy ?? finalResult.score ?? 0);
-    const score = accuracy;
-    const targetRole = assignment?.targetRole || user?.targetRole || 'Backend Developer';
-    const targetCompany = assignment?.targetCompanies?.[0] || 'TCS';
+    const derivedAccuracy = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+    const accuracy = finalResult.accuracy ?? finalResult.score ?? derivedAccuracy;
+    const score = finalResult.score ?? accuracy;
+    const targetRole = assignment?.targetRole || user?.targetRole || 'Target role not set';
+    const targetCompany = assignment?.targetCompanies?.[0] || user?.targetCompanies?.[0] || 'Company benchmark not set';
 
     return (
       <div className="relative h-screen w-screen overflow-hidden flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-3 sm:p-6 font-sans text-slate-900 dark:text-slate-100">
@@ -770,8 +773,8 @@ export default function FreeAssessmentTest() {
   const options = questionDetails.options || [];
   const selectedOption = selectedAnswers[activeQuestionIndex];
   const isQuestionSubmitted = submittedQuestions.has(activeQuestionIndex);
-  const candidateRole = assignment?.targetRole || user?.targetRole || 'Software Developer';
-  const candidateCompany = assignment?.targetCompanies?.[0] || 'Tech Corp';
+  const candidateRole = assignment?.targetRole || user?.targetRole || 'Target role not set';
+  const candidateCompany = assignment?.targetCompanies?.[0] || user?.targetCompanies?.[0] || 'Company benchmark not set';
 
   return (
     <div className="flex min-h-screen lg:h-screen flex-col lg:overflow-hidden bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] font-sans">

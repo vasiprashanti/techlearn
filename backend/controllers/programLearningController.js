@@ -9,6 +9,7 @@ import {
 } from "../services/programQuestionEngineService.js";
 import {
   assignmentSummary,
+  completeProgramAssignment as completeProgramAssignmentService,
   ensureReadinessLead,
   submitProgramAssignmentAnswer,
 } from "../services/programAssignmentService.js";
@@ -261,6 +262,34 @@ export const submitAssignmentAnswer = async (req, res) => {
     });
   } catch (error) {
     return sendError(res, error, "Failed to submit program assignment answer.");
+  }
+};
+
+export const completeProgramAssignment = async (req, res) => {
+  try {
+    const assignment = await getOwnedAssignment({
+      assignmentId: req.params.assignmentId,
+      userId: req.user._id,
+      programId: req.params.programId,
+    });
+    if (!assignment) {
+      const error = new Error("Assignment not found.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const result = await completeProgramAssignmentService({
+      assignment,
+      user: req.user,
+    });
+
+    return res.json({
+      success: true,
+      summary: result.summary,
+      assignment: await serializeAssignment(result.assignment),
+    });
+  } catch (error) {
+    return sendError(res, error, "Failed to complete program assignment.");
   }
 };
 

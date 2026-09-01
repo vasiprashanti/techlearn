@@ -136,12 +136,38 @@ const jobSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["Draft", "Published", "Closed", "Archived"],
+      enum: ["Draft", "Published", "Active", "Closed", "Archived"],
       default: "Draft",
       index: true,
     },
 
     publishedAt: {
+      type: Date,
+      default: null,
+    },
+
+    // Compatibility fields with main
+    company: {
+      type: String,
+      trim: true,
+    },
+    employmentType: {
+      type: String,
+      default: "Full-time",
+    },
+    role: {
+      type: String,
+      default: "",
+    },
+    applyUrl: {
+      type: String,
+      default: "",
+    },
+    postedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    closesAt: {
       type: Date,
       default: null,
     },
@@ -209,5 +235,6 @@ jobSchema.index({ companyName: 1, title: 1 });
 
 // Useful for published job listing
 jobSchema.index({ status: 1, createdAt: -1 });
+jobSchema.index({ status: 1, postedAt: -1 });
 
 export default mongoose.model("Job", jobSchema);

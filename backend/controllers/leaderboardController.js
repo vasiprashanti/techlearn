@@ -15,45 +15,76 @@ const sumMapValues = (value) => {
   );
 };
 
-const buildAvatarUrl = (user) => user.avatar || "";
+const buildAvatarUrl = (user) => user?.avatar || "";
 
 const buildDisplayName = (user) => {
-  const userFullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+  const userFullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
   if (userFullName) return userFullName;
-  
-  const emailUsername = String(user.email || "").split("@")[0];
-  if (user.name && user.name !== emailUsername) return user.name;
+
+  const emailUsername = String(user?.email || "").split("@")[0];
+  if (user?.name && user.name !== emailUsername) return user.name;
   return emailUsername || "Learner";
 };
+
+const normalizeTokens = (user) => {
+  const programSelection = String(user?.programSelection || "").trim();
+  return [
+    user?.targetRole,
+    user?.otherTargetRole,
+    user?.learningGoal,
+    user?.placementCategory,
+    ...(programSelection && programSelection !== "Placement Sprint" ? [programSelection] : []),
+    ...(Array.isArray(user?.skills) ? user.skills : []),
+  ]
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter(Boolean);
+};
+
+const getPersonalizationScore = (candidate, viewer) => {
+  const viewerTokens = normalizeTokens(viewer);
+  if (!viewerTokens.length) return 0;
+  const candidateTokens = normalizeTokens(candidate);
+  return viewerTokens.reduce(
+    (score, token) => score + (
+      candidateTokens.some((value) => value === token || value.includes(token) || token.includes(value))
+        ? 1
+        : 0
+    ),
+    0
+  );
+};
+
+const rankRows = (rows) => rows
+  .sort((a, b) => {
+    if (b.totalXp !== a.totalXp) return b.totalXp - a.totalXp;
+    if (b.solvedCount !== a.solvedCount) return b.solvedCount - a.solvedCount;
+    return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+  })
+  .map((entry, index) => {
+    const { profile, ...publicEntry } = entry;
+    return { ...publicEntry, rank: index + 1 };
+  });
 
 export const getPublicLeaderboard = async (req, res) => {
   try {
     const requestedLimit = Number.parseInt(req.query.limit, 10);
-    const limit =
-      Number.isFinite(requestedLimit) && requestedLimit > 0
-        ? Math.min(requestedLimit, 100)
-        : DEFAULT_LIMIT;
+    const limit = Number.isFinite(requestedLimit) && requestedLimit > 0
+      ? Math.min(requestedLimit, 100)
+      : DEFAULT_LIMIT;
 
-    const progressRows = await UserProgress.find({})
-      .populate("userId", "firstName lastName email avatar role batchId programSelection")
+    // Start with learner accounts and left-join progress. Previously this
+    // endpoint started with UserProgress, so a new learner had no row and the
+    // user-specific board rendered empty.
+    const learners = await User.find({ role: { $ne: "admin" } })
+      .select("firstName lastName name email avatar role programSelection targetRole otherTargetRole skills learningGoal placementCategory updatedAt")
       .lean();
-
-    const isProjectUser = req.user && req.user.programSelection === "Full Stack Project Program";
-
-    let filteredRows = progressRows.filter((row) => row.userId && row.userId.role !== "admin");
-
-    if (req.user && req.user.batchId) {
-      const userBatchIdStr = req.user.batchId.toString();
-      filteredRows = filteredRows.filter((row) => {
-        const rowBatchIdStr = row.userId.batchId ? row.userId.batchId.toString() : null;
-        return rowBatchIdStr && rowBatchIdStr === userBatchIdStr;
-      });
-    }
-
-    const learnerRows = filteredRows;
-    const learnerIds = learnerRows.map((row) => row.userId._id);
-    const learnerEmails = learnerRows
-      .map((row) => String(row.userId.email || "").trim().toLowerCase())
+    const learnerIds = learners.map((learner) => learner._id);
+    const progressRows = learnerIds.length
+      ? await UserProgress.find({ userId: { $in: learnerIds } }).lean()
+      : [];
+    const progressByUserId = new Map(progressRows.map((row) => [String(row.userId), row]));
+    const learnerEmails = learners
+      .map((learner) => String(learner.email || "").trim().toLowerCase())
       .filter(Boolean);
 
     const [practiceSolvedCounts, collegeMcqSubmissions] = await Promise.all([
@@ -82,91 +113,95 @@ export const getPublicLeaderboard = async (req, res) => {
       collegeMcqXpByEmail.set(email, (collegeMcqXpByEmail.get(email) || 0) + correctAnswers * MCQ_XP_VALUE);
     });
 
-    const leaderboardRows = learnerRows
-      .map((row) => {
-        const userProgram = row.userId.programSelection || "Placement Sprint";
-        const isProjectOnly = userProgram === "Full Stack Project Program";
-        const isPlacementOnly = userProgram === "Placement Sprint";
+    const allRows = learners.map((learner) => {
+      const progress = progressByUserId.get(String(learner._id)) || {};
+      const userProgram = learner.programSelection || "Placement Sprint";
+      const isProjectOnly = userProgram === "Full Stack Project Program";
+      const isPlacementOnly = userProgram === "Placement Sprint";
+      const courseXp = isProjectOnly ? 0 : sumMapValues(progress.courseXP);
+      const exerciseXp = isProjectOnly ? 0 : sumMapValues(progress.exerciseXP);
+      const projectXp = isPlacementOnly ? 0 : sumMapValues(progress.projectXP);
+      const email = String(learner.email || "").trim().toLowerCase();
+      const assessmentXp = isProjectOnly ? 0 : (collegeMcqXpByEmail.get(email) || 0);
+      const totalXp = courseXp + exerciseXp + projectXp + assessmentXp;
+      const completedExercises = Array.isArray(progress.completedExercises)
+        ? progress.completedExercises.length
+        : 0;
+      const solvedCount = (
+        (practiceSolvedByUserId.get(String(learner._id)) || 0)
+        + (collegeMcqSolvedByEmail.get(email) || 0)
+      ) || completedExercises;
 
-        const courseXp = isProjectOnly ? 0 : sumMapValues(row.courseXP);
-        const exerciseXp = isProjectOnly ? 0 : sumMapValues(row.exerciseXP);
-        const projectXp = isPlacementOnly ? 0 : sumMapValues(row.projectXP);
-        const email = String(row.userId.email || "").trim().toLowerCase();
-        const assessmentXp = isProjectOnly ? 0 : (collegeMcqXpByEmail.get(email) || 0);
-        const totalXp = courseXp + exerciseXp + projectXp + assessmentXp;
+      return {
+        userId: learner._id.toString(),
+        name: buildDisplayName(learner),
+        avatar: buildAvatarUrl(learner),
+        totalXp,
+        courseXp,
+        exerciseXp,
+        projectXp,
+        assessmentXp,
+        completedExercises,
+        solvedCount,
+        updatedAt: progress.updatedAt || learner.updatedAt,
+        profile: learner,
+      };
+    });
 
-        const completedExercises = Array.isArray(row.completedExercises)
-          ? row.completedExercises.length
-          : 0;
-
-        const solvedCount = (
-          // Explicit parentheses to avoid (a + b || c) being parsed as (a + (b || c))
-          ((practiceSolvedByUserId.get(String(row.userId._id)) || 0) +
-           (collegeMcqSolvedByEmail.get(email) || 0)) ||
-          completedExercises
-        );
-
-        return {
-          userId: row.userId._id.toString(),
-          name: buildDisplayName(row.userId),
-          avatar: buildAvatarUrl(row.userId),
-          totalXp,
-          courseXp,
-          exerciseXp,
-          projectXp,
-          assessmentXp,
-          completedExercises,
-          solvedCount,
-          updatedAt: row.updatedAt,
-        };
-      })
-      .sort((a, b) => {
-        if (b.totalXp !== a.totalXp) return b.totalXp - a.totalXp;
-        if (b.solvedCount !== a.solvedCount) {
-          return b.solvedCount - a.solvedCount;
-        }
-        return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
-      })
-      .map((entry, index) => ({
-        ...entry,
-        rank: index + 1,
-      }));
+    const matchingRows = req.user
+      ? allRows.filter((entry) => getPersonalizationScore(entry.profile, req.user) > 0)
+      : [];
+    const personalized = matchingRows.length >= 3;
+    const visibleRows = personalized ? matchingRows : allRows;
+    const rankedRows = rankRows(visibleRows);
 
     let currentUser = null;
-
     if (req.user) {
       const userId = req.user._id.toString();
-      currentUser = leaderboardRows.find((entry) => entry.userId === userId) || null;
+      currentUser = rankedRows.find((entry) => entry.userId === userId) || null;
 
       if (!currentUser && req.user.role !== "admin") {
-        const fallbackUser = await User.findById(req.user._id)
-          .select("firstName lastName email avatar")
-          .lean();
-
-        if (fallbackUser) {
-          currentUser = {
-            rank: leaderboardRows.length + 1,
-            userId,
-            name: buildDisplayName(fallbackUser),
-            avatar: buildAvatarUrl(fallbackUser),
-            totalXp: 0,
-            courseXp: 0,
-            exerciseXp: 0,
-            projectXp: 0,
-            assessmentXp: 0,
-            completedExercises: 0,
-            solvedCount: 0,
-          };
-        }
+        currentUser = {
+          rank: rankedRows.length + 1,
+          userId,
+          name: buildDisplayName(req.user),
+          avatar: buildAvatarUrl(req.user),
+          totalXp: 0,
+          courseXp: 0,
+          exerciseXp: 0,
+          projectXp: 0,
+          assessmentXp: 0,
+          completedExercises: 0,
+          solvedCount: 0,
+        };
       }
     }
+
+    const publicRows = rankedRows.length
+      ? rankedRows
+      : [{
+          rank: 1,
+          userId: "community-benchmark",
+          name: "TechLearn Community",
+          avatar: "",
+          totalXp: 0,
+          courseXp: 0,
+          exerciseXp: 0,
+          projectXp: 0,
+          assessmentXp: 0,
+          completedExercises: 0,
+          solvedCount: 0,
+        }];
 
     return res.status(200).json({
       success: true,
       data: {
-        entries: leaderboardRows.slice(0, limit),
+        entries: publicRows.slice(0, limit),
         currentUser,
-        totalParticipants: leaderboardRows.length,
+        totalParticipants: publicRows.length,
+        globalParticipants: allRows.length,
+        scope: personalized ? "personalized" : "global",
+        personalized,
       },
     });
   } catch (error) {

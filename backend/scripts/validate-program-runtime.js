@@ -123,7 +123,7 @@ const run = () => {
     "company_preparation",
     "final_assessment",
   ]);
-  assert.deepEqual(BLUEPRINT_TYPES_BY_PROGRAM_TYPE.Skill, ["final_assessment"]);
+  assert.deepEqual(BLUEPRINT_TYPES_BY_PROGRAM_TYPE.Skill, ["day_0_readiness", "final_assessment"]);
 
   const questionA = { _id: id(), roles: ["Frontend Developer"], companies: ["Accenture"], subject: "DSA", topic: "Arrays", subtopic: "Sliding Window", usage: "Both" };
   const questionB = { _id: id(), roles: ["Backend Developer"], companies: ["TCS"], subject: "DSA", topic: "Arrays", subtopic: "Two Pointer", usage: "Assessment" };

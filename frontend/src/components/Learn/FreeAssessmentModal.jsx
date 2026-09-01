@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useAuthModalContext } from '../../context/AuthModalContext';
-import { programLearningAPI } from '../../services/programLearningApi';
 
 const POPULAR_ROLES = [
   'Full Stack Developer',
@@ -27,14 +26,13 @@ const POPULAR_COMPANIES = [
 
 export default function FreeAssessmentModal({ isOpen, onClose, defaultProgramId = null, initialRole = null }) {
   const { user } = useAuth();
-  const { openSignup } = useAuthModalContext();
+  const { openLogin } = useAuthModalContext();
   const navigate = useNavigate();
 
-  const [selectedRole, setSelectedRole] = useState(initialRole || user?.targetRole || 'Full Stack Developer');
+  const [selectedRole, setSelectedRole] = useState(initialRole || user?.targetRole || '');
   const [customRole, setCustomRole] = useState('');
-  const [selectedCompany, setSelectedCompany] = useState(user?.targetCompanies?.[0] || 'TCS');
+  const [selectedCompany, setSelectedCompany] = useState(user?.targetCompanies?.[0] || '');
   const [customCompany, setCustomCompany] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   React.useEffect(() => {
@@ -44,32 +42,26 @@ export default function FreeAssessmentModal({ isOpen, onClose, defaultProgramId 
     }
   }, [initialRole, isOpen]);
 
-  // If user just logged in and had a pending assessment, trigger it automatically
-  React.useEffect(() => {
-    const triggerPending = async () => {
-      const pendingRaw = sessionStorage.getItem('pending_assessment');
-      if (user && pendingRaw) {
-        try {
-          const pending = JSON.parse(pendingRaw);
-          sessionStorage.removeItem('pending_assessment');
-          const response = await programLearningAPI.startFreeAssessment(pending);
-          if (response?.success && response?.programId) {
-            navigate(`/free-assessment/${response.programId}`);
-          }
-        } catch (e) {
-          console.error("Failed to start pending assessment:", e);
-        }
-      }
-    };
-    triggerPending();
-  }, [user, navigate]);
-
   if (!isOpen) return null;
 
   const finalRole = customRole.trim() || selectedRole;
   const finalCompany = customCompany.trim() || selectedCompany;
 
-  const handleStartAssessment = async () => {
+  const continueToAssessmentAuth = (mode) => {
+    sessionStorage.setItem('pending_assessment', JSON.stringify({
+      intent: 'assessment',
+      programId: defaultProgramId,
+      requiresSetup: true,
+    }));
+    onClose();
+    if (mode === 'login') {
+      openLogin();
+      return;
+    }
+    navigate('/signup/contextual?intent=assessment');
+  };
+
+  const handleStartAssessment = () => {
     if (!finalRole) {
       setError('Please select or specify your target role.');
       return;
@@ -80,38 +72,18 @@ export default function FreeAssessmentModal({ isOpen, onClose, defaultProgramId 
     }
 
     if (!user) {
-      sessionStorage.setItem('pending_assessment', JSON.stringify({
-        targetRole: finalRole,
-        targetCompany: finalCompany,
-        programId: defaultProgramId,
-      }));
-      onClose();
-      openSignup();
+      continueToAssessmentAuth('signup');
       return;
     }
 
-    setLoading(true);
-    setError('');
-
-    try {
-      const response = await programLearningAPI.startFreeAssessment({
+    onClose();
+    navigate('/free-assessment/setup', {
+      state: {
+        programId: defaultProgramId,
         targetRole: finalRole,
         targetCompany: finalCompany,
-        programId: defaultProgramId,
-      });
-
-      if (response?.success && response?.programId) {
-        onClose();
-        navigate(`/free-assessment/${response.programId}`);
-      } else {
-        throw new Error(response?.message || 'Could not generate assessment.');
-      }
-    } catch (err) {
-      console.error('Error starting Free Assessment:', err);
-      setError(err.message || 'Failed to start Free Assessment. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+      },
+    });
   };
 
   return (
@@ -334,7 +306,7 @@ export default function FreeAssessmentModal({ isOpen, onClose, defaultProgramId 
       <div className="fam-root fam-card">
         {/* Top Bar Row */}
         <div className="fam-top-bar">
-          <button type="button" className="fam-close-btn" onClick={onClose} disabled={loading}>
+          <button type="button" className="fam-close-btn" onClick={onClose}>
             &times;
           </button>
         </div>
@@ -346,6 +318,7 @@ export default function FreeAssessmentModal({ isOpen, onClose, defaultProgramId 
 
         {error && <div className="fam-status-error">{error}</div>}
 
+        {user ? <>
         {/* 1. Target Role Section */}
         <div className="fam-followup-card">
           <h3>1. Target Role</h3>
@@ -418,18 +391,36 @@ export default function FreeAssessmentModal({ isOpen, onClose, defaultProgramId 
 
         {/* Action Button Row */}
         <div className="fam-btn-row">
-          <button type="button" className="fam-btn-secondary" onClick={onClose} disabled={loading}>
+          <button type="button" className="fam-btn-secondary" onClick={onClose}>
             CANCEL
           </button>
           <button
             type="button"
             className="fam-btn-primary"
             onClick={handleStartAssessment}
-            disabled={loading || !finalRole || !finalCompany}
+            disabled={!finalRole || !finalCompany}
           >
-            {loading ? 'STARTING...' : 'START TEST →'}
+            START TEST →
           </button>
         </div>
+        </> : (
+          <div className="fam-followup-card" style={{ textAlign: 'center', padding: '24px 18px' }}>
+            <h3 style={{ fontSize: '14px', color: '#111111', marginBottom: '8px', textTransform: 'none', letterSpacing: 0 }}>
+              Create your account to begin
+            </h3>
+            <p style={{ fontSize: '12px', color: '#666666', lineHeight: 1.5, marginBottom: '18px' }}>
+              We’ll ask for your target role and company after you sign up, then build your diagnostic from the Question Bank.
+            </p>
+            <div className="fam-btn-row">
+              <button type="button" className="fam-btn-secondary" onClick={() => continueToAssessmentAuth('login')}>
+                LOG IN
+              </button>
+              <button type="button" className="fam-btn-primary" onClick={() => continueToAssessmentAuth('signup')}>
+                SIGN UP →
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

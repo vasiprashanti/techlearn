@@ -263,7 +263,12 @@ export const submitProgramAssignmentAnswer = async ({
     error.statusCode = 403;
     throw error;
   }
-  if (["Completed", "Expired"].includes(assignment.status) && assignment.status === "Expired") {
+  if (assignment.status === "Completed") {
+    const error = new Error("This assessment attempt is already complete. Your saved result is available.");
+    error.statusCode = 409;
+    throw error;
+  }
+  if (assignment.status === "Expired") {
     const error = new Error("This assignment is no longer available.");
     error.statusCode = 403;
     throw error;
@@ -360,8 +365,12 @@ export const submitProgramAssignmentAnswer = async ({
     }
   }
 
-  await assignment.save();
   const summary = assignmentSummary(assignment);
+  assignment.score = summary.accuracy;
+  assignment.accuracy = summary.accuracy;
+  assignment.answeredQuestions = summary.answered;
+  assignment.correctAnswers = summary.correct;
+  await assignment.save();
   await updateReadinessLead(assignment, summary);
 
   if (summary.completed) {
@@ -412,6 +421,54 @@ export const submitProgramAssignmentAnswer = async ({
     result,
     summary,
   };
+};
+
+export const completeProgramAssignment = async ({ assignment, user }) => {
+  if (!assignment || !user?._id) {
+    const error = new Error("Assignment and authenticated user are required.");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (String(assignment.userId) !== String(user._id)) {
+    const error = new Error("You do not own this assignment.");
+    error.statusCode = 403;
+    throw error;
+  }
+  if (assignment.status === "Expired") {
+    const error = new Error("This assignment is no longer available.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (assignment.status !== "Completed") {
+    const now = new Date();
+    const summary = assignmentSummary(assignment);
+    assignment.status = "Completed";
+    assignment.completedAt = assignment.completedAt || now;
+    assignment.score = summary.accuracy;
+    assignment.accuracy = summary.accuracy;
+    assignment.answeredQuestions = summary.answered;
+    assignment.correctAnswers = summary.correct;
+    await assignment.save();
+    await updateReadinessLead(assignment, summary);
+
+    try {
+      await persistAssessmentLearnerReport({ assignment });
+    } catch (reportError) {
+      console.error("Assessment report persistence failed:", reportError);
+    }
+
+    if (assignment.phase === "final_assessment") {
+      await syncProgramEnrollmentCompletion({
+        programId: assignment.programId,
+        userId: assignment.userId,
+        studentId: assignment.studentId,
+        now,
+      });
+    }
+  }
+
+  return { assignment, summary: assignmentSummary(assignment) };
 };
 
 export { assignmentSummary };

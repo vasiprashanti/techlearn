@@ -10,6 +10,7 @@ import Batch from "../models/Batch.js";
 import LearnerReport from "../models/LearnerReport.js";
 import { findStudentForUser } from "../utils/userProfile.js";
 import { resolveProgramSchedule, calculateProgramDayNumber } from "../utils/programSchedule.js";
+import { parseDurationDays } from "../utils/programPhases.js";
 
 const getId = (value) => value?._id || value?.id || value || null;
 
@@ -106,7 +107,18 @@ export const buildProgramLearnerReport = async ({ user, programId }) => {
   const batch = schedule.batchId
     ? (enrollment.batchId?._id ? enrollment.batchId : await Batch.findById(schedule.batchId).select("name startDate expiryDate status releaseTime").lean())
     : null;
-  const durationDays = Math.max(1, Math.min(730, Number(program.durationDays || program.duration || 30)));
+  const numericDurationDays = Number(program.durationDays);
+  const durationDays = Math.max(
+    1,
+    Math.min(
+      730,
+      Math.round(
+        Number.isFinite(numericDurationDays) && numericDurationDays > 0
+          ? numericDurationDays
+          : (parseDurationDays(program.duration) || Number(program.duration) || 30)
+      )
+    )
+  );
   const currentDay = Math.min(
     durationDays,
     calculateProgramDayNumber({

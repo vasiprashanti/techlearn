@@ -5,6 +5,7 @@ import {
   enrollInFreeProgram,
   getAssignedPrograms,
   getPublicPrograms,
+  getPublicProgramPreview,
   getReadinessOptions,
   joinProgramWaitlist,
   selectActiveProgram,
@@ -17,6 +18,7 @@ import {
   getProgramExperience,
   getFinalProgramReport,
   getRevisionMaterials,
+  completeProgramAssignment,
   submitAssignmentAnswer,
   submitReadinessAnswer,
 } from "../controllers/programLearningController.js";
@@ -27,6 +29,7 @@ const router = express.Router();
 
 // Public / Guest-accessible endpoints
 router.get("/public", getPublicPrograms);
+router.get("/public/:programId", getPublicProgramPreview);
 router.get("/readiness-options", getReadinessOptions);
 router.post("/:programId/waitlist", guestAssessmentRateLimiter, protectOptional, joinProgramWaitlist);
 
@@ -34,10 +37,9 @@ router.post("/:programId/waitlist", guestAssessmentRateLimiter, protectOptional,
 router.get("/catalog", getProgramCatalog);
 router.get("/recommendations", protect, getProgramRecommendations);
 router.get("/assigned", protect, getAssignedPrograms);
-router.post("/free-assessment/start", protect, startFreeAssessment);
+router.post("/free-assessment/start", protectOptional, guestAssessmentRateLimiter, protect, startFreeAssessment);
 router.post("/select-active", protect, selectActiveProgram);
 router.post("/:programId/free-enroll", protect, enrollInFreeProgram);
-router.post("/:programId/waitlist", protect, joinProgramWaitlist);
 router.get("/:programId/experience", protect, getProgramExperience);
 router.get("/:programId/final-report", protect, getFinalProgramReport);
 router.get("/:programId/readiness", protect, getProgramAssignment);
@@ -47,6 +49,7 @@ router.get("/:programId/assignments/current", protect, getProgramAssignment);
 router.get("/:programId/assignments/:assignmentId", protect, getProgramAssignment);
 router.get("/:programId/assignments/:assignmentId/questions/:questionId", protect, getAssignmentQuestion);
 router.post("/:programId/assignments/:assignmentId/answers", protect, submitAssignmentAnswer);
+router.post("/:programId/assignments/:assignmentId/complete", protect, completeProgramAssignment);
 router.get("/:programId", protect, getProgramDetailForStudent);
 
 export default router;

@@ -4,7 +4,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
 import { register } from '../../api/authService';
 import { navigateUserByProgram } from '../../utils/navigation';
-import { programLearningAPI } from '../../services/programLearningApi';
 import { auth } from '../../config/firebase';
 import { 
   signInWithPopup, 
@@ -199,17 +198,15 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
       try {
         const pending = JSON.parse(pendingRaw);
         sessionStorage.removeItem('pending_assessment');
-        setLoading(true);
-        const response = await programLearningAPI.startFreeAssessment(pending);
-        if (response?.success && response?.programId) {
-          handleClose();
-          navigate(`/free-assessment/${response.programId}`);
+        if (pending?.requiresSetup || pending?.intent === 'assessment') {
+          if (onClose) onClose();
+          navigate('/free-assessment/setup', {
+            state: { programId: pending.programId || null },
+          });
           return true;
         }
       } catch (e) {
-        console.error('Failed to start pending assessment:', e);
-      } finally {
-        setLoading(false);
+        console.error('Failed to resume pending assessment:', e);
       }
     }
     return false;
@@ -735,53 +732,50 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
       }
 
       setLoading(false);
-      setScreen('complete');
-      setTimeout(async () => {
-        const continuation = location.state || {};
-        handleClose();
-        if (selectedPath === 'Free' && continuation.freeProgramId) {
-          try {
-            const enrollResponse = await fetch(`${getApiBase()}/programs/${continuation.freeProgramId}/free-enroll`, {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            const enrollData = await enrollResponse.json().catch(() => ({}));
-            if (!enrollResponse.ok) throw new Error(enrollData.message || 'Unable to start this program.');
-            navigate(`/learn/program/${continuation.freeProgramId}`);
-          } catch (error) {
-            console.error('Program continuation after onboarding failed:', error);
-            navigate('/learn');
-          }
-          return;
-        }
-        if (continuation.waitlistProgramId) {
-          try {
-            const waitlistResponse = await fetch(`${getApiBase()}/programs/${continuation.waitlistProgramId}/waitlist`, {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            if (!waitlistResponse.ok) {
-              const waitlistData = await waitlistResponse.json().catch(() => ({}));
-              throw new Error(waitlistData.message || 'Unable to join the waitlist.');
-            }
-          } catch (error) {
-            console.error('Waitlist continuation after onboarding failed:', error);
-          }
-          navigate('/learn');
-          return;
-        }
-        if (selectedPath === 'Member') {
-          navigate('/onboarding/programs', {
-            state: {
-              targetRole: payload.targetRole,
-              skills: payload.skills,
-              learningGoal: payload.learningGoal,
-            }
+      const continuation = location.state || {};
+      handleClose();
+      if (selectedPath === 'Free' && continuation.freeProgramId) {
+        try {
+          const enrollResponse = await fetch(`${getApiBase()}/programs/${continuation.freeProgramId}/free-enroll`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
           });
-        } else {
-          navigate('/dashboard');
+          const enrollData = await enrollResponse.json().catch(() => ({}));
+          if (!enrollResponse.ok) throw new Error(enrollData.message || 'Unable to start this program.');
+          navigate(`/learn/program/${continuation.freeProgramId}`);
+        } catch (error) {
+          console.error('Program continuation after onboarding failed:', error);
+          navigate('/learn');
         }
-      }, 1800);
+        return;
+      }
+      if (continuation.waitlistProgramId) {
+        try {
+          const waitlistResponse = await fetch(`${getApiBase()}/programs/${continuation.waitlistProgramId}/waitlist`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!waitlistResponse.ok) {
+            const waitlistData = await waitlistResponse.json().catch(() => ({}));
+            throw new Error(waitlistData.message || 'Unable to join the waitlist.');
+          }
+        } catch (error) {
+          console.error('Waitlist continuation after onboarding failed:', error);
+        }
+        navigate('/learn');
+        return;
+      }
+      if (selectedPath === 'Member') {
+        navigate('/onboarding/programs', {
+          state: {
+            targetRole: payload.targetRole,
+            skills: payload.skills,
+            learningGoal: payload.learningGoal,
+          }
+        });
+      } else {
+        navigate('/dashboard');
+      }
     } catch (e) {
       console.error('Onboarding completion error:', e);
       const errMsg = e.response?.data?.message || e.message || 'Unable to complete onboarding. Please check your information and try again.';

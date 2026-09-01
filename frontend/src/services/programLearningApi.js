@@ -25,6 +25,7 @@ const request = async (path, options = {}) => {
 
 export const programLearningAPI = {
   getPublicPrograms: () => request('/programs/public'),
+  getPublicProgramPreview: (programId) => request('/programs/public/' + programId),
   getReadinessOptions: () => request('/programs/readiness-options'),
   joinWaitlist: (programId, leadData) => request('/programs/' + programId + '/waitlist', {
     method: 'POST',
@@ -42,6 +43,10 @@ export const programLearningAPI = {
   submitAssignmentAnswer: (programId, assignmentId, answer) => request(
     '/programs/' + programId + '/assignments/' + assignmentId + '/answers',
     { method: 'POST', body: JSON.stringify(answer) }
+  ),
+  completeAssignment: (programId, assignmentId) => request(
+    '/programs/' + programId + '/assignments/' + assignmentId + '/complete',
+    { method: 'POST', body: JSON.stringify({}) }
   ),
   submitReadinessAnswer: (programId, answer) => request(
     '/programs/' + programId + '/readiness/answers',

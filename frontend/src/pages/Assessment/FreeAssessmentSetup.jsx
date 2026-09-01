@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Play, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { useAuthModalContext } from '../../context/AuthModalContext';
 import { programLearningAPI } from '../../services/programLearningApi';
 
 const POPULAR_ROLES = [
@@ -38,19 +37,18 @@ const INTERVIEW_RULES = [
 
 export default function FreeAssessmentSetup() {
   const { theme } = useTheme();
-  const { user } = useAuth();
-  const { openSignup } = useAuthModalContext();
+  const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   // Step 1: 'role-company', Step 2: 'rules'
   const [step, setStep] = useState('role-company');
   const [selectedRole, setSelectedRole] = useState(
-    location.state?.targetRole || user?.targetRole || 'Full Stack Developer'
+    location.state?.targetRole || user?.targetRole || ''
   );
   const [customRole, setCustomRole] = useState('');
   const [selectedCompany, setSelectedCompany] = useState(
-    location.state?.targetCompany || user?.targetCompanies?.[0] || 'TCS'
+    location.state?.targetCompany || user?.targetCompanies?.[0] || ''
   );
   const [customCompany, setCustomCompany] = useState('');
   const [loading, setLoading] = useState(false);
@@ -58,29 +56,6 @@ export default function FreeAssessmentSetup() {
 
   const finalRole = customRole.trim() || selectedRole;
   const finalCompany = customCompany.trim() || selectedCompany;
-
-  // If user logs in while on this screen (e.g. via modal), auto-trigger pending interview
-  useEffect(() => {
-    const checkAndTrigger = async () => {
-      const pendingRaw = sessionStorage.getItem('pending_assessment');
-      if (user && pendingRaw) {
-        try {
-          const pending = JSON.parse(pendingRaw);
-          sessionStorage.removeItem('pending_assessment');
-          setLoading(true);
-          const response = await programLearningAPI.startFreeAssessment(pending);
-          if (response?.success && response?.programId) {
-            navigate(`/free-assessment/${response.programId}`);
-          }
-        } catch (err) {
-          console.error('Failed to trigger pending assessment:', err);
-          setError(err.message || 'Unable to launch interview. Please try again.');
-          setLoading(false);
-        }
-      }
-    };
-    checkAndTrigger();
-  }, [user, navigate]);
 
   const handleContinueToRules = (e) => {
     e.preventDefault();
@@ -110,9 +85,12 @@ export default function FreeAssessmentSetup() {
     };
 
     if (!user) {
-      // Save pending state and prompt auth
-      sessionStorage.setItem('pending_assessment', JSON.stringify(payload));
-      openSignup();
+      sessionStorage.setItem('pending_assessment', JSON.stringify({
+        intent: 'assessment',
+        programId: payload.programId,
+        requiresSetup: true,
+      }));
+      navigate('/signup/contextual?intent=assessment');
       return;
     }
 
@@ -132,6 +110,45 @@ export default function FreeAssessmentSetup() {
       setLoading(false);
     }
   };
+
+  const handleGuestContinue = (destination) => {
+    sessionStorage.setItem('pending_assessment', JSON.stringify({
+      intent: 'assessment',
+      programId: location.state?.programId || null,
+      requiresSetup: true,
+    }));
+    navigate(destination);
+  };
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#daf0fa] text-sm text-[#00113b] dark:bg-[#04083d] dark:text-white">
+        Preparing your assessment...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="relative flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] px-4 py-6 font-sans text-slate-900 dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:text-slate-100">
+        <main className="dashboard-surface w-full max-w-lg p-6 text-center sm:p-10">
+          <span className="press-start-font text-[8.5px] uppercase tracking-wider text-blue-600 dark:text-[#8fd9ff]">FREE ASSESSMENT</span>
+          <h1 className="mt-4 text-2xl font-black tracking-tight sm:text-4xl">Create your account first</h1>
+          <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-slate-600 dark:text-slate-300">
+            Sign up or log in, then choose your target role and company before starting the diagnostic.
+          </p>
+          <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+            <button type="button" onClick={() => handleGuestContinue('/login')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-black/10 px-5 py-3 text-sm font-bold dark:border-white/10">
+              Log in
+            </button>
+            <button type="button" onClick={() => handleGuestContinue('/signup/contextual?intent=assessment')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#3c83f6] px-5 py-3 text-sm font-bold text-white">
+              Create account <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] px-3 sm:px-6 py-6 font-sans text-slate-900 dark:text-slate-100">

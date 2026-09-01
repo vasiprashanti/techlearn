@@ -152,7 +152,7 @@ const Profile = () => {
             initial={{ opacity: 0, y: 12 }} 
             animate={{ opacity: 1, y: 0 }} 
             transition={{ duration: 0.4 }}
-            className="w-full relative overflow-hidden rounded-2xl bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-md"
+            className="dashboard-surface w-full relative overflow-hidden shadow-md"
           >
             {/* Sleek low-profile blue banner strip */}
             <div className="h-12 sm:h-14 w-full bg-gradient-to-r from-[#0052a3] via-[#0274c4] to-[#0091d9]" />
@@ -226,7 +226,7 @@ const Profile = () => {
             className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full"
           >
             {/* Total XP Card */}
-            <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl p-3.5 flex flex-col justify-between shadow-sm min-h-[75px]">
+            <div className="dashboard-surface p-3.5 flex flex-col justify-between shadow-sm min-h-[75px]">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[9px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold">TOTAL XP</span>
                 <div className="p-1 rounded-md bg-amber-500/10 text-amber-500">
@@ -239,7 +239,7 @@ const Profile = () => {
             </div>
 
             {/* Exercises Card */}
-            <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl p-3.5 flex flex-col justify-between shadow-sm min-h-[75px]">
+            <div className="dashboard-surface p-3.5 flex flex-col justify-between shadow-sm min-h-[75px]">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[9px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold">EXERCISES</span>
                 <div className="p-1 rounded-md bg-blue-500/10 text-blue-500">
@@ -252,7 +252,7 @@ const Profile = () => {
             </div>
 
             {/* Course Progress Card */}
-            <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl p-3.5 flex flex-col justify-between shadow-sm min-h-[75px]">
+            <div className="dashboard-surface p-3.5 flex flex-col justify-between shadow-sm min-h-[75px]">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[9px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold font-sans">COURSE</span>
                 <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-500">
@@ -281,7 +281,7 @@ const Profile = () => {
             className="grid grid-cols-1 md:grid-cols-2 gap-3.5 w-full items-stretch"
           >
             {/* ROW 1 - CARD A: Account Profile */}
-            <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col justify-between h-full">
+            <div className="dashboard-surface p-3.5 sm:p-4 shadow-sm flex flex-col justify-between h-full">
               <div className="space-y-2">
                 <div className="flex items-center gap-2 pb-1 border-b border-black/5 dark:border-white/5">
                   <div className="p-1 rounded-md bg-blue-500/10 text-blue-500">
@@ -323,7 +323,7 @@ const Profile = () => {
             </div>
 
             {/* ROW 1 - CARD B: Education & Enrollment */}
-            <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col justify-between h-full">
+            <div className="dashboard-surface p-3.5 sm:p-4 shadow-sm flex flex-col justify-between h-full">
               <div className="space-y-2">
                 <div className="flex items-center gap-2 pb-1 border-b border-black/5 dark:border-white/5">
                   <div className="p-1 rounded-md bg-blue-500/10 text-blue-500">
@@ -377,7 +377,7 @@ const Profile = () => {
 
             {/* ROW 2 - CARD C: Goals & Placement Preferences */}
             {(profileGoals.learningGoal === "Get Placed" || Boolean(profileGoals.targetRole) || Boolean(profileGoals.opportunityType) || displayUser?.learningGoal === "Get Placed" || Boolean(displayUser?.targetRole) || Boolean(displayUser?.placementCategory)) && (
-              <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col justify-between h-full">
+              <div className="dashboard-surface p-3.5 sm:p-4 shadow-sm flex flex-col justify-between h-full">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 pb-1 border-b border-black/5 dark:border-white/5">
                     <div className="p-1 rounded-md bg-blue-500/10 text-blue-500">
@@ -422,7 +422,7 @@ const Profile = () => {
             <div className="flex flex-col gap-3.5 justify-between h-full">
               {/* Target Companies */}
               {(profileGoals.learningGoal === "Get Placed" || Boolean(profileGoals.companies?.length) || displayUser?.learningGoal === "Get Placed" || Boolean(displayUser?.targetCompanies?.length)) && (
-                <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl p-3.5 sm:p-4 shadow-sm space-y-2 flex-1 flex flex-col justify-center">
+                <div className="dashboard-surface p-3.5 sm:p-4 shadow-sm space-y-2 flex-1 flex flex-col justify-center">
                   <div className="flex items-center gap-2 pb-1 border-b border-black/5 dark:border-white/5">
                     <div className="p-1 rounded-md bg-blue-500/10 text-blue-500">
                       <Shield className="w-3.5 h-3.5" />
@@ -448,7 +448,7 @@ const Profile = () => {
 
               {/* Skills & Interests */}
               {(profileGoals.learningGoal === "Learn New Skills" || profileSkills.length > 0 || displayUser?.learningGoal === "Learn New Skills" || (Array.isArray(displayUser?.skills) && displayUser.skills.length > 0)) && (
-                <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl p-3.5 sm:p-4 shadow-sm space-y-2 flex-1 flex flex-col justify-center">
+                <div className="dashboard-surface p-3.5 sm:p-4 shadow-sm space-y-2 flex-1 flex flex-col justify-center">
                   <div className="flex items-center gap-2 pb-1 border-b border-black/5 dark:border-white/5">
                     <div className="p-1 rounded-md bg-blue-500/10 text-blue-500">
                       <Zap className="w-3.5 h-3.5" />
