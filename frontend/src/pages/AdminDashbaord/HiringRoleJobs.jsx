@@ -51,6 +51,40 @@ export default function HiringRoleJobs() {
   // Modal State for View Job Details
   const [viewingJob, setViewingJob] = useState(null);
 
+  // Modal State for Edit Job
+  const [editingJob, setEditingJob] = useState(null);
+  const [editingJobId, setEditingJobId] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editLogoUrl, setEditLogoUrl] = useState("");
+  const [uploadingEditMarkdown, setUploadingEditMarkdown] = useState(false);
+  const [uploadingEditLogo, setUploadingEditLogo] = useState(false);
+
+  const [editForm, setEditForm] = useState({
+    companyName: "",
+    roleTitle: "",
+    jobType: "Full-time",
+    companyType: "MNC",
+    workMode: "Hybrid",
+    location: "",
+    experience: "Fresher",
+    salary: "",
+    education: "",
+    eligibleBranches: "",
+    graduationYear: "",
+    eligibility: "",
+    description: "",
+    skills: "",
+    responsibilities: "",
+    requirements: "",
+    benefits: "",
+    applicationUrl: "",
+    applicationDeadline: "",
+    status: "Draft",
+    markdownFile: null,
+    logoFile: null,
+  });
+
   // Modal State for Create Job
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [submittingJob, setSubmittingJob] = useState(false);
@@ -120,6 +154,188 @@ export default function HiringRoleJobs() {
       ...prev,
       [field]: value,
     }));
+  };
+
+  const updateEditField = (field, value) => {
+    setEditForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const openEditModal = (job) => {
+    setEditingJob(job);
+    setEditingJobId(job._id || job.id);
+    setEditError("");
+    setEditLogoUrl(job.companyLogo || "");
+    setEditForm({
+      companyName: job.companyName || job.company || "",
+      roleTitle: job.title || "",
+      jobType: job.jobType || "Full-time",
+      companyType: job.companyType || "MNC",
+      workMode: job.workMode || "Hybrid",
+      location: job.location || "",
+      experience: job.experience || "Fresher",
+      salary: job.salary || "",
+      education: job.education || "",
+      eligibleBranches: Array.isArray(job.eligibleBranches)
+        ? job.eligibleBranches.join(", ")
+        : job.eligibleBranches || "",
+      graduationYear: job.graduationYear || "",
+      eligibility: job.eligibility || "",
+      description: job.description || "",
+      skills: Array.isArray(job.skills)
+        ? job.skills.join(", ")
+        : job.skills || "",
+      responsibilities: Array.isArray(job.responsibilities)
+        ? job.responsibilities.join("\n")
+        : job.responsibilities || "",
+      requirements: Array.isArray(job.requirements)
+        ? job.requirements.join("\n")
+        : job.requirements || "",
+      benefits: Array.isArray(job.benefits)
+        ? job.benefits.join("\n")
+        : job.benefits || "",
+      applicationUrl: job.applicationUrl || "",
+      applicationDeadline: job.applicationDeadline
+        ? String(job.applicationDeadline).slice(0, 10)
+        : "",
+      status: job.status || "Draft",
+      markdownFile: null,
+      logoFile: null,
+    });
+  };
+
+  const closeEditModal = () => {
+    setEditingJob(null);
+    setEditingJobId(null);
+    setEditError("");
+    setEditLogoUrl("");
+  };
+
+  const handleEditSubmit = async (chosenStatus) => {
+    if (!editForm.companyName.trim()) {
+      setEditError("Company name is required.");
+      return;
+    }
+    if (!editForm.roleTitle.trim()) {
+      setEditError("Job title is required.");
+      return;
+    }
+
+    try {
+      setSavingEdit(true);
+      setEditError("");
+
+      const payload = {
+        companyName: editForm.companyName.trim(),
+        companyLogo: editLogoUrl || "",
+        parsedData: {
+          title: editForm.roleTitle.trim(),
+          companyType: editForm.companyType.trim(),
+          jobType: editForm.jobType,
+          workMode: editForm.workMode,
+          location: editForm.location.trim(),
+          experience: editForm.experience.trim(),
+          salary: editForm.salary.trim(),
+          skills: editForm.skills,
+          education: editForm.education.trim(),
+          eligibleBranches: editForm.eligibleBranches,
+          graduationYear: editForm.graduationYear.trim(),
+          eligibility: editForm.eligibility.trim(),
+          description: editForm.description.trim(),
+          responsibilities: editForm.responsibilities,
+          requirements: editForm.requirements,
+          benefits: editForm.benefits,
+          applicationUrl: editForm.applicationUrl.trim(),
+          applicationDeadline: editForm.applicationDeadline || null,
+        },
+        status: chosenStatus || editForm.status || "Draft",
+      };
+
+      await adminAPI.updateJob(editingJobId, payload);
+      closeEditModal();
+      fetchRoleAndJobs();
+    } catch (err) {
+      console.error("Failed to update job:", err);
+      setEditError(err.message || "Failed to update job. Please try again.");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleEditMarkdownUpload = async (e) => {
+    const file = e.target.files?.[0] || null;
+    updateEditField("markdownFile", file);
+    if (!file) return;
+
+    try {
+      setUploadingEditMarkdown(true);
+      setEditError("");
+
+      const result = await adminAPI.parseJobMarkdown(file);
+      const data = result?.data || result;
+
+      setEditForm((prev) => ({
+        ...prev,
+        roleTitle: data?.title || prev.roleTitle,
+        jobType: data?.jobType || prev.jobType,
+        companyType: data?.companyType || prev.companyType,
+        workMode: data?.workMode || prev.workMode,
+        location: data?.location || prev.location,
+        experience: data?.experience || prev.experience,
+        salary: data?.salary || prev.salary,
+        education: data?.education || prev.education,
+        eligibleBranches: Array.isArray(data?.eligibleBranches)
+          ? data.eligibleBranches.join(", ")
+          : data?.eligibleBranches || prev.eligibleBranches,
+        graduationYear: data?.graduationYear ? String(data.graduationYear) : prev.graduationYear,
+        eligibility: data?.eligibility || prev.eligibility,
+        description: data?.description || prev.description,
+        skills: Array.isArray(data?.skills)
+          ? data.skills.join(", ")
+          : data?.skills || prev.skills,
+        responsibilities: Array.isArray(data?.responsibilities)
+          ? data.responsibilities.join("\n")
+          : data?.responsibilities || prev.responsibilities,
+        requirements: Array.isArray(data?.requirements)
+          ? data.requirements.join("\n")
+          : data?.requirements || prev.requirements,
+        benefits: Array.isArray(data?.benefits)
+          ? data.benefits.join("\n")
+          : data?.benefits || prev.benefits,
+        applicationUrl: data?.applicationUrl || prev.applicationUrl,
+        applicationDeadline: data?.applicationDeadline
+          ? new Date(data.applicationDeadline).toISOString().split("T")[0]
+          : prev.applicationDeadline,
+        companyName: data?.company || data?.companyName || prev.companyName,
+      }));
+    } catch (err) {
+      console.error("Markdown parse failed:", err);
+      setEditError(err.message || "Failed to parse markdown file.");
+    } finally {
+      setUploadingEditMarkdown(false);
+    }
+  };
+
+  const handleEditLogoUpload = async (e) => {
+    const file = e.target.files?.[0] || null;
+    updateEditField("logoFile", file);
+    if (!file) return;
+
+    try {
+      setUploadingEditLogo(true);
+      setEditError("");
+
+      const result = await adminAPI.uploadJobLogo(file);
+      const uploadedUrl = result?.imageUrl || result?.url || result?.data?.imageUrl || "";
+      setEditLogoUrl(uploadedUrl);
+    } catch (err) {
+      console.error("Logo upload failed:", err);
+      setEditError(err.message || "Failed to upload company logo.");
+    } finally {
+      setUploadingEditLogo(false);
+    }
   };
 
   const filteredJobs = jobs.filter((job) => {
@@ -588,9 +804,9 @@ export default function HiringRoleJobs() {
                               <FiEye className="w-3.5 h-3.5" />
                             </button>
 
-                            {/* Edit Job */}
+                            {/* Edit Job Modal Button */}
                             <button
-                              onClick={() => navigate(`/admin/hiring/${roleId}/jobs/${job.id}/edit`)}
+                              onClick={() => openEditModal(job)}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                               title="Edit Job"
                             >
@@ -1162,6 +1378,313 @@ export default function HiringRoleJobs() {
                 >
                   <FiCheck className="w-3.5 h-3.5" />
                   {submittingJob ? "Publishing..." : "Publish Job"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT JOB MODAL POPUP */}
+      {editingJob && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-[#0f1f43] shadow-2xl border border-black/10 dark:border-white/10 overflow-hidden my-6 max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-slate-900/20">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <FiEdit2 className="w-4 h-4 text-[#3C83F6]" />
+                  Edit Job: {editForm.roleTitle || "Job Opportunity"}
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Role: <span className="font-semibold text-slate-700 dark:text-slate-200">{roleName}</span>
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeEditModal}
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xl p-1"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Scrollable Body */}
+            <div className="p-6 overflow-y-auto space-y-5 flex-1 minimal-scrollbar">
+              {/* Upload Boxes Row: Markdown + Logo */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* 1. Markdown Upload */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5 uppercase tracking-wide">
+                    1. Update via .md File
+                  </label>
+                  <label className="flex flex-col items-center justify-center w-full h-24 rounded-xl border border-dashed border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#071532] cursor-pointer hover:border-[#3C83F6] transition-colors p-3 text-center">
+                    <FiUpload className="w-4 h-4 text-[#3C83F6] mb-1" />
+                    <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[200px]">
+                      {editForm.markdownFile ? editForm.markdownFile.name : (uploadingEditMarkdown ? "Parsing .md..." : "Click to auto-fill with .md")}
+                    </span>
+                    <span className="text-[9px] text-slate-400">Extracts title, skills, description</span>
+                    <input
+                      type="file"
+                      accept=".md,text/markdown"
+                      className="hidden"
+                      onChange={handleEditMarkdownUpload}
+                    />
+                  </label>
+                </div>
+
+                {/* 2. Logo Upload */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5 uppercase tracking-wide">
+                    2. Company Logo
+                  </label>
+                  <div className="flex items-center gap-2.5">
+                    <label className="flex-1 flex flex-col items-center justify-center h-24 rounded-xl border border-dashed border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#071532] cursor-pointer hover:border-[#3C83F6] transition-colors p-3 text-center">
+                      <FiUpload className="w-4 h-4 text-[#3C83F6] mb-1" />
+                      <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[150px]">
+                        {editForm.logoFile ? editForm.logoFile.name : (uploadingEditLogo ? "Uploading logo..." : "Upload new logo")}
+                      </span>
+                      <span className="text-[9px] text-slate-400">PNG, JPG, SVG</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleEditLogoUpload}
+                      />
+                    </label>
+                    {editLogoUrl && (
+                      <div className="w-16 h-24 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 p-2 flex items-center justify-center shrink-0">
+                        <img src={editLogoUrl} alt="Logo" className="max-h-16 max-w-full object-contain" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Fields Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2 border-t border-black/5 dark:border-white/10">
+                {/* Company Name */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Company Name*
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.companyName}
+                    onChange={(e) => updateEditField("companyName", e.target.value)}
+                    placeholder="e.g. TCS, Amazon, Microsoft"
+                    className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#071532] px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    required
+                  />
+                </div>
+
+                {/* Job Title */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Job Title*
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.roleTitle}
+                    onChange={(e) => updateEditField("roleTitle", e.target.value)}
+                    placeholder="e.g. Software Engineer, SDE-1"
+                    className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#071532] px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    required
+                  />
+                </div>
+
+                {/* Salary */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Salary / Stipend
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.salary}
+                    onChange={(e) => updateEditField("salary", e.target.value)}
+                    placeholder="e.g. ₹6–10 LPA, ₹25,000/mo"
+                    className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#071532] px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                  />
+                </div>
+
+                {/* Experience */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Experience
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.experience}
+                    onChange={(e) => updateEditField("experience", e.target.value)}
+                    placeholder="e.g. Fresher, 0–2 years"
+                    className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#071532] px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                  />
+                </div>
+
+                {/* Location */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.location}
+                    onChange={(e) => updateEditField("location", e.target.value)}
+                    placeholder="e.g. Bengaluru, Hyderabad, Remote"
+                    className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#071532] px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                  />
+                </div>
+
+                {/* Work Mode */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Work Mode
+                  </label>
+                  <select
+                    value={editForm.workMode}
+                    onChange={(e) => updateEditField("workMode", e.target.value)}
+                    className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#071532] px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                  >
+                    <option value="Hybrid" className="bg-white text-slate-900 dark:bg-[#071532] dark:text-white">Hybrid</option>
+                    <option value="Remote" className="bg-white text-slate-900 dark:bg-[#071532] dark:text-white">Remote</option>
+                    <option value="On-site" className="bg-white text-slate-900 dark:bg-[#071532] dark:text-white">On-site</option>
+                  </select>
+                </div>
+
+                {/* Job Type */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Job Type
+                  </label>
+                  <select
+                    value={editForm.jobType}
+                    onChange={(e) => updateEditField("jobType", e.target.value)}
+                    className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#071532] px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                  >
+                    <option value="Full-time" className="bg-white text-slate-900 dark:bg-[#071532] dark:text-white">Full-time</option>
+                    <option value="Internship" className="bg-white text-slate-900 dark:bg-[#071532] dark:text-white">Internship</option>
+                    <option value="Freelance" className="bg-white text-slate-900 dark:bg-[#071532] dark:text-white">Freelance</option>
+                    <option value="Contract" className="bg-white text-slate-900 dark:bg-[#071532] dark:text-white">Contract</option>
+                  </select>
+                </div>
+
+                {/* Company Type */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Company Type
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.companyType}
+                    onChange={(e) => updateEditField("companyType", e.target.value)}
+                    placeholder="e.g. MNC, Startup"
+                    className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#071532] px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                  />
+                </div>
+
+                {/* Application URL */}
+                <div className="col-span-1 sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Application Link / URL
+                  </label>
+                  <input
+                    type="url"
+                    value={editForm.applicationUrl}
+                    onChange={(e) => updateEditField("applicationUrl", e.target.value)}
+                    placeholder="https://careers.company.com/apply"
+                    className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#071532] px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                  />
+                </div>
+
+                {/* Application Deadline */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Application Deadline
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.applicationDeadline}
+                    onChange={(e) => updateEditField("applicationDeadline", e.target.value)}
+                    className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#071532] px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                  />
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Listing Status
+                  </label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => updateEditField("status", e.target.value)}
+                    className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#071532] px-3 py-2 text-xs text-slate-900 dark:text-white outline-none font-semibold"
+                  >
+                    <option value="Draft" className="bg-white text-slate-900 dark:bg-[#071532] dark:text-white">Draft (Hidden from users)</option>
+                    <option value="Published" className="bg-white text-slate-900 dark:bg-[#071532] dark:text-white">Published (Live on Hiring page)</option>
+                    <option value="Closed" className="bg-white text-slate-900 dark:bg-[#071532] dark:text-white">Closed</option>
+                  </select>
+                </div>
+
+                {/* Skills */}
+                <div className="col-span-1 sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Key Skills (comma separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.skills}
+                    onChange={(e) => updateEditField("skills", e.target.value)}
+                    placeholder="e.g. React, Node.js, Python, SQL"
+                    className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#071532] px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="col-span-1 sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Job Description Overview
+                  </label>
+                  <textarea
+                    value={editForm.description}
+                    onChange={(e) => updateEditField("description", e.target.value)}
+                    placeholder="Brief description of the job opportunity and expectations..."
+                    rows={3}
+                    className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#071532] px-3 py-2 text-xs text-slate-900 dark:text-white outline-none resize-none"
+                  />
+                </div>
+              </div>
+
+              {editError && <p className="text-xs text-red-500 font-medium">{editError}</p>}
+            </div>
+
+            {/* Modal Actions Footer */}
+            <div className="px-6 py-3.5 border-t border-black/10 dark:border-white/10 bg-slate-50/70 dark:bg-slate-900/30 flex items-center justify-between shrink-0">
+              <button
+                type="button"
+                onClick={closeEditModal}
+                className="px-4 py-2 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/15 text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 transition"
+              >
+                Cancel
+              </button>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={savingEdit}
+                  onClick={() => handleEditSubmit("Draft")}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold border border-[#3C83F6]/30 text-[#3C83F6] dark:text-blue-300 hover:bg-[#3C83F6]/10 transition disabled:opacity-50"
+                >
+                  Save as Draft
+                </button>
+                <button
+                  type="button"
+                  disabled={savingEdit}
+                  onClick={() => handleEditSubmit("Published")}
+                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-[#3C83F6] text-white hover:bg-[#2f73e0] transition shadow-xs disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <FiCheck className="w-3.5 h-3.5" />
+                  {savingEdit ? "Updating..." : "Update Job"}
                 </button>
               </div>
             </div>

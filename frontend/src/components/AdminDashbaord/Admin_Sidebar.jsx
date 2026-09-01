@@ -6,7 +6,7 @@ import {
   FiX, FiSidebar, FiGrid, FiBarChart2, FiActivity,
   FiHome, FiBookOpen, FiUsers, FiCode, FiGitCommit,
   FiFileText, FiAward, FiMonitor, FiBell, FiClipboard, FiPieChart, FiSettings, FiTerminal,
-  FiLayers, FiFolder
+  FiLayers, FiFolder, FiBriefcase
 } from "react-icons/fi";
 
 const menuGroups = [
@@ -25,7 +25,7 @@ const menuGroups = [
       { id: "track-templates", title: "Track Templates", icon: <FiGitCommit className="w-4 h-4" /> },
       { id: "admin/roadmaps", title: "Roadmaps", icon: <FiFileText className="w-4 h-4" /> },
       { id: "admin/courses", title: "Courses", icon: <FiBookOpen className="w-4 h-4" /> },
-      { id: "admin/hiring", title: "Hiring", icon: <FiFolder className="w-4 h-4" /> },
+      { id: "admin/hiring", title: "Hiring", icon: <FiBriefcase className="w-4 h-4" /> },
       { id: "admin/projects", title: "Projects", icon: <FiClipboard className="w-4 h-4" /> },
       { id: "certificates", title: "Certificates", icon: <FiAward className="w-4 h-4" /> },
     ]
