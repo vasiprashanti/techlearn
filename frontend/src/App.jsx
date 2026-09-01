@@ -251,9 +251,7 @@ function LayoutWrapper() {
         <main className="flex-grow">
           <Routes>
           <Route path="/login" element={<Signup initialMode="login" />} />
-          {/* New account creation starts with contextual intent questions. The
-              legacy form remains available inside auth modals for compatibility. */}
-          <Route path="/signup" element={<Navigate to="/onboarding?intent=placement" replace />} />
+          <Route path="/signup" element={<Signup initialMode="signup" />} />
           <Route path="/signup/contextual" element={<ContextualSignup />} />
           <Route path="/onboarding" element={<ContextualOnboarding />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />

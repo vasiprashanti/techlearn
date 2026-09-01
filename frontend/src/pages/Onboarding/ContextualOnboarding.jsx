@@ -226,8 +226,37 @@ export default function ContextualOnboarding() {
       setError("");
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ intent, ...payload }));
 
+      // Synchronize draft for legacy/modal signup flow compatibility
+      const draftPayload = {
+        learningGoal: intent === "skill" ? "Learn New Skills" : "Get Placed",
+        targetRole: effectiveRole,
+        targetRoleOther: isOtherRoleActive ? otherRoleValue.trim() : "",
+        placementCategory: opportunity,
+        targetCompanies: selectedCompanies,
+        skills: intent === "skill" && selectedSkill ? [selectedSkill] : [],
+        learningPath: selectedPlan === "free_assessment" ? "Free" : "Member",
+        savedAt: new Date().toISOString(),
+      };
+      try {
+        localStorage.setItem("techlearn-onboarding-draft", JSON.stringify(draftPayload));
+      } catch (e) {
+        console.warn("Could not save onboarding draft:", e);
+      }
+
       if (!isAuthenticated || !user) {
-        navigate(`/signup/contextual?intent=${encodeURIComponent(intent)}`);
+        if (selectedPlan === "free_assessment") {
+          sessionStorage.setItem(
+            "pending_assessment",
+            JSON.stringify({
+              intent: "assessment",
+              targetRole: payload.targetRole,
+              targetCompany: payload.targetCompanies[0] || "",
+              requiresSetup: true,
+            })
+          );
+        }
+        // Redirect to the existing signup card
+        navigate("/signup", { state: payload });
         return;
       }
 
@@ -250,7 +279,12 @@ export default function ContextualOnboarding() {
             targetCompany: payload.targetCompanies[0] || "",
           })
         );
-        navigate("/free-assessment");
+        navigate("/free-assessment/setup", {
+          state: {
+            targetRole: payload.targetRole,
+            targetCompany: payload.targetCompanies[0] || "",
+          },
+        });
       } else {
         navigate("/onboarding/programs", { state: payload });
       }
