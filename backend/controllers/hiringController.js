@@ -480,29 +480,6 @@ export const listRecommendedJobs = async (req, res) => {
 
     /*
      * --------------------------------------------------------
-     * BRANCH ELIGIBILITY
-     * --------------------------------------------------------
-     */
-
-    if (degreeBranch) {
-      filter.eligibleBranches = {
-        $regex: `^${escapeRegex(degreeBranch)}$`,
-        $options: "i",
-      };
-    }
-
-    /*
-     * --------------------------------------------------------
-     * GRADUATION YEAR ELIGIBILITY
-     * --------------------------------------------------------
-     */
-
-    if (graduationYear) {
-      filter.graduationYear = graduationYear;
-    }
-
-    /*
-     * --------------------------------------------------------
      * SEARCH
      * --------------------------------------------------------
      */
@@ -566,12 +543,12 @@ export const listRecommendedJobs = async (req, res) => {
      * FETCH ELIGIBLE JOBS
      * --------------------------------------------------------
      *
-     * We fetch all eligible jobs first because personalization
-     * needs to happen BEFORE pagination.
+     * We fetch all published jobs first because personalization & ranking
+     * happens in memory across all profile dimensions.
      */
 
     const jobs = await Job.find(filter)
-      .select(`${jobListFields} roleId`)
+      .select(`${jobListFields} roleId eligibleBranches graduationYear`)
       .populate("roleId", "roleName")
       .lean();
 
@@ -580,14 +557,18 @@ export const listRecommendedJobs = async (req, res) => {
      * PERSONALIZATION SCORING
      * --------------------------------------------------------
      *
-     * Target Role       = +5
-     * Other Target Role = +5
-     * Target Company    = +4
-     * Matching Skill    = +2 each
-     *
-     * Graduation year and branch are already used as
-     * eligibility filters above.
+     * Target Role       = +6
+     * Target Company    = +5
+     * Matching Branch   = +4 (or +2 if job is open to Any Branch)
+     * Matching Grad Year= +4 (or +2 if job is open to Any Year)
+     * Matching Skill    = +2 each (up to +10)
      */
+
+    const normalizedDegreeBranch =
+      degreeBranch.toLowerCase();
+
+    const normalizedGraduationYear =
+      graduationYear.toLowerCase();
 
     const normalizedTargetRole =
       targetRole.toLowerCase();
@@ -627,51 +608,85 @@ export const listRecommendedJobs = async (req, res) => {
           )
         : [];
 
+      const jobBranches = Array.isArray(job.eligibleBranches)
+        ? job.eligibleBranches.map((b) =>
+            String(b).toLowerCase()
+          )
+        : [];
+
+      const jobGradYear =
+        String(job.graduationYear || "").toLowerCase();
+
       /*
-       * Target role
+       * 1. Target Role Match (+6)
        */
       if (
         normalizedTargetRole &&
         (
           jobTitle.includes(normalizedTargetRole) ||
-          roleName.includes(normalizedTargetRole)
+          roleName.includes(normalizedTargetRole) ||
+          normalizedTargetRole.includes(jobTitle) ||
+          normalizedTargetRole.includes(roleName)
         )
       ) {
-        recommendationScore += 5;
+        recommendationScore += 6;
       }
 
-      /*
-       * Other target role
-       */
       if (
         normalizedOtherTargetRole &&
         (
-          jobTitle.includes(
-            normalizedOtherTargetRole
-          ) ||
-          roleName.includes(
-            normalizedOtherTargetRole
-          )
+          jobTitle.includes(normalizedOtherTargetRole) ||
+          roleName.includes(normalizedOtherTargetRole)
         )
       ) {
         recommendationScore += 5;
       }
 
       /*
-       * Target company
+       * 2. Target Company Match (+5)
        */
       if (
         normalizedTargetCompanies.some(
           (company) =>
             companyName === company ||
-            companyName.includes(company)
+            companyName.includes(company) ||
+            company.includes(companyName)
         )
       ) {
-        recommendationScore += 4;
+        recommendationScore += 5;
       }
 
       /*
-       * Skills
+       * 3. Degree / Branch Match (+4 for exact match, +2 if open/any)
+       */
+      if (normalizedDegreeBranch) {
+        const isBranchMatch = jobBranches.some(
+          (b) =>
+            b.includes(normalizedDegreeBranch) ||
+            normalizedDegreeBranch.includes(b) ||
+            (normalizedDegreeBranch.includes("computer") && (b.includes("cs") || b.includes("it") || b.includes("software")))
+        );
+
+        if (isBranchMatch) {
+          recommendationScore += 4;
+        } else if (jobBranches.length === 0 || jobBranches.some((b) => b.includes("any") || b.includes("all"))) {
+          recommendationScore += 2;
+        }
+      }
+
+      /*
+       * 4. Graduation Year Match (+4 for exact match, +2 if open/any)
+       */
+      if (normalizedGraduationYear) {
+        if (jobGradYear && jobGradYear.includes(normalizedGraduationYear)) {
+          recommendationScore += 4;
+        } else if (!jobGradYear || jobGradYear.includes("any") || jobGradYear.includes("all")) {
+          recommendationScore += 2;
+        }
+      }
+
+      /*
+       * 5. Skills Match (+2 per matching skill, max 10)
        */
       const matchingSkills =
         normalizedStudentSkills.filter(
@@ -697,6 +712,30 @@ export const listRecommendedJobs = async (req, res) => {
 
     /*
      * --------------------------------------------------------
+     * RELEVANCE THRESHOLD
+     * --------------------------------------------------------
+     *
+     * Only return jobs that are genuinely relevant.
+     * The minimum threshold must be at least one real
+     * signal match beyond the open branch/year bonuses.
+     *
+     * Open branch alone = +2
+     * Open grad year alone = +2
+     * Total from "open" fallbacks alone = 4
+     *
+     * So threshold = 5 means the job MUST match at least
+     * one of: target role (+6), target company (+5),
+     * exact branch (+4), exact year (+4), or a skill (+2).
+     * A job with only open-branch + open-year bonuses (4) is excluded.
+     */
+    const MIN_RELEVANCE_SCORE = 5;
+
+    const relevantJobs = scoredJobs.filter(
+      (j) => j.recommendationScore >= MIN_RELEVANCE_SCORE
+    );
+
+    /*
+     * --------------------------------------------------------
      * SORT BY PERSONALIZATION
      * --------------------------------------------------------
      *
@@ -704,7 +743,7 @@ export const listRecommendedJobs = async (req, res) => {
      * If scores are equal, newest jobs first.
      */
 
-    scoredJobs.sort((a, b) => {
+    relevantJobs.sort((a, b) => {
       if (
         b.recommendationScore !==
         a.recommendationScore
@@ -731,9 +770,9 @@ export const listRecommendedJobs = async (req, res) => {
      * --------------------------------------------------------
      */
 
-    const total = scoredJobs.length;
+    const total = relevantJobs.length;
 
-    const paginatedJobs = scoredJobs.slice(
+    const paginatedJobs = relevantJobs.slice(
       skip,
       skip + itemsPerPage
     );
