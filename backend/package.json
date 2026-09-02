@@ -18,7 +18,9 @@
     "validate:phase2": "node scripts/validate-phase2.js",
     "validate:analytics-mix": "node scripts/validate-analytics-mix.js",
     "validate:program": "node scripts/validate-program-entity.js",
-    "validate:program-runtime": "node scripts/validate-program-runtime.js"
+    "validate:program-runtime": "node scripts/validate-program-runtime.js",
+    "seed:roadmaps": "node scripts/seed-roadmaps.js",
+    "validate:roadmaps": "node scripts/validate-roadmaps.js"
   },
   "keywords": [],
   "author": "",

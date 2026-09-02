@@ -641,6 +641,10 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
         setStatusMsg({ text: 'Please select at least one skill.', type: 'error' });
         return;
       }
+      if (!targetRole) {
+        setStatusMsg({ text: 'Please select a target role.', type: 'error' });
+        return;
+      }
     } else if (goal === 'Get Placed') {
       if (!targetRole) {
         setStatusMsg({ text: 'Please select a target role.', type: 'error' });
@@ -1532,6 +1536,21 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
               {goal === 'Learn New Skills' ? 'Select all that apply.' : 'Select all that apply.'}
             </p>
 
+            {goal !== 'Exploring TechLearn' && (
+              <div className="su-followup-card">
+                <h3>Target Role *</h3>
+                <select className="su-select" value={targetRole} onChange={(e) => setTargetRole(e.target.value)}>
+                  <option value="">Select Target Role</option>
+                  <option value="Frontend Developer">Frontend Developer</option>
+                  <option value="Backend Developer">Backend Developer</option>
+                  <option value="Full Stack Developer">Full Stack Developer</option>
+                  <option value="AI / Machine Learning Engineer">AI / Machine Learning Engineer</option>
+                  <option value="Data Scientist">Data Scientist</option>
+                  <option value="Generative AI Engineer">Generative AI Engineer</option>
+                </select>
+              </div>
+            )}
+
             {goal === 'Learn New Skills' && (
               <div className="su-followup-card">
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -1557,37 +1576,7 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
             {goal === 'Get Placed' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div className="su-followup-card">
-                  <h3>1. Target Role</h3>
-                  <select className="su-select" value={targetRole} onChange={(e) => setTargetRole(e.target.value)}>
-                    <option value="">Select Target Role</option>
-                    <option value="Frontend Developer">Frontend Developer</option>
-                    <option value="Backend Developer">Backend Developer</option>
-                    <option value="Full Stack Developer">Full Stack Developer</option>
-                    <option value="Java Developer">Java Developer</option>
-                    <option value="Python Developer">Python Developer</option>
-                    <option value="Data Analyst">Data Analyst</option>
-                    <option value="QA Engineer">QA Engineer</option>
-                    <option value="UI/UX Designer">UI/UX Designer</option>
-                    <option value="DevOps Engineer">DevOps Engineer</option>
-                    <option value="Other">Other</option>
-                  </select>
-
-                  {targetRole === 'Other' && (
-                    <div style={{ marginTop: '8px' }}>
-                      <label className="su-label">Don't see your role? Type it below:</label>
-                      <input
-                        type="text"
-                        className="su-input"
-                        placeholder="e.g. Cybersecurity Engineer, Mobile App Dev..."
-                        value={targetRoleOther}
-                        onChange={(e) => setTargetRoleOther(e.target.value)}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="su-followup-card">
-                  <h3>2. Target Companies</h3>
+                  <h3>Target Companies</h3>
                   <p style={{ fontSize: '10px', color: '#666', marginBottom: '8px' }}>What type of opportunity are you preparing for?</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
                     {['Campus Placements', 'Product Companies', 'Service Companies'].map(cat => (

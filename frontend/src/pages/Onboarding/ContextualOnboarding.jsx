@@ -9,13 +9,12 @@ const STORAGE_KEY = "techlearn-contextual-onboarding";
 const MAX_COMPANIES = 3;
 
 const roleOptions = [
-  "Software Developer",
+  "Frontend Developer",
+  "Backend Developer",
   "Full Stack Developer",
-  "Data Analyst",
-  "AI / ML Engineer",
-  "Web Developer",
-  "QA Engineer",
-  "Other",
+  "AI / Machine Learning Engineer",
+  "Data Scientist",
+  "Generative AI Engineer",
 ];
 
 const companyCatalog = {
@@ -102,12 +101,6 @@ export default function ContextualOnboarding() {
 
   const [step, setStep] = useState(1);
   const [role, setRole] = useState(initial.role || initial.targetRole || "");
-  const [otherRoleValue, setOtherRoleValue] = useState(
-    initial.role && !roleOptions.slice(0, -1).includes(initial.role) ? initial.role : ""
-  );
-  const [isOtherRoleActive, setIsOtherRoleActive] = useState(
-    initial.role && !roleOptions.slice(0, -1).includes(initial.role)
-  );
   const [opportunity, setOpportunity] = useState(initial.opportunity || initial.placementCategory || "");
   const [selectedCompanies, setSelectedCompanies] = useState(
     Array.isArray(initial.companies) ? initial.companies : initial.targetCompanies || []
@@ -145,11 +138,11 @@ export default function ContextualOnboarding() {
     return [...new Set([...companyCatalog.campus, ...companyCatalog.offCampus])];
   }, [opportunity]);
 
-  const effectiveRole = isOtherRoleActive ? otherRoleValue.trim() : role;
+  const effectiveRole = role.trim();
 
   const isStep1Valid =
     intent === "skill"
-      ? !!selectedSkill
+      ? !!selectedSkill && !!effectiveRole
       : !!effectiveRole && !!opportunity;
 
   const isStep2Valid =
@@ -159,14 +152,7 @@ export default function ContextualOnboarding() {
 
   const handleRoleSelect = (r) => {
     setError("");
-    if (r === "Other") {
-      setIsOtherRoleActive(true);
-      setRole("Other");
-    } else {
-      setIsOtherRoleActive(false);
-      setRole(r);
-      setOtherRoleValue("");
-    }
+    setRole(r);
   };
 
   const handleOpportunitySelect = (opp) => {
@@ -230,7 +216,7 @@ export default function ContextualOnboarding() {
       const draftPayload = {
         learningGoal: intent === "skill" ? "Learn New Skills" : "Get Placed",
         targetRole: effectiveRole,
-        targetRoleOther: isOtherRoleActive ? otherRoleValue.trim() : "",
+        targetRoleOther: "",
         placementCategory: opportunity,
         targetCompanies: selectedCompanies,
         skills: intent === "skill" && selectedSkill ? [selectedSkill] : [],
@@ -297,6 +283,10 @@ export default function ContextualOnboarding() {
 
   const handleStep1Continue = () => {
     if (intent === "skill") {
+      if (!effectiveRole) {
+        setError("Please choose your target role.");
+        return;
+      }
       if (!selectedSkill) {
         setError("Please select the skill you want to learn.");
         return;
@@ -1081,46 +1071,61 @@ export default function ContextualOnboarding() {
             {step === 1 && (
               <section className="tl-screen">
                 <div className="tl-eyebrow">STEP 1 OF {totalSteps}</div>
-                <h1 className="tl-title">
-                  {intent === "skill" ? "What do you want to learn?" : "What are you preparing for?"}
-                </h1>
+                <h1 className="tl-title">What role are you preparing for?</h1>
                 <p className="tl-description">
                   {intent === "skill"
-                    ? "Pick the skill and domain you want to turn into real capability."
+                    ? "Choose your target role and the skill you want to turn into real capability."
                     : "Tell us what kind of role you're targeting and the opportunity you're aiming for."}
                 </p>
 
                 {intent === "skill" ? (
-                  <div className="tl-field">
-                    <label className="tl-field-label">Primary Skill</label>
-                    <div className="tl-chips">
-                      {skillList.map((s) => (
-                        <button
-                          key={s}
-                          type="button"
-                          className={`tl-chip ${selectedSkill === s ? "selected" : ""}`}
-                          onClick={() => {
-                            setError("");
-                            setSelectedSkill(s);
-                          }}
-                        >
-                          {s}
-                        </button>
-                      ))}
+                  <>
+                    <div className="tl-field">
+                      <label className="tl-field-label">Target Role <span aria-hidden="true">*</span></label>
+                      <div className="tl-chips">
+                        {roleOptions.map((r) => (
+                          <button
+                            key={r}
+                            type="button"
+                            className={`tl-chip ${role === r ? "selected" : ""}`}
+                            onClick={() => handleRoleSelect(r)}
+                          >
+                            {r}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+
+                    <div className="tl-field">
+                      <label className="tl-field-label">Primary Skill <span aria-hidden="true">*</span></label>
+                      <div className="tl-chips">
+                        {skillList.map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            className={`tl-chip ${selectedSkill === s ? "selected" : ""}`}
+                            onClick={() => {
+                              setError("");
+                              setSelectedSkill(s);
+                            }}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
                 ) : (
                   <>
                     <div className="tl-field">
-                      <label className="tl-field-label">Target Role</label>
+                      <label className="tl-field-label">Target Role <span aria-hidden="true">*</span></label>
                       <div className="tl-chips">
                         {roleOptions.map((r) => {
-                          const isSelected = r === "Other" ? isOtherRoleActive : role === r && !isOtherRoleActive;
                           return (
                             <button
                               key={r}
                               type="button"
-                              className={`tl-chip ${isSelected ? "selected" : ""}`}
+                              className={`tl-chip ${role === r ? "selected" : ""}`}
                               onClick={() => handleRoleSelect(r)}
                             >
                               {r}
@@ -1128,27 +1133,6 @@ export default function ContextualOnboarding() {
                           );
                         })}
                       </div>
-
-                      {isOtherRoleActive && (
-                        <div className="tl-other-role-wrapper">
-                          <label className="tl-other-role-label" htmlFor="otherRoleInput">
-                            Enter your target role
-                          </label>
-                          <input
-                            type="text"
-                            id="otherRoleInput"
-                            className="tl-other-role-input"
-                            placeholder="e.g. Backend Developer"
-                            maxLength={60}
-                            value={otherRoleValue}
-                            onChange={(e) => {
-                              setOtherRoleValue(e.target.value);
-                              setError("");
-                            }}
-                            autoFocus
-                          />
-                        </div>
-                      )}
                     </div>
 
                     <div className="tl-field">
