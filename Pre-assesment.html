@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>TechLearn | Interview Assessment</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  >
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap"
+    rel="stylesheet"
+  >
+
+  <style>
+
+    :root {
+      --bg: #c0e9ff;
+      --text: #050a5b;
+      --muted: #68718b;
+      --lime: #8dd035;
+      --lime-hover: #a2d354;
+      --card: #ffffffba;
+      --border: rgba(5, 10, 91, .14);
+      --soft-bg: rgba(255, 255, 255, .45);
+    }
+
+    body.dark-mode {
+      --bg: #080d25;
+      --text: #f5f7ff;
+      --muted: #9da7c2;
+      --lime: #8dd23f;
+      --lime-hover: #afe56b;
+      --card: #091233;
+      --border: rgba(255, 255, 255, .14);
+      --soft-bg: rgba(255, 255, 255, .035);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Inter", sans-serif;
+      transition: background .25s ease, color .25s ease;
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    /* =========================
+       THEME TOGGLE
+    ========================= */
+
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 22px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      z-index: 100;
+      transition: .2s ease;
+    }
+
+    .theme-toggle:hover {
+      transform: translateY(-1px);
+      border-color: var(--lime);
+    }
+
+    /* =========================
+       PAGE
+    ========================= */
+
+    .page {
+      width: 100%;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 48px 28px 60px;
+    }
+
+    /* =========================
+       EYEBROW
+    ========================= */
+
+    .eyebrow {
+      font-family: "Press Start 2P", cursive;
+      font-size: 8px;
+      line-height: 1.7;
+      color: var(--muted);
+      margin-left: 2px;
+      margin-bottom: 6px;
+    }
+
+    /* =========================
+       PAGE INTRO
+    ========================= */
+
+    .page-title {
+      color: var(--text);
+      font-family: "Inter", sans-serif;
+      font-size: 32px;
+      line-height: 1.1;
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      margin-bottom: 32px;
+    }
+
+    /* =========================
+       TWO COLUMN
+    ========================= */
+
+    .content-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    /* =========================
+       LEFT CARD
+    ========================= */
+
+    .instructions-card {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 14px 35px rgba(5, 10, 91, .045);
+      transition: background .25s ease, border-color .25s ease;
+    }
+
+    body.dark-mode .instructions-card {
+      box-shadow: 0 18px 40px rgba(0, 0, 0, .16);
+    }
+
+    /* =========================
+       INSTRUCTIONS HEADER
+    ========================= */
+
+    .instructions-header {
+      padding: 22px 24px 20px;
+    }
+
+    .instructions-header .eyebrow {
+      color: var(--lime);
+      font-size: 8px;
+      margin-bottom: 10px;
+      letter-spacing: .8px;
+    }
+
+    .instructions-title {
+      color: var(--text);
+      font-family: "Inter", sans-serif;
+      font-size: 21px;
+      line-height: 1.3;
+      font-weight: 700;
+      letter-spacing: -.4px;
+    }
+
+    /* =========================
+       INSTRUCTION ROW
+    ========================= */
+
+    .instruction-row {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 12px;
+      padding: 17px 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .instruction-number {
+      width: 27px;
+      height: 27px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--lime);
+      font-family: "Press Start 2P", cursive;
+      font-size: 7px;
+    }
+
+    .instruction-content h3 {
+      color: var(--text);
+      font-family: "Inter", sans-serif;
+      font-size: 12px;
+      line-height: 1.4;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .instruction-content p {
+      color: var(--muted);
+      font-family: "Inter", sans-serif;
+      font-size: 11px;
+      line-height: 1.55;
+      max-width: 650px;
+    }
+
+    .instruction-content strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* =========================
+       RIGHT CARD
+    ========================= */
+
+    .summary-wrapper {
+      position: sticky;
+      top: 22px;
+      height: 100%;
+    }
+
+    .summary-card {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 18px 45px rgba(5, 10, 91, .07);
+      transition: background .25s ease, border-color .25s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.dark-mode .summary-card {
+      box-shadow: 0 18px 45px rgba(0, 0, 0, .20);
+    }
+
+    /* =========================
+       SUMMARY HEADER
+    ========================= */
+
+    .summary-top {
+      padding: 21px 21px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .summary-eyebrow {
+      font-family: "Press Start 2P", cursive;
+      font-size: 6px;
+      line-height: 1.8;
+      color: var(--lime);
+      margin-bottom: 9px;
+    }
+
+    .summary-title {
+      color: var(--text);
+      font-family: "Inter", sans-serif;
+      font-size: 19px;
+      line-height: 1.3;
+      font-weight: 800;
+      letter-spacing: -.4px;
+    }
+
+    /* =========================
+       DETAILS
+    ========================= */
+
+    .details {
+      padding: 3px 21px 6px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+
+    .detail-label {
+      color: var(--muted);
+      font-family: "Inter", sans-serif;
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .45px;
+    }
+
+    .detail-value {
+      color: var(--text);
+      font-family: "Inter", sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: right;
+      line-height: 1.45;
+      max-width: 60%;
+    }
+
+    .detail-value.highlight {
+      color: var(--lime);
+    }
+
+    /* =========================
+       ASSESSMENT INCLUDED
+    ========================= */
+
+    .summary-rounds {
+      margin: 5px 21px 17px;
+      padding: 13px;
+      background: var(--soft-bg);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+    }
+
+    .summary-rounds-title {
+      color: var(--muted);
+      font-family: "Inter", sans-serif;
+      font-size: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 11px;
+    }
+
+    .summary-round {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+      font-family: "Inter", sans-serif;
+      font-size: 10px;
+      margin-bottom: 8px;
+    }
+
+    .summary-round:last-child {
+      margin-bottom: 0;
+    }
+
+    .summary-round-dot {
+      width: 5px;
+      height: 5px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: var(--lime);
+    }
+
+    /* =========================
+       CTA
+    ========================= */
+
+    .cta-area {
+      padding: 0 21px 21px;
+      margin-top: auto;
+    }
+
+    .start-button {
+      width: 100%;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--lime);
+      color: #07101b;
+      font-family: "Press Start 2P", cursive;
+      font-size: 8px;
+      line-height: 1.6;
+      letter-spacing: 0;
+      cursor: pointer;
+      transition: .18s ease;
+      box-shadow: 0 7px 18px rgba(140, 191, 74, .15);
+    }
+
+    .start-button:hover {
+      background: var(--lime-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 9px 22px rgba(140, 191, 74, .20);
+    }
+
+    .start-button:active {
+      transform: translateY(0);
+    }
+
+    .start-note {
+      color: var(--muted);
+      font-family: "Inter", sans-serif;
+      font-size: 8px;
+      line-height: 1.5;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    /* =========================
+       TABLET
+    ========================= */
+
+    @media (max-width: 900px) {
+
+      .page {
+        max-width: 760px;
+      }
+
+      .content-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-wrapper {
+        position: static;
+        height: auto;
+        order: -1;
+      }
+
+      .summary-card {
+        height: auto;
+      }
+
+      .instructions-card {
+        height: auto;
+      }
+
+    }
+
+    /* =========================
+       MOBILE
+    ========================= */
+
+    @media (max-width: 600px) {
+
+      .page {
+        padding: 38px 16px 50px;
+      }
+
+      .page-title {
+        font-size: 27px;
+        letter-spacing: -1.2px;
+        margin-bottom: 25px;
+      }
+
+      .instructions-header {
+        padding: 20px;
+      }
+
+      .instruction-row {
+        grid-template-columns: 29px 1fr;
+        gap: 10px;
+        padding: 16px 20px;
+      }
+
+      .instruction-number {
+        width: 25px;
+        height: 25px;
+        font-size: 6px;
+      }
+
+      .instruction-content h3 {
+        font-size: 11px;
+      }
+
+      .instruction-content p {
+        font-size: 10px;
+        line-height: 1.55;
+      }
+
+      .summary-top {
+        padding: 20px;
+      }
+
+      .details {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+
+      .summary-rounds {
+        margin-left: 20px;
+        margin-right: 20px;
+      }
+
+      .cta-area {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+
+      .theme-toggle {
+        top: 14px;
+        right: 14px;
+        width: 35px;
+        height: 35px;
+      }
+
+    }
+
+    /* =========================
+       SMALL MOBILE
+    ========================= */
+
+    @media (max-width: 420px) {
+
+      .page {
+        padding-left: 13px;
+        padding-right: 13px;
+      }
+
+      .page-title {
+        font-size: 24px;
+      }
+
+      .summary-top {
+        padding: 18px;
+      }
+
+      .details {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+
+      .summary-rounds {
+        margin-left: 18px;
+        margin-right: 18px;
+      }
+
+      .cta-area {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+
+  <!-- =========================
+       THEME TOGGLE
+  ========================= -->
+
+  <button
+    class="theme-toggle"
+    id="themeToggle"
+    type="button"
+    aria-label="Toggle dark mode"
+  >
+    ☼
+  </button>
+
+
+  <!-- =========================
+       MAIN
+  ========================= -->
+
+  <main class="page">
+
+
+    <!-- =========================
+         INTRO
+    ========================= -->
+
+    <div class="eyebrow">
+      ASSESSMENT OVERVIEW
+    </div>
+
+
+    <h1 class="page-title">
+      <i>Your</i> interview is ready.
+    </h1>
+
+
+    <!-- =========================
+         CONTENT
+    ========================= -->
+
+    <div class="content-layout">
+
+
+      <!-- =========================
+           LEFT — INSTRUCTIONS
+      ========================= -->
+
+      <section>
+
+        <div class="instructions-card">
+
+
+          <div class="instructions-header">
+
+            <div class="eyebrow">
+              BEFORE YOU BEGIN
+            </div>
+
+            <h2 class="instructions-title">
+              Instructions
+            </h2>
+
+          </div>
+
+
+          <!-- 01 -->
+
+          <div class="instruction-row">
+
+            <div class="instruction-number">
+              01
+            </div>
+
+            <div class="instruction-content">
+
+              <h3>
+                Your Mock Interview
+              </h3>
+
+              <p>
+                This mock interview is based on the
+                <strong>company and role you selected</strong>,
+                with relevant patterns and topics to help you
+                understand what is commonly asked for your target.
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <!-- 02 -->
+
+          <div class="instruction-row">
+
+            <div class="instruction-number">
+              02
+            </div>
+
+            <div class="instruction-content">
+
+              <h3>
+                Give It Your Best
+              </h3>
+
+              <p>
+                Questions may range from easy to challenging.
+                <strong>
+                  Answer what you know or can attempt,
+                  and don't worry about getting everything right.
+                </strong>
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <!-- 03 -->
+
+          <div class="instruction-row">
+
+            <div class="instruction-number">
+              03
+            </div>
+
+            <div class="instruction-content">
+
+              <h3>
+                Keep It Honest
+              </h3>
+
+              <p>
+                Please complete the assessment on your own
+                without Google, ChatGPT, notes, or other external
+                help. <strong>This helps us understand where you can improve.</strong>
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <!-- 04 -->
+
+          <div class="instruction-row">
+
+            <div class="instruction-number">
+              04
+            </div>
+
+            <div class="instruction-content">
+
+              <h3>
+                Stay on the Page
+              </h3>
+
+              <p>
+                You have <strong>30 minutes</strong> to complete
+                the assessment. Please stay on the assessment
+                page while you work through the questions.
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <!-- 05 -->
+
+          <div class="instruction-row">
+
+            <div class="instruction-number">
+              05
+            </div>
+
+            <div class="instruction-content">
+
+              <h3>
+                Learn From Your Results
+              </h3>
+
+              <p>
+                A wrong answer doesn't mean you're bad at
+                programming. <strong>Your results help us understand
+                what to practice and recommend the right learning
+                path for you.</strong>
+              </p>
+
+            </div>
+
+          </div>
+
+
+        </div>
+
+      </section>
+
+
+      <!-- =========================
+           RIGHT — USER DETAILS
+      ========================= -->
+
+      <aside class="summary-wrapper">
+
+        <div class="summary-card">
+
+
+          <!-- HEADER -->
+
+          <div class="summary-top">
+
+            <div class="summary-eyebrow">
+              YOUR DETAILS
+            </div>
+
+            <h2 class="summary-title">
+              Interview Details
+            </h2>
+
+          </div>
+
+
+          <!-- DETAILS -->
+
+          <div class="details">
+
+
+            <div class="detail-row">
+
+              <div class="detail-label">
+                Target Role
+              </div>
+
+              <div
+                class="detail-value"
+                id="targetRole"
+              >
+                Full Stack Developer
+              </div>
+
+            </div>
+
+
+            <div class="detail-row">
+
+              <div class="detail-label">
+                Company Pattern
+              </div>
+
+              <div
+                class="detail-value"
+                id="targetCompany"
+              >
+                Google
+              </div>
+
+            </div>
+
+
+            <div class="detail-row">
+
+              <div class="detail-label">
+                Placement Type
+              </div>
+
+              <div
+                class="detail-value"
+                id="placementType"
+              >
+                Off-Campus
+              </div>
+
+            </div>
+
+
+            <div class="detail-row">
+
+              <div class="detail-label">
+                Duration
+              </div>
+
+              <div class="detail-value highlight">
+                30 Minutes
+              </div>
+
+            </div>
+
+
+            <div class="detail-row">
+
+              <div class="detail-label">
+                Mode
+              </div>
+
+              <div class="detail-value">
+                Online Assessment
+              </div>
+
+            </div>
+
+
+          </div>
+
+
+          <!-- =========================
+               ASSESSMENT INCLUDED
+          ========================= -->
+
+          <div class="summary-rounds">
+
+            <div class="summary-rounds-title">
+              Assessment Includes
+            </div>
+
+
+            <div class="summary-round">
+
+              <span class="summary-round-dot"></span>
+
+              Technical &amp; MCQ Round
+
+            </div>
+
+
+            <div class="summary-round">
+
+              <span class="summary-round-dot"></span>
+
+              Coding &amp; Problem Solving
+
+            </div>
+
+
+            <div class="summary-round">
+
+              <span class="summary-round-dot"></span>
+
+              Evaluation &amp; Feedback
+
+            </div>
+
+          </div>
+
+
+          <!-- =========================
+               CTA
+          ========================= -->
+
+          <div class="cta-area">
+
+            <button
+              class="start-button"
+              id="startButton"
+              type="button"
+            >
+              ▶ START INTERVIEW
+            </button>
+
+            <p class="start-note">
+              Your 30-minute timer starts immediately.
+            </p>
+
+          </div>
+
+
+        </div>
+
+      </aside>
+
+
+    </div>
+
+  </main>
+
+
+  <!-- =========================
+       JAVASCRIPT
+  ========================= -->
+
+  <script>
+
+    /* =========================
+       THEME
+    ========================= */
+
+    const themeToggle =
+      document.getElementById("themeToggle");
+
+    const savedTheme =
+      localStorage.getItem("techlearn_theme");
+
+
+    if (savedTheme === "dark") {
+
+      document.body.classList.add("dark-mode");
+
+      themeToggle.textContent = "☾";
+
+    } else {
+
+      document.body.classList.remove("dark-mode");
+
+      themeToggle.textContent = "☼";
+
+    }
+
+
+    themeToggle.addEventListener(
+      "click",
+      () => {
+
+        const isDark =
+          document.body.classList.toggle("dark-mode");
+
+
+        if (isDark) {
+
+          themeToggle.textContent = "☾";
+
+          localStorage.setItem(
+            "techlearn_theme",
+            "dark"
+          );
+
+        } else {
+
+          themeToggle.textContent = "☼";
+
+          localStorage.setItem(
+            "techlearn_theme",
+            "light"
+          );
+
+        }
+
+      }
+    );
+
+
+    /* =========================
+       START INTERVIEW
+    ========================= */
+
+    document
+      .getElementById("startButton")
+      .addEventListener(
+        "click",
+        () => {
+
+          window.location.href = "/interview";
+
+        }
+      );
+
+  </script>
+
+
+</body>
+
+</html>

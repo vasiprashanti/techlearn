@@ -256,6 +256,7 @@ export default function ContextualOnboarding() {
               intent: "assessment",
               targetRole: payload.targetRole,
               targetCompany: payload.targetCompanies[0] || "",
+              placementCategory: opportunity === "campus" ? "On-Campus" : "Off-Campus",
               requiresSetup: true,
             })
           );
@@ -282,12 +283,14 @@ export default function ContextualOnboarding() {
           JSON.stringify({
             targetRole: payload.targetRole,
             targetCompany: payload.targetCompanies[0] || "",
+            placementCategory: opportunity === "campus" ? "On-Campus" : "Off-Campus",
           })
         );
         navigate("/free-assessment/setup", {
           state: {
             targetRole: payload.targetRole,
             targetCompany: payload.targetCompanies[0] || "",
+            placementType: opportunity === "campus" ? "On-Campus" : "Off-Campus",
           },
         });
       } else {

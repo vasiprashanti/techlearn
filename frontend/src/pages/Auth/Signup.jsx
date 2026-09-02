@@ -83,6 +83,7 @@ export default function Signup({
               programId: pending.programId || null,
               targetRole: pending.targetRole || '',
               targetCompany: pending.targetCompany || '',
+              placementType: pending.placementCategory || pending.placementType || '',
             },
           });
           return true;
