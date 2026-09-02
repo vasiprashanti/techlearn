@@ -22,7 +22,7 @@ export default function Signup({
 }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, user, isLoading: authLoading, setSession } = useAuth();
+  const { setSession } = useAuth();
   const { refetchUserData } = useUser();
   const { theme, toggleTheme, isDark } = useTheme();
 
@@ -38,28 +38,9 @@ export default function Signup({
     setIsLoginMode(initialMode === 'login');
   }, [initialMode]);
 
-  // Block signed-in users from accessing login/signup pages
-  useEffect(() => {
-    if (!authLoading && (isAuthenticated || localStorage.getItem('token'))) {
-      if (onClose) {
-        onClose();
-      } else {
-        const storedUser = user || JSON.parse(localStorage.getItem('userData') || 'null');
-        navigateUserByProgram(storedUser, navigate, { replace: true });
-      }
-    }
-  }, [authLoading, isAuthenticated, user, navigate, onClose]);
-
   const handleClose = () => {
     if (onClose) {
       onClose();
-      return;
-    }
-    const lastPage = sessionStorage.getItem('lastNonAuthPage');
-    if (lastPage && !['/login', '/signup'].includes(lastPage)) {
-      navigate(lastPage);
-    } else if (window.history.length > 1) {
-      navigate(-1);
     } else {
       navigate('/');
     }
@@ -294,10 +275,6 @@ export default function Signup({
       setLoading(false);
     }
   };
-
-  if (!authLoading && (isAuthenticated || localStorage.getItem('token'))) {
-    return null;
-  }
 
   const isModal = Boolean(onClose);
 
@@ -589,7 +566,7 @@ export default function Signup({
           line-height: 1.5;
         }
 
-        .tl-back-btn {
+        .tl-theme-toggle {
           position: fixed;
           top: 22px;
           right: 25px;
@@ -599,8 +576,7 @@ export default function Signup({
           border: 1px solid var(--border);
           background: rgba(255, 255, 255, 0.4);
           color: var(--text);
-          font-size: 15px;
-          font-weight: bold;
+          font-size: 16px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -609,17 +585,12 @@ export default function Signup({
           transition: all 0.2s;
         }
 
-        .dark-mode .tl-back-btn {
+        .dark-mode .tl-theme-toggle {
           background: rgba(17, 23, 45, 0.7);
         }
 
-        .tl-back-btn:hover {
-          transform: scale(1.08);
-          background: rgba(255, 255, 255, 0.7);
-        }
-
-        .dark-mode .tl-back-btn:hover {
-          background: rgba(17, 23, 45, 0.95);
+        .tl-theme-toggle:hover {
+          transform: scale(1.05);
         }
 
         .tl-close-btn {
@@ -713,17 +684,16 @@ export default function Signup({
         }
       `}</style>
 
-      {/* Top Right Close / Back Button */}
+      {/* Standalone Theme Toggle */}
       {!isModal && (
         <button
-          className="tl-back-btn"
-          id="authBackBtn"
+          className="tl-theme-toggle"
+          id="themeToggle"
           type="button"
-          onClick={handleClose}
-          title="Go back"
-          aria-label="Go back"
+          onClick={toggleTheme}
+          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
         >
-          ✕
+          {isDark ? '☾' : '☼'}
         </button>
       )}
 
@@ -765,7 +735,7 @@ export default function Signup({
             </div>
           ) : isLoginMode ? (
             <div>
-              <div className="tl-eyebrow">SIGN IN TO CONTINUE.</div>
+              <div className="tl-eyebrow">WELCOME BACK</div>
               <h1 className="tl-auth-title">Welcome back</h1>
             </div>
           ) : (
@@ -937,11 +907,7 @@ export default function Signup({
                         onClick={() => {
                           setIsLoginMode(false);
                           setStatusMsg({ text: '', type: '' });
-                          if (isModal) {
-                            if (onSwitchToSignup) onSwitchToSignup();
-                          } else {
-                            navigate('/signup', { replace: true });
-                          }
+                          if (onSwitchToSignup) onSwitchToSignup();
                         }}
                       >
                         Sign up
@@ -955,11 +921,7 @@ export default function Signup({
                         onClick={() => {
                           setIsLoginMode(true);
                           setStatusMsg({ text: '', type: '' });
-                          if (isModal) {
-                            if (onSwitchToLogin) onSwitchToLogin();
-                          } else {
-                            navigate('/login', { replace: true });
-                          }
+                          if (onSwitchToLogin) onSwitchToLogin();
                         }}
                       >
                         Log in

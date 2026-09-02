@@ -34,7 +34,7 @@ import {
 import { expireAllActiveBatches, expireBatchIfNeeded, isBatchExpired } from "../../utils/batchLifecycle.js";
 import { buildUnifiedProfile } from "../../utils/userProfile.js";
 
-const LEGACY_PROGRAM_SELECTIONS = ["Placement Sprint", "Full Stack Project Program", "Both"];
+const LEGACY_PROGRAM_SELECTIONS = ["Placement", "Skill", "placement", "skill", "Placement Sprint", "Full Stack Project Program", "Both"];
 
 const deleteStudentProjectProgress = async (studentIds) => {
   if (!studentIds || studentIds.length === 0) return;
@@ -774,7 +774,7 @@ export const createBatchAdmin = async (req, res) => {
               batchSize: Number.isFinite(parsedBatchSize) && parsedBatchSize > 0 ? parsedBatchSize : null,
               releaseTime: releaseTime || "00:00",
               status: status || BATCH_STATUS.DRAFT,
-              programSelection: programSelection || "Placement Sprint",
+              programSelection: programSelection || "Placement",
               attachedCourse: resolvedAttached,
               supportingCourses: resolvedSupporting,
             },
@@ -2738,7 +2738,7 @@ export const updateBatchAdmin = async (req, res) => {
         : (typeof existingBatch.batchSize === "number" ? existingBatch.batchSize : null),
       releaseTime: req.body.releaseTime || existingBatch.releaseTime || "00:00",
       status: req.body.status || existingBatch.status,
-      programSelection: req.body.programSelection || existingBatch.programSelection || "Placement Sprint",
+      programSelection: req.body.programSelection || existingBatch.programSelection || "Placement",
     };
 
     let primaryCourseId = undefined;
@@ -3155,10 +3155,6 @@ export const createStudentAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
 
-    if (batch && String(batch.collegeId) !== String(collegeId)) {
-      return res.status(400).json({ success: false, message: "Selected batch does not belong to the selected college." });
-    }
-
     if (programId && !requestedProgram) {
       return res.status(404).json({ success: false, message: "Program not found." });
     }
@@ -3410,10 +3406,6 @@ export const updateStudentAdmin = async (req, res) => {
 
     if (nextProgramId && !requestedProgram) {
       return res.status(404).json({ success: false, message: "Program not found." });
-    }
-
-    if (batch && String(batch.collegeId) !== String(nextCollegeId)) {
-      return res.status(400).json({ success: false, message: "Selected batch does not belong to the selected college." });
     }
 
     if (duplicateStudent) {

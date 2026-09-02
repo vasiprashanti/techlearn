@@ -298,7 +298,7 @@ const Batches = () => {
     endDate: '',
     batchSize: '',
     status: 'Draft',
-    programSelection: 'Placement Sprint',
+    programSelection: 'Placement',
     courses: [],
   });
   const [searchQuery, setSearchQuery] = useState('');
@@ -513,7 +513,7 @@ const Batches = () => {
       endDate: '',
       batchSize: '',
       status: 'Draft',
-      programSelection: 'Placement Sprint',
+      programSelection: 'Placement',
       courses: [],
     });
     setIsCreateFormOpen(true);
@@ -533,6 +533,10 @@ const Batches = () => {
       ? batch.collegeIds.map(String)
       : (batch.collegeId ? [String(batch.collegeId._id || batch.collegeId.id || batch.collegeId)] : []);
 
+    const normalizedProgram = (batch.programSelection === 'Full Stack Project Program' || batch.programSelection === 'Skill' || batch.programSelection === 'skill')
+      ? 'Skill'
+      : 'Placement';
+
     setEditingBatchId(batch.id);
     setEditingTrackTemplateId(batch.assignedTrackTemplateId || null);
     setTrackTemplateDropdownOpen(false);
@@ -549,7 +553,7 @@ const Batches = () => {
       endDate: batch.expiryDateValue || '',
       batchSize: batch.batchSize ? String(batch.batchSize) : '',
       status: batch.status || 'Draft',
-      programSelection: batch.programSelection || 'Placement Sprint',
+      programSelection: normalizedProgram,
       courses: allCourses,
     });
     setIsCreateFormOpen(true);
@@ -597,7 +601,7 @@ const Batches = () => {
         confirmTrackReplacement: true,
         batchSize: createBatchForm.batchSize ? Number(createBatchForm.batchSize) : null,
         status: createBatchForm.status,
-        programSelection: createBatchForm.programSelection || 'Placement Sprint',
+        programSelection: createBatchForm.programSelection || 'Placement',
         courses: createBatchForm.courses || [],
       };
 
@@ -918,13 +922,12 @@ const Batches = () => {
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Program*</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select
-                      value={createBatchForm.programSelection}
+                      value={createBatchForm.programSelection || 'Placement'}
                       onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, programSelection: e.target.value }))}
                       className="appearance-none w-full px-3 py-2 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                     >
-                      <option className={dropdownOptionClass} value="Placement Sprint">Placement Sprint</option>
-                      <option className={dropdownOptionClass} value="Full Stack Project Program">Full Stack Project Program</option>
-                      <option className={dropdownOptionClass} value="Both">Both</option>
+                      <option className={dropdownOptionClass} value="Skill">Skill</option>
+                      <option className={dropdownOptionClass} value="Placement">Placement</option>
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                   </div>

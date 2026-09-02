@@ -282,7 +282,7 @@ export default function Students() {
   const openAddStudent = () => {
     setEditingStudentId(null);
     setFormError('');
-    setStudentForm({ name: '', email: '', collegeId: filterOptions.colleges[0]?._id || '', batchId: '', programId: filterOptions.programs[0]?._id || '', track: '', programSelection: 'Placement Sprint', status: 'Active' });
+    setStudentForm({ name: '', email: '', collegeId: filterOptions.colleges[0]?._id || '', batchId: '', programId: filterOptions.programs[0]?._id || '', track: '', programSelection: 'Placement', status: 'Active' });
     setIsAddFormOpen(true);
   };
 
@@ -296,7 +296,7 @@ export default function Students() {
       batchId: student.batchId || '',
       programId: student.programId || '',
       track: student.track || '',
-      programSelection: student.programSelection || 'Placement Sprint',
+      programSelection: student.programSelection || 'Placement',
       status: student.status || 'Active',
     });
     setIsAddFormOpen(true);
