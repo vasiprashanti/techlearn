@@ -20,26 +20,31 @@ const roleOptions = [
 
 const companyCatalog = {
   campus: [
+    // Companies with Question Bank questions tagged to them first
     "TCS",
     "Infosys",
-    "Wipro",
     "Accenture",
     "Cognizant",
     "Deloitte",
     "Capgemini",
+    "Wipro",
     "HCL",
   ],
   offCampus: [
+    // Companies with Question Bank questions tagged to them first
+    "Accenture",
+    "TCS",
+    "Cognizant",
+    "Infosys",
+    "Deloitte",
+    "Capgemini",
+    "Wipro",
     "Amazon",
-    "Microsoft",
     "Google",
+    "Microsoft",
     "Adobe",
     "Flipkart",
     "Walmart",
-    "Accenture",
-    "Deloitte",
-    "TCS",
-    "Infosys",
   ],
 };
 
