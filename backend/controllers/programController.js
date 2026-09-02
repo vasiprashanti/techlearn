@@ -20,6 +20,7 @@ import { syncPrimaryProgramPointers, upsertProgramEnrollment } from "../utils/pr
 import { matchProgramsForUser } from "../utils/programMatching.js";
 import { isUserVisibleProgram } from "../utils/programVisibility.js";
 import { isUserVisibleCourse } from "../utils/courseVisibility.js";
+import { expireAllActiveBatches } from "../utils/batchLifecycle.js";
 
 /**
  * GET /api/programs/public

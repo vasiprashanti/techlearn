@@ -815,12 +815,8 @@ export default function Jobs() {
                           hasJobs ? "cursor-pointer" : "cursor-default"
                         } ${
                           isDarkMode
-                            ? hasJobs
-                              ? "bg-white/10 border-white/20 hover:bg-white/20 shadow-sm"
-                              : "bg-white/5 border-white/5 opacity-60"
-                            : hasJobs
-                            ? "bg-white border-[#00113b]/15 hover:border-[#b2e96a] hover:shadow-md shadow-sm"
-                            : "bg-white/60 border-white/80 opacity-75"
+                            ? "bg-white/5 border-white/5"
+                            : "bg-white/60 border-white/80"
                         }`}
                       >
                         <div
