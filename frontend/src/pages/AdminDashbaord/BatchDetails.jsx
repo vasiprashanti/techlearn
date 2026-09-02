@@ -290,10 +290,10 @@ const BatchDetails = () => {
         await adminAPI.updateStudent(selectedStudent.id || selectedStudent._id, {
           name: selectedStudent.name,
           email: selectedStudent.email,
-          collegeId: studentForm.collegeId,
-          batchId: studentForm.batchId,
+          collegeId: selectedStudent.collegeId || studentForm.collegeId,
+          batchId: studentForm.batchId || batch.id || batchId,
           primaryTrack: studentForm.track || selectedStudent.track || 'General Track',
-          programSelection: selectedStudent.programSelection || 'Placement Sprint',
+          programSelection: selectedStudent.programSelection || batch.programSelection || 'Placement',
           status: studentForm.status || selectedStudent.status || 'Active',
         });
         const remoteBatch = await adminAPI.getBatch(batchId);

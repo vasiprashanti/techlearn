@@ -20,6 +20,7 @@ import { syncPrimaryProgramPointers, upsertProgramEnrollment } from "../utils/pr
 import { matchProgramsForUser } from "../utils/programMatching.js";
 import { isUserVisibleProgram } from "../utils/programVisibility.js";
 import { isUserVisibleCourse } from "../utils/courseVisibility.js";
+import { expireAllActiveBatches } from "../utils/batchLifecycle.js";
 
 /**
  * GET /api/programs/public
@@ -249,11 +250,21 @@ export const startFreeAssessment = async (req, res) => {
     let programId = requestedProgramId;
     if (!programId) {
       const publicPlacements = await Program.find({
-        programType: "Placement",
+        programType: { $in: ["Placement", "Placement Sprint"] },
         status: "Active",
-        visibility: "Public",
       }).sort({ createdAt: -1 }).lean();
-      const publicPlacement = publicPlacements.find(isUserVisibleProgram);
+
+      // Find one that has an active day_0_readiness blueprint
+      const blueprintProgIds = await Blueprint.find({
+        blueprintType: "day_0_readiness",
+        status: "Active",
+      }).distinct("programId");
+      const blueprintProgSet = new Set(blueprintProgIds.map(String));
+
+      const publicPlacement = publicPlacements.find((p) => {
+        const hasBlueprint = blueprintProgSet.has(String(p._id));
+        return hasBlueprint && (isUserVisibleProgram(p) || p.visibility === "Public");
+      }) || publicPlacements.find((p) => blueprintProgSet.has(String(p._id))) || publicPlacements.find(isUserVisibleProgram);
 
       if (!publicPlacement) {
         return res.status(404).json({ success: false, message: "No active Placement Program available." });
@@ -286,7 +297,7 @@ export const startFreeAssessment = async (req, res) => {
       allowUnenrolled: true,
     });
 
-    if (req.user?.role !== "admin" && !isUserVisibleProgram(context.program)) {
+    if (req.user?.role !== "admin" && !isUserVisibleProgram(context.program) && context.program?.visibility !== "Public" && context.program?.status !== "Active") {
       return res.status(404).json({ success: false, message: "No active Placement Program available." });
     }
 

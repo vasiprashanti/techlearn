@@ -98,11 +98,7 @@ export default function Navbar() {
 
   const handleLoginClick = (e) => {
     e.preventDefault();
-    if (typeof openLogin === 'function') {
-      openLogin();
-    } else {
-      navigate('/login');
-    }
+    navigate('/login');
   };
 
   const firstName = user?.firstName || user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'User';

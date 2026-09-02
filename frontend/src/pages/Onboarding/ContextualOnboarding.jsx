@@ -19,26 +19,31 @@ const roleOptions = [
 
 const companyCatalog = {
   campus: [
+    // Companies with Question Bank questions tagged to them first
     "TCS",
     "Infosys",
-    "Wipro",
     "Accenture",
     "Cognizant",
     "Deloitte",
     "Capgemini",
+    "Wipro",
     "HCL",
   ],
   offCampus: [
+    // Companies with Question Bank questions tagged to them first
+    "Accenture",
+    "TCS",
+    "Cognizant",
+    "Infosys",
+    "Deloitte",
+    "Capgemini",
+    "Wipro",
     "Amazon",
-    "Microsoft",
     "Google",
+    "Microsoft",
     "Adobe",
     "Flipkart",
     "Walmart",
-    "Accenture",
-    "Deloitte",
-    "TCS",
-    "Infosys",
   ],
 };
 
@@ -237,6 +242,7 @@ export default function ContextualOnboarding() {
               intent: "assessment",
               targetRole: payload.targetRole,
               targetCompany: payload.targetCompanies[0] || "",
+              placementCategory: opportunity === "campus" ? "On-Campus" : "Off-Campus",
               requiresSetup: true,
             })
           );
@@ -263,12 +269,14 @@ export default function ContextualOnboarding() {
           JSON.stringify({
             targetRole: payload.targetRole,
             targetCompany: payload.targetCompanies[0] || "",
+            placementCategory: opportunity === "campus" ? "On-Campus" : "Off-Campus",
           })
         );
         navigate("/free-assessment/setup", {
           state: {
             targetRole: payload.targetRole,
             targetCompany: payload.targetCompanies[0] || "",
+            placementType: opportunity === "campus" ? "On-Campus" : "Off-Campus",
           },
         });
       } else {
@@ -367,11 +375,11 @@ export default function ContextualOnboarding() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap');
 
         .tl-onboarding-page-root {
-          --navy: #b6d6e7;
+          --navy: #bceaff;
           --navy-dark: #02052e;
-          --chip-blue: #c7e6f5;
-          --lime: #8cbf4a;
-          --lime-hover: #a2d354;
+          --chip-blue: #a5d8f4;
+          --lime: #b2e96a;
+          --lime-hover: #c4f385;
           --white: #050a5b;
           --muted: #6f7894;
           --muted-light: #59657d;
@@ -386,7 +394,7 @@ export default function ContextualOnboarding() {
           --input-bg: rgba(255,255,255,.28);
 
           min-height: 100vh;
-          background: var(--navy);
+          background: linear-gradient(to bottom right, #daf0fa, #bceaff, #bceaff);
           color: var(--white);
           font-family: "Inter", sans-serif;
           transition: background .25s ease, color .25s ease;
@@ -399,6 +407,7 @@ export default function ContextualOnboarding() {
         }
 
         .tl-onboarding-page-root.dark-mode {
+          background: var(--navy);
           --navy: #080d25;
           --navy-dark: #020416;
           --chip-blue: #151d3a;

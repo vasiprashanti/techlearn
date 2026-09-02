@@ -57,7 +57,6 @@ import practiceRoutes from "./routes/practiceRoutes.js";
 
 import programRoutes from "./routes/programRoutes.js";
 import learnerReportRoutes from "./routes/learnerReportRoutes.js";
-import jobRoutes from "./routes/jobRoutes.js";
 import adminJobRoutes from "./routes/adminJobRoutes.js";
 
 import testimonialRoutes from "./routes/testimonialRoutes.js";
@@ -132,7 +131,6 @@ app.use("/api/roadmaps", roadmapRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/practice", practiceRoutes);
 app.use("/api/testimonials", testimonialRoutes);
-app.use("/api/jobs", jobRoutes);
 // ✅ BUILD PAGE Routes
 app.use("/api/mini-projects", miniRouter);
 app.use("/api/major-projects", majorRouter);

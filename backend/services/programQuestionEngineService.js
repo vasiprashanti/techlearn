@@ -268,7 +268,7 @@ export const scoreQuestion = ({ question, profile, summaries, phase, configurati
 
   let score = 0;
   if (roleMatch) score += 90;
-  if (companyMatch) score += phase === "company_preparation" ? 140 : 45;
+  if (companyMatch) score += (phase === "company_preparation" || phase === "day_0_readiness") ? 200 : 45;
   if (subjectMatch) score += 25;
   if (exactTopicMatch) score += 75;
   const performancePriority = phase === "revision"
