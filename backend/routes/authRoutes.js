@@ -259,12 +259,29 @@ router.post("/google", async function googleLogin(req, res) {
       return res.status(400).json({ message: "Google login failed: missing Google token." });
     }
 
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
+    let email, name, picture;
 
-    const { email, name, picture } = ticket.getPayload();
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      email = payload.email;
+      name = payload.name;
+      picture = payload.picture;
+    } catch (googleClientErr) {
+      // If token was issued by Firebase Auth client, verify via Firebase Admin SDK
+      if (admin && admin.auth) {
+        const decoded = await admin.auth().verifyIdToken(token);
+        email = decoded.email;
+        name = decoded.name;
+        picture = decoded.picture;
+      } else {
+        throw googleClientErr;
+      }
+    }
+
     const formattedEmail = normalizeEmail(email);
 
     if (!formattedEmail) {
