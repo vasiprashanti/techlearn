@@ -188,6 +188,12 @@ function LayoutWrapper() {
   const location = useLocation();
   const { isAuthenticated, user } = useAuth();
 
+  useEffect(() => {
+    if (!['/login', '/signup'].includes(location.pathname)) {
+      sessionStorage.setItem('lastNonAuthPage', location.pathname + location.search + location.hash);
+    }
+  }, [location.pathname, location.search, location.hash]);
+
   // NEW: Array containing all our sidebar dashboard routes
   const adminSidebarRoutes = [
     '/analytics', 
@@ -231,7 +237,7 @@ function LayoutWrapper() {
     location.pathname === '/dashboard/profile' ||
     location.pathname.startsWith('/dashboard/profile/');
 
-  const showNavbar = !['/mcq'].includes(location.pathname) && 
+  const showNavbar = !['/mcq', '/signup', '/login'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
                      !location.pathname.startsWith('/daily-challenge/') &&
                      !location.pathname.startsWith('/free-assessment');
