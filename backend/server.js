@@ -51,6 +51,7 @@ import adminProgramRoutes from "./routes/adminProgramRoutes.js";
 import questionBankRoutes from "./routes/questionBank.routes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import resourceRoutes from "./routes/resourceRoutes.js";
+import roadmapRoutes from "./routes/roadmapRoutes.js";
 import leaderboardRoutes from "./routes/leaderboardRoutes.js";
 import practiceRoutes from "./routes/practiceRoutes.js";
 
@@ -126,6 +127,7 @@ app.use("/api/college", collegeRouter);
 app.use("/api", dashboardProjectRoutes);
 app.use("/api/student/project", studentProjectRoutes);
 app.use("/api/resources", resourceRoutes);
+app.use("/api/roadmaps", roadmapRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/practice", practiceRoutes);
 app.use("/api/testimonials", testimonialRoutes);

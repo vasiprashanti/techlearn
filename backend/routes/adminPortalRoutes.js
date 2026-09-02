@@ -88,8 +88,10 @@ import {
 import {
   createRoadmapAdmin,
   deleteRoadmapAdmin,
+  getRoadmapAdmin,
   listRoadmapsAdmin,
   updateRoadmapAdmin,
+  updateRoadmapStatusAdmin,
 } from "../controllers/roadmapController.js";
 
 const router = express.Router();
@@ -169,7 +171,9 @@ router.post("/resources/:resourceId/view", recordResourceView);
 
 router.get("/roadmaps", listRoadmapsAdmin);
 router.post("/roadmaps", createRoadmapAdmin);
+router.get("/roadmaps/:roadmapId", getRoadmapAdmin);
 router.put("/roadmaps/:roadmapId", updateRoadmapAdmin);
+router.patch("/roadmaps/:roadmapId/status", updateRoadmapStatusAdmin);
 router.delete("/roadmaps/:roadmapId", deleteRoadmapAdmin);
 
 router.get("/certificates", getCertificatesPage);

@@ -276,6 +276,7 @@ function LayoutWrapper() {
             <Route path="/daily-challenge/:linkId/test" element={<DailyChallengeTest />} />
             <Route path="/daily-challenge/:linkId/result" element={<DailyChallengeResult />} />
             <Route path="/dashboard/roadmap" element={<Roadmaps />} />
+            <Route path="/dashboard/roadmap/:roadmapId" element={<Roadmaps />} />
             <Route path="/dashboard/practice" element={<PracticeHub />} />
             <Route path="/dashboard/practice/core-cs" element={<CoreCsQuestions />} />
             <Route path="/dashboard/practice/core-cs/:questionId" element={<InterviewCoreCsQuestionDetail />} />
@@ -325,7 +326,9 @@ function LayoutWrapper() {
           
           {/* Guest-accessible resource & interview routes */}
           <Route path="/roadmaps" element={<Roadmaps />} />
+          <Route path="/roadmaps/:roadmapId" element={<Roadmaps />} />
           <Route path="/resources/roadmaps" element={<Roadmaps />} />
+          <Route path="/resources/roadmaps/:roadmapId" element={<Roadmaps />} />
           <Route path="/resources/resume-templates" element={<ResumeTemplates />} />
           <Route path="/core-prep/languages" element={<Languages />} />
           <Route path="/core-prep/important-concepts" element={<Concepts />} />

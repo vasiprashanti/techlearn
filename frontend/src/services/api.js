@@ -420,6 +420,27 @@ export const resourceAPI = {
     return handleResponse(response);
   },
 
+  getRoadmapsForYou: async () => {
+    const response = await fetch(`${API_BASE}/resources/roadmaps/for-you`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  getPublishedRoadmaps: async () => {
+    const response = await fetch(`${API_BASE}/resources/roadmaps/published`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  getPublishedRoadmapById: async (roadmapId) => {
+    const response = await fetch(`${API_BASE}/resources/roadmaps/${roadmapId}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
   getResources: async (category) => {
     const suffix = category ? `?category=${encodeURIComponent(category)}` : '';
     const response = await fetch(`${API_BASE}/resources${suffix}`, {

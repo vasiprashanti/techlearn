@@ -40,6 +40,7 @@ const Sidebar = () => {
     location.pathname.startsWith('/demo') ||
     location.pathname.startsWith('/dashboard/') ||
     location.pathname.startsWith('/resources/roadmaps') ||
+    location.pathname.startsWith('/roadmaps') ||
     location.pathname.startsWith('/learn/program/') ||
     location.pathname.startsWith('/jobs') ||
     location.pathname === '/dashboard/profile' ||

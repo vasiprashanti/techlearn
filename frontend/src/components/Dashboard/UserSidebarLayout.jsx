@@ -13,6 +13,7 @@ export default function UserSidebarLayout({ children, maxWidthClass = 'max-w-[14
     location.pathname.startsWith('/demo') ||
     location.pathname.startsWith('/dashboard/') ||
     location.pathname.startsWith('/resources/roadmaps') ||
+    location.pathname.startsWith('/roadmaps') ||
     location.pathname === '/dashboard/profile' ||
     location.pathname.startsWith('/dashboard/profile/');
   const isDashboardDetailRoute =

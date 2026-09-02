@@ -1,607 +1,575 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
-import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
-import { adminAPI } from '../../services/adminApi';
-import { FiSearch, FiPlus, FiX, FiEdit2, FiTrash2, FiChevronDown, FiMap, FiUpload, FiEye } from 'react-icons/fi';
+import { useEffect, useMemo, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { useTheme } from "../../context/ThemeContext";
+import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
+import LoadingScreen from "../../components/AdminDashbaord/AdminPageLoader";
+import { adminAPI } from "../../services/adminApi";
+import {
+  FiChevronDown,
+  FiChevronLeft,
+  FiChevronRight,
+  FiEdit2,
+  FiEye,
+  FiFileText,
+  FiPlus,
+  FiSearch,
+  FiTrash2,
+  FiUpload,
+  FiX,
+} from "react-icons/fi";
+
+const TARGET_ROLES = [
+  "Frontend Developer",
+  "Backend Developer",
+  "Full Stack Developer",
+  "AI / Machine Learning Engineer",
+  "Data Scientist",
+  "Generative AI Engineer",
+];
+
+const BRANCHES = ["CSE", "IT", "ECE", "EEE", "Mechanical", "Civil", "Other"];
+const DURATION_UNITS = ["days", "weeks", "months"];
+const STATUSES = ["Active", "Draft", "Archived"];
 
 const createRoadmapForm = () => ({
-  title: '',
-  description: '',
-  markdownBody: '',
+  title: "",
+  description: "",
+  targetRole: "",
+  customTargetRole: "",
+  duration: "",
+  durationUnit: "weeks",
+  markdownBody: "",
+  markdownFile: "",
+  branches: [],
+  // Kept in state so editing a legacy batch-linked roadmap does not silently
+  // remove its old assignment. New roadmaps use branches for eligibility.
   assignedBatchIds: [],
-  status: 'Active',
-  attachedNoteTitle: '',
-  attachedNoteDay: '',
-  fileName: '',
+  status: "Draft",
 });
 
-const searchRoutes = [
-  { id: 'dashboard', title: 'Dashboard', category: 'Overview' },
-  { id: 'analytics', title: 'Analytics', category: 'Overview' },
-  { id: 'system-health', title: 'System Health', category: 'Overview' },
-  { id: 'colleges', title: 'Colleges', category: 'Organization' },
-  { id: 'batches', title: 'Batches', category: 'Organization' },
-  { id: 'students', title: 'Students', category: 'Organization' },
-  { id: 'question-bank', title: 'Question Bank', category: 'Learning' },
-  { id: 'track-templates', title: 'Track Templates', category: 'Learning' },
-  { id: 'admin/roadmaps', title: 'Roadmaps', category: 'Learning' },
-  { id: 'certificates', title: 'Certificates', category: 'Learning' },
-  { id: 'submission-monitor', title: 'Submission Monitor', category: 'Operations' },
-  { id: 'audit-logs', title: 'Audit Logs', category: 'Operations' },
-  { id: 'reports', title: 'Reports', category: 'Operations' },
-];
+const normalizeId = (roadmap) => roadmap?.id || roadmap?._id;
+
+const formatDate = (value) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+};
+
+const getDurationLabel = (roadmap) => {
+  if (roadmap?.durationLabel) return roadmap.durationLabel;
+  if (!roadmap?.duration || !roadmap?.durationUnit) return "Not set";
+  const duration = Number(roadmap.duration);
+  const unit = String(roadmap.durationUnit).replace(/s$/, "");
+  return `${duration} ${unit}${duration === 1 ? "" : "s"}`;
+};
+
+const getStatusClasses = (status, isDarkMode) => {
+  if (status === "Active") return isDarkMode
+    ? "bg-emerald-400/15 text-emerald-200 border-emerald-300/20"
+    : "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (status === "Archived") return isDarkMode
+    ? "bg-rose-400/15 text-rose-200 border-rose-300/20"
+    : "bg-rose-50 text-rose-700 border-rose-200";
+  return isDarkMode
+    ? "bg-amber-400/15 text-amber-200 border-amber-300/20"
+    : "bg-amber-50 text-amber-700 border-amber-200";
+};
+
+const markdownComponents = {
+  h1: ({ children }) => <h1 className="mb-4 mt-6 text-2xl font-bold">{children}</h1>,
+  h2: ({ children }) => <h2 className="mb-3 mt-6 text-xl font-bold">{children}</h2>,
+  h3: ({ children }) => <h3 className="mb-2 mt-5 text-lg font-semibold">{children}</h3>,
+  p: ({ children }) => <p className="mb-4 leading-7 opacity-80">{children}</p>,
+  ul: ({ children }) => <ul className="mb-4 list-disc space-y-2 pl-5 opacity-80">{children}</ul>,
+  ol: ({ children }) => <ol className="mb-4 list-decimal space-y-2 pl-5 opacity-80">{children}</ol>,
+  code: ({ inline, children }) => (
+    inline
+      ? <code className="rounded bg-black/10 px-1.5 py-0.5 font-mono text-xs dark:bg-white/10">{children}</code>
+      : <code className="font-mono text-sm">{children}</code>
+  ),
+  pre: ({ children }) => <pre className="mb-5 overflow-x-auto rounded-lg bg-[#071831] p-4 text-sm text-slate-100">{children}</pre>,
+};
 
 export default function Resources() {
   const { theme } = useTheme();
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [isPageScrolled, setIsPageScrolled] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roadmapSearchQuery, setRoadmapSearchQuery] = useState('');
-
+  const isDarkMode = theme === "dark";
   const [roadmapEntries, setRoadmapEntries] = useState([]);
-  const [batchOptions, setBatchOptions] = useState([]);
-  const [isRoadmapModalOpen, setIsRoadmapModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All statuses");
+  const [sortBy, setSortBy] = useState("updated-desc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRoadmapId, setEditingRoadmapId] = useState(null);
-  const [viewingRoadmap, setViewingRoadmap] = useState(null);
   const [roadmapForm, setRoadmapForm] = useState(createRoadmapForm());
-  const [roadmapFormError, setRoadmapFormError] = useState('');
-  const [isSavingRoadmap, setIsSavingRoadmap] = useState(false);
-  const searchInputRef = useRef(null);
-  const isDarkMode = theme === 'dark';
+  const [formError, setFormError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [showFormPreview, setShowFormPreview] = useState(false);
+  const [viewingRoadmap, setViewingRoadmap] = useState(null);
+  const fileInputRef = useRef(null);
 
-  useEffect(() => { setMounted(true); }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    Promise.all([
-      adminAPI.getRoadmaps(),
-      adminAPI.getBatches(),
-    ])
-      .then(([remoteRoadmaps, remoteBatches]) => {
-        if (cancelled) return;
-        setRoadmapEntries(Array.isArray(remoteRoadmaps) ? remoteRoadmaps : []);
-        setBatchOptions((Array.isArray(remoteBatches) ? remoteBatches : []).map((batch) => ({
-          id: batch.id || batch._id,
-          name: batch.name || 'Untitled Batch',
-          college: batch.college || '',
-        })));
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setRoadmapEntries([]);
-          setBatchOptions([]);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setIsSearchOpen(prev => !prev); }
-      if (e.key === 'Escape') setIsSearchOpen(false);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    if (isSearchOpen && searchInputRef.current) searchInputRef.current.focus();
-    else setSearchQuery('');
-  }, [isSearchOpen]);
-
-  const filteredRoutes = searchRoutes.filter(r =>
-    r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleRouteSelect = (id) => { setIsSearchOpen(false); navigate('/' + id); };
-
-  const openAddRoadmapModal = () => {
-    setEditingRoadmapId(null);
-    setRoadmapForm(createRoadmapForm());
-    setRoadmapFormError('');
-    setIsRoadmapModalOpen(true);
+  const loadRoadmaps = async () => {
+    try {
+      setIsLoading(true);
+      setPageError("");
+      const roadmaps = await adminAPI.getRoadmaps();
+      setRoadmapEntries(Array.isArray(roadmaps) ? roadmaps : []);
+    } catch (error) {
+      setPageError(error?.message || "Could not load roadmaps.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const openEditRoadmapModal = (roadmap) => {
-    setEditingRoadmapId(roadmap.id || roadmap._id);
+  useEffect(() => {
+    void loadRoadmaps();
+  }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, statusFilter, sortBy, pageSize]);
+
+  const filteredRoadmaps = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const result = roadmapEntries.filter((roadmap) => {
+      const matchesQuery = !query || [
+        roadmap.title,
+        roadmap.targetRole,
+        roadmap.description,
+        roadmap.roadmapId,
+        ...(roadmap.branches || []),
+      ].some((value) => String(value || "").toLowerCase().includes(query));
+      const matchesStatus = statusFilter === "All statuses" || roadmap.status === statusFilter;
+      return matchesQuery && matchesStatus;
+    });
+
+    return result.sort((left, right) => {
+      if (sortBy === "title-asc") return String(left.title || "").localeCompare(String(right.title || ""));
+      if (sortBy === "duration-asc") return Number(left.duration || 0) - Number(right.duration || 0);
+      if (sortBy === "created-desc") return new Date(right.createdAt || 0) - new Date(left.createdAt || 0);
+      return new Date(right.updatedAt || right.createdAt || 0) - new Date(left.updatedAt || left.createdAt || 0);
+    });
+  }, [roadmapEntries, searchQuery, sortBy, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRoadmaps.length / pageSize));
+  const visibleRoadmaps = filteredRoadmaps.slice((page - 1) * pageSize, page * pageSize);
+
+  const updateForm = (field, value) => {
+    setRoadmapForm((previous) => ({ ...previous, [field]: value }));
+    setFormError("");
+  };
+
+  const openCreateForm = () => {
+    setEditingRoadmapId(null);
+    setRoadmapForm(createRoadmapForm());
+    setFormError("");
+    setShowFormPreview(false);
+    setIsFormOpen(true);
+  };
+
+  const openEditForm = (roadmap) => {
+    const knownRole = TARGET_ROLES.includes(roadmap.targetRole);
+    setEditingRoadmapId(normalizeId(roadmap));
     setRoadmapForm({
-      title: roadmap.title || '',
-      description: roadmap.description || '',
-      markdownBody: roadmap.markdownBody || '',
-      assignedBatchIds: (roadmap.assignedBatchIds || []).map((batchId) => String(batchId)),
-      status: roadmap.status || 'Active',
-      attachedNoteTitle: roadmap.attachedNoteTitle || '',
-      attachedNoteDay: roadmap.attachedNoteDay || '',
-      fileName: 'Assigned Roadmap.md',
+      title: roadmap.title || "",
+      description: roadmap.description || "",
+      targetRole: knownRole ? roadmap.targetRole : roadmap.targetRole ? "__custom__" : "",
+      customTargetRole: knownRole ? "" : roadmap.targetRole || "",
+      duration: roadmap.duration ?? "",
+      durationUnit: String(roadmap.durationUnit || "weeks").toLowerCase(),
+      markdownBody: roadmap.markdownBody || "",
+      markdownFile: roadmap.markdownFile || "Existing Markdown",
+      branches: Array.isArray(roadmap.branches) ? roadmap.branches : [],
+      assignedBatchIds: Array.isArray(roadmap.assignedBatchIds) ? roadmap.assignedBatchIds.map(String) : [],
+      status: roadmap.status || "Draft",
     });
-    setRoadmapFormError('');
-    setIsRoadmapModalOpen(true);
+    setFormError("");
+    setShowFormPreview(false);
+    setIsFormOpen(true);
   };
 
-  const closeRoadmapModal = () => {
-    setIsRoadmapModalOpen(false);
+  const closeForm = () => {
+    setIsFormOpen(false);
     setEditingRoadmapId(null);
     setRoadmapForm(createRoadmapForm());
-    setRoadmapFormError('');
-    setIsSavingRoadmap(false);
+    setFormError("");
+    setShowFormPreview(false);
   };
 
-  const toggleRoadmapBatch = (batchId) => {
-    setRoadmapForm((prev) => {
-      const nextId = String(batchId);
-      const selected = new Set((prev.assignedBatchIds || []).map(String));
-      if (selected.has(nextId)) selected.delete(nextId);
-      else selected.add(nextId);
-      return { ...prev, assignedBatchIds: Array.from(selected) };
-    });
-  };
-
-  const saveRoadmap = async () => {
-    if (!roadmapForm.title.trim()) {
-      setRoadmapFormError('Roadmap title is required.');
+  const handleMarkdownFile = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".md")) {
+      setFormError("Only Markdown (.md) files are supported.");
+      event.target.value = "";
       return;
     }
 
-    if (!roadmapForm.markdownBody.trim()) {
-      setRoadmapFormError('Roadmap markdown is required.');
-      return;
-    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateForm("markdownBody", String(reader.result || ""));
+      updateForm("markdownFile", file.name);
+      setShowFormPreview(true);
+    };
+    reader.onerror = () => setFormError("Could not read that Markdown file.");
+    reader.readAsText(file);
+  };
 
-    setIsSavingRoadmap(true);
-    setRoadmapFormError('');
+  const toggleBranch = (branch) => {
+    setRoadmapForm((previous) => ({
+      ...previous,
+      branches: previous.branches.includes(branch)
+        ? previous.branches.filter((item) => item !== branch)
+        : [...previous.branches, branch],
+    }));
+    setFormError("");
+  };
+
+  const persistRoadmap = async (payload) => {
+    if (editingRoadmapId) return adminAPI.updateRoadmap(editingRoadmapId, payload);
+    return adminAPI.createRoadmap(payload);
+  };
+
+  const saveRoadmap = async (statusOverride = null, allowDuplicate = false) => {
+    const targetRole = roadmapForm.targetRole === "__custom__"
+      ? roadmapForm.customTargetRole.trim()
+      : roadmapForm.targetRole.trim();
+    const status = statusOverride || roadmapForm.status;
+    const duration = Number(roadmapForm.duration);
+
+    if (!roadmapForm.title.trim()) return setFormError("Roadmap title is required.");
+    if (!targetRole) return setFormError("Target role is required.");
+    if (!roadmapForm.markdownBody.trim()) return setFormError("Upload a Markdown file before saving.");
+    if (!Number.isFinite(duration) || duration <= 0) return setFormError("Duration must be a positive number.");
 
     const payload = {
       title: roadmapForm.title.trim(),
       description: roadmapForm.description.trim(),
+      targetRole,
+      duration,
+      durationUnit: roadmapForm.durationUnit,
       markdownBody: roadmapForm.markdownBody.trim(),
+      markdownFile: roadmapForm.markdownFile.trim(),
+      status,
+      branches: roadmapForm.branches,
       assignedBatchIds: roadmapForm.assignedBatchIds,
-      status: roadmapForm.status,
-      attachedNoteTitle: roadmapForm.attachedNoteTitle.trim(),
-      attachedNoteDay: roadmapForm.attachedNoteDay,
+      ...(allowDuplicate ? { allowDuplicate: true } : {}),
     };
 
     try {
-      if (editingRoadmapId) {
-        await adminAPI.updateRoadmap(editingRoadmapId, payload);
-      } else {
-        const res = await adminAPI.createRoadmap(payload);
-        const newRoadmapId = res?.data?._id || res?._id || res?.id;
-        const searchParams = new URLSearchParams(window.location.search);
-        const returnTo = searchParams.get('returnTo');
-        if (returnTo) {
-          const targetUrl = newRoadmapId ? `${decodeURIComponent(returnTo)}&newId=${newRoadmapId}` : decodeURIComponent(returnTo);
-          navigate(targetUrl);
+      setIsSaving(true);
+      setFormError("");
+      await persistRoadmap(payload);
+      await loadRoadmaps();
+      closeForm();
+    } catch (error) {
+      if ((error?.code === "ROADMAP_DUPLICATE" || error?.data?.existing) && !allowDuplicate) {
+        const shouldContinue = window.confirm(
+          `A roadmap named "${error.data?.existing?.title || payload.title}" for "${targetRole}" already exists. Create another one anyway?`
+        );
+        if (shouldContinue) {
+          await saveRoadmap(statusOverride, true);
           return;
         }
       }
-      const refreshed = await adminAPI.getRoadmaps();
-      setRoadmapEntries(Array.isArray(refreshed) ? refreshed : []);
-      closeRoadmapModal();
-    } catch (error) {
-      setRoadmapFormError(error?.message || 'Failed to save roadmap.');
+      setFormError(error?.message || "Failed to save roadmap.");
     } finally {
-      setIsSavingRoadmap(false);
+      setIsSaving(false);
+    }
+  };
+
+  const updateStatus = async (roadmap, status) => {
+    try {
+      const updated = await adminAPI.updateRoadmapStatus(normalizeId(roadmap), status);
+      setRoadmapEntries((previous) => previous.map((entry) => (
+        String(normalizeId(entry)) === String(normalizeId(roadmap)) ? updated : entry
+      )));
+    } catch (error) {
+      window.alert(error?.message || "Could not update roadmap status.");
     }
   };
 
   const deleteRoadmap = async (roadmap) => {
-    const confirmed = window.confirm(`Delete "${roadmap.title}"?`);
-    if (!confirmed) return;
-
+    if (!window.confirm(`Delete "${roadmap.title}"? This cannot be undone.`)) return;
     try {
-      await adminAPI.deleteRoadmap(roadmap.id || roadmap._id);
-      setRoadmapEntries((prev) => prev.filter((entry) => String(entry.id || entry._id) !== String(roadmap.id || roadmap._id)));
+      await adminAPI.deleteRoadmap(normalizeId(roadmap));
+      setRoadmapEntries((previous) => previous.filter((entry) => String(normalizeId(entry)) !== String(normalizeId(roadmap))));
     } catch (error) {
-      window.alert(error?.message || 'Failed to delete roadmap.');
+      window.alert(error?.message || "Could not delete roadmap.");
     }
   };
 
-  if (!mounted) return <LoadingScreen />;
+  const previewForm = {
+    ...roadmapForm,
+    targetRole: roadmapForm.targetRole === "__custom__" ? roadmapForm.customTargetRole : roadmapForm.targetRole,
+    duration: Number(roadmapForm.duration),
+    durationLabel: getDurationLabel(roadmapForm),
+    status: roadmapForm.status,
+  };
+
+  if (isLoading) {
+    return <LoadingScreen message="Loading roadmaps..." fullScreen />;
+  }
 
   return (
-    <>
-      {isSearchOpen && (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4 font-sans">
-          <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={() => setIsSearchOpen(false)} />
-          <div className="relative w-full max-w-2xl bg-white/90 dark:bg-[#020b23]/90 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center px-6 py-4 border-b border-black/5 dark:border-white/5">
-              <FiSearch className="w-5 h-5 text-black/40 dark:text-white/40 mr-4 shrink-0" />
-              <input ref={searchInputRef} type="text" placeholder="Search pages, tracks, or settings..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="flex-1 bg-transparent border-none outline-none text-lg text-[#3C83F6] dark:text-white placeholder:text-black/30 dark:placeholder:text-white/30" />
-              <div className="flex items-center gap-1 text-[10px] font-medium text-black/40 dark:text-white/40 border border-black/10 dark:border-white/10 px-1.5 py-0.5 rounded ml-4 shrink-0 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5" onClick={() => setIsSearchOpen(false)}>
-                <span>ESC</span>
-              </div>
+    <div className={`min-h-screen font-sans antialiased ${isDarkMode ? "dark bg-[#020b23] text-slate-100" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] text-slate-900"}`}>
+      <Sidebar />
+      <main className="min-h-screen overflow-y-auto px-4 pb-14 pt-24 sm:px-6 lg:ml-64 lg:px-12">
+        <div className="mx-auto max-w-[1600px]">
+          <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#3c83f6]">Learning content</p>
+              <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Roadmaps</h1>
+              <p className="mt-2 max-w-2xl text-sm opacity-65">Manage personalized learning paths by target role and branch eligibility.</p>
             </div>
-            <div className="max-h-[60vh] overflow-y-auto p-2">
-              {filteredRoutes.length === 0 ? (
-                <div className="px-6 py-12 text-center text-sm text-black/40 dark:text-white/40">No results found for &ldquo;{searchQuery}&rdquo;</div>
-              ) : filteredRoutes.map(route => (
-                <button key={route.id} onClick={() => handleRouteSelect(route.id)} className="w-full flex items-center justify-between px-4 py-4 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group text-left">
-                  <div>
-                    <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{route.title}</h4>
-                  </div>
-                  <span className="text-black/20 dark:text-white/20 group-hover:translate-x-1 transition-transform">›</span>
-                </button>
-              ))}
-            </div>
+            <button type="button" onClick={openCreateForm} className="dashboard-primary-btn inline-flex h-11 items-center justify-center gap-2 px-5 text-sm">
+              <FiPlus /> Create Roadmap
+            </button>
           </div>
+
+          {pageError && <div className="mb-5 rounded-lg border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-200">{pageError}</div>}
+
+          <section className="dashboard-surface overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
+            <div className="flex flex-col gap-3 border-b border-black/10 p-4 dark:border-white/10 lg:flex-row lg:items-center lg:justify-between">
+              <div className="relative w-full lg:max-w-sm">
+                <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 opacity-45" />
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search roadmaps, roles, or RID..."
+                  className="dashboard-input-surface h-10 w-full pl-9 text-sm"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="relative">
+                  <span className="sr-only">Filter by status</span>
+                  <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="dashboard-input-surface h-10 appearance-none pr-9 text-sm">
+                    <option>All statuses</option>
+                    {STATUSES.map((status) => <option key={status}>{status}</option>)}
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 opacity-50" />
+                </label>
+                <label className="relative">
+                  <span className="sr-only">Sort roadmaps</span>
+                  <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} className="dashboard-input-surface h-10 appearance-none pr-9 text-sm">
+                    <option value="updated-desc">Recently updated</option>
+                    <option value="created-desc">Recently created</option>
+                    <option value="title-asc">Title A–Z</option>
+                    <option value="duration-asc">Duration shortest</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 opacity-50" />
+                </label>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[920px] text-left text-sm">
+                <thead className="bg-black/[0.03] text-[10px] uppercase tracking-[0.16em] opacity-55 dark:bg-white/[0.04]">
+                  <tr>
+                    <th className="px-5 py-4">Roadmap</th>
+                    <th className="px-5 py-4">Target role</th>
+                    <th className="px-5 py-4">Duration</th>
+                    <th className="px-5 py-4">Status</th>
+                    <th className="px-5 py-4">Created</th>
+                    <th className="px-5 py-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/10 dark:divide-white/10">
+                  {visibleRoadmaps.map((roadmap) => (
+                    <tr key={normalizeId(roadmap)} className="transition-colors hover:bg-black/[0.025] dark:hover:bg-white/[0.035]">
+                      <td className="px-5 py-4">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 rounded-lg bg-[#3c83f6]/10 p-2 text-[#3c83f6]"><FiFileText /></div>
+                          <div className="min-w-0">
+                            <p className="truncate font-bold" title={roadmap.title}>{roadmap.title || "Untitled roadmap"}</p>
+                            <p className="mt-1 text-xs opacity-50">{roadmap.roadmapId || "Legacy ID pending"}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <p className="font-medium">{roadmap.targetRole || "Not set"}</p>
+                        <p className="mt-1 text-xs opacity-50">{roadmap.branches?.length ? roadmap.branches.join(", ") : "All branches"}</p>
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 font-semibold">{getDurationLabel(roadmap)}</td>
+                      <td className="px-5 py-4">
+                        <select
+                          aria-label={`Change status for ${roadmap.title}`}
+                          value={roadmap.status || "Draft"}
+                          onChange={(event) => updateStatus(roadmap, event.target.value)}
+                          className={`rounded-full border px-3 py-1.5 text-xs font-bold outline-none ${getStatusClasses(roadmap.status, isDarkMode)}`}
+                        >
+                          {STATUSES.map((status) => <option key={status}>{status}</option>)}
+                        </select>
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 opacity-70">{formatDate(roadmap.createdAt)}</td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-1">
+                          <button type="button" onClick={() => setViewingRoadmap(roadmap)} className="rounded-lg p-2 opacity-65 transition hover:bg-[#3c83f6]/10 hover:text-[#3c83f6]" aria-label={`Preview ${roadmap.title}`}><FiEye /></button>
+                          <button type="button" onClick={() => openEditForm(roadmap)} className="rounded-lg p-2 opacity-65 transition hover:bg-[#3c83f6]/10 hover:text-[#3c83f6]" aria-label={`Edit ${roadmap.title}`}><FiEdit2 /></button>
+                          <button type="button" onClick={() => deleteRoadmap(roadmap)} className="rounded-lg p-2 opacity-65 transition hover:bg-rose-500/10 hover:text-rose-500" aria-label={`Delete ${roadmap.title}`}><FiTrash2 /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!visibleRoadmaps.length && <div className="px-5 py-16 text-center text-sm opacity-60">No roadmaps match the current filters.</div>}
+            </div>
+
+            <div className="flex flex-col gap-3 border-t border-black/10 px-5 py-4 text-xs opacity-70 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between">
+              <span>{filteredRoadmaps.length} roadmap{filteredRoadmaps.length === 1 ? "" : "s"}</span>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2">Rows
+                  <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))} className="dashboard-input-surface h-8 px-2 text-xs">
+                    {[8, 16, 32].map((size) => <option key={size} value={size}>{size}</option>)}
+                  </select>
+                </label>
+                <span>Page {Math.min(page, totalPages)} of {totalPages}</span>
+                <button type="button" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} className="rounded-lg p-1.5 hover:bg-black/5 disabled:opacity-30 dark:hover:bg-white/10" aria-label="Previous page"><FiChevronLeft /></button>
+                <button type="button" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))} className="rounded-lg p-1.5 hover:bg-black/5 disabled:opacity-30 dark:hover:bg-white/10" aria-label="Next page"><FiChevronRight /></button>
+              </div>
+            </div>
+          </section>
         </div>
-      )}
+      </main>
 
-      {isRoadmapModalOpen && (
-        <div className="fixed inset-0 z-[135] flex items-center justify-center px-4 py-6">
-          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeRoadmapModal} />
-          <div className="relative w-full max-w-4xl max-h-[88vh] flex flex-col rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f274f] shadow-2xl overflow-hidden">
-            {/* Modal Header */}
-            <div className="p-5 flex justify-between items-center border-b border-black/15 dark:border-white/15 shrink-0">
-              <h2 className="text-xl font-semibold text-[#0f1f3d] dark:text-white">
-                {editingRoadmapId ? 'Edit Roadmap' : 'Create Roadmap'}
-              </h2>
-              <button
-                onClick={closeRoadmapModal}
-                className="text-black/45 dark:text-white/55 hover:text-black dark:hover:text-white transition-colors"
-                aria-label="Close roadmap form"
-              >
-                <FiX className="w-5 h-5" />
-              </button>
+      {isFormOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-black/10 bg-white shadow-2xl dark:border-white/10 dark:bg-[#0b1d3b]">
+            <div className="flex items-center justify-between border-b border-black/10 px-6 py-4 dark:border-white/10">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#3c83f6]">Roadmap CRUD</p>
+                <h2 className="mt-1 text-xl font-black">{editingRoadmapId ? "Edit Roadmap" : "Create Roadmap"}</h2>
+              </div>
+              <button type="button" onClick={closeForm} className="rounded-lg p-2 opacity-60 hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10" aria-label="Close form"><FiX /></button>
             </div>
 
-            {/* Modal Content - Scrollable */}
-            <div className="flex-1 overflow-y-auto p-6 minimal-scrollbar">
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] items-stretch gap-6">
-                {/* Left Column (flex container that matches the height of the right column) */}
-                <div className="flex flex-col justify-between h-full gap-4">
-                  <div>
-                    <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Roadmap Title*</label>
-                    <input
-                      value={roadmapForm.title}
-                      onChange={(e) => setRoadmapForm((prev) => ({ ...prev, title: e.target.value }))}
-                      className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#122b52] px-3 text-sm text-slate-800 dark:text-white"
-                    />
-                  </div>
+            <div className="grid gap-6 overflow-y-auto p-6 lg:grid-cols-[1fr_0.9fr]">
+              <div className="space-y-5">
+                <label className="block text-sm font-semibold">Roadmap Title *
+                  <input value={roadmapForm.title} onChange={(event) => updateForm("title", event.target.value)} className="dashboard-input-surface mt-2 w-full" placeholder="Frontend Developer Roadmap" />
+                </label>
+                <label className="block text-sm font-semibold">Description
+                  <textarea value={roadmapForm.description} onChange={(event) => updateForm("description", event.target.value)} className="dashboard-input-surface mt-2 min-h-24 w-full resize-y" placeholder="A structured roadmap for frontend development." />
+                </label>
+                <label className="block text-sm font-semibold">Target Role *
+                  <select value={roadmapForm.targetRole} onChange={(event) => updateForm("targetRole", event.target.value)} className="dashboard-input-surface mt-2 w-full">
+                    <option value="">Select target role</option>
+                    {TARGET_ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
+                    <option value="__custom__">Other role…</option>
+                  </select>
+                </label>
+                {roadmapForm.targetRole === "__custom__" && <input value={roadmapForm.customTargetRole} onChange={(event) => updateForm("customTargetRole", event.target.value)} className="dashboard-input-surface -mt-2 w-full" placeholder="Enter a target role" />}
 
-                  <div>
-                    <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Description</label>
-                    <input
-                      value={roadmapForm.description}
-                      onChange={(e) => setRoadmapForm((prev) => ({ ...prev, description: e.target.value }))}
-                      className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#122b52] px-3 text-sm text-slate-800 dark:text-white"
-                    />
+                <div>
+                  <p className="text-sm font-semibold">Duration *</p>
+                  <div className="mt-2 flex gap-2">
+                    <input type="number" step="any" value={roadmapForm.duration} onChange={(event) => updateForm("duration", event.target.value)} className="dashboard-input-surface w-full" placeholder="6" />
+                    <select value={roadmapForm.durationUnit} onChange={(event) => updateForm("durationUnit", event.target.value)} className="dashboard-input-surface w-36 shrink-0">
+                      {DURATION_UNITS.map((unit) => <option key={unit} value={unit}>{unit[0].toUpperCase() + unit.slice(1)}</option>)}
+                    </select>
                   </div>
-
-                  {/* Stretches to fill the remaining height, aligning its bottom with the right column */}
-                  <div className="flex-grow flex flex-col">
-                    <label className="text-xs font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Markdown File (.md)*</label>
-                    <div className="mt-2 flex-grow flex flex-col items-center justify-center border-2 border-dashed border-black/10 dark:border-white/10 rounded-2xl bg-white/40 dark:bg-[#122b52]/50 hover:bg-white/60 dark:hover:bg-[#122b52]/80 hover:border-[#3C83F6] dark:hover:border-blue-400 transition-all duration-200 py-6 px-6 text-center cursor-pointer relative min-h-[140px]">
-                      <input
-                        type="file"
-                        accept=".md"
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (evt) => {
-                              setRoadmapForm((prev) => ({
-                                ...prev,
-                                markdownBody: evt.target?.result || '',
-                                fileName: file.name,
-                              }));
-                            };
-                            reader.readAsText(file);
-                          }
-                        }}
-                      />
-                      <div className="space-y-2 flex flex-col items-center justify-center">
-                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 dark:bg-blue-300/10 text-[#3C83F6] dark:text-blue-300 flex items-center justify-center">
-                          <FiUpload className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800 dark:text-white">
-                            {roadmapForm.fileName ? roadmapForm.fileName : 'Click to upload Markdown file'}
-                          </p>
-                          <p className="text-xs text-slate-400 dark:text-slate-400 mt-1">
-                            Only Markdown (.md) files are supported
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <p className="mt-1 text-xs opacity-55">Enter any positive duration; there is no fixed roadmap length.</p>
                 </div>
 
-                {/* Right Column */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Status</label>
-                    <div className="mt-1 relative rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43]">
-                      <select
-                        value={roadmapForm.status}
-                        onChange={(e) => setRoadmapForm((prev) => ({ ...prev, status: e.target.value }))}
-                        className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
-                      >
-                        <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Active</option>
-                        <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Draft</option>
-                        <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Archived</option>
-                      </select>
-                      <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                    </div>
-                  </div>
+                <div>
+                  <p className="text-sm font-semibold">Markdown File (.md) *</p>
+                  <input ref={fileInputRef} type="file" accept=".md,text/markdown" onChange={handleMarkdownFile} className="hidden" />
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="dashboard-input-surface mt-2 flex w-full items-center gap-3 text-left text-sm">
+                    <FiUpload className="shrink-0 text-[#3c83f6]" />
+                    <span className="truncate">{roadmapForm.markdownFile || "Click to upload Markdown file"}</span>
+                  </button>
+                  <p className="mt-1 text-xs opacity-55">Only Markdown (.md) files are supported.</p>
+                  <textarea value={roadmapForm.markdownBody} onChange={(event) => updateForm("markdownBody", event.target.value)} className="dashboard-input-surface mt-3 min-h-40 w-full resize-y font-mono text-xs" placeholder="Upload a .md file to load its content, or paste Markdown here." />
+                </div>
 
-                  <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/55 dark:bg-[#122b52] p-3 space-y-3">
-                    <p className="text-xs font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Attach Resource to Note</p>
-                    <div>
-                      <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Note Title</label>
-                      <input
-                        value={roadmapForm.attachedNoteTitle}
-                        onChange={(e) => setRoadmapForm((prev) => ({ ...prev, attachedNoteTitle: e.target.value }))}
-                        placeholder="e.g. Day 3 Notes"
-                        className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#0f1f43] px-3 text-sm text-slate-800 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Day Number</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={roadmapForm.attachedNoteDay}
-                        onChange={(e) => setRoadmapForm((prev) => ({ ...prev, attachedNoteDay: e.target.value }))}
-                        placeholder="Optional"
-                        className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#0f1f43] px-3 text-sm text-slate-800 dark:text-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Assign to Batches</p>
-                    <div className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#122b52] p-2 space-y-1 minimal-scrollbar">
-                      {batchOptions.map((batch) => {
-                        const checked = roadmapForm.assignedBatchIds.map(String).includes(String(batch.id));
-                        return (
-                          <label key={batch.id} className="flex items-start gap-2 rounded-lg px-2 py-2 text-sm text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleRoadmapBatch(batch.id)}
-                              className="mt-1"
-                            />
-                            <span>
-                              <span className="block font-medium">{batch.name}</span>
-                              {batch.college && <span className="block text-[11px] text-[#5f7592] dark:text-slate-300">{batch.college}</span>}
-                            </span>
-                          </label>
-                        );
-                      })}
-                      {batchOptions.length === 0 && (
-                        <p className="px-2 py-3 text-xs text-[#5f7592] dark:text-slate-300">No batches available.</p>
-                      )}
-                    </div>
+                <div>
+                  <p className="text-sm font-semibold">Assign to Branches</p>
+                  <p className="mt-1 text-xs opacity-55">Leave all unchecked to make the roadmap available to every branch.</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {BRANCHES.map((branch) => (
+                      <label key={branch} className="flex cursor-pointer items-center gap-2 rounded-lg border border-black/10 px-3 py-2 text-xs dark:border-white/10">
+                        <input type="checkbox" checked={roadmapForm.branches.includes(branch)} onChange={() => toggleBranch(branch)} />
+                        {branch}
+                      </label>
+                    ))}
                   </div>
                 </div>
               </div>
+
+              <div className="space-y-5">
+                <div>
+                  <p className="text-sm font-semibold">Status</p>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {STATUSES.map((status) => (
+                      <label key={status} className={`cursor-pointer rounded-lg border px-3 py-2 text-center text-xs font-bold ${roadmapForm.status === status ? getStatusClasses(status, isDarkMode) : "border-black/10 opacity-60 dark:border-white/10"}`}>
+                        <input type="radio" name="roadmap-status" value={status} checked={roadmapForm.status === status} onChange={() => updateForm("status", status)} className="sr-only" />
+                        {status}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs opacity-55">Only Active roadmaps appear on the learner side.</p>
+                </div>
+
+                <div className="rounded-xl border border-black/10 bg-black/[0.025] p-4 dark:border-white/10 dark:bg-white/[0.035]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold">Preview</p>
+                      <p className="mt-1 text-xs opacity-55">Check the title, metadata, and rendered Markdown before publishing.</p>
+                    </div>
+                    <button type="button" onClick={() => setShowFormPreview((current) => !current)} className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[#3c83f6] px-3 py-2 text-xs font-bold text-white"><FiEye /> {showFormPreview ? "Hide" : "Preview"}</button>
+                  </div>
+                  {showFormPreview && (
+                    <div className="mt-4 max-h-[28rem] overflow-y-auto rounded-lg border border-black/10 bg-white p-4 text-sm dark:border-white/10 dark:bg-[#071831]">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#3c83f6]">{previewForm.targetRole || "Target role not set"} · {getDurationLabel(previewForm)}</p>
+                      <h3 className="mt-2 text-xl font-black">{previewForm.title || "Untitled roadmap"}</h3>
+                      {previewForm.description && <p className="mt-2 opacity-70">{previewForm.description}</p>}
+                      <div className="mt-4 border-t border-black/10 pt-3 dark:border-white/10"><ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{previewForm.markdownBody || "Markdown content will appear here."}</ReactMarkdown></div>
+                    </div>
+                  )}
+                </div>
+
+                {formError && <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-700 dark:text-rose-200">{formError}</p>}
+              </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-5 border-t border-black/15 dark:border-white/15 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50 dark:bg-slate-900/10 shrink-0">
-              <div className="flex-1 min-w-0">
-                {roadmapFormError && <p className="text-xs text-red-500">{roadmapFormError}</p>}
-              </div>
-              <div className="flex gap-3 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={closeRoadmapModal}
-                  className="px-5 py-2.5 rounded-xl border border-black/10 dark:border-white/15 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5 transition-all w-full sm:w-auto"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={saveRoadmap}
-                  disabled={isSavingRoadmap}
-                  className="px-6 py-2.5 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] disabled:opacity-70 text-white text-sm font-semibold shadow-md transition-all w-full sm:w-auto"
-                >
-                  {isSavingRoadmap ? 'Saving...' : editingRoadmapId ? 'Save Changes' : 'Create Roadmap'}
-                </button>
-              </div>
+            <div className="flex flex-col-reverse gap-2 border-t border-black/10 px-6 py-4 dark:border-white/10 sm:flex-row sm:items-center sm:justify-end">
+              <button type="button" onClick={closeForm} className="dashboard-secondary-btn px-4 py-2 text-sm">Cancel</button>
+              <button type="button" onClick={() => saveRoadmap("Draft")} disabled={isSaving} className="dashboard-secondary-btn px-4 py-2 text-sm disabled:opacity-50">{isSaving ? "Saving…" : "Save Draft"}</button>
+              <button type="button" onClick={() => saveRoadmap("Active")} disabled={isSaving} className="dashboard-primary-btn px-4 py-2 text-sm disabled:opacity-50">{editingRoadmapId ? "Publish / Activate" : "Publish / Activate"}</button>
             </div>
           </div>
         </div>
       )}
 
       {viewingRoadmap && (
-        <div className="fixed inset-0 z-[135] flex items-center justify-center px-4 py-6">
-          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setViewingRoadmap(null)} />
-          <div className="relative w-full max-w-5xl max-h-[88vh] overflow-hidden rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f274f] shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-black/10 dark:border-white/10 px-6 py-5">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-xl font-semibold text-[#0f1f3d] dark:text-white">{viewingRoadmap.title}</h2>
-                  <span className="rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-xs font-semibold text-[#0f2b54] dark:text-blue-200">
-                    {viewingRoadmap.status || 'Active'}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-[#5f7592] dark:text-slate-300">{viewingRoadmap.description || 'No description'}</p>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {(viewingRoadmap.assignedBatches || []).length > 0 ? (
-                    viewingRoadmap.assignedBatches.map((batch) => (
-                      <span key={batch.id} className="rounded-full border border-black/10 dark:border-white/10 px-2 py-0.5 text-[11px] text-[#0f2b54] dark:text-slate-200">
-                        {batch.name}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-xs text-[#5f7592] dark:text-slate-300">No batches assigned</span>
-                  )}
-                </div>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-black/10 bg-white shadow-2xl dark:border-white/10 dark:bg-[#0b1d3b]">
+            <div className="flex items-start justify-between border-b border-black/10 px-6 py-5 dark:border-white/10">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#3c83f6]">{viewingRoadmap.roadmapId || "Roadmap preview"}</p>
+                <h2 className="mt-1 text-2xl font-black">{viewingRoadmap.title}</h2>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs opacity-70"><span>{viewingRoadmap.targetRole || "Target role not set"}</span><span>·</span><span>{getDurationLabel(viewingRoadmap)}</span><span>·</span><span>{formatDate(viewingRoadmap.createdAt)}</span></div>
               </div>
-              <button
-                onClick={() => setViewingRoadmap(null)}
-                className="shrink-0 text-black/45 dark:text-white/55 hover:text-black dark:hover:text-white"
-                aria-label="Close roadmap preview"
-              >
-                <FiX className="w-5 h-5" />
-              </button>
+              <button type="button" onClick={() => setViewingRoadmap(null)} className="rounded-lg p-2 opacity-60 hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10" aria-label="Close preview"><FiX /></button>
             </div>
-
-            <div className="max-h-[62vh] overflow-y-auto px-6 py-6">
-              <div className="prose prose-slate max-w-none dark:prose-invert prose-headings:text-[#0f1f3d] dark:prose-headings:text-white prose-p:text-[#31445f] dark:prose-p:text-slate-300 prose-li:text-[#31445f] dark:prose-li:text-slate-300 prose-a:text-[#3C83F6] prose-pre:bg-[#071831] prose-pre:text-slate-100">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {viewingRoadmap.markdownBody || 'No roadmap content available.'}
-                </ReactMarkdown>
-              </div>
+            <div className="overflow-y-auto px-6 py-5">
+              {viewingRoadmap.description && <p className="mb-5 rounded-lg bg-black/[0.035] p-4 text-sm leading-6 opacity-75 dark:bg-white/[0.04]">{viewingRoadmap.description}</p>}
+              <div className="mb-5 flex flex-wrap gap-2">{(viewingRoadmap.branches?.length ? viewingRoadmap.branches : ["All branches"]).map((branch) => <span key={branch} className="rounded-full border border-[#3c83f6]/25 bg-[#3c83f6]/10 px-3 py-1 text-xs font-semibold text-[#2563eb] dark:text-[#a9d9ff]">{branch}</span>)}</div>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{viewingRoadmap.markdownBody || "No Markdown content available."}</ReactMarkdown>
             </div>
+            <div className="flex justify-end gap-2 border-t border-black/10 px-6 py-4 dark:border-white/10"><button type="button" onClick={() => { setViewingRoadmap(null); openEditForm(viewingRoadmap); }} className="dashboard-primary-btn inline-flex items-center gap-2 px-4 py-2 text-sm"><FiEdit2 /> Edit</button></div>
           </div>
         </div>
       )}
-
-      <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
-        <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
-        <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
-
-        <main
-          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)} className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="max-w-[1600px] mx-auto space-y-8">
-            <div>
-              <h1 className="admin-page-title">Roadmaps</h1>
-            </div>
-
-            <section className="space-y-4">
-              {/* Toolbar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center shrink-0">
-                    <FiMap className="w-4 h-4 text-[#3C83F6] dark:text-blue-300" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm md:text-[15px] font-semibold text-[#0b1b38] dark:text-white">Batch Roadmaps</h2>
-                    <p className="text-[11px] md:text-xs text-[#5f7592] dark:text-slate-300 truncate">Create one roadmap and assign it to multiple batches.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-                  <div className="relative w-48 sm:w-56">
-                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                    <input
-                      type="text"
-                      value={roadmapSearchQuery}
-                      onChange={(e) => setRoadmapSearchQuery(e.target.value)}
-                      placeholder="Search roadmaps..."
-                      className="w-full h-9 pl-9 pr-3 text-xs rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
-                    />
-                  </div>
-                  <button onClick={openAddRoadmapModal} className="dashboard-primary-btn h-9 px-4 text-xs shrink-0">
-                    <FiPlus className="w-3.5 h-3.5" />
-                    Create Roadmap
-                  </button>
-                </div>
-              </div>
-
-              {roadmapEntries.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-sm text-black/40 dark:text-white/40">
-                  No roadmaps created yet. Users will keep seeing the default roadmap until a batch roadmap is assigned.
-                </div>
-              ) : (
-                <div className="overflow-auto max-h-[78vh] bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl">
-                  <table className="w-full min-w-[900px] table-fixed">
-                    <thead>
-                      <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30 select-none">
-                        <th className="px-4 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-12 whitespace-nowrap">#</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[200px] whitespace-nowrap">Roadmap Title</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-28 whitespace-nowrap">Actions</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[240px] whitespace-nowrap">Description</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-28 whitespace-nowrap">Status</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-36 whitespace-nowrap">Batches</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">Assigned To</th>
-                      </tr>
-                    </thead>
-                    <tbody className="border-t border-black/5 dark:border-white/10">
-                      {roadmapEntries.filter((roadmap) => {
-                        const query = roadmapSearchQuery.toLowerCase();
-                        const batchNames = (roadmap.assignedBatches || []).map((b) => b.name).join(' ').toLowerCase();
-                        return (
-                          (roadmap.title || '').toLowerCase().includes(query) ||
-                          (roadmap.description || '').toLowerCase().includes(query) ||
-                          (roadmap.status || '').toLowerCase().includes(query) ||
-                          batchNames.includes(query)
-                        );
-                      }).map((roadmap, index) => {
-                        const truncatedDesc = roadmap.description
-                          ? (roadmap.description.length > 40 ? `${roadmap.description.substring(0, 40)}...` : roadmap.description)
-                          : 'No description';
-                        const batchCount = (roadmap.assignedBatches || []).length;
-                        const batchLabel = batchCount === 0
-                          ? 'None'
-                          : (roadmap.assignedBatches || []).map((b) => b.name).join(', ');
-
-                        return (
-                          <tr key={roadmap.id || roadmap._id} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
-                            <td className="px-4 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
-                              {index + 1}
-                            </td>
-                            <td className="px-4 py-2.5 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-white/85 truncate" title={roadmap.title}>
-                              {roadmap.title}
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  onClick={() => setViewingRoadmap(roadmap)}
-                                  className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 text-slate-500 dark:text-slate-400"
-                                  aria-label={`View ${roadmap.title}`}
-                                >
-                                  <FiEye className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => openEditRoadmapModal(roadmap)}
-                                  className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 text-slate-500 dark:text-slate-400"
-                                  aria-label={`Edit ${roadmap.title}`}
-                                >
-                                  <FiEdit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => deleteRoadmap(roadmap)}
-                                  className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10 text-slate-500 dark:text-slate-400"
-                                  aria-label={`Delete ${roadmap.title}`}
-                                >
-                                  <FiTrash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </td>
-                            <td className="px-4 py-2.5 text-[11px] sm:text-xs text-slate-500 dark:text-white/60 truncate" title={roadmap.description}>
-                              {truncatedDesc}
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <span className="shrink-0 rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-[10px] font-semibold text-[#0f2b54] dark:text-blue-200">
-                                {roadmap.status || 'Active'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-2.5 text-[11px] sm:text-xs font-medium text-slate-500 dark:text-white/60 whitespace-nowrap">
-                              {batchCount} batch{batchCount === 1 ? '' : 'es'}
-                            </td>
-                            <td className="px-4 py-2.5 text-[11px] sm:text-xs text-slate-500 dark:text-white/60 truncate" title={batchLabel}>
-                              {batchLabel}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-          </div>
-        </main>
-      </div>
-    </>
+    </div>
   );
 }

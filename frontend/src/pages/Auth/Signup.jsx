@@ -219,19 +219,41 @@ export default function Signup({
       }
     } else {
       try {
+        let draft = {};
+        try {
+          const draftRaw = localStorage.getItem('techlearn-onboarding-draft');
+          if (draftRaw) draft = JSON.parse(draftRaw);
+        } catch (e) {
+          console.warn('Could not read onboarding draft:', e);
+        }
+
+        const regPayload = {
+          email: email.trim(),
+          password,
+          confirmPassword: password,
+          fullName: email.split('@')[0],
+          learningGoal: draft.learningGoal || '',
+          targetRole: draft.targetRole || '',
+          placementCategory: draft.placementCategory || '',
+          targetCompanies: draft.targetCompanies || [],
+          skills: draft.skills || [],
+          learningPath: draft.learningPath || '',
+          completeOnboarding: Boolean(draft.targetRole || draft.skills?.length),
+        };
+
         const regRes = await fetch(`${getApiBase()}/users/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: email.trim(),
-            password,
-            fullName: email.split('@')[0],
-          }),
+          body: JSON.stringify(regPayload),
         });
 
         const regData = await regRes.json();
 
         if (regRes.ok && regData.token) {
+          try {
+            localStorage.removeItem('techlearn-onboarding-draft');
+          } catch (e) {}
+
           localStorage.setItem('token', regData.token);
           localStorage.setItem('userData', JSON.stringify(regData.user));
           if (setSession) setSession(regData.user, regData.token);

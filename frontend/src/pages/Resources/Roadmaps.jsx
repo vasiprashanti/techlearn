@@ -1,526 +1,200 @@
-import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeHighlight from 'rehype-highlight';
-import 'highlight.js/styles/github-dark.css';
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
-  CheckCircle2,
+  BookOpen,
+  Clock3,
   Loader2,
-  X,
-} from 'lucide-react';
-import ScrollProgress from '../../components/ScrollProgress';
-import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
-import { useAuth } from '../../context/AuthContext';
-import { resourceAPI } from '../../services/api';
+  Map,
+  Search,
+  Sparkles,
+  Target,
+} from "lucide-react";
+import UserSidebarLayout from "../../components/Dashboard/UserSidebarLayout";
+import { useAuth } from "../../context/AuthContext";
+import { resourceAPI } from "../../services/api";
 
-const ROADMAP_PATH = '/resources/roadmaps/roadmap.md';
+const unwrap = (payload) => payload?.data ?? payload;
 
-const looksLikeHtmlDocument = (content) => {
-  if (typeof content !== 'string') return false;
-  const sample = content.slice(0, 500).toLowerCase();
-  return sample.includes('<!doctype html') || sample.includes('<html') || sample.includes('<head>');
+const getRoadmapId = (roadmap) => roadmap?.id || roadmap?._id;
+
+const formatDuration = (roadmap) => {
+  if (roadmap?.durationLabel) return roadmap.durationLabel;
+  if (!roadmap?.duration || !roadmap?.durationUnit) return "Duration not set";
+  const duration = Number(roadmap.duration);
+  const unit = String(roadmap.durationUnit).replace(/s$/, "");
+  return `${duration} ${unit}${duration === 1 ? "" : "s"}`;
 };
 
-const stripMarkdown = (value = '') =>
-  value
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/^#{1,6}\s*/gm, '')
-    .replace(/[`*_~>]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-const getStepMeta = (heading, index) => {
-  const cleanHeading = stripMarkdown(heading);
-  const match = cleanHeading.match(/^(day|phase|week|module|track|step)\s*([0-9a-z]+)\s*:?\s*(.*)$/i);
-
-  if (match) {
-    return {
-      label: `${match[1].toUpperCase()} ${match[2].toUpperCase()}`,
-      title: match[3]?.trim() || cleanHeading,
-    };
-  }
-
-  return {
-    label: `STEP ${index + 1}`,
-    title: cleanHeading || `Roadmap step ${index + 1}`,
-  };
-};
-
-const getPreview = (body) => {
-  const preview = stripMarkdown(
-    body
-      .split('\n')
-      .filter((line) => line.trim() && !/^#{1,6}\s/.test(line.trim()))
-      .slice(0, 3)
-      .join(' ')
-  );
-
-  if (!preview) return 'Open this milestone to view the assigned roadmap details.';
-  return preview.length > 125 ? `${preview.slice(0, 122)}...` : preview;
-};
-
-const parseRoadmapMarkdown = (markdown) => {
-  const content = typeof markdown === 'string' ? markdown.replace(/\r\n/g, '\n').trim() : '';
-
-  if (!content) {
-    return {
-      title: '',
-      intro: '',
-      steps: [],
-    };
-  }
-
-  const lines = content.split('\n');
-  const introLines = [];
-  const sections = [];
-  let title = '';
-  let currentSection = null;
-
-  lines.forEach((line) => {
-    const trimmed = line.trim();
-    const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
-
-    if (headingMatch) {
-      const level = headingMatch[1].length;
-      const headingText = headingMatch[2].trim();
-      const isTimelineHeading =
-        level <= 2 || /^(day|phase|week|module|track|step)\s*[0-9a-z]+/i.test(stripMarkdown(headingText));
-
-      if (level === 1 && !title && !currentSection && sections.length === 0) {
-        title = stripMarkdown(headingText);
-        return;
-      }
-
-      if (isTimelineHeading) {
-        if (currentSection) sections.push(currentSection);
-        currentSection = {
-          heading: headingText,
-          body: '',
-        };
-        return;
-      }
-    }
-
-    if (currentSection) {
-      currentSection.body += `${line}\n`;
-    } else if (trimmed) {
-      introLines.push(line);
-    }
-  });
-
-  if (currentSection) sections.push(currentSection);
-
-  if (!sections.length) {
-    sections.push({
-      heading: title || 'Roadmap Details',
-      body: content,
-    });
-  }
-
-  const steps = sections.map((section, index) => {
-    const meta = getStepMeta(section.heading, index);
-    const body = section.body.trim();
-
-    return {
-      id: `${meta.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${index}`,
-      label: meta.label,
-      title: meta.title,
-      preview: getPreview(body),
-      body: body || `## ${meta.title}`,
-    };
-  });
-
-  return {
-    title,
-    intro: stripMarkdown(introLines.join(' ')),
-    steps,
-  };
+const extractRoadmapList = (payload) => {
+  const data = unwrap(payload);
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(payload?.roadmaps)) return payload.roadmaps;
+  return [];
 };
 
 const markdownComponents = {
-  h1: ({ children }) => (
-    <h1 className="mt-6 mb-4 text-2xl font-semibold tracking-tight text-[#00113b] dark:text-[#dff3ff] md:text-3xl">
-      {children}
-    </h1>
+  h1: ({ children }) => <h1 className="mb-5 mt-8 text-3xl font-black tracking-tight text-[#00113b] dark:text-[#e3f4ff]">{children}</h1>,
+  h2: ({ children }) => <h2 className="mb-3 mt-8 text-2xl font-bold tracking-tight text-[#00113b] dark:text-[#d7efff]">{children}</h2>,
+  h3: ({ children }) => <h3 className="mb-2 mt-6 text-xl font-bold text-[#00113b] dark:text-[#c5e7ff]">{children}</h3>,
+  p: ({ children }) => <p className="mb-5 text-[15px] leading-8 text-[#00113b]/75 dark:text-[#b9d6ed]">{children}</p>,
+  ul: ({ children }) => <ul className="mb-5 list-disc space-y-2 pl-6 text-[#00113b]/75 dark:text-[#b9d6ed]">{children}</ul>,
+  ol: ({ children }) => <ol className="mb-5 list-decimal space-y-2 pl-6 text-[#00113b]/75 dark:text-[#b9d6ed]">{children}</ol>,
+  li: ({ children }) => <li className="pl-1 leading-7 marker:text-[#3c83f6]">{children}</li>,
+  blockquote: ({ children }) => <blockquote className="my-6 rounded-xl border-l-4 border-[#3c83f6] bg-[#3c83f6]/10 px-5 py-4 dark:bg-[#3c83f6]/15">{children}</blockquote>,
+  a: ({ children, href }) => <a href={href} target="_blank" rel="noreferrer" className="font-semibold text-[#2563eb] underline underline-offset-4 dark:text-[#8fd3ff]">{children}</a>,
+  code: ({ inline, children }) => (
+    inline
+      ? <code className="rounded bg-black/10 px-1.5 py-0.5 font-mono text-xs dark:bg-white/10">{children}</code>
+      : <code className="font-mono text-sm">{children}</code>
   ),
-  h2: ({ children }) => (
-    <h2 className="mt-6 mb-3 text-xl font-semibold tracking-tight text-[#00113b] dark:text-[#c9e9ff] md:text-2xl">
-      {children}
-    </h2>
-  ),
-  h3: ({ children }) => (
-    <h3 className="mt-5 mb-2 text-lg font-semibold tracking-tight text-[#00113b]/90 dark:text-[#b7ddff]">
-      {children}
-    </h3>
-  ),
-  p: ({ children }) => (
-    <p className="mb-4 text-[15px] leading-7 text-[#00113b]/72 dark:text-[#afcff1] md:text-base">{children}</p>
-  ),
-  ul: ({ children }) => <ul className="mb-5 space-y-2 text-[#00113b]/72 dark:text-[#afcff1]">{children}</ul>,
-  ol: ({ children }) => (
-    <ol className="mb-5 ml-5 list-decimal space-y-2 text-[#00113b]/72 dark:text-[#afcff1]">{children}</ol>
-  ),
-  li: ({ children }) => (
-    <li className="pl-2 text-[15px] leading-7 marker:text-[#0b3ef2] dark:marker:text-[#7ac7ff]">{children}</li>
-  ),
-  blockquote: ({ children }) => (
-    <blockquote className="my-6 rounded-2xl border border-[#8ec8ff]/70 bg-[#e4f6ff]/80 px-5 py-4 text-[#00113b]/76 dark:border-[#3f74ac] dark:bg-[#09204b] dark:text-[#bee1ff]">
-      {children}
-    </blockquote>
-  ),
-  a: ({ children, href }) => (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="font-medium text-[#0b3ef2] underline decoration-[#0b3ef2]/30 underline-offset-4 transition hover:text-[#00113b] dark:text-[#7ac8ff] dark:decoration-[#7ac8ff]/45 dark:hover:text-[#9edbff]"
-    >
-      {children}
-    </a>
-  ),
-  code: ({ inline, className, children, ...props }) => {
-    if (inline) {
-      return (
-        <code
-          className="rounded-md border border-[#9fd2ff] bg-[#e1f2ff] px-1.5 py-0.5 font-mono text-[13px] text-[#00113b] dark:border-[#3f74ac] dark:bg-[#10335f] dark:text-[#bee1ff]"
-          {...props}
-        >
-          {children}
-        </code>
-      );
-    }
-
-    return (
-      <code className={className} {...props}>
-        {children}
-      </code>
-    );
-  },
-  pre: ({ children }) => (
-    <pre className="my-6 overflow-x-auto rounded-2xl border border-[#335e92] bg-[#0b1f3f] p-5 text-sm text-slate-100 shadow-xl shadow-[#0b1f3f]/25 dark:border-[#3f74ac] dark:bg-[#071831]">
-      {children}
-    </pre>
-  ),
-  hr: () => <hr className="my-8 border-[#9fd2ff] dark:border-[#3f74ac]" />,
+  pre: ({ children }) => <pre className="my-6 overflow-x-auto rounded-xl bg-[#071831] p-5 text-sm leading-6 text-slate-100 shadow-lg">{children}</pre>,
+  hr: () => <hr className="my-8 border-black/10 dark:border-white/10" />,
 };
 
-export default function Roadmaps() {
-  const { user, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+const Meta = ({ icon, label, value }) => (
+  <div className="flex items-center gap-2 rounded-lg border border-black/10 bg-black/[0.025] px-3 py-2 dark:border-white/10 dark:bg-white/[0.04]">
+    {icon}
+    <div><p className="text-[10px] uppercase tracking-[0.14em] opacity-50">{label}</p><p className="text-sm font-bold">{value}</p></div>
+  </div>
+);
 
-  const [markdown, setMarkdown] = useState('');
-  const [roadmapTitle, setRoadmapTitle] = useState('Roadmap');
-  const [roadmapDescription, setRoadmapDescription] = useState('');
+const LoadingState = ({ label = "Loading roadmaps..." }) => (
+  <div className="flex min-h-48 items-center justify-center gap-3 text-sm opacity-65"><Loader2 className="h-5 w-5 animate-spin text-[#3c83f6]" />{label}</div>
+);
+
+const ErrorState = ({ message }) => (
+  <div className="flex items-start gap-3 rounded-xl border border-rose-400/30 bg-rose-500/10 p-5 text-sm text-rose-700 dark:text-rose-200"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0" /><span>{message}</span></div>
+);
+
+export default function Roadmaps() {
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { roadmapId } = useParams();
+  const navigate = useNavigate();
+  const hasUser = Boolean(!authLoading && isAuthenticated && user);
+
+  const [activeTab, setActiveTab] = useState("for-you");
+  const [forYouRoadmap, setForYouRoadmap] = useState(null);
+  const [publishedRoadmaps, setPublishedRoadmaps] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [activeStepId, setActiveStepId] = useState('');
-  const [isEmpty, setIsEmpty] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
-    const loadRoadmap = async () => {
+    const load = async () => {
+      setLoading(true);
+      setError("");
       try {
-        setLoading(true);
-        setError('');
-        setIsEmpty(false);
-
-        const hasToken = Boolean(localStorage.getItem('token') || localStorage.getItem('authToken'));
-        if (hasToken) {
-          try {
-            const assignedRoadmapPayload = await resourceAPI.getCurrentRoadmap();
-            const assignedRoadmap = assignedRoadmapPayload?.data || assignedRoadmapPayload;
-            if (!cancelled) {
-              if (assignedRoadmap?.markdownBody) {
-                setMarkdown(assignedRoadmap.markdownBody);
-                setRoadmapTitle(assignedRoadmap.title || 'Roadmap');
-                setRoadmapDescription(assignedRoadmap.description || '');
-              } else {
-                setMarkdown('');
-                setIsEmpty(true);
-              }
-              return;
-            }
-          } catch (e) {
-            console.error('Failed to load user roadmap from API:', e);
-            // Fall back to the default markdown file below.
-          }
+        if (roadmapId) {
+          const payload = await resourceAPI.getPublishedRoadmapById(roadmapId);
+          if (!cancelled) setDetail(unwrap(payload));
+          return;
         }
 
-        const response = await fetch(ROADMAP_PATH, { cache: 'no-store' });
-        if (!response.ok) {
-          throw new Error('Roadmap markdown is not available yet.');
-        }
-
-        const content = await response.text();
-        if (looksLikeHtmlDocument(content)) {
-          throw new Error('Roadmap markdown file is missing or being served as HTML fallback.');
+        setDetail(null);
+        const publishedPayload = await resourceAPI.getPublishedRoadmaps();
+        const nextPublished = extractRoadmapList(publishedPayload);
+        let nextForYou = null;
+        if (hasUser) {
+          const forYouPayload = await resourceAPI.getRoadmapsForYou();
+          nextForYou = unwrap(forYouPayload) || null;
         }
 
         if (!cancelled) {
-          setMarkdown(content);
-          setRoadmapTitle('Roadmap');
-          setRoadmapDescription('');
+          setPublishedRoadmaps(nextPublished);
+          setForYouRoadmap(nextForYou);
         }
-      } catch (fetchError) {
-        if (!cancelled) {
-          setMarkdown('');
-          setError(fetchError.message || 'Unable to load roadmap.');
-        }
+      } catch (loadError) {
+        if (!cancelled) setError(loadError?.message || "Unable to load roadmaps right now.");
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     };
 
-    loadRoadmap();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void load();
+    return () => { cancelled = true; };
+  }, [hasUser, roadmapId]);
 
-  const parsedRoadmap = useMemo(() => parseRoadmapMarkdown(markdown), [markdown]);
+  const filteredRoadmaps = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return publishedRoadmaps;
+    return publishedRoadmaps.filter((roadmap) => [roadmap.title, roadmap.targetRole, roadmap.description]
+      .some((value) => String(value || "").toLowerCase().includes(query)));
+  }, [publishedRoadmaps, searchQuery]);
 
-  useEffect(() => {
-    if (!activeStepId) return;
-    if (!parsedRoadmap.steps.some((step) => step.id === activeStepId)) {
-      setActiveStepId('');
-    }
-  }, [activeStepId, parsedRoadmap.steps]);
+  const openRoadmap = (roadmap) => {
+    const id = getRoadmapId(roadmap);
+    if (id) navigate(`/roadmaps/${id}`);
+  };
 
-  useEffect(() => {
-    if (!activeStepId) return undefined;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    // Hide navbar when drawer is open
-    window.dispatchEvent(new CustomEvent('techlearn:hide-navbar', { detail: { hide: true } }));
-
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') setActiveStepId('');
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-      // Restore navbar when drawer closes
-      window.dispatchEvent(new CustomEvent('techlearn:hide-navbar', { detail: { hide: false } }));
-    };
-  }, [activeStepId]);
-
-  const activeStep = parsedRoadmap.steps.find((step) => step.id === activeStepId);
-
-  const heroTitle = roadmapTitle !== 'Roadmap' ? roadmapTitle : parsedRoadmap.title || 'Roadmap';
-  const heroDescription = isEmpty
-    ? 'No active roadmap configuration found.'
-    : (roadmapDescription ||
-       parsedRoadmap.intro ||
-       'Follow the assigned batch or track roadmap, and open any milestone for details.');
-
-  const statusCopy = useMemo(() => {
-    if (loading) {
-      return {
-        title: 'Syncing roadmap',
-        description: 'Loading the latest batch or track roadmap.',
-      };
-    }
-
-    if (error) {
-      return {
-        title: 'Roadmap file not available',
-        description: `Add markdown at ${ROADMAP_PATH} and this page will render it automatically.`,
-      };
-    }
-
-    return {
-      title: 'Roadmap ready',
-      description: 'Your assigned roadmap is ready.',
-    };
-  }, [error, loading]);
-
-  const roadmapContent = (
-    <div className="space-y-8 pb-8">
-      <motion.div
-        initial={{ opacity: 0, y: 18 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.65 }}
-        className="mx-auto max-w-4xl pt-2 text-center md:pt-4"
-      >
-        <h1 className="font-press-start leading-normal">
-          <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
-            {heroTitle.toUpperCase()}
-          </span>
-        </h1>
-        {heroDescription && (
-          <p className="mt-3.5 text-sm leading-6 text-[#00113b]/65 dark:text-[#afcff1]/70 max-w-2xl mx-auto">
-            {heroDescription}
-          </p>
-        )}
-      </motion.div>
-
-      {loading ? (
-        <section className="flex min-h-[360px] items-center justify-center">
-          <div className="inline-flex items-center gap-3 rounded-full border border-[#86c4ff]/45 bg-white/40 px-5 py-3 text-sm font-medium text-[#00113b] shadow-sm shadow-[#3c83f6]/10 backdrop-blur-xl dark:border-[#6fbfff]/24 dark:bg-[#051738]/75 dark:text-[#8fd9ff]">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading roadmap content
+  const content = roadmapId ? (
+    <div className="space-y-6 pb-12">
+      <button type="button" onClick={() => navigate("/roadmaps")} className="inline-flex items-center gap-2 text-sm font-bold opacity-65 transition hover:text-[#2563eb] hover:opacity-100 dark:hover:text-[#8fd3ff]"><ArrowLeft className="h-4 w-4" /> Back to Roadmaps</button>
+      {loading && <LoadingState label="Loading roadmap details..." />}
+      {!loading && error && <ErrorState message={error} />}
+      {!loading && !error && detail && (
+        <article className="overflow-hidden rounded-2xl border border-black/10 bg-white/75 shadow-xl shadow-[#3c83f6]/5 dark:border-white/10 dark:bg-[#071a39]/85">
+          <header className="border-b border-black/10 bg-gradient-to-br from-[#3c83f6] to-[#6366f1] px-6 py-8 text-white sm:px-10 sm:py-10">
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/75">Personal learning roadmap</p>
+            <h1 className="mt-3 max-w-4xl text-3xl font-black tracking-tight sm:text-5xl">{detail.title}</h1>
+            <div className="mt-5 flex flex-wrap gap-3 text-sm font-semibold"><span className="rounded-full bg-white/15 px-3 py-1.5">{detail.targetRole || "Target role"}</span><span className="rounded-full bg-white/15 px-3 py-1.5">{formatDuration(detail)}</span></div>
+          </header>
+          <div className="px-6 py-8 sm:px-10">
+            {detail.description && <p className="mb-8 max-w-3xl text-lg leading-8 opacity-75">{detail.description}</p>}
+            <div className="prose max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{detail.markdownBody || "No roadmap content is available yet."}</ReactMarkdown></div>
           </div>
+        </article>
+      )}
+      {!loading && !error && !detail && <ErrorState message="This roadmap is no longer available." />}
+    </div>
+  ) : (
+    <div className="space-y-7 pb-12">
+      <section className="flex flex-col justify-between gap-6 rounded-2xl border border-black/10 bg-white/70 p-6 shadow-lg shadow-[#3c83f6]/5 dark:border-white/10 dark:bg-[#071a39]/80 sm:flex-row sm:items-center sm:p-8">
+        <div>
+          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.24em] text-[#3c83f6]">Your learning paths</p>
+          <h1 className="text-3xl font-black tracking-tight sm:text-5xl">Roadmaps</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-7 opacity-65">Choose a clear path toward your target role, with every step organized in one place.</p>
+        </div>
+        <div className="hidden h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#3c83f6]/10 text-[#3c83f6] sm:flex"><Map className="h-8 w-8" /></div>
+      </section>
+
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="inline-flex w-fit rounded-xl border border-black/10 bg-white/60 p-1 dark:border-white/10 dark:bg-white/[0.04]">
+          <button type="button" onClick={() => setActiveTab("for-you")} className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${activeTab === "for-you" ? "bg-[#3c83f6] text-white shadow" : "opacity-60 hover:opacity-100"}`}>For You</button>
+          <button type="button" onClick={() => setActiveTab("all")} className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${activeTab === "all" ? "bg-[#3c83f6] text-white shadow" : "opacity-60 hover:opacity-100"}`}>All Roadmaps</button>
+        </div>
+        {activeTab === "all" && <div className="relative w-full sm:max-w-xs"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-45" /><input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search roadmaps..." className="dashboard-input-surface w-full pl-9" /></div>}
+      </div>
+
+      {loading && <LoadingState />}
+      {!loading && error && <ErrorState message={error} />}
+
+      {!loading && !error && activeTab === "for-you" && (
+        <section className="space-y-4">
+          {!hasUser && <div className="rounded-2xl border border-[#3c83f6]/20 bg-[#3c83f6]/10 p-8 text-center"><Sparkles className="mx-auto h-8 w-8 text-[#3c83f6]" /><h2 className="mt-4 text-xl font-black">Sign in to see your roadmap</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 opacity-70">Your personalized roadmap is selected from the target role in your profile.</p><button type="button" onClick={() => navigate("/onboarding")} className="dashboard-primary-btn mt-5 inline-flex items-center gap-2 px-4 py-2 text-sm">Choose your target role <ArrowRight className="h-4 w-4" /></button></div>}
+          {hasUser && forYouRoadmap && <div className="rounded-2xl border border-[#3c83f6]/25 bg-white/75 p-6 shadow-lg shadow-[#3c83f6]/5 dark:bg-[#071a39]/85 sm:p-8"><div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#3c83f6]">Based on your target role</p><h2 className="mt-3 text-2xl font-black sm:text-3xl">{forYouRoadmap.title}</h2><div className="mt-4 flex flex-wrap gap-3"><Meta icon={<Target className="h-4 w-4 text-[#3c83f6]" />} label="Target role" value={forYouRoadmap.targetRole || user?.targetRole || "—"} /><Meta icon={<Clock3 className="h-4 w-4 text-[#3c83f6]" />} label="Duration" value={formatDuration(forYouRoadmap)} /></div></div><button type="button" onClick={() => openRoadmap(forYouRoadmap)} className="dashboard-primary-btn inline-flex shrink-0 items-center justify-center gap-2 px-5 py-3 text-sm">View Roadmap <ArrowRight className="h-4 w-4" /></button></div>{forYouRoadmap.description && <p className="mt-6 max-w-3xl text-sm leading-7 opacity-70">{forYouRoadmap.description}</p>}</div>}
+          {hasUser && !forYouRoadmap && <div className="rounded-2xl border border-dashed border-black/20 p-10 text-center dark:border-white/20"><BookOpen className="mx-auto h-9 w-9 opacity-45" /><h2 className="mt-4 text-xl font-black">No roadmap is available for your target role yet.</h2><p className="mt-2 text-sm opacity-65">Explore the active roadmaps available to you while more personalized paths are added.</p><button type="button" onClick={() => setActiveTab("all")} className="dashboard-secondary-btn mt-5 inline-flex items-center gap-2 px-4 py-2 text-sm">View All Roadmaps <ArrowRight className="h-4 w-4" /></button></div>}
         </section>
-      ) : error ? (
-        <section className="dashboard-surface dashboard-surface-strong mx-auto max-w-2xl border-dashed p-8 text-center">
-          <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#8ec8ff] bg-[#e4f4ff] text-[#1266af] dark:border-[#6fbfff] dark:bg-[#14406f] dark:text-[#9cd6ff]">
-            <AlertCircle className="h-5 w-5" />
-          </div>
-          <h2 className="text-2xl font-semibold tracking-tight text-[#00113b] dark:text-[#d3edff]">{statusCopy.title}</h2>
-          <p className="mt-3 text-sm leading-7 text-[#00113b]/65 dark:text-[#afcff1]">{statusCopy.description}</p>
+      )}
+
+      {!loading && !error && activeTab === "all" && (
+        <section className="overflow-hidden rounded-2xl border border-black/10 bg-white/70 dark:border-white/10 dark:bg-[#071a39]/80">
+          <div className="border-b border-black/10 px-5 py-5 dark:border-white/10"><h2 className="text-xl font-black">All Roadmaps</h2><p className="mt-1 text-sm opacity-60">Active learning paths available to you.</p></div>
+          <div className="hidden grid-cols-[minmax(0,1.8fr)_minmax(0,1.3fr)_minmax(120px,0.7fr)_auto] gap-4 border-b border-black/10 bg-black/[0.025] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.16em] opacity-55 dark:border-white/10 dark:bg-white/[0.03] sm:grid"><span>Roadmap</span><span>Target role</span><span>Duration</span><span /></div>
+          {filteredRoadmaps.map((roadmap) => <div key={getRoadmapId(roadmap)} className="grid gap-4 border-b border-black/10 px-5 py-5 last:border-b-0 dark:border-white/10 sm:grid-cols-[minmax(0,1.8fr)_minmax(0,1.3fr)_minmax(120px,0.7fr)_auto] sm:items-center"><div><p className="font-bold">{roadmap.title}</p><p className="mt-1 text-xs opacity-50">{roadmap.roadmapId || "Roadmap"}</p></div><div className="text-sm opacity-75"><span className="mr-2 text-[10px] font-bold uppercase tracking-[0.12em] opacity-50 sm:hidden">Role</span>{roadmap.targetRole || "—"}</div><div className="text-sm font-semibold"><span className="mr-2 text-[10px] font-bold uppercase tracking-[0.12em] opacity-50 sm:hidden">Duration</span>{formatDuration(roadmap)}</div><button type="button" onClick={() => openRoadmap(roadmap)} className="dashboard-secondary-btn inline-flex w-fit items-center gap-2 px-4 py-2 text-sm">View <ArrowRight className="h-4 w-4" /></button></div>)}
+          {!filteredRoadmaps.length && <div className="px-5 py-14 text-center text-sm opacity-60">No active roadmaps match your search.</div>}
         </section>
-      ) : isEmpty ? (
-        <section className="dashboard-surface dashboard-surface-strong mx-auto max-w-2xl border-dashed p-8 text-center">
-          <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#8ec8ff]/45 bg-white/40 px-5 py-5 text-[#1266af] dark:border-[#6fbfff]/24 dark:bg-[#051738]/75 dark:text-[#9cd6ff]">
-            <AlertCircle className="h-5 w-5" />
-          </div>
-          <h2 className="text-2xl font-semibold tracking-tight text-[#00113b] dark:text-[#d3edff]">No Roadmap Available</h2>
-          <p className="mt-3 text-sm leading-7 text-[#00113b]/65 dark:text-[#afcff1]">
-            There is no roadmap assigned to your program yet. Please check back later.
-          </p>
-        </section>
-      ) : (
-        <>
-          <section className="relative mx-auto max-w-[520px] md:max-w-[1040px]">
-            <div className="pointer-events-none absolute left-1/2 top-3 hidden h-[calc(100%-1.5rem)] w-px -translate-x-1/2 bg-[#86c4ff]/45 md:block dark:bg-[#28537f]/75" />
-
-            <div className="space-y-6 md:space-y-8">
-              {parsedRoadmap.steps.map((step, index) => {
-                const isRight = index % 2 === 1;
-                return (
-                  <motion.div
-                    key={step.id}
-                    initial={{ opacity: 0, y: 18 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: '-80px' }}
-                    transition={{ duration: 0.45, delay: Math.min(index * 0.03, 0.18) }}
-                    className="relative grid items-start gap-3 md:grid-cols-[1fr_60px_1fr] md:gap-0"
-                  >
-                    <div className="absolute left-1/2 top-6 z-10 hidden h-3.5 w-3.5 -translate-x-1/2 rounded-full border-[4px] border-[#e0f5ff] bg-[#0000a8] shadow-[0_0_0_1px_rgba(0,17,59,0.08)] md:block dark:border-[#06142f] dark:bg-[#79cfff]" />
-
-                    <button
-                      type="button"
-                      onClick={() => setActiveStepId(step.id)}
-                      className={`dashboard-surface group relative w-full rounded-2xl px-5 py-5 text-left text-[#00113b] transition duration-300 hover:-translate-y-1 hover:border-[#3C83F6]/55 hover:bg-white/55 hover:shadow-lg dark:text-[#dff3ff] dark:hover:border-[#34699e] dark:hover:bg-[#071a3d] md:min-h-[96px] ${
-                        isRight ? 'md:col-start-3' : 'md:col-start-1'
-                      }`}
-                      aria-expanded={step.id === activeStepId}
-                    >
-                      <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-[#0000a8] dark:text-[#89d6ff]">
-                        {step.label}
-                      </span>
-                      <span className="mt-2 block pr-9 text-lg font-semibold tracking-tight sm:text-xl">{step.title}</span>
-                      <span className="absolute right-5 top-5 inline-flex h-7 w-7 items-center justify-center rounded-full text-[#00113b]/45 transition group-hover:translate-x-1 group-hover:text-[#0000a8] dark:text-white/45 dark:group-hover:text-[#8fd9ff]">
-                        <ArrowRight className="h-4 w-4" />
-                      </span>
-                    </button>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </section>
-
-          {createPortal(
-            <AnimatePresence mode="wait">
-              {activeStep && (
-                <motion.div
-                  key="roadmap-detail-drawer"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="fixed inset-0 z-[2000] flex justify-end bg-[#00113b]/55 backdrop-blur-[1px]"
-                  role="dialog"
-                  aria-modal="true"
-                  aria-labelledby="roadmap-detail-title"
-                >
-                  <button
-                    type="button"
-                    aria-label="Close roadmap details"
-                    onClick={() => setActiveStepId('')}
-                    className="absolute inset-0 cursor-default"
-                  />
-
-                  <motion.aside
-                    initial={{ x: '100%' }}
-                    animate={{ x: 0 }}
-                    exit={{ x: '100%' }}
-                    transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                    className="relative z-10 h-full w-full max-w-[560px] overflow-y-auto bg-gradient-to-br from-[#bceaff] via-[#d9f3ff] to-[#bceaff] px-7 py-8 text-[#00113b] shadow-[-22px_0_60px_rgba(0,17,59,0.22)] [scrollbar-width:thin] [scrollbar-color:#7abdf2_transparent] dark:bg-none dark:bg-[#06142f] dark:text-white md:px-10 md:py-10"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setActiveStepId('')}
-                      className="absolute right-6 top-6 inline-flex h-10 w-10 items-center justify-center rounded-full text-[#00113b] transition hover:bg-[#00113b]/8 dark:text-white dark:hover:bg-white/10"
-                      aria-label="Close roadmap details"
-                    >
-                      <X className="h-6 w-6" />
-                    </button>
-
-                    <div className="pr-12">
-                      <span className="mb-5 inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.15em] text-[#0000a8] dark:text-[#8fd9ff]">
-                        <CheckCircle2 className="h-4 w-4" />
-                        {activeStep.label}
-                      </span>
-                      <h2 id="roadmap-detail-title" className="text-3xl font-semibold leading-tight tracking-tight md:text-4xl">
-                        {activeStep.title}
-                      </h2>
-                    </div>
-
-                    <div className="roadmap-markdown mt-10">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={markdownComponents}>
-                        {activeStep.body}
-                      </ReactMarkdown>
-                    </div>
-                  </motion.aside>
-                </motion.div>
-              )}
-            </AnimatePresence>,
-            document.body
-          )}
-        </>
       )}
     </div>
   );
 
-  // If user is authenticated, render with the User Sidebar Layout
-  if (isAuthenticated && user) {
-    return (
-      <UserSidebarLayout maxWidthClass="max-w-[1180px]">
-        <ScrollProgress />
-        {roadmapContent}
-      </UserSidebarLayout>
-    );
-  }
-
-  // For guest users, render as a full page with a back button
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] pt-24 md:pt-28 pb-16 px-4 md:px-8">
-      <ScrollProgress />
-      <div className="mx-auto max-w-5xl">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="mb-6 inline-flex items-center gap-2 rounded-xl border border-black/10 dark:border-white/10 bg-white/40 dark:bg-white/5 hover:bg-white/70 dark:hover:bg-white/10 px-4 py-2 text-xs font-bold text-[#00113b] dark:text-[#8fd9ff] shadow-sm transition hover:-translate-x-0.5 cursor-pointer backdrop-blur-md"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back</span>
-        </button>
-        {roadmapContent}
-      </div>
-    </div>
-  );
+  if (hasUser) return <UserSidebarLayout maxWidthClass="max-w-[1220px]">{content}</UserSidebarLayout>;
+  return <div className="min-h-screen bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] px-5 pt-28 text-[#00113b] dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:text-slate-100 sm:px-8"><div className="mx-auto max-w-[1220px]">{content}</div></div>;
 }
