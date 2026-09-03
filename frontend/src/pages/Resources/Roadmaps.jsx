@@ -48,12 +48,14 @@ const durationFilters = [
 // job-type tags. Roadmap technologies use the palette by position because the
 // roadmap API does not require a fixed technology taxonomy.
 const roadmapChipClasses = [
-  "bg-[#d9f4a7] text-[#080830]",
-  "bg-[#dceeff] text-[#080830]",
-  "bg-[#ffe3bf] text-[#080830]",
-  "bg-[#e8ddff] text-[#080830]",
-  "bg-[#f8dce8] text-[#080830]",
-  "bg-[#e7eaec] text-[#080830]",
+  "bg-[#e6f2ff] text-[#3d638c]",
+  "bg-[#eee7ff] text-[#6c5b93]",
+  "bg-[#e4f5e9] text-[#347555]",
+  "bg-[#fff0d7] text-[#95672a]",
+  "bg-[#def2f3] text-[#347678]",
+  "bg-[#f2e3f5] text-[#855387]",
+  "bg-[#e4efff] text-[#3f6390]",
+  "bg-[#ffe4e5] text-[#a25e62]",
 ];
 
 const technologyMatchers = [
@@ -71,6 +73,17 @@ const technologyMatchers = [
   ["API", /\b(?:rest\s*)?apis?\b|\bhttp\b/i],
   ["AI", /\bartificial intelligence\b|\bmachine learning\b|\bgenerative ai\b/i],
   ["Projects", /\bproject(?:s)?\b|\bcapstone\b/i],
+];
+
+const roleStackDefaults = [
+  {
+    matcher: /full[- ]?stack/i,
+    labels: ["HTML", "CSS", "JavaScript", "React", "Node.js", "MongoDB"],
+  },
+  {
+    matcher: /front[- ]?end/i,
+    labels: ["HTML", "CSS", "JavaScript", "React", "Git"],
+  },
 ];
 
 const toLabels = (value) => {
@@ -106,8 +119,6 @@ const getRoadmapTechStack = (roadmap) => {
     roadmap?.techStack || roadmap?.technologies || roadmap?.skills || roadmap?.tags
   );
 
-  if (explicitStack.length) return [...new Set(explicitStack)].slice(0, 7);
-
   const roadmapText = [
     roadmap?.title,
     roadmap?.targetRole,
@@ -115,12 +126,18 @@ const getRoadmapTechStack = (roadmap) => {
     roadmap?.markdownBody,
   ].filter(Boolean).join(" ");
 
+  const roleDefaultStack = roleStackDefaults.find(({ matcher }) => matcher.test(roadmapText))?.labels || [];
+
+  if (explicitStack.length) {
+    return [...new Set([...roleDefaultStack, ...explicitStack])].slice(0, 7);
+  }
+
   const inferredStack = technologyMatchers
     .filter(([, matcher]) => matcher.test(roadmapText))
     .map(([label]) => label);
 
   const fallbackStack = [roadmap?.targetRole || "Core skills", "Projects"];
-  return [...new Set([...inferredStack, ...fallbackStack])].slice(0, 7);
+  return [...new Set([...inferredStack, ...roleDefaultStack, ...fallbackStack])].slice(0, 7);
 };
 
 const getRoadmapLevel = (roadmap) => {
@@ -235,17 +252,21 @@ const RoadmapChip = ({ label, index }) => (
 
 function RoadmapRow({ roadmap, isDarkMode, onOpen }) {
   const techStack = getRoadmapStackChips(roadmap);
+  const rawTitle = String(roadmap.title || "").trim();
+  const title = /^(untitled roadmap|roadmap)$/i.test(rawTitle)
+    ? roadmap.targetRole || rawTitle || "Untitled roadmap"
+    : rawTitle || roadmap.targetRole || "Untitled roadmap";
 
   return (
-    <div className={`grid min-h-[128px] grid-cols-1 items-center gap-5 rounded-[15px] border px-[26px] py-[22px] transition-all duration-200 lg:grid-cols-[minmax(280px,365px)_minmax(0,1fr)_250px_172px] lg:gap-0 ${
+    <div className={`grid min-h-[128px] grid-cols-1 items-center gap-5 rounded-[15px] border px-[26px] py-[22px] transition-all duration-200 lg:grid-cols-[365px_minmax(0,1fr)_250px_172px] lg:gap-0 ${
       isDarkMode
         ? "border-white/10 bg-white/5 hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/10"
-        : "border-white/80 bg-white/60 shadow-sm hover:-translate-y-[1px] hover:border-[#00113b]/20 hover:bg-white hover:shadow-md"
+        : "border-[#c5dfe6] bg-[#d9eef3] shadow-sm hover:-translate-y-[1px] hover:border-[#00113b]/20 hover:bg-[#e0f2f5] hover:shadow-md"
     }`}
     >
       <div className="min-w-0 pr-2">
         <div className={`mb-[7px] truncate text-[17px] font-bold leading-[1.35] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
-          {roadmap.title || "Untitled roadmap"}
+          {title}
         </div>
         <div className={`truncate text-[12px] ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
           {getRoadmapCategory(roadmap)}
@@ -429,7 +450,7 @@ export default function Roadmaps() {
         </p>
       </header>
 
-      <div className={`mb-[29px] flex h-[62px] w-full items-center rounded-[13px] border px-[20px] transition-colors ${isDarkMode ? "border-white/10 bg-white/5 text-white focus-within:border-white/20 focus-within:bg-white/10" : "border-[#00113b]/15 bg-white/35 text-[#00113b] shadow-sm focus-within:border-[#00113b]/30 focus-within:bg-white/70"}`}>
+      <div className={`mb-[29px] flex h-[62px] w-full items-center rounded-[13px] border px-[20px] transition-colors ${isDarkMode ? "border-white/10 bg-white/5 text-white focus-within:border-white/20 focus-within:bg-white/10" : "border-[#c4dfe6] bg-[#def0f4] text-[#00113b] shadow-sm focus-within:border-[#00113b]/30 focus-within:bg-[#e5f4f7]"}`}>
         <Search className={`mr-[12px] h-5 w-5 shrink-0 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`} />
         <input
           id="roadmapSearchInput"
@@ -468,7 +489,7 @@ export default function Roadmaps() {
               className={`whitespace-nowrap rounded-[100px] border px-[13px] py-[9px] text-[10px] transition-colors ${
                 activeCategory === category.id
                   ? isDarkMode ? "border-[#b2e96a] bg-[#b2e96a] font-bold text-[#0a1128]" : "border-[#00113b] bg-[#00113b] font-semibold text-white shadow-sm"
-                  : isDarkMode ? "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10" : "border-[#00113b]/15 bg-white/70 text-[#00113b] shadow-xs hover:bg-white"
+                  : isDarkMode ? "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10" : "border-[#c6e0e6] bg-[#def0f4] text-[#00113b] shadow-xs hover:bg-[#e8f6f8]"
               }`}
             >
               {category.label}
@@ -483,7 +504,7 @@ export default function Roadmaps() {
             className={`flex h-[42px] cursor-pointer items-center gap-1.5 rounded-[8px] border px-[12px] text-[10px] transition-colors ${
               selectedFilterCount
                 ? isDarkMode ? "border-[#b2e96a] bg-[#b2e96a]/20 font-bold text-[#b2e96a]" : "border-[#00113b] bg-[#00113b] font-bold text-white shadow-sm"
-                : isDarkMode ? "border-white/10 bg-white/5 text-white hover:bg-white/15" : "border-[#00113b]/15 bg-white/70 text-[#00113b] shadow-xs hover:bg-white"
+                : isDarkMode ? "border-white/10 bg-white/5 text-white hover:bg-white/15" : "border-[#c6e0e6] bg-[#def0f4] text-[#00113b] shadow-xs hover:bg-[#e8f6f8]"
             }`}
           >
             Filters{selectedFilterCount ? " •" : ""}
@@ -493,7 +514,7 @@ export default function Roadmaps() {
             aria-label="Sort roadmaps"
             value={sortBy}
             onChange={(event) => setSortBy(event.target.value)}
-            className={`h-[42px] cursor-pointer rounded-[8px] border pl-[10px] pr-[28px] text-[10px] outline-none transition-colors ${isDarkMode ? "border-white/10 bg-[#071532] text-white" : "border-[#00113b]/15 bg-white/70 text-[#00113b] shadow-xs hover:bg-white"}`}
+            className={`h-[42px] cursor-pointer rounded-[8px] border pl-[10px] pr-[28px] text-[10px] outline-none transition-colors ${isDarkMode ? "border-white/10 bg-[#071532] text-white" : "border-[#c6e0e6] bg-[#def0f4] text-[#00113b] shadow-xs hover:bg-[#e8f6f8]"}`}
           >
             <option value="newest">Newest</option>
             <option value="duration">Shortest</option>
@@ -551,7 +572,7 @@ export default function Roadmaps() {
       <div className={`fixed inset-0 -z-10 transition-colors duration-300 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-[#d6eef4]"}`} />
 
       <main className="min-h-screen w-full">
-        <div className="mx-auto w-full max-w-[1376px] px-5 pb-16 pt-[64px] sm:px-6 lg:px-0">
+        <div className="mx-auto w-[calc(100%-2rem)] max-w-none px-0 pb-16 pt-[64px] sm:w-[calc(100%-3rem)] lg:w-[86%]">
           {roadmapId ? detailContent : listContent}
         </div>
       </main>
