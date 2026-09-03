@@ -231,6 +231,7 @@ export default function Signup({
           fullName: email.split('@')[0],
           learningGoal: draft.learningGoal || '',
           targetRole: draft.targetRole || '',
+          targetRoleOther: draft.targetRoleOther || draft.otherTargetRole || '',
           placementCategory: draft.placementCategory || '',
           targetCompanies: draft.targetCompanies || [],
           skills: draft.skills || [],

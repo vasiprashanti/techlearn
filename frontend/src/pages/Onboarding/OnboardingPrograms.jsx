@@ -405,7 +405,7 @@ export default function OnboardingPrograms() {
 
       {/* PRICING PLANS SECTION */}
       <section id="pricing" className="min-h-screen w-full flex flex-col justify-center items-center px-4 py-12 sm:py-16">
-        <div className="max-w-5xl mx-auto w-full space-y-6">
+        <div className="max-w-5xl mx-auto w-full space-y-3 md:space-y-6">
           
           <div className="text-center space-y-1.5">
             <h2 className="ob-pixel-heading text-base sm:text-lg uppercase tracking-wider text-slate-900 dark:text-white">
@@ -416,7 +416,7 @@ export default function OnboardingPrograms() {
             </p>
           </div>
 
-          <div className={`grid grid-cols-1 ${plans.length > 1 ? 'md:grid-cols-2 max-w-4xl mx-auto' : 'max-w-md mx-auto'} gap-6 pt-2`}>
+          <div className={`grid grid-cols-1 ${plans.length > 1 ? 'md:grid-cols-2 max-w-4xl mx-auto' : 'max-w-md mx-auto'} gap-6 pt-0 md:pt-2`}>
             {plans.map((plan) => {
               const isSelected = selectedPlanId === plan.id;
 

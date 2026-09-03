@@ -16,6 +16,15 @@ const roleOptions = [
   "Data Scientist",
   "Generative AI Engineer",
 ];
+const placementRoleOptions = [
+  "Software Developer",
+  "Full Stack Developer",
+  "Data Analyst",
+  "AI / ML Engineer",
+  "Web Developer",
+  "Other",
+];
+const OTHER_ROLE = "Other";
 
 const companyCatalog = {
   campus: [
@@ -106,6 +115,7 @@ export default function ContextualOnboarding() {
 
   const [step, setStep] = useState(1);
   const [role, setRole] = useState(initial.role || initial.targetRole || "");
+  const [otherRole, setOtherRole] = useState(initial.otherRole || initial.targetRoleOther || "");
   const [opportunity, setOpportunity] = useState(initial.opportunity || initial.placementCategory || "");
   const [selectedCompanies, setSelectedCompanies] = useState(
     Array.isArray(initial.companies) ? initial.companies : initial.targetCompanies || []
@@ -143,7 +153,7 @@ export default function ContextualOnboarding() {
     return [...new Set([...companyCatalog.campus, ...companyCatalog.offCampus])];
   }, [opportunity]);
 
-  const effectiveRole = role.trim();
+  const effectiveRole = (role === OTHER_ROLE ? otherRole : role).trim();
 
   const isStep1Valid =
     intent === "skill"
@@ -190,6 +200,7 @@ export default function ContextualOnboarding() {
     return {
       learningGoal: intent === "skill" ? "Learn New Skills" : "Get Placed",
       targetRole: effectiveRole,
+      targetRoleOther: role === OTHER_ROLE ? otherRole.trim() : "",
       targetCompanies: selectedCompanies,
       placementCategory: opportunity,
       placementTimeline: "",
@@ -200,6 +211,7 @@ export default function ContextualOnboarding() {
       onboardingIntent: intent,
       onboardingAnswers: {
         role: effectiveRole,
+        otherRole: role === OTHER_ROLE ? otherRole.trim() : "",
         opportunity,
         companies: selectedCompanies,
         skill: selectedSkill,
@@ -221,7 +233,7 @@ export default function ContextualOnboarding() {
       const draftPayload = {
         learningGoal: intent === "skill" ? "Learn New Skills" : "Get Placed",
         targetRole: effectiveRole,
-        targetRoleOther: "",
+        targetRoleOther: role === OTHER_ROLE ? otherRole.trim() : "",
         placementCategory: opportunity,
         targetCompanies: selectedCompanies,
         skills: intent === "skill" && selectedSkill ? [selectedSkill] : [],
@@ -976,23 +988,44 @@ export default function ContextualOnboarding() {
             max-width: none;
             min-height: 100vh;
             margin: 0;
-            padding: 28px 20px 35px;
+            padding: 15vh 20px 35px;
+            justify-content: flex-start;
           }
           .tl-progress-wrapper {
             margin-bottom: 55px;
-            padding-right: 50px;
+            padding-right: 0;
+          }
+          .tl-screen {
+            min-height: calc(85vh - 120px);
+            display: flex;
+            flex-direction: column;
           }
           .tl-eyebrow { font-size: 8px; }
           .tl-title { font-size: 34px; letter-spacing: -1.7px; }
-          .tl-description { font-size: 14px; }
+          .tl-description {
+            font-size: 14px;
+            visibility: hidden;
+            margin-bottom: 32px !important;
+          }
+          .tl-plan-screen .tl-description {
+            height: 0;
+            line-height: 0;
+            margin-bottom: 24px !important;
+          }
           .tl-field:first-of-type { margin-top: 48px; }
           .tl-chip { font-size: 11px; padding: 10px 13px; min-height: 38px; }
-          .tl-actions { padding-top: 32px; }
+          .tl-onboarding-page-root { --chip-blue: #a5d8f4; }
+          .tl-onboarding-page-root.dark-mode { --chip-blue: #031553; }
+          .tl-chip.selected { background: #000f45; }
+          .tl-onboarding-page-root.dark-mode .tl-chip.selected { background: var(--lime); }
+          .tl-helper { display: none; }
+          .tl-selected-count { margin-top: 22px; }
+          .tl-actions { margin-top: auto; padding-top: 32px; }
           .tl-btn { height: 50px; font-size: 8px; }
           .tl-plans {
             grid-template-columns: 1fr;
             gap: 16px;
-            margin-top: 40px;
+            margin-top: 0;
           }
           .tl-plan-card { min-height: auto; padding: 23px; }
           .tl-plan-card.paid { order: 1; }
@@ -1005,7 +1038,7 @@ export default function ContextualOnboarding() {
         }
 
         @media (max-width: 430px) {
-          .tl-page-container { padding: 24px 17px 30px; }
+          .tl-page-container { padding: 15vh 17px 30px; }
           .tl-title { font-size: 30px; }
           .tl-description { font-size: 13px; }
           .tl-chip { font-size: 11px; padding: 9px 11px; min-height: 36px; }
@@ -1092,7 +1125,7 @@ export default function ContextualOnboarding() {
                     <div className="tl-field">
                       <label className="tl-field-label">Target Role <span aria-hidden="true">*</span></label>
                       <div className="tl-chips">
-                        {roleOptions.map((r) => (
+                        {placementRoleOptions.map((r) => (
                           <button
                             key={r}
                             type="button"
@@ -1103,6 +1136,23 @@ export default function ContextualOnboarding() {
                           </button>
                         ))}
                       </div>
+                      {role === OTHER_ROLE && (
+                        <div className="tl-other-role-wrapper">
+                          <label className="tl-other-role-label" htmlFor="other-role-skill">Enter your desired role <span aria-hidden="true">*</span></label>
+                          <input
+                            id="other-role-skill"
+                            type="text"
+                            className="tl-other-role-input"
+                            value={otherRole}
+                            onChange={(event) => {
+                              setError("");
+                              setOtherRole(event.target.value);
+                            }}
+                            placeholder="e.g. Product Designer"
+                            maxLength={100}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div className="tl-field">
@@ -1129,7 +1179,7 @@ export default function ContextualOnboarding() {
                     <div className="tl-field">
                       <label className="tl-field-label">Target Role <span aria-hidden="true">*</span></label>
                       <div className="tl-chips">
-                        {roleOptions.map((r) => {
+                        {placementRoleOptions.map((r) => {
                           return (
                             <button
                               key={r}
@@ -1142,6 +1192,23 @@ export default function ContextualOnboarding() {
                           );
                         })}
                       </div>
+                      {role === OTHER_ROLE && (
+                        <div className="tl-other-role-wrapper">
+                          <label className="tl-other-role-label" htmlFor="other-role">Enter your desired role <span aria-hidden="true">*</span></label>
+                          <input
+                            id="other-role"
+                            type="text"
+                            className="tl-other-role-input"
+                            value={otherRole}
+                            onChange={(event) => {
+                              setError("");
+                              setOtherRole(event.target.value);
+                            }}
+                            placeholder="e.g. Product Designer"
+                            maxLength={100}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div className="tl-field">
@@ -1286,7 +1353,7 @@ export default function ContextualOnboarding() {
 
             {/* STEP 3 */}
             {step === 3 && (
-              <section className="tl-screen" style={{ position: "relative" }}>
+              <section className="tl-screen tl-plan-screen" style={{ position: "relative" }}>
                 <button
                   type="button"
                   className="tl-close-step"

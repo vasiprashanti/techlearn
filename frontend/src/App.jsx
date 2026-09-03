@@ -254,7 +254,7 @@ function LayoutWrapper() {
   return (
     <div className="relative z-10 flex flex-col min-h-screen">
       {location.pathname.startsWith('/onboarding') && (
-        <Link to="/" aria-label="TechLearn home" className="fixed left-[23px] top-[14px] z-50">
+        <Link to="/" aria-label="TechLearn home" className="absolute left-[23px] top-[14px] z-50">
           <img src="/logoo2-small.webp" alt="TechLearn" className="block h-11 w-11 rounded-[9px] object-contain" />
         </Link>
       )}

@@ -3559,7 +3559,7 @@ html {
   .tl-primary-button {
     min-height: 54px;
     padding: 0 20px;
-    font-size: 8px;
+    font-size: 11px;
   }
   .tl-code-line {
     font-size: 9px;
@@ -3795,7 +3795,7 @@ html {
     min-height: 50px;
     margin-top: 26px;
     padding: 0 18px;
-    font-size: 7px;
+    font-size: 11px;
   }
 }
 
@@ -3814,7 +3814,7 @@ html {
     font-size: 12px;
   }
   .tl-search-button {
-    font-size: 6.5px;
+    font-size: 11px;
   }
 }
 
