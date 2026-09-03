@@ -238,11 +238,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Clear the current session without changing the current route. This is
+  // used when an authenticated request proves that the stored credentials
+  // are no longer valid.
+  const clearSession = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+    localStorage.removeItem('isAdmin');
+    localStorage.removeItem('techlearn-dashboard-cache-v1');
+    dispatch({ type: AUTH_ACTIONS.LOGOUT });
+  };
+
   // Logout function
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userData');
-    dispatch({ type: AUTH_ACTIONS.LOGOUT });
+    clearSession();
     navigate("/"); // Fixed: now using navigate correctly
   };
 
@@ -264,6 +274,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    clearSession,
     clearError,
     setSession,
   };
