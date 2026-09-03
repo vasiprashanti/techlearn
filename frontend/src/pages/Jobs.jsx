@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import Sidebar from "../components/Dashboard/Sidebar";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
@@ -347,18 +347,6 @@ export default function Jobs() {
         }`}
       >
         <div className="w-full max-w-[1250px] mx-auto px-6 sm:px-12 pt-28 pb-16">
-          {/* Back button for guest users matching Roadmaps page */}
-          {!isAuthenticated && (
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="mb-6 inline-flex items-center gap-2 rounded-xl border border-black/10 dark:border-white/10 bg-white/40 dark:bg-white/5 hover:bg-white/70 dark:hover:bg-white/10 px-4 py-2 text-xs font-bold text-[#00113b] dark:text-[#8fd9ff] shadow-sm transition hover:-translate-x-0.5 cursor-pointer backdrop-blur-md"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Back</span>
-            </button>
-          )}
-
           {/* HEADER */}
           <header className="mb-[30px]">
             <h1

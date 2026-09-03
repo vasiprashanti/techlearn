@@ -621,6 +621,7 @@ export default function HiringRoleJobs() {
                   <option value="Draft" className="bg-white text-slate-900 dark:bg-[#071532] dark:text-white">Draft</option>
                   <option value="Published" className="bg-white text-slate-900 dark:bg-[#071532] dark:text-white">Published</option>
                   <option value="Closed" className="bg-white text-slate-900 dark:bg-[#071532] dark:text-white">Closed</option>
+                  <option value="Expired" className="bg-white text-slate-900 dark:bg-[#071532] dark:text-white">Archived / Expired</option>
                 </select>
 
                 {/* Sort By */}
@@ -1693,4 +1694,4 @@ export default function HiringRoleJobs() {
       )}
     </div>
   );
-}
+}
