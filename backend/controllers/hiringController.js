@@ -117,6 +117,12 @@ export const listActiveJobs = async (req, res) => {
      */
     const filter = {
       status: "Published",
+      $and: [{
+        $or: [
+          { applicationDeadline: null },
+          { applicationDeadline: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
+        ],
+      }],
     };
 
     /*
@@ -839,6 +845,10 @@ export const getJobFilters = async (req, res) => {
   try {
     const jobs = await Job.find({
       status: "Published",
+      $or: [
+        { applicationDeadline: null },
+        { applicationDeadline: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
+      ],
     })
       .select(
         "location experience workMode jobType companyType"

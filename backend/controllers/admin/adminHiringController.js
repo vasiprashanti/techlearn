@@ -51,14 +51,33 @@ export const listJobs = async (req, res) => {
 
     // Status filter
     if (status) {
-      if (!ALLOWED_STATUS.includes(status)) {
+      if (status === "Expired") {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        query.$and = [{ $or: [
+          { status: { $in: ["Closed", "Archived"] } },
+          { applicationDeadline: { $lt: today } },
+        ] }];
+      } else if (!ALLOWED_STATUS.includes(status)) {
         return res.status(400).json({
           success: false,
           message: "Invalid status filter",
         });
       }
 
-      query.status = status;
+      if (status !== "Expired") query.status = status;
+    } else {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      query.$and = [
+        { status: { $nin: ["Closed", "Archived"] } },
+        {
+          $or: [
+            { applicationDeadline: null },
+            { applicationDeadline: { $gte: today } },
+          ],
+        },
+      ];
     }
 
     // Role filter
@@ -933,6 +952,8 @@ export const listRoles = async (req, res) => {
     // ObjectId and string storage of roleId in Job documents
     const roleIdStrings = roles.map((r) => r._id.toString());
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const jobCountAgg = await Job.aggregate([
       {
         $addFields: {
@@ -942,15 +963,18 @@ export const listRoles = async (req, res) => {
       {
         $match: {
           roleIdStr: { $in: roleIdStrings },
+          status: "Published",
+          $or: [
+            { applicationDeadline: null },
+            { applicationDeadline: { $gte: today } },
+          ],
         },
       },
       {
         $group: {
           _id: "$roleIdStr",
           totalJobs: { $sum: 1 },
-          activeJobs: {
-            $sum: { $cond: [{ $eq: ["$status", "Published"] }, 1, 0] },
-          },
+          activeJobs: { $sum: 1 },
         },
       },
     ]);
