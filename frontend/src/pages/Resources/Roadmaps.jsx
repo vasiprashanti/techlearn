@@ -237,7 +237,7 @@ function RoadmapRow({ roadmap, isDarkMode, onOpen }) {
   const techStack = getRoadmapStackChips(roadmap);
 
   return (
-    <div className={`grid grid-cols-1 items-center gap-5 rounded-[15px] border px-[26px] py-[22px] transition-all duration-200 lg:grid-cols-[minmax(280px,365px)_minmax(0,1fr)_250px_172px] lg:gap-0 ${
+    <div className={`grid min-h-[128px] grid-cols-1 items-center gap-5 rounded-[15px] border px-[26px] py-[22px] transition-all duration-200 lg:grid-cols-[minmax(280px,365px)_minmax(0,1fr)_250px_172px] lg:gap-0 ${
       isDarkMode
         ? "border-white/10 bg-white/5 hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/10"
         : "border-white/80 bg-white/60 shadow-sm hover:-translate-y-[1px] hover:border-[#00113b]/20 hover:bg-white hover:shadow-md"
@@ -420,19 +420,8 @@ export default function Roadmaps() {
 
   const listContent = (
     <>
-      {!isAuthenticated && (
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="mb-6 inline-flex cursor-pointer items-center gap-2 rounded-xl border border-black/10 bg-white/40 px-4 py-2 text-xs font-bold text-[#00113b] shadow-sm backdrop-blur-md transition hover:-translate-x-0.5 hover:bg-white/70 dark:border-white/10 dark:bg-white/5 dark:text-[#8fd9ff] dark:hover:bg-white/10"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back</span>
-        </button>
-      )}
-
-      <header className="mb-[32px]">
-        <h1 className={`font-['Press_Start_2P'] text-[28px] leading-[1.35] tracking-[-1px] sm:text-[36px] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
+      <header className="mb-[34px]">
+        <h1 className={`font-['Press_Start_2P'] text-[28px] leading-[1.35] tracking-[-1px] sm:text-[32px] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
           Roadmaps
         </h1>
         <p className={`mt-[10px] text-[15px] ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
@@ -542,7 +531,7 @@ export default function Roadmaps() {
             )}
           </div>
         ) : (
-          <div className="flex flex-col gap-[9px]">
+          <div className="flex flex-col gap-[12px]">
             {visibleRoadmaps.map((roadmap) => (
               <RoadmapRow
                 key={getRoadmapId(roadmap) || roadmap.title}
@@ -562,7 +551,7 @@ export default function Roadmaps() {
       <div className={`fixed inset-0 -z-10 transition-colors duration-300 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-[#d6eef4]"}`} />
 
       <main className="min-h-screen w-full">
-        <div className="mx-auto w-full max-w-[1424px] px-5 pb-16 pt-[62px] sm:px-6">
+        <div className="mx-auto w-full max-w-[1376px] px-5 pb-16 pt-[64px] sm:px-6 lg:px-0">
           {roadmapId ? detailContent : listContent}
         </div>
       </main>
