@@ -20,13 +20,17 @@ export default function Navbar() {
   const accountRef = useRef(null);
   const mobileMenuRef = useRef(null);
 
-  const [isDarkHeader, setIsDarkHeader] = useState(isDarkMode);
+  const [isOverDarkSection, setIsOverDarkSection] = useState(false);
 
   useEffect(() => {
     const checkDarkSection = () => {
       setScrollY(window.scrollY);
-      // Check all dark sections: Hero (#start, .tl-hero), Pricing (#pricing, .tl-pricing-section)
-      const darkSections = document.querySelectorAll('#start, #pricing, .tl-pricing-section, .tl-hero');
+
+      // In Dark mode, determine if current section is dark or light.
+      // Dark sections in light mode (e.g. Hero, Pricing, and in dark mode: Hero, Journey, Pricing)
+      // Light sections (Problem #problem, Results #results, FAQs #faqs, CTA #start-program)
+      const darkSectionSelectors = '#start, .tl-hero, #pricing, .tl-pricing-section' + (isDarkMode ? ', #journey, .journey-scroll' : '');
+      const darkSections = document.querySelectorAll(darkSectionSelectors);
       let isOverDark = false;
 
       darkSections.forEach((section) => {
@@ -37,7 +41,13 @@ export default function Navbar() {
         }
       });
 
-      setIsDarkHeader(isOverDark);
+      // If we are not on the landing page (no sections found), fallback to current theme
+      const hasSections = document.querySelectorAll('#start, #problem, #journey, #results, #pricing, #faqs, #start-program').length > 0;
+      if (!hasSections) {
+        setIsOverDarkSection(isDarkMode);
+      } else {
+        setIsOverDarkSection(isOverDark);
+      }
     };
 
     window.addEventListener('scroll', checkDarkSection, { passive: true });
@@ -50,7 +60,9 @@ export default function Navbar() {
     };
   }, [location.pathname, isDarkMode]);
 
-  const isDarkNav = isDarkMode || isDarkHeader;
+  // If over dark section -> use dark theme styling (white text / dark dropdown)
+  // If over light section -> use light theme styling (dark text / light dropdown)
+  const isDarkNav = isOverDarkSection;
 
   // Close menus on outside click
   useEffect(() => {
@@ -136,9 +148,8 @@ export default function Navbar() {
           --theme-btn-color: #00113b;
         }
 
-        /* Dark Mode or Hero Section Active */
-        .tl-navbar-root.dark-theme,
-        .dark .tl-navbar-root {
+        /* Dark Section Active or Dark Page Fallback */
+        .tl-navbar-root.dark-theme {
           --navy: #04103d;
           --green: #b2e96a;
           --green-text: #04103d;
