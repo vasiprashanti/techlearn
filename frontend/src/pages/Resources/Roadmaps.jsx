@@ -252,13 +252,18 @@ const RoadmapChip = ({ label, index }) => (
 
 function RoadmapRow({ roadmap, isDarkMode, onOpen }) {
   const techStack = getRoadmapStackChips(roadmap);
+  const techStackRows = [];
   const rawTitle = String(roadmap.title || "").trim();
   const title = /^(untitled roadmap|roadmap)$/i.test(rawTitle)
     ? roadmap.targetRole || rawTitle || "Untitled roadmap"
     : rawTitle || roadmap.targetRole || "Untitled roadmap";
 
+  for (let index = 0; index < techStack.length; index += 5) {
+    techStackRows.push(techStack.slice(index, index + 5));
+  }
+
   return (
-    <div className={`grid min-h-[128px] grid-cols-1 items-center gap-5 rounded-[15px] border px-[26px] py-[22px] transition-all duration-200 lg:grid-cols-[365px_minmax(0,1fr)_250px_172px] lg:gap-0 ${
+    <div className={`grid min-h-[128px] grid-cols-1 items-center gap-5 rounded-[15px] border px-[26px] py-[22px] transition-all duration-200 lg:grid-cols-[366px_minmax(0,1fr)_250px_172px] lg:gap-0 ${
       isDarkMode
         ? "border-white/10 bg-white/5 hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/10"
         : "border-[#c5dfe6] bg-[#d9eef3] shadow-sm hover:-translate-y-[1px] hover:border-[#00113b]/20 hover:bg-[#e0f2f5] hover:shadow-md"
@@ -277,9 +282,17 @@ function RoadmapRow({ roadmap, isDarkMode, onOpen }) {
         <div className={`mb-[9px] text-[17px] font-bold leading-[1.35] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
           Tech Stack
         </div>
-        <div className="flex flex-wrap gap-[5px]">
-          {techStack.map((technology, index) => (
-            <RoadmapChip key={`${technology}-${index}`} label={technology} index={index} />
+        <div className="flex flex-col gap-[5px]">
+          {techStackRows.map((row, rowIndex) => (
+            <div key={`tech-stack-row-${rowIndex}`} className="flex flex-wrap gap-[5px]">
+              {row.map((technology, index) => (
+                <RoadmapChip
+                  key={`${technology}-${rowIndex}-${index}`}
+                  label={technology}
+                  index={rowIndex * 5 + index}
+                />
+              ))}
+            </div>
           ))}
         </div>
       </div>
