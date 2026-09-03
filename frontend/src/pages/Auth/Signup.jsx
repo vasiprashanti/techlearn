@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -116,14 +116,11 @@ export default function Signup({
       const firebaseUser = result.user;
       const idToken = await firebaseUser.getIdToken();
 
-      const res = await fetch(`${getApiBase()}/auth/google`, {
+      const res = await fetch(`${getApiBase()}/auth/firebase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          token: idToken,
-          email: firebaseUser.email,
-          name: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL,
+          idToken,
         }),
       });
 
@@ -338,14 +335,18 @@ export default function Signup({
     <div
       className={`${containerClasses} ${isDark ? 'dark-mode dark' : ''}`}
       style={{
-        '--bg': isDark ? '#080d25' : '#c0e9ff',
+        '--bg': isDark ? '#080d25' : '#daf0fa',
         '--text': isDark ? '#f5f7ff' : '#050a5b',
         '--muted': isDark ? '#9da7c2' : '#68718b',
         '--lime': isDark ? '#9bd45a' : '#8cbf4a',
         '--lime-hover': isDark ? '#afe56b' : '#a2d354',
         '--card': isDark ? '#11172d' : '#ffffff',
         '--border': isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(5, 10, 91, 0.14)',
-        background: isModal ? 'transparent' : 'var(--bg)',
+        background: isModal
+          ? 'transparent'
+          : isDark
+          ? '#080d25'
+          : 'linear-gradient(to bottom right, #daf0fa, #bceaff, #bceaff)',
         color: 'var(--text)',
         fontFamily: '"Inter", sans-serif',
       }}
@@ -361,17 +362,43 @@ export default function Signup({
           position: relative;
         }
 
+        .tl-auth-logo-link {
+          position: fixed;
+          top: 24px;
+          left: 28px;
+          z-index: 50;
+          display: flex;
+          align-items: center;
+          text-decoration: none;
+          transition: transform 0.2s ease;
+        }
+
+        .tl-auth-logo-link:hover {
+          transform: scale(1.05);
+        }
+
+        .tl-auth-logo-img {
+          width: 44px;
+          height: 44px;
+          object-fit: contain;
+          display: block;
+          border-radius: 9px;
+        }
+
         .tl-visual-side {
           width: 100%;
           min-width: 0;
           display: flex;
           flex-direction: column;
-          align-items: flex-start;
+          align-items: flex-end;
+          padding-right: 15px;
         }
 
         .tl-product-preview {
           width: 100%;
           max-width: 650px;
+          display: flex;
+          justify-content: flex-end;
           position: relative;
           background: transparent;
           overflow: visible;
@@ -384,7 +411,7 @@ export default function Signup({
         }
 
         .tl-product-image {
-          width: 85%;
+          width: 88%;
           max-height: 520px;
           object-fit: cover;
           border-radius: 16px;
@@ -462,11 +489,11 @@ export default function Signup({
 
         .tl-input:focus {
           border-color: var(--lime);
-          box-shadow: 0 0 0 3px rgba(140, 191, 74, 0.14);
+          box-shadow: 0 0 0 3px rgba(184, 240, 112, 0.18);
         }
 
         .tl-password-input {
-          padding-right: 60px;
+          padding-right: 64px;
         }
 
         .tl-password-toggle {
@@ -474,33 +501,39 @@ export default function Signup({
           right: 12px;
           top: 50%;
           transform: translateY(-50%);
-          border: 0;
           background: transparent;
+          border: none;
           color: var(--muted);
-          font-size: 10px;
+          font-size: 11px;
           font-weight: 600;
           cursor: pointer;
+          padding: 4px 6px;
+          line-height: 1;
+        }
+
+        .tl-password-toggle:hover {
+          color: var(--text);
         }
 
         .tl-forgot {
           display: flex;
           justify-content: flex-end;
-          margin-top: -5px;
-          margin-bottom: 16px;
+          margin-top: 6px;
+          margin-bottom: 8px;
         }
 
-        .tl-forgot button,
-        .tl-forgot a {
+        .tl-forgot button {
           background: transparent;
           border: none;
           color: var(--muted);
-          font-size: 10px;
-          text-decoration: none;
+          font-size: 11px;
+          font-weight: 500;
           cursor: pointer;
+          padding: 0;
+          transition: color 0.18s ease;
         }
 
-        .tl-forgot button:hover,
-        .tl-forgot a:hover {
+        .tl-forgot button:hover {
           color: var(--text);
           text-decoration: underline;
         }
@@ -508,23 +541,23 @@ export default function Signup({
         .tl-submit-btn {
           width: 100%;
           height: 46px;
-          border: 0;
+          margin-top: 10px;
+          border: none;
           border-radius: 9px;
           background: var(--lime);
           color: #07101b;
-          font-size: 11px;
-          font-weight: 800;
-          letter-spacing: 0.3px;
+          font-family: "Press Start 2P", cursive;
+          font-size: 8.5px;
+          line-height: 1.6;
           cursor: pointer;
+          box-shadow: 0 7px 18px rgba(140, 191, 74, 0.15);
           transition: 0.18s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
         }
 
         .tl-submit-btn:hover {
           background: var(--lime-hover);
           transform: translateY(-1px);
+          box-shadow: 0 9px 22px rgba(140, 191, 74, 0.2);
         }
 
         .tl-submit-btn:active {
@@ -534,6 +567,7 @@ export default function Signup({
         .tl-submit-btn:disabled {
           opacity: 0.6;
           cursor: not-allowed;
+          transform: none;
         }
 
         .tl-divider {
@@ -600,55 +634,21 @@ export default function Signup({
           color: var(--text);
           font-weight: 700;
           cursor: pointer;
-          font-size: 11px;
-          text-decoration: none;
+          padding: 0;
         }
 
         .tl-switch-auth a:hover,
         .tl-switch-auth button:hover {
           text-decoration: underline;
-          text-underline-offset: 3px;
         }
 
         .tl-terms {
           text-align: center;
-          margin-top: 15px;
+          font-size: 9.5px;
           color: var(--muted);
-          font-size: 9px;
-          line-height: 1.5;
-        }
-
-        .tl-back-btn {
-          position: fixed;
-          top: 22px;
-          right: 25px;
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          border: 1px solid var(--border);
-          background: rgba(255, 255, 255, 0.4);
-          color: var(--text);
-          font-size: 15px;
-          font-weight: bold;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          z-index: 50;
-          transition: all 0.2s;
-        }
-
-        .dark-mode .tl-back-btn {
-          background: rgba(17, 23, 45, 0.7);
-        }
-
-        .tl-back-btn:hover {
-          transform: scale(1.08);
-          background: rgba(255, 255, 255, 0.7);
-        }
-
-        .dark-mode .tl-back-btn:hover {
-          background: rgba(17, 23, 45, 0.95);
+          line-height: 1.4;
+          margin-top: 14px;
+          padding: 0 4px;
         }
 
         .tl-close-btn {
@@ -722,6 +722,16 @@ export default function Signup({
             row-gap: 30px;
           }
 
+          .tl-auth-logo-link {
+            top: 16px;
+            left: 16px;
+          }
+
+          .tl-auth-logo-img {
+            width: 34px;
+            height: 34px;
+          }
+
           .tl-product-preview {
             transform: none;
           }
@@ -742,18 +752,23 @@ export default function Signup({
         }
       `}</style>
 
-      {/* Top Right Close / Back Button */}
+      {/* Top Left TechLearn Logo */}
       {!isModal && (
-        <button
-          className="tl-back-btn"
-          id="authBackBtn"
-          type="button"
-          onClick={handleClose}
-          title="Go back"
-          aria-label="Go back"
+        <Link
+          to="/"
+          className="tl-auth-logo-link"
+          aria-label="Go to TechLearn Homepage"
         >
-          ✕
-        </button>
+          <img
+            src={isDark ? "/logoo2.png" : "/logoo-small.webp"}
+            alt="TechLearn"
+            className="tl-auth-logo-img"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = isDark ? "/logoo2-small.webp" : "/logoo-small.webp";
+            }}
+          />
+        </Link>
       )}
 
       {/* Main Layout Card (Wrapped in modal box if modal) */}
