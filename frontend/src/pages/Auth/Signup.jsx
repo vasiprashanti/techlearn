@@ -330,7 +330,7 @@ export default function Signup({
 
   const containerClasses = isModal
     ? 'fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto'
-    : 'min-h-screen w-full flex items-center justify-center p-6 lg:p-10 transition-colors duration-300';
+    : 'tl-auth-shell min-h-screen w-full flex items-center justify-center p-6 lg:p-10 transition-colors duration-300';
 
   return (
     <div
@@ -361,6 +361,10 @@ export default function Signup({
           column-gap: 90px;
           align-items: center;
           position: relative;
+        }
+
+        .tl-auth-shell {
+          overflow: hidden;
         }
 
         .tl-auth-logo-link {
@@ -692,29 +696,65 @@ export default function Signup({
         }
 
         @media (max-width: 950px) {
+          .tl-auth-shell {
+            height: 100dvh;
+            min-height: 100dvh;
+            padding: 0;
+            padding-top: 72px;
+            align-items: stretch;
+          }
+
           .tl-auth-page {
             grid-template-columns: 1fr;
             max-width: 520px;
-            row-gap: 45px;
+            width: 100%;
+            max-width: none;
+            height: calc(100dvh - 72px);
+            max-height: calc(100dvh - 72px);
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            row-gap: 0;
           }
 
           .tl-visual-side {
             align-items: center;
+            flex: 0 0 30vh;
+            height: 30vh;
+            padding: 0;
+            overflow: hidden;
           }
 
           .tl-product-preview {
-            max-width: 480px;
+            width: 100%;
+            max-width: none;
+            height: 30vh;
             display: flex;
             justify-content: center;
+            transform: none;
           }
 
           .tl-product-image {
-            width: 75%;
+            width: 100%;
+            height: 100%;
+            max-height: none;
+            border-radius: 0;
+            object-fit: cover;
           }
 
           .tl-form-side {
+            width: 100%;
             max-width: 520px;
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: hidden;
+            padding: 16px 24px;
+            zoom: 1;
             justify-self: center;
+          }
+
+          .tl-close-btn {
+            display: none;
           }
         }
 
@@ -724,8 +764,12 @@ export default function Signup({
           }
 
           .tl-auth-logo-link {
-            top: 16px;
-            left: 16px;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 72px;
+            padding-left: 23px;
+            background: var(--bg);
           }
 
           .tl-auth-logo-img {
@@ -741,6 +785,25 @@ export default function Signup({
             border-radius: 12px;
             width: 90%;
           }
+
+          .tl-visual-side {
+            flex-basis: 20vh;
+            height: 20vh;
+          }
+
+          .tl-product-preview {
+            height: 20vh;
+          }
+
+          .tl-form-side {
+            padding: 10px 16px;
+            zoom: 1;
+          }
+
+          .tl-auth-title { margin-bottom: 14px; }
+          .tl-auth-card { padding: 16px; }
+          .tl-field { margin-bottom: 10px; }
+          .tl-input { height: 40px; }
 
           .tl-auth-title {
             font-size: 28px;
