@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
+import { Routes, Route, useLocation, Navigate, Link } from 'react-router-dom'
 import { lazy, Suspense, useState, useEffect } from 'react'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
@@ -240,17 +240,24 @@ function LayoutWrapper() {
   const showNavbar = !['/mcq', '/signup', '/login'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
                      !location.pathname.startsWith('/daily-challenge/') &&
-                     !location.pathname.startsWith('/free-assessment');
+                     !location.pathname.startsWith('/free-assessment') &&
+                     !location.pathname.startsWith('/onboarding');
 
   const showFooter = !['/mcq', '/signup', '/login'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
                      !location.pathname.startsWith('/daily-challenge/') &&
                      !location.pathname.startsWith('/free-assessment') &&
+                     !location.pathname.startsWith('/onboarding') &&
                      !isDashboardRoute &&
                      !isStudentSidebarRoute;
 
   return (
     <div className="relative z-10 flex flex-col min-h-screen">
+      {location.pathname.startsWith('/onboarding') && (
+        <Link to="/" aria-label="TechLearn home" className="fixed left-[23px] top-[14px] z-50">
+          <img src="/logoo2-small.webp" alt="TechLearn" className="block h-11 w-11 rounded-[9px] object-contain" />
+        </Link>
+      )}
       {showNavbar && <Navbar />}
 
       <Suspense fallback={<main className="flex-grow"><RouteFallback /></main>}>
