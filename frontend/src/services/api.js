@@ -10,11 +10,12 @@ const handleResponse = async (response) => {
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Network error' }));
 
-    // Handle 401 Unauthorized - clear token and redirect to login
+    // Do not redirect globally on 401. Public pages make optional requests
+    // for learner-only data (for example, the course sidebar); a guest
+    // should remain on the public page when those requests are unauthorized.
     if (response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('authToken'); // Also clear backup token
-      window.location.href = '/login';
     }
 
     throw new Error(error.message || `HTTP error! status: ${response.status}`);
