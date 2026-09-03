@@ -379,7 +379,7 @@ export default function ContextualOnboarding() {
     navigate("/");
   };
 
-  const totalSteps = 3;
+  const totalSteps = 2;
 
   return (
     <div className={`tl-onboarding-page-root ${isDarkMode ? "dark-mode" : ""}`}>
@@ -1008,10 +1008,12 @@ export default function ContextualOnboarding() {
             margin-bottom: 32px !important;
           }
           .tl-plan-screen .tl-description {
-            height: 0;
-            line-height: 0;
+            height: auto;
+            line-height: 1.4;
+            visibility: visible;
             margin-bottom: 24px !important;
           }
+          .tl-plan-screen { margin-top: -32px; }
           .tl-field:first-of-type { margin-top: 48px; }
           .tl-chip { font-size: 11px; padding: 10px 13px; min-height: 38px; }
           .tl-onboarding-page-root { --chip-blue: #a5d8f4; }
@@ -1027,7 +1029,7 @@ export default function ContextualOnboarding() {
             gap: 16px;
             margin-top: 0;
           }
-          .tl-plan-card { min-height: auto; padding: 23px; }
+          .tl-plan-card { min-height: auto; width: 80vw; justify-self: center; padding: 23px; }
           .tl-plan-card.paid { order: 1; }
           .tl-plan-card.free { order: 2; }
           .tl-plan-description { min-height: auto; }
@@ -1050,12 +1052,11 @@ export default function ContextualOnboarding() {
 
       <div className="tl-page-container">
         {/* Progress bar */}
-        {!isFeedbackOpen && (
+        {!isFeedbackOpen && step < 3 && (
           <div className="tl-progress-wrapper">
             <div className="tl-progress-steps">
               <div className={`tl-progress-step ${step >= 1 ? "active" : ""}`}></div>
               <div className={`tl-progress-step ${step >= 2 ? "active" : ""}`}></div>
-              <div className={`tl-progress-step ${step >= 3 ? "active" : ""}`}></div>
             </div>
           </div>
         )}
@@ -1363,9 +1364,8 @@ export default function ContextualOnboarding() {
                   ×
                 </button>
 
-                <div className="tl-eyebrow">STEP 3 OF {totalSteps}</div>
                 <h1 className="tl-title">Here's your plan.</h1>
-                <p className="tl-description" style={{ marginBottom: 0 }}>
+                <p className="tl-description tl-plan-description">
                   {intent === "skill"
                     ? "Start with our core learning track or unlock full project mastery."
                     : "Start with a focused assessment or go all in with the complete TechLearn placement program."}

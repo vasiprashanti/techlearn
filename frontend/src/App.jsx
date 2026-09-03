@@ -254,9 +254,14 @@ function LayoutWrapper() {
   return (
     <div className="relative z-10 flex flex-col min-h-screen">
       {location.pathname.startsWith('/onboarding') && (
-        <Link to="/" aria-label="TechLearn home" className="absolute left-[23px] top-[14px] z-50">
-          <img src="/logoo2-small.webp" alt="TechLearn" className="block h-11 w-11 rounded-[9px] object-contain" />
-        </Link>
+        <div
+          className="fixed left-0 top-0 z-[100] h-[72px] w-full bg-[#02052e] dark:bg-[#080d25]"
+          style={{ position: 'fixed', top: 0, left: 0, right: 0 }}
+        >
+          <Link to="/" aria-label="TechLearn home" className="absolute left-[23px] top-[14px]">
+            <img src="/logoo2-small.webp" alt="TechLearn" className="block h-11 w-11 rounded-[9px] object-contain" />
+          </Link>
+        </div>
       )}
       {showNavbar && <Navbar />}
 

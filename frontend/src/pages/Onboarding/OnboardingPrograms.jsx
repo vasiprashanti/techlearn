@@ -423,7 +423,7 @@ export default function OnboardingPrograms() {
               return (
                 <div
                   key={plan.id}
-                  className={`relative flex flex-col justify-between rounded-3xl p-6 sm:p-7 border transition-all duration-300 ${plan.color}`}
+                  className={`relative flex w-full max-w-[80vw] justify-self-center flex-col justify-between rounded-3xl p-6 sm:max-w-none sm:p-7 border transition-all duration-300 ${plan.color}`}
                 >
                   {plan.badge && (
                     <div className="absolute -top-3.5 right-6">
