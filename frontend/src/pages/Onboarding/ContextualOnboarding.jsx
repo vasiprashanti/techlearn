@@ -1145,7 +1145,7 @@ export default function ContextualOnboarding() {
                     </div>
 
                     <div className="tl-field">
-                      <label className="tl-field-label">Target Opportunity</label>
+                      <label className="tl-field-label">Target Opportunity <span aria-hidden="true">*</span></label>
                       <div className="tl-chips">
                         {["Campus", "Off-campus", "Both"].map((opp) => (
                           <button
