@@ -28,6 +28,26 @@ const endOfDay = (date = new Date()) => {
 };
 
 const resolveTrackTemplateForStudent = async (student, batch, programId) => {
+  let program = null;
+  if (programId) {
+    program = await Program.findById(programId).lean();
+  }
+  if (!program && student.programSelection) {
+    program = await Program.findOne({ programType: student.programSelection, status: "Active" }).sort({ createdAt: -1 }).lean();
+  }
+
+  // A concrete Program owns its Daily Task track. Do not let a legacy batch
+  // track silently replace or supplement the selected Program's content.
+  if (program?.trackTemplateIds?.length) {
+    const trackTemplate = await TrackTemplate.findOne({
+      _id: { $in: program.trackTemplateIds },
+      trackType: "Daily Task",
+      status: "Active",
+    });
+    if (trackTemplate) return trackTemplate;
+  }
+  if (programId) return null;
+
   if (batch?.assignedDailyTaskTrack) {
     const trackTemplate = await TrackTemplate.findById(batch.assignedDailyTaskTrack);
     if (trackTemplate && trackTemplate.trackType === "Daily Task") return trackTemplate;
@@ -40,26 +60,6 @@ const resolveTrackTemplateForStudent = async (student, batch, programId) => {
     });
     if (trackTemplate) return trackTemplate;
   }
-  let program = null;
-  if (programId) {
-    program = await Program.findById(programId).lean();
-  }
-  if (!program && student.programSelection) {
-    program = await Program.findOne({ programType: student.programSelection, status: "Active" }).sort({ createdAt: -1 }).lean();
-  }
-  if (program?.trackTemplateIds?.length) {
-    const trackTemplate = await TrackTemplate.findOne({
-      _id: { $in: program.trackTemplateIds },
-      trackType: "Daily Task",
-      status: "Active",
-    });
-    if (trackTemplate) return trackTemplate;
-  }
-
-  // A concrete program enrollment must not silently consume an unrelated
-  // global Daily Task template. Batch-less learners only receive the
-  // template attached to their own program.
-  if (programId) return null;
 
   return TrackTemplate.findOne({ trackType: "Daily Task", status: "Active" }).sort({ createdAt: -1 });
 };
@@ -70,7 +70,12 @@ export const getTodayDailyTasks = async (req, res) => {
     const email = req.user.email.toLowerCase().trim();
 
     // 1. Resolve student and optional batch
-    const student = await Student.findOne({ email });
+    const student = await Student.findOne({
+      $or: [
+        { userId },
+        ...(email ? [{ email }] : []),
+      ],
+    });
     if (!student) {
       return res.status(404).json({ success: false, message: "Student record not found." });
     }
@@ -136,7 +141,10 @@ export const getTodayDailyTasks = async (req, res) => {
     // Populate day assignment tasks
     const tasksAssigned = (dayAssignment.tasks || []).filter((task) =>
       (task.status || "Published") === "Published" &&
-      (!task.batchId || (batch && String(task.batchId) === String(batch._id)))
+      // Program-owned assignments are reusable content. A legacy batchId on
+      // an imported task must not hide it from learners on the Program's
+      // selected batch or individual schedule.
+      (schedule.programId || !task.batchId || (batch && String(task.batchId) === String(batch._id)))
     );
     const populatedTasks = [];
 
@@ -300,7 +308,12 @@ export const submitDailyTask = async (req, res) => {
       return res.status(400).json({ success: false, message: "questionId and taskType are required." });
     }
 
-    const student = await Student.findOne({ email });
+    const student = await Student.findOne({
+      $or: [
+        { userId },
+        ...(email ? [{ email }] : []),
+      ],
+    });
     if (!student) {
       return res.status(404).json({ success: false, message: "Student record not found." });
     }

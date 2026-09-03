@@ -64,6 +64,9 @@ const normalizeBatch = (batch) => {
     start: batch.start || 'TBD',
     end: batch.end || 'TBD',
     students: Number(batch.students || 0),
+    programId: batch.programId?._id || batch.programId || '',
+    programType: batch.programType || batch.program?.programType || '',
+    program: batch.program || null,
     createdAt: batch.createdAt || null,
   };
 };
@@ -246,6 +249,12 @@ const BatchCard = ({ batch, onEdit, onDelete, navigate, selected, onSelectToggle
           <span className="shrink-0">Active Track</span>
           <span className="font-semibold text-slate-800 dark:text-slate-200 truncate ml-2 text-right flex-1 min-w-0" title={batch.track || 'No Track'}>{batch.track || 'No Track'}</span>
         </div>
+        <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400 min-w-0">
+          <span className="shrink-0">Program</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-200 truncate ml-2 text-right flex-1 min-w-0" title={batch.program?.name || batch.programType || 'Not assigned'}>
+            {batch.program?.name || (batch.programType ? `${batch.programType} (not selected)` : 'Not assigned')}
+          </span>
+        </div>
         <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
           <span>Students</span>
           <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{batch.students || 0}</span>
@@ -276,6 +285,7 @@ const Batches = () => {
   const [batches, setBatches] = useState(() => readAdminSessionCache('batches', emptyBatches));
   const [colleges, setColleges] = useState(() => readAdminSessionCache('batches-colleges', []));
   const [trackTemplates, setTrackTemplates] = useState(() => readAdminSessionCache('batches-track-templates', []));
+  const [programs, setPrograms] = useState([]);
   const [isLoadingBatches, setIsLoadingBatches] = useState(() => !hasMeaningfulAdminData(readAdminSessionCache('batches', emptyBatches)));
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -299,6 +309,8 @@ const Batches = () => {
     batchSize: '',
     status: 'Draft',
     programSelection: 'Placement',
+    programType: 'Placement',
+    programId: '',
     courses: [],
   });
   const [searchQuery, setSearchQuery] = useState('');
@@ -346,13 +358,15 @@ const Batches = () => {
   const todayIsoDate = getTodayIsoDate();
   const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
   const batchFormInputClass = 'mt-1 w-full px-3 py-2 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
+  const availablePrograms = programs.filter((program) => program.programType === createBatchForm.programType);
 
   const loadBatchPageData = useCallback(async () => {
-    const [remoteBatches, remoteColleges, remoteTrackTemplates, remoteCourses] = await Promise.all([
+    const [remoteBatches, remoteColleges, remoteTrackTemplates, remoteCourses, remotePrograms] = await Promise.all([
       adminAPI.getBatches(),
       adminAPI.getColleges(),
       adminAPI.getTrackTemplates().catch(() => []),
       adminAPI.getCourses().catch(() => ({ courses: [] })),
+      adminAPI.getPrograms({ status: 'Active', limit: 100 }).catch(() => ({ programs: [] })),
     ]);
 
     const normalizedBatches = preferRemoteData(remoteBatches, emptyBatches).map(normalizeBatch);
@@ -379,6 +393,16 @@ const Batches = () => {
         title: c.title || 'Untitled Course',
       }));
     setCourses(assignableCourses);
+
+    const assignablePrograms = (remotePrograms?.programs || remotePrograms?.data || remotePrograms || [])
+      .filter((program) => program?.status === 'Active' && ['Placement', 'Skill'].includes(program.programType))
+      .map((program) => ({
+        id: program.id || program._id,
+        name: program.name || 'Untitled Program',
+        programType: program.programType,
+      }))
+      .filter((program) => program.id);
+    setPrograms(assignablePrograms);
 
     writeAdminSessionCache('batches', normalizedBatches);
     writeAdminSessionCache('batches-colleges', normalizedColleges);
@@ -514,6 +538,8 @@ const Batches = () => {
       batchSize: '',
       status: 'Draft',
       programSelection: 'Placement',
+      programType: 'Placement',
+      programId: '',
       courses: [],
     });
     setIsCreateFormOpen(true);
@@ -533,7 +559,10 @@ const Batches = () => {
       ? batch.collegeIds.map(String)
       : (batch.collegeId ? [String(batch.collegeId._id || batch.collegeId.id || batch.collegeId)] : []);
 
-    const normalizedProgram = (batch.programSelection === 'Full Stack Project Program' || batch.programSelection === 'Skill' || batch.programSelection === 'skill')
+    const selectedProgramId = batch.programId?._id || batch.programId || '';
+    const selectedProgram = programs.find((program) => String(program.id) === String(selectedProgramId));
+    const rawProgramType = batch.programType || selectedProgram?.programType || batch.programSelection;
+    const normalizedProgram = (String(rawProgramType || '').toLowerCase() === 'skill' || rawProgramType === 'Full Stack Project Program')
       ? 'Skill'
       : 'Placement';
 
@@ -554,6 +583,8 @@ const Batches = () => {
       batchSize: batch.batchSize ? String(batch.batchSize) : '',
       status: batch.status || 'Draft',
       programSelection: normalizedProgram,
+      programType: normalizedProgram,
+      programId: selectedProgramId ? String(selectedProgramId) : '',
       courses: allCourses,
     });
     setIsCreateFormOpen(true);
@@ -580,6 +611,10 @@ const Batches = () => {
       setCreateError('Batch size must be a positive number');
       return;
     }
+    if (!createBatchForm.programId) {
+      setCreateError('Select a specific Program for this batch');
+      return;
+    }
 
     const selectedTemplateIds = Array.isArray(createBatchForm.assignedTrackTemplateIds)
       ? createBatchForm.assignedTrackTemplateIds.map(String)
@@ -601,7 +636,9 @@ const Batches = () => {
         confirmTrackReplacement: true,
         batchSize: createBatchForm.batchSize ? Number(createBatchForm.batchSize) : null,
         status: createBatchForm.status,
-        programSelection: createBatchForm.programSelection || 'Placement',
+        programSelection: createBatchForm.programType || createBatchForm.programSelection || 'Placement',
+        programType: createBatchForm.programType || 'Placement',
+        programId: createBatchForm.programId,
         courses: createBatchForm.courses || [],
       };
 
@@ -900,7 +937,7 @@ const Batches = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Status</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
@@ -919,11 +956,16 @@ const Batches = () => {
                 </div>
 
                 <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Program*</label>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Program Type*</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select
-                      value={createBatchForm.programSelection || 'Placement'}
-                      onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, programSelection: e.target.value }))}
+                      value={createBatchForm.programType || 'Placement'}
+                      onChange={(e) => setCreateBatchForm((prev) => ({
+                        ...prev,
+                        programType: e.target.value,
+                        programSelection: e.target.value,
+                        programId: prev.programType === e.target.value ? prev.programId : '',
+                      }))}
                       className="appearance-none w-full px-3 py-2 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                     >
                       <option className={dropdownOptionClass} value="Skill">Skill</option>
@@ -931,6 +973,30 @@ const Batches = () => {
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                   </div>
+                </div>
+
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Program*</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={createBatchForm.programId || ''}
+                      onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, programId: e.target.value }))}
+                      className="appearance-none w-full px-3 py-2 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className={dropdownOptionClass} value="">Select a {createBatchForm.programType || 'program'} program</option>
+                      {availablePrograms.map((program) => (
+                        <option className={dropdownOptionClass} key={program.id} value={program.id}>
+                          {program.name}
+                        </option>
+                      ))}
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                  {programs.length === 0 ? (
+                    <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-300">No active Programs are available.</p>
+                  ) : availablePrograms.length === 0 ? (
+                    <p className="mt-1 text-[11px] text-black/40 dark:text-white/45">No active {createBatchForm.programType} Programs are available.</p>
+                  ) : null}
                 </div>
               </div>
 

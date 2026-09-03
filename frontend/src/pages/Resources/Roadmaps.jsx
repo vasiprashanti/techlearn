@@ -3,7 +3,6 @@ import remarkGfm from "remark-gfm";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AlertCircle, ArrowLeft, BookOpen, Loader2, Search, X } from "lucide-react";
-import Sidebar from "../../components/Dashboard/Sidebar";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { resourceAPI } from "../../services/api";
@@ -124,6 +123,35 @@ const getRoadmapTechStack = (roadmap) => {
   return [...new Set([...inferredStack, ...fallbackStack])].slice(0, 7);
 };
 
+const getRoadmapLevel = (roadmap) => {
+  const value = roadmap?.experienceLevel || roadmap?.level || roadmap?.difficulty;
+  if (!value || typeof value === "object") return "";
+  return String(value).trim();
+};
+
+const getRoadmapStackChips = (roadmap) => {
+  const chips = [...getRoadmapTechStack(roadmap)];
+  const level = getRoadmapLevel(roadmap);
+  const duration = formatDuration(roadmap);
+
+  if (level) chips.push(level);
+  if (duration !== "Duration not set") chips.push(duration);
+
+  return [...new Set(chips)].slice(0, 9);
+};
+
+const formatRoadmapSalary = (roadmap) => {
+  const value = roadmap?.estimatedSalary ?? roadmap?.salaryRange ?? roadmap?.salary;
+  if (value && typeof value === "object") {
+    const minimum = value.min ?? value.minimum ?? value.from;
+    const maximum = value.max ?? value.maximum ?? value.to;
+    if (minimum !== undefined && maximum !== undefined) return `₹${minimum}–${maximum} LPA`;
+    if (minimum !== undefined) return `₹${minimum} LPA`;
+  }
+
+  return value ? String(value) : "—";
+};
+
 const durationInWeeks = (roadmap) => {
   const duration = Number(roadmap?.duration);
   if (!Number.isFinite(duration)) return null;
@@ -200,35 +228,32 @@ const ErrorState = ({ message }) => (
 );
 
 const RoadmapChip = ({ label, index }) => (
-  <span className={`inline-flex items-center rounded-[6px] px-[8px] py-[5px] text-[9px] font-bold whitespace-nowrap ${roadmapChipClasses[index % roadmapChipClasses.length]}`}>
+  <span className={`inline-flex items-center rounded-[6px] px-[9px] py-[5px] text-[10px] font-bold whitespace-nowrap ${roadmapChipClasses[index % roadmapChipClasses.length]}`}>
     {label}
   </span>
 );
 
 function RoadmapRow({ roadmap, isDarkMode, onOpen }) {
-  const techStack = getRoadmapTechStack(roadmap);
+  const techStack = getRoadmapStackChips(roadmap);
 
   return (
-    <div className={`grid grid-cols-1 items-center gap-4 rounded-[14px] border px-[22px] py-[18px] transition-all duration-200 md:grid-cols-[minmax(190px,1.1fr)_minmax(280px,1.6fr)_minmax(150px,0.75fr)_105px] md:gap-0 ${
+    <div className={`grid grid-cols-1 items-center gap-5 rounded-[15px] border px-[26px] py-[22px] transition-all duration-200 lg:grid-cols-[minmax(280px,365px)_minmax(0,1fr)_250px_172px] lg:gap-0 ${
       isDarkMode
         ? "border-white/10 bg-white/5 hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/10"
         : "border-white/80 bg-white/60 shadow-sm hover:-translate-y-[1px] hover:border-[#00113b]/20 hover:bg-white hover:shadow-md"
     }`}
     >
       <div className="min-w-0 pr-2">
-        <div className={`mb-[6px] truncate text-[15px] font-bold leading-[1.35] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
+        <div className={`mb-[7px] truncate text-[17px] font-bold leading-[1.35] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
           {roadmap.title || "Untitled roadmap"}
         </div>
-        <div className={`mb-[5px] truncate text-[11px] ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
+        <div className={`truncate text-[12px] ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
           {getRoadmapCategory(roadmap)}
-        </div>
-        <div className={`truncate text-[10px] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
-          {roadmap.targetRole || "Career path"}
         </div>
       </div>
 
       <div className="min-w-0 pr-2">
-        <div className={`mb-[9px] text-[15px] font-bold leading-[1.35] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
+        <div className={`mb-[9px] text-[17px] font-bold leading-[1.35] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
           Tech Stack
         </div>
         <div className="flex flex-wrap gap-[5px]">
@@ -239,11 +264,11 @@ function RoadmapRow({ roadmap, isDarkMode, onOpen }) {
       </div>
 
       <div>
-        <div className={`text-[16px] font-bold leading-[1.4] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
-          {formatDuration(roadmap)}
+        <div className={`text-[18px] font-bold leading-[1.4] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
+          {formatRoadmapSalary(roadmap)}
         </div>
-        <span className={`mt-[3px] block text-[9px] font-medium ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
-          Estimated duration
+        <span className={`mt-[3px] block text-[10px] font-medium ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+          Estimated Salary
         </span>
       </div>
 
@@ -251,7 +276,7 @@ function RoadmapRow({ roadmap, isDarkMode, onOpen }) {
         <button
           type="button"
           onClick={() => onOpen(roadmap)}
-          className="inline-flex w-full items-center justify-center rounded-[8px] border-none bg-[#b2e96a] px-[10px] py-[13px] font-['Press_Start_2P'] text-[8px] font-bold leading-[1.5] text-[#0a1128] transition-all hover:-translate-y-[2px] hover:shadow-[0_5px_0_rgba(0,17,59,0.15)] active:translate-y-0 active:shadow-none"
+          className="inline-flex min-h-[45px] w-full items-center justify-center rounded-[8px] border-none bg-[#b2e96a] px-[10px] py-[13px] font-['Press_Start_2P'] text-[8px] font-bold leading-[1.5] text-[#0a1128] transition-all hover:-translate-y-[2px] hover:shadow-[0_5px_0_rgba(0,17,59,0.15)] active:translate-y-0 active:shadow-none"
         >
           SHOW ROADMAP
         </button>
@@ -406,16 +431,16 @@ export default function Roadmaps() {
         </button>
       )}
 
-      <header className="mb-[30px]">
-        <h1 className={`font-['Press_Start_2P'] text-[24px] leading-[1.5] tracking-[-1px] sm:text-[28px] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
+      <header className="mb-[32px]">
+        <h1 className={`font-['Press_Start_2P'] text-[28px] leading-[1.35] tracking-[-1px] sm:text-[36px] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
           Roadmaps
         </h1>
-        <p className={`mt-[10px] text-[13px] ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
+        <p className={`mt-[10px] text-[15px] ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
           Opportunities matched to your career goals.
         </p>
       </header>
 
-      <div className={`mb-[18px] flex h-[52px] w-full items-center rounded-[12px] border px-[17px] transition-colors ${isDarkMode ? "border-white/10 bg-white/5 text-white focus-within:border-white/20 focus-within:bg-white/10" : "border-[#00113b]/15 bg-white/70 text-[#00113b] shadow-sm focus-within:border-[#00113b]/30 focus-within:bg-white"}`}>
+      <div className={`mb-[29px] flex h-[62px] w-full items-center rounded-[13px] border px-[20px] transition-colors ${isDarkMode ? "border-white/10 bg-white/5 text-white focus-within:border-white/20 focus-within:bg-white/10" : "border-[#00113b]/15 bg-white/35 text-[#00113b] shadow-sm focus-within:border-[#00113b]/30 focus-within:bg-white/70"}`}>
         <Search className={`mr-[12px] h-5 w-5 shrink-0 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`} />
         <input
           id="roadmapSearchInput"
@@ -427,7 +452,7 @@ export default function Roadmaps() {
         />
       </div>
 
-      <div className={`mb-[16px] flex items-center gap-[7px] border-b ${isDarkMode ? "border-white/10" : "border-[#00113b]/15"}`}>
+      <div className={`mb-[20px] flex items-center gap-[7px] border-b ${isDarkMode ? "border-white/10" : "border-[#00113b]/15"}`}>
         {[{ id: "for-you", label: "For You" }, { id: "all", label: "All Roadmaps" }].map((tab) => (
           <button
             key={tab.id}
@@ -444,14 +469,14 @@ export default function Roadmaps() {
         ))}
       </div>
 
-      <div className="mb-[24px] flex flex-wrap items-center justify-between gap-[15px] md:flex-nowrap">
+      <div className="mb-[28px] flex flex-wrap items-center justify-between gap-[15px] md:flex-nowrap">
         <div className="flex max-w-full gap-[7px] overflow-x-auto scrollbar-none">
           {roadmapCategories.map((category) => (
             <button
               key={category.id}
               type="button"
               onClick={() => setActiveCategory(category.id)}
-              className={`whitespace-nowrap rounded-[100px] border px-[13px] py-[8px] text-[10px] transition-colors ${
+              className={`whitespace-nowrap rounded-[100px] border px-[13px] py-[9px] text-[10px] transition-colors ${
                 activeCategory === category.id
                   ? isDarkMode ? "border-[#b2e96a] bg-[#b2e96a] font-bold text-[#0a1128]" : "border-[#00113b] bg-[#00113b] font-semibold text-white shadow-sm"
                   : isDarkMode ? "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10" : "border-[#00113b]/15 bg-white/70 text-[#00113b] shadow-xs hover:bg-white"
@@ -466,7 +491,7 @@ export default function Roadmaps() {
           <button
             type="button"
             onClick={() => setFilterDrawerOpen(true)}
-            className={`flex h-[36px] cursor-pointer items-center gap-1.5 rounded-[8px] border px-[12px] text-[10px] transition-colors ${
+            className={`flex h-[42px] cursor-pointer items-center gap-1.5 rounded-[8px] border px-[12px] text-[10px] transition-colors ${
               selectedFilterCount
                 ? isDarkMode ? "border-[#b2e96a] bg-[#b2e96a]/20 font-bold text-[#b2e96a]" : "border-[#00113b] bg-[#00113b] font-bold text-white shadow-sm"
                 : isDarkMode ? "border-white/10 bg-white/5 text-white hover:bg-white/15" : "border-[#00113b]/15 bg-white/70 text-[#00113b] shadow-xs hover:bg-white"
@@ -479,7 +504,7 @@ export default function Roadmaps() {
             aria-label="Sort roadmaps"
             value={sortBy}
             onChange={(event) => setSortBy(event.target.value)}
-            className={`h-[36px] cursor-pointer rounded-[8px] border pl-[10px] pr-[28px] text-[10px] outline-none transition-colors ${isDarkMode ? "border-white/10 bg-[#071532] text-white" : "border-[#00113b]/15 bg-white/70 text-[#00113b] shadow-xs hover:bg-white"}`}
+            className={`h-[42px] cursor-pointer rounded-[8px] border pl-[10px] pr-[28px] text-[10px] outline-none transition-colors ${isDarkMode ? "border-white/10 bg-[#071532] text-white" : "border-[#00113b]/15 bg-white/70 text-[#00113b] shadow-xs hover:bg-white"}`}
           >
             <option value="newest">Newest</option>
             <option value="duration">Shortest</option>
@@ -534,12 +559,10 @@ export default function Roadmaps() {
 
   return (
     <div className={`min-h-screen font-sans antialiased ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
-      <div className={`fixed inset-0 -z-10 transition-colors duration-300 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
+      <div className={`fixed inset-0 -z-10 transition-colors duration-300 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-[#d6eef4]"}`} />
 
-      {isAuthenticated && user && <Sidebar />}
-
-      <main className={`min-h-screen w-full ${isAuthenticated && user ? "lg:ml-[90px] lg:w-[calc(100%-90px)]" : ""}`}>
-        <div className="mx-auto w-full max-w-[1250px] px-6 pb-16 pt-28 sm:px-12">
+      <main className="min-h-screen w-full">
+        <div className="mx-auto w-full max-w-[1424px] px-5 pb-16 pt-[62px] sm:px-6">
           {roadmapId ? detailContent : listContent}
         </div>
       </main>

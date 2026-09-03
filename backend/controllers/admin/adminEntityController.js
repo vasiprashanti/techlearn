@@ -7,7 +7,7 @@ import College from "../../models/College.js";
 import Batch, { BATCH_STATUS } from "../../models/Batch.js";
 import Course from "../../models/Course.js";
 import Student from "../../models/Student.js";
-import Program from "../../models/Program.js";
+import Program, { PROGRAM_TYPES } from "../../models/Program.js";
 import Submission from "../../models/Submission.js";
 import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import StudentMcqSubmission from "../../models/StudentMcqSubmission.js";
@@ -30,6 +30,8 @@ import {
   pauseProgramEnrollment,
   syncPrimaryProgramPointers,
   upsertProgramEnrollment,
+  assignProgramToBatch,
+  removeProgramFromBatch,
 } from "../../utils/programEnrollment.js";
 import { expireAllActiveBatches, expireBatchIfNeeded, isBatchExpired } from "../../utils/batchLifecycle.js";
 import { buildUnifiedProfile } from "../../utils/userProfile.js";
@@ -632,6 +634,7 @@ export const listBatches = async (req, res) => {
       .populate("assignedDailyTaskTrack", "name category trackType status dayAssignments")
       .populate("assignedDailyChallengeTrack", "name category trackType status dayAssignments")
       .populate("assignedTrackTemplateIds", "name category trackType status dayAssignments")
+      .populate("programId", "_id name programType status")
       .lean();
 
     const batchIds = batches.map((batch) => batch._id);
@@ -707,6 +710,11 @@ export const listBatches = async (req, res) => {
         currentActiveTrack,
         attachedCourse: batch.attachedCourse || null,
         supportingCourses: batch.supportingCourses || [],
+        programId: batch.programId?._id || batch.programId || null,
+        programType: batch.programType || batch.programId?.programType || null,
+        program: batch.programId && typeof batch.programId === "object"
+          ? batch.programId
+          : null,
       };
     });
 
@@ -719,7 +727,25 @@ export const listBatches = async (req, res) => {
 
 export const createBatchAdmin = async (req, res) => {
   try {
-    const { collegeId, collegeIds, name, startDate, expiryDate, releaseTime, status, assignedTrack, assignedTrackTemplateId, assignedTrackTemplateIds, batchSize, programSelection, attachedCourse, supportingCourses, courses } = req.body;
+    const {
+      collegeId,
+      collegeIds,
+      name,
+      startDate,
+      expiryDate,
+      releaseTime,
+      status,
+      assignedTrack,
+      assignedTrackTemplateId,
+      assignedTrackTemplateIds,
+      batchSize,
+      programSelection,
+      programId,
+      programType,
+      attachedCourse,
+      supportingCourses,
+      courses,
+    } = req.body;
     const parsedBatchSize =
       batchSize === undefined || batchSize === null || String(batchSize).trim() === ""
         ? null
@@ -731,6 +757,29 @@ export const createBatchAdmin = async (req, res) => {
     }
     for (const id of resolvedCollegeIds) {
       if (!assertObjectId(id, "collegeIds", res)) return;
+    }
+
+    let selectedProgram = null;
+    if (programId && programId !== "null") {
+      if (!assertObjectId(programId, "programId", res)) return;
+      selectedProgram = await Program.findOne({
+        _id: programId,
+        status: { $ne: "Archived" },
+      }).lean();
+      if (!selectedProgram) {
+        return res.status(404).json({ success: false, message: "Program not found or archived." });
+      }
+      if (programType && !PROGRAM_TYPES.includes(programType)) {
+        return res.status(400).json({ success: false, message: "Program type must be Placement or Skill." });
+      }
+      if (programType && selectedProgram.programType !== programType) {
+        return res.status(400).json({
+          success: false,
+          message: "The selected program does not belong to the selected program type.",
+        });
+      }
+    } else if (programType && !PROGRAM_TYPES.includes(programType)) {
+      return res.status(400).json({ success: false, message: "Program type must be Placement or Skill." });
     }
 
     let selectedCourseIds = [];
@@ -774,7 +823,9 @@ export const createBatchAdmin = async (req, res) => {
               batchSize: Number.isFinite(parsedBatchSize) && parsedBatchSize > 0 ? parsedBatchSize : null,
               releaseTime: releaseTime || "00:00",
               status: status || BATCH_STATUS.DRAFT,
-              programSelection: programSelection || "Placement",
+              programSelection: selectedProgram?.programType || programSelection || "Placement",
+              programId: selectedProgram?._id || null,
+              programType: selectedProgram?.programType || null,
               attachedCourse: resolvedAttached,
               supportingCourses: resolvedSupporting,
             },
@@ -800,6 +851,14 @@ export const createBatchAdmin = async (req, res) => {
 
     if (!batch) {
       return res.status(500).json({ success: false, message: "Failed to create batch." });
+    }
+
+    if (selectedProgram) {
+      await assignProgramToBatch({
+        batchId: batch._id,
+        program: selectedProgram,
+        source: "admin",
+      });
     }
 
     await writeAuditLog({
@@ -837,6 +896,15 @@ export const getBatchDetail = async (req, res) => {
       .populate("assignedDailyChallengeTrack", "name category trackType status")
       .populate("attachedCourse", "title description numTopics topicIds")
       .populate("supportingCourses", "title description numTopics topicIds")
+      .populate({
+        path: "programId",
+        select: "_id name programType status duration durationDays courseIds roadmapIds trackTemplateIds",
+        populate: [
+          { path: "courseIds", select: "_id title description numTopics topicIds status" },
+          { path: "roadmapIds", select: "_id title description status" },
+          { path: "trackTemplateIds", select: "_id name category trackType status totalDays dayAssignments" },
+        ],
+      })
       .lean();
     if (!batch) {
       return res.status(404).json({ success: false, message: "Batch not found." });
@@ -866,6 +934,21 @@ export const getBatchDetail = async (req, res) => {
       userIds.push(u._id);
     });
 
+    const programTrackTemplateIds = Array.isArray(batch.programId?.trackTemplateIds)
+      ? batch.programId.trackTemplateIds.map((template) => template?._id || template).filter(Boolean)
+      : [];
+    const trackTemplateQuery = batch.programId
+      ? { _id: { $in: programTrackTemplateIds } }
+      : {
+          $or: [
+            { batchId },
+            ...(batch.assignedTrackTemplateIds ? batch.assignedTrackTemplateIds.map((id) => ({ _id: id })) : []),
+            ...(batch.assignedDailyTaskTrack ? [{ _id: batch.assignedDailyTaskTrack }] : []),
+            ...(batch.assignedDailyChallengeTrack ? [{ _id: batch.assignedDailyChallengeTrack }] : []),
+            ...(batch.assignedTrackTemplate?._id ? [{ _id: batch.assignedTrackTemplate._id }] : []),
+          ],
+        };
+
     const [tracks, submissions, trackTemplates, practiceSubmissions, dailyTaskAttempts, allProgress, dailyChallengeAttempts, codingChallengeSubmissions] = await Promise.all([
       Track.find({ batchId }).populate("orderedQuestionIds", "title").lean(),
       Submission.find(
@@ -873,15 +956,7 @@ export const getBatchDetail = async (req, res) => {
           ? { $or: [{ batchId }, { studentId: { $in: studentIds } }] }
           : { batchId }
       ).lean(),
-      TrackTemplate.find({
-        $or: [
-          { batchId },
-          ...(batch.assignedTrackTemplateIds ? batch.assignedTrackTemplateIds.map((id) => ({ _id: id })) : []),
-          ...(batch.assignedDailyTaskTrack ? [{ _id: batch.assignedDailyTaskTrack }] : []),
-          ...(batch.assignedDailyChallengeTrack ? [{ _id: batch.assignedDailyChallengeTrack }] : []),
-          ...(batch.assignedTrackTemplate?._id ? [{ _id: batch.assignedTrackTemplate._id }] : []),
-        ],
-      })
+      TrackTemplate.find(trackTemplateQuery)
         .populate("dayAssignments.questionId", "title categoryType categorySlug trackType difficulty content.correctOption")
         .populate("dayAssignments.tasks.questionId", "title categoryType categorySlug trackType difficulty content.correctOption")
         .lean(),
@@ -975,17 +1050,19 @@ export const getBatchDetail = async (req, res) => {
     const todayStart = new Date(Date.UTC(year, month, day, 0, 0, 0, 0) - 5.5 * 60 * 60 * 1000);
     const todayEnd = new Date(Date.UTC(year, month, day, 23, 59, 59, 999) - 5.5 * 60 * 60 * 1000);
 
-    const dailyChallengeTemplate = (trackTemplates || []).find(
-      (t) => String(t._id) === String(batch.assignedDailyChallengeTrack?._id || batch.assignedDailyChallengeTrack)
+    const findTemplateById = (templateId) => (trackTemplates || []).find(
+      (template) => String(template._id) === String(templateId?._id || templateId)
     );
-    const dailyTaskTemplate = (trackTemplates || []).find(
-      (t) => String(t._id) === String(batch.assignedDailyTaskTrack?._id || batch.assignedDailyTaskTrack)
-    ) || (trackTemplates || []).find(
-      (t) => String(t._id) === String(batch.assignedTrackTemplate?._id || batch.assignedTrackTemplate) && t.trackType === "Daily Task"
-    );
+    const dailyChallengeTemplate = batch.programId
+      ? (trackTemplates || []).find((template) => template.trackType === "Daily Challenge")
+      : findTemplateById(batch.assignedDailyChallengeTrack);
+    const dailyTaskTemplate = batch.programId
+      ? (trackTemplates || []).find((template) => template.trackType === "Daily Task")
+      : findTemplateById(batch.assignedDailyTaskTrack)
+        || findTemplateById(batch.assignedTrackTemplate);
 
-    const activeTrackTemplate = trackTemplates.find(
-      (t) => t.trackType === "Daily Task"
+    const activeTrackTemplate = dailyTaskTemplate || (trackTemplates || []).find(
+      (template) => template.trackType === "Daily Task"
     );
     let totalMCQsInTemplateToday = 0;
     let totalSQLInTemplateToday = 0;
@@ -2482,6 +2559,7 @@ todayXp = todayChallengeXp + todayTaskXp;
 
     const resolvedTracks = (() => {
       const activeTemplateIds = new Set([
+        ...(batch.programId ? programTrackTemplateIds : []),
         ...(batch.assignedTrackTemplateIds || []),
         batch.assignedDailyTaskTrack?._id,
         batch.assignedDailyChallengeTrack?._id,
@@ -2587,6 +2665,14 @@ todayXp = todayChallengeXp + todayTaskXp;
       }
     }
 
+    const mappedProgramCourses = batch.programId && Array.isArray(batch.programId.courseIds)
+      ? batch.programId.courseIds.filter(Boolean)
+      : [];
+    const effectiveAttachedCourse = mappedProgramCourses[0] || batch.attachedCourse || null;
+    const effectiveSupportingCourses = mappedProgramCourses.length > 0
+      ? mappedProgramCourses.slice(1)
+      : (batch.supportingCourses || []);
+
     return res.status(200).json({
       success: true,
       data: {
@@ -2622,22 +2708,40 @@ todayXp = todayChallengeXp + todayTaskXp;
         activeStudentsToday: activeCount,
         inactiveStudentsToday: inactiveCount,
         currentActiveTrack,
-        attachedCourse: (batch.attachedCourse && batch.attachedCourse._id)
+        attachedCourse: (effectiveAttachedCourse && effectiveAttachedCourse._id)
           ? {
-              id: batch.attachedCourse._id,
-              title: batch.attachedCourse.title || "Untitled Course",
-              description: batch.attachedCourse.description || "",
-              numTopics: batch.attachedCourse.numTopics || batch.attachedCourse.topicIds?.length || 0,
+              id: effectiveAttachedCourse._id,
+              title: effectiveAttachedCourse.title || "Untitled Course",
+              description: effectiveAttachedCourse.description || "",
+              numTopics: effectiveAttachedCourse.numTopics || effectiveAttachedCourse.topicIds?.length || 0,
             }
           : null,
-        supportingCourses: Array.isArray(batch.supportingCourses)
-          ? batch.supportingCourses.filter(Boolean).map((c) => ({
+        supportingCourses: Array.isArray(effectiveSupportingCourses)
+          ? effectiveSupportingCourses.filter(Boolean).map((c) => ({
               id: c._id || c,
               title: c.title || "Untitled Course",
               description: c.description || "",
               numTopics: c.numTopics || c.topicIds?.length || 0,
             }))
           : [],
+        programCourses: mappedProgramCourses.map((course) => ({
+          id: course._id,
+          title: course.title || "Untitled Course",
+          description: course.description || "",
+          numTopics: course.numTopics || course.topicIds?.length || 0,
+        })),
+        programRoadmaps: batch.programId && Array.isArray(batch.programId.roadmapIds)
+          ? batch.programId.roadmapIds.filter(Boolean).map((roadmap) => ({
+              id: roadmap._id,
+              title: roadmap.title || "Untitled Roadmap",
+              status: roadmap.status || "Active",
+            }))
+          : [],
+        programId: batch.programId?._id || batch.programId || null,
+        programType: batch.programType || batch.programId?.programType || null,
+        program: batch.programId && typeof batch.programId === "object"
+          ? batch.programId
+          : null,
         dayNumber: dayNumber || 1,
         tracks: resolvedTracks,
         maxTrackDays: maxTrackDays || 30,
@@ -2711,14 +2815,52 @@ export const updateBatchAdmin = async (req, res) => {
       });
     }
 
-    const programChanged = req.body.programSelection && req.body.programSelection !== existingBatch.programSelection;
+    const hasProgramId = Object.prototype.hasOwnProperty.call(req.body, "programId");
+    const previousProgramId = existingBatch.programId || null;
+    let nextProgramId = previousProgramId;
+
+    if (hasProgramId) {
+      const rawProgramId = req.body.programId;
+      if (rawProgramId && rawProgramId !== "null") {
+        if (!assertObjectId(rawProgramId, "programId", res)) return;
+        nextProgramId = rawProgramId;
+      } else {
+        nextProgramId = null;
+      }
+    }
+
+    let selectedProgram = nextProgramId
+      ? await Program.findById(nextProgramId).lean()
+      : null;
+    if (hasProgramId && nextProgramId && (!selectedProgram || selectedProgram.status === "Archived")) {
+      return res.status(404).json({ success: false, message: "Program not found or archived." });
+    }
+
+    if (req.body.programType && !PROGRAM_TYPES.includes(req.body.programType)) {
+      return res.status(400).json({ success: false, message: "Program type must be Placement or Skill." });
+    }
+    if (selectedProgram && req.body.programType && selectedProgram.programType !== req.body.programType) {
+      return res.status(400).json({
+        success: false,
+        message: "The selected program does not belong to the selected program type.",
+      });
+    }
+    if (hasProgramId && !nextProgramId && req.body.programType) {
+      return res.status(400).json({ success: false, message: "Select a concrete Program before choosing a program type." });
+    }
+
+    const legacyProgramChanged = !nextProgramId
+      && req.body.programSelection
+      && req.body.programSelection !== existingBatch.programSelection;
+    const programChanged = String(previousProgramId || "") !== String(nextProgramId || "") || legacyProgramChanged;
     if (programChanged && req.body.confirmProgramReplacement !== true) {
       const studentCount = await Student.countDocuments({ batchId });
       if (studentCount > 0) {
+        const programLabel = selectedProgram?.name || selectedProgram?.programType || req.body.programSelection || "the selected Program";
         return res.status(409).json({
           success: false,
           code: "PROGRAM_REPLACEMENT_CONFIRMATION_REQUIRED",
-          message: `Confirm updating the program to "${req.body.programSelection}" for all ${studentCount} students in this batch.`,
+          message: `Confirm updating the batch Program to "${programLabel}" for all ${studentCount} students in this batch.`,
           data: { studentCount },
         });
       }
@@ -2738,7 +2880,14 @@ export const updateBatchAdmin = async (req, res) => {
         : (typeof existingBatch.batchSize === "number" ? existingBatch.batchSize : null),
       releaseTime: req.body.releaseTime || existingBatch.releaseTime || "00:00",
       status: req.body.status || existingBatch.status,
-      programSelection: req.body.programSelection || existingBatch.programSelection || "Placement",
+      programSelection: selectedProgram?.programType
+        || (nextProgramId ? existingBatch.programSelection : null)
+        || req.body.programSelection
+        || existingBatch.programSelection
+        || "Placement",
+      programId: nextProgramId,
+      programType: selectedProgram?.programType
+        || (nextProgramId ? existingBatch.programType : null),
     };
 
     let primaryCourseId = undefined;
@@ -2854,27 +3003,38 @@ export const updateBatchAdmin = async (req, res) => {
             { session }
           );
         }
-        if (programChanged) {
-          await Student.updateMany(
-            { batchId },
-            { $set: { programSelection: req.body.programSelection } },
-            { session }
-          );
-          const studentEmails = await Student.find({ batchId }).distinct("email");
-          if (studentEmails.length > 0) {
-            await User.updateMany(
-              { email: { $in: studentEmails } },
-              { $set: { programSelection: req.body.programSelection } },
-              { session }
-            );
-          }
-        }
       });
     } finally {
       await session.endSession();
     }
 
     await ensureDefaultBatchTracks(batchId);
+
+    if (selectedProgram) {
+      await assignProgramToBatch({
+        batchId,
+        program: selectedProgram,
+        previousProgramId,
+        source: "admin",
+      });
+    } else if (programChanged && !hasProgramId && req.body.programSelection) {
+      // Preserve compatibility for old clients that only know the legacy
+      // type label. New clients always send a concrete programId and use the
+      // synchronization above.
+      await Student.updateMany(
+        { batchId },
+        { $set: { programSelection: req.body.programSelection } }
+      );
+      const studentEmails = await Student.find({ batchId }).distinct("email");
+      if (studentEmails.length > 0) {
+        await User.updateMany(
+          { email: { $in: studentEmails } },
+          { $set: { programSelection: req.body.programSelection } }
+        );
+      }
+    } else if (programChanged && previousProgramId && !nextProgramId) {
+      await removeProgramFromBatch({ batchId, programId: previousProgramId });
+    }
 
     await writeAuditLog({
       verb: "Updated",
@@ -3155,24 +3315,69 @@ export const createStudentAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
 
+    if (batch) {
+      const batchCollegeIds = (batch.collegeIds?.length ? batch.collegeIds : [batch.collegeId])
+        .filter(Boolean)
+        .map((id) => String(id));
+      if (batchCollegeIds.length > 0 && !batchCollegeIds.includes(String(collegeId))) {
+        return res.status(400).json({
+          success: false,
+          message: "The student's college must be one of the colleges assigned to this batch.",
+        });
+      }
+    }
+
     if (programId && !requestedProgram) {
       return res.status(404).json({ success: false, message: "Program not found." });
+    }
+
+    if (requestedProgram?.status === "Archived") {
+      return res.status(400).json({ success: false, message: "Archived programs cannot be assigned." });
+    }
+
+    const batchProgram = batch?.programId
+      ? await Program.findById(batch.programId).lean()
+      : null;
+    if (batch?.programId && !batchProgram) {
+      return res.status(409).json({
+        success: false,
+        message: "This batch points to a Program that is no longer available. Update the batch before adding students.",
+      });
+    }
+    if (batchProgram && requestedProgram && String(batchProgram._id) !== String(requestedProgram._id)) {
+      return res.status(409).json({
+        success: false,
+        code: "BATCH_PROGRAM_CONFLICT",
+        message: `This batch is assigned to ${batchProgram.name}. Students added to it must use the batch Program.`,
+      });
     }
 
     if (existingStudent) {
       return res.status(409).json({ success: false, message: "A student with this email already exists." });
     }
 
-    const resolvedProgram = requestedProgram || (
+    const resolvedProgram = requestedProgram || batchProgram || (
       linkedUser
         ? await resolveProgramForSelection(programSelection || batch?.programSelection)
         : null
     );
-    const resolvedProgramType = LEGACY_PROGRAM_SELECTIONS.includes(resolvedProgram?.programType)
+    const resolvedProgramType = PROGRAM_TYPES.includes(resolvedProgram?.programType)
       ? resolvedProgram.programType
       : (LEGACY_PROGRAM_SELECTIONS.includes(programSelection)
         ? programSelection
         : (LEGACY_PROGRAM_SELECTIONS.includes(batch?.programSelection) ? batch.programSelection : "Placement Sprint"));
+
+    // A concrete Program selected while adding a student to a batch becomes
+    // the batch's canonical Program as well. This keeps future student
+    // additions on the same content/schedule and prevents type-only drift.
+    const concreteBatchProgram = requestedProgram || batchProgram;
+    if (batch && concreteBatchProgram) {
+      await assignProgramToBatch({
+        batchId: batch._id,
+        program: concreteBatchProgram,
+        source: "admin",
+      });
+    }
 
     const student = await Student.create({
       name: name.trim(),
@@ -3393,23 +3598,76 @@ export const updateStudentAdmin = async (req, res) => {
     const nextCollegeId = update.collegeId || existingStudent.collegeId;
     const nextEmail = update.email || existingStudent.email;
 
-    const [batch, duplicateStudent, linkedUser, requestedProgram] = await Promise.all([
+    const [batch, duplicateStudent, linkedUser] = await Promise.all([
       nextBatchId ? Batch.findById(nextBatchId).lean() : Promise.resolve(null),
       Student.findOne({ _id: { $ne: studentId }, email: nextEmail }).select("_id").lean(),
       User.findOne({ email: nextEmail }).select("_id").lean(),
-      nextProgramId ? Program.findById(nextProgramId).lean() : Promise.resolve(null),
     ]);
 
     if (nextBatchId && !batch) {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
 
-    if (nextProgramId && !requestedProgram) {
-      return res.status(404).json({ success: false, message: "Program not found." });
+    if (batch) {
+      const batchCollegeIds = (batch.collegeIds?.length ? batch.collegeIds : [batch.collegeId])
+        .filter(Boolean)
+        .map((id) => String(id));
+      if (batchCollegeIds.length > 0 && !batchCollegeIds.includes(String(nextCollegeId))) {
+        return res.status(400).json({
+          success: false,
+          message: "The student's college must be one of the colleges assigned to this batch.",
+        });
+      }
     }
 
     if (duplicateStudent) {
       return res.status(409).json({ success: false, message: "A student with this email already exists." });
+    }
+
+    let requestedProgram = nextProgramId
+      ? await Program.findById(nextProgramId).lean()
+      : null;
+    if (nextProgramId && !requestedProgram) {
+      return res.status(404).json({ success: false, message: "Program not found." });
+    }
+    if (requestedProgram?.status === "Archived") {
+      return res.status(400).json({ success: false, message: "Archived programs cannot be assigned." });
+    }
+
+    const batchProgram = batch?.programId
+      ? await Program.findById(batch.programId).lean()
+      : null;
+    if (batch?.programId && !batchProgram) {
+      return res.status(409).json({
+        success: false,
+        message: "This batch points to a Program that is no longer available. Update the batch before adding students.",
+      });
+    }
+
+    if (batchProgram && hasProgramId && nextProgramId && String(batchProgram._id) !== String(nextProgramId)) {
+      return res.status(409).json({
+        success: false,
+        code: "BATCH_PROGRAM_CONFLICT",
+        message: `This batch is assigned to ${batchProgram.name}. Students added to it must use the batch Program.`,
+      });
+    }
+
+    // A concrete batch Program is authoritative when a learner is moved
+    // into that batch. This also handles the BatchDetails "Add existing
+    // student" flow, which intentionally does not ask for a second Program.
+    if (batchProgram && (!hasProgramId || !nextProgramId)) {
+      nextProgramId = batchProgram._id;
+      requestedProgram = batchProgram;
+      update.programId = batchProgram._id;
+      update.programSelection = batchProgram.programType;
+    }
+
+    if (batch && requestedProgram && !batchProgram) {
+      await assignProgramToBatch({
+        batchId: batch._id,
+        program: requestedProgram,
+        source: "admin",
+      });
     }
 
     update.userId = linkedUser?._id || existingStudent.userId || null;
@@ -3442,7 +3700,11 @@ export const updateStudentAdmin = async (req, res) => {
       }
 
       const programChanged = String(previousProgramId || "") !== String(nextProgramId || "");
-      if (hasProgramId && requestedProgram && (programChanged || hasBatchId)) {
+      if (programChanged && previousProgramId && (hasProgramId || batchProgram)) {
+        await pauseProgramEnrollment({ student, user: linkedUser, programId: previousProgramId });
+      }
+
+      if (requestedProgram && (hasProgramId || hasBatchId || batchProgram)) {
         await upsertProgramEnrollment({
           user: linkedUser,
           student,
@@ -3455,9 +3717,27 @@ export const updateStudentAdmin = async (req, res) => {
       if (hasProgramId && !requestedProgram && previousProgramId) {
         await pauseProgramEnrollment({ student, user: linkedUser, programId: previousProgramId });
       }
-      if (hasProgramId) {
+      if (hasProgramId || hasBatchId || batchProgram) {
         await syncPrimaryProgramPointers({ student, user: linkedUser });
       }
+    }
+
+    if (requestedProgram) {
+      await Program.updateOne(
+        { _id: requestedProgram._id },
+        {
+          $addToSet: {
+            studentIds: student._id,
+            ...(nextBatchId ? { batchIds: nextBatchId } : {}),
+          },
+        }
+      );
+    }
+    if (previousProgramId && String(previousProgramId) !== String(nextProgramId || "")) {
+      await Program.updateOne(
+        { _id: previousProgramId },
+        { $pull: { studentIds: student._id } }
+      );
     }
 
     await writeAuditLog({

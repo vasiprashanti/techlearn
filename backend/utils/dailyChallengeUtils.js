@@ -250,7 +250,17 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
   }
 
   let trackTemplate = null;
-  if (batch) {
+  // Program-owned Daily Challenge content is authoritative. A batch track
+  // is only a legacy fallback for batches that have no concrete Program.
+  if (program?.trackTemplateIds?.length) {
+    trackTemplate = await TrackTemplate.findOne({
+      _id: { $in: program.trackTemplateIds },
+      trackType: "Daily Challenge",
+      status: "Active",
+    });
+  }
+
+  if (!trackTemplate && !schedule.programId && batch) {
     trackTemplate = batch.assignedDailyChallengeTrack
       ? await TrackTemplate.findById(batch.assignedDailyChallengeTrack)
       : null;
@@ -269,17 +279,8 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     }
   }
 
-  if (!trackTemplate) {
-    if (program?.trackTemplateIds?.length) {
-      trackTemplate = await TrackTemplate.findOne({
-        _id: { $in: program.trackTemplateIds },
-        trackType: "Daily Challenge",
-        status: "Active",
-      });
-    }
-    if (!trackTemplate && !schedule.programId) {
-      trackTemplate = await TrackTemplate.findOne({ trackType: "Daily Challenge", status: "Active" }).sort({ createdAt: -1 });
-    }
+  if (!trackTemplate && !schedule.programId) {
+    trackTemplate = await TrackTemplate.findOne({ trackType: "Daily Challenge", status: "Active" }).sort({ createdAt: -1 });
   }
 
   const individualStartDate = batch ? null : (schedule.individualStartDate || studentContext.student?.createdAt || user?.createdAt || new Date());

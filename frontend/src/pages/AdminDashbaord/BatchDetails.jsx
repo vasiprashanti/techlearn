@@ -40,11 +40,18 @@ const BatchDetails = () => {
   const [tracks, setTracks] = useState([]);
   const [courses, setCourses] = useState([]);
   const attachedCourses = useMemo(() => {
+    const mappedProgramCourses = Array.isArray(batchDetail?.programCourses)
+      ? batchDetail.programCourses.filter(Boolean)
+      : [];
+    if (mappedProgramCourses.length > 0) {
+      return mappedProgramCourses;
+    }
+
     return courses.filter((course) =>
       Array.isArray(course.assignedBatchIds) &&
       course.assignedBatchIds.map(String).includes(String(batchId))
     );
-  }, [courses, batchId]);
+  }, [batchDetail?.programCourses, courses, batchId]);
   const [selectedAttachedCourseId, setSelectedAttachedCourseId] = useState('');
   const [primaryCourseId, setPrimaryCourseId] = useState('');
   const [isSavingAttachedCourse, setIsSavingAttachedCourse] = useState(false);
@@ -213,9 +220,12 @@ const BatchDetails = () => {
 
   const openAddStudent = () => {
     setFormError('');
-    const currentBatchCollegeName = batch.college;
-    const matchingCollege = colleges.find((college) => college.name === currentBatchCollegeName);
-    
+    const batchCollegeIds = Array.isArray(batch.collegeIds)
+      ? batch.collegeIds.map((collegeId) => String(collegeId?._id || collegeId))
+      : [];
+    const matchingCollege = colleges.find((college) => batchCollegeIds.includes(String(college.id)))
+      || colleges.find((college) => college.name === String(batch.college || '').split(',')[0].trim());
+
     setStudentForm({
       name: '',
       email: '',
@@ -287,13 +297,17 @@ const BatchDetails = () => {
       setFormError('');
       setIsSavingStudent(true);
       try {
+        const batchProgramId = batch.programId?._id || batch.programId || '';
         await adminAPI.updateStudent(selectedStudent.id || selectedStudent._id, {
           name: selectedStudent.name,
           email: selectedStudent.email,
           collegeId: selectedStudent.collegeId || studentForm.collegeId,
           batchId: studentForm.batchId || batch.id || batchId,
+          ...(batchProgramId || selectedStudent.programId
+            ? { programId: batchProgramId || selectedStudent.programId?._id || selectedStudent.programId }
+            : {}),
           primaryTrack: studentForm.track || selectedStudent.track || 'General Track',
-          programSelection: selectedStudent.programSelection || batch.programSelection || 'Placement',
+          programSelection: batch.programType || selectedStudent.programSelection || batch.programSelection || 'Placement',
           status: studentForm.status || selectedStudent.status || 'Active',
         });
         const remoteBatch = await adminAPI.getBatch(batchId);
@@ -320,6 +334,9 @@ const BatchDetails = () => {
         email: studentForm.email.trim().toLowerCase(),
         collegeId: studentForm.collegeId,
         batchId: studentForm.batchId,
+        ...(batch.programId?._id || batch.programId
+          ? { programId: batch.programId?._id || batch.programId }
+          : {}),
         primaryTrack: studentForm.track.trim() || 'General Track',
         status: studentForm.status,
       };

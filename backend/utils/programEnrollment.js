@@ -2,6 +2,7 @@ import Program from "../models/Program.js";
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import User from "../models/User.js";
 import Student from "../models/Student.js";
+import Batch from "../models/Batch.js";
 import ProgramReadinessLead from "../models/ProgramReadinessLead.js";
 import { matchProgramsForUser } from "./programMatching.js";
 
@@ -14,6 +15,166 @@ const getId = (value) => value?._id || value || null;
 
 const getAccessTier = (program, fallback) =>
   fallback || (program?.pricingType === "Paid" ? "Member" : "Free");
+
+const getUserForStudent = async (student) => {
+  const conditions = [
+    student?.userId ? { _id: getId(student.userId) } : null,
+    student?.email ? { email: String(student.email).trim().toLowerCase() } : null,
+  ].filter(Boolean);
+
+  return conditions.length ? User.findOne({ $or: conditions }).lean() : null;
+};
+
+/**
+ * Make one concrete Program the canonical schedule/content source for a
+ * batch. A batch has one optional program; every learner already in that
+ * batch is moved onto that program's batch schedule while preserving their
+ * individualStartDate for a later return to an individual schedule.
+ */
+export const assignProgramToBatch = async ({ batchId, program, previousProgramId = null, source = "admin" }) => {
+  const resolvedBatchId = getId(batchId);
+  const resolvedProgramId = getId(program);
+
+  if (!resolvedBatchId || !resolvedProgramId || !program?.programType) {
+    throw new Error("A valid batch and concrete Program are required.");
+  }
+
+  const batch = await Batch.findById(resolvedBatchId).lean();
+  if (!batch) throw new Error("Batch not found.");
+
+  const students = await Student.find({ batchId: resolvedBatchId }).lean();
+  const studentIds = students.map((student) => student._id).filter(Boolean);
+  const existingBatchProgramIds = await ProgramEnrollment.find({
+    batchId: resolvedBatchId,
+    status: "Active",
+  }).distinct("programId");
+  const oldProgramIds = [
+    getId(previousProgramId),
+    getId(batch.programId),
+    ...existingBatchProgramIds.map(getId),
+  ]
+    .filter(Boolean)
+    .filter((id, index, ids) => ids.findIndex((candidate) => String(candidate) === String(id)) === index)
+    .filter((id) => String(id) !== String(resolvedProgramId));
+
+  for (const student of students) {
+    const user = await getUserForStudent(student);
+    const identifiers = [
+      { studentId: student._id },
+      user?._id ? { userId: user._id } : null,
+    ].filter(Boolean);
+
+    // If this batch used to provide another Program, move that old
+    // enrollment back to its own individual schedule instead of letting the
+    // new batch assignment silently rewrite an unrelated Program.
+    if (identifiers.length) {
+      await ProgramEnrollment.updateMany(
+        {
+          batchId: resolvedBatchId,
+          status: "Active",
+          programId: { $ne: resolvedProgramId },
+          $or: identifiers,
+        },
+        { $set: { batchId: null } }
+      );
+    }
+
+    await Student.updateOne(
+      { _id: student._id },
+      { $set: { programId: resolvedProgramId, programSelection: program.programType } }
+    );
+
+    if (user?._id) {
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            batchId: resolvedBatchId,
+            programId: resolvedProgramId,
+            programSelection: program.programType,
+            ...(batch.startDate ? { startDate: batch.startDate } : {}),
+          },
+        }
+      );
+
+      await upsertProgramEnrollment({
+        user,
+        student,
+        program,
+        batchId: resolvedBatchId,
+        source,
+      });
+    }
+  }
+
+  await Program.updateOne(
+    { _id: resolvedProgramId },
+    {
+      $addToSet: {
+        batchIds: resolvedBatchId,
+        ...(studentIds.length ? { studentIds: { $each: studentIds } } : {}),
+      },
+    }
+  );
+
+  if (oldProgramIds.length) {
+    await Program.updateMany(
+      { _id: { $in: oldProgramIds } },
+      { $pull: { batchIds: resolvedBatchId } }
+    );
+  }
+
+  await Batch.updateOne(
+    { _id: resolvedBatchId },
+    {
+      $set: {
+        programId: resolvedProgramId,
+        programType: program.programType,
+        programSelection: program.programType,
+      },
+    }
+  );
+
+  return {
+    batchId: resolvedBatchId,
+    programId: resolvedProgramId,
+    studentCount: students.length,
+    reassignedStudentCount: students.length,
+  };
+};
+
+/**
+ * Remove a Program from a batch without removing the learners from the
+ * batch. Their enrollment for that Program becomes individual, so the
+ * learner keeps access and returns to the original individual Day 1 anchor.
+ */
+export const removeProgramFromBatch = async ({ batchId, programId }) => {
+  const resolvedBatchId = getId(batchId);
+  const resolvedProgramId = getId(programId);
+  if (!resolvedBatchId || !resolvedProgramId) return { modifiedCount: 0 };
+
+  const batch = await Batch.findById(resolvedBatchId).lean();
+  if (!batch) return { modifiedCount: 0 };
+
+  const result = await ProgramEnrollment.updateMany(
+    { batchId: resolvedBatchId, programId: resolvedProgramId, status: "Active" },
+    { $set: { batchId: null } }
+  );
+
+  if (String(getId(batch.programId) || "") === String(resolvedProgramId)) {
+    await Batch.updateOne(
+      { _id: resolvedBatchId, programId: resolvedProgramId },
+      { $set: { programId: null, programType: null } }
+    );
+  }
+
+  await Program.updateOne(
+    { _id: resolvedProgramId },
+    { $pull: { batchIds: resolvedBatchId } }
+  );
+
+  return result;
+};
 
 export const resolveProgramForSelection = async (programSelection) => {
   const selection = normalizeSelection(programSelection);

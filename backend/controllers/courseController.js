@@ -519,11 +519,17 @@ export const getAllCourses = async (req, res) => {
           programCourseIds.forEach((courseId) => allowedProgramCourseIds.add(courseId));
         }
 
-        if (batch && batch.status === "Active") {
+        if (schedule.programId) {
+          // A concrete Program is the only content source for this learner.
+          // Do not surface a legacy/manual batch course that is not mapped to
+          // the selected Program.
+          filter = programCourseIds.length
+            ? { _id: { $in: programCourseIds } }
+            : { _id: { $in: [] } };
+        } else if (batch && batch.status === "Active") {
           allowedBatchIds.add(String(batch._id));
           const primaryCourseId = batch.attachedCourse;
           if (primaryCourseId) allowedProgramCourseIds.add(String(primaryCourseId));
-          programCourseIds.forEach((courseId) => allowedProgramCourseIds.add(courseId));
           const supportingCourseIds = (batch.supportingCourses || []).map(String);
           const conditions = [
             ...publicConditions,
@@ -659,8 +665,29 @@ export const getCourseById = async (req, res) => {
           .filter((assignedBatch) => assignedBatch?.status === "Active")
           .map((assignedBatch) => String(assignedBatch._id))
       );
-      const hasBatchAccess = Boolean(student?.batchId && activeBatchIds.has(String(student.batchId)))
-        || enrollments.some((enrollment) => enrollment.batchId && activeBatchIds.has(String(enrollment.batchId)));
+      const activeBatchById = new Map(
+        batchResults
+          .map((result) => result.batch)
+          .filter((assignedBatch) => assignedBatch?.status === "Active")
+          .map((assignedBatch) => [String(assignedBatch._id), assignedBatch])
+      );
+      const hasBatchAccess = enrollments.some((enrollment) => {
+        if (!enrollment.batchId) return false;
+        const assignedBatch = activeBatchById.get(String(enrollment.batchId));
+        if (!assignedBatch) return false;
+        // A concrete batch Program must match the learner's exact Program;
+        // legacy batches without programId retain their old batch access.
+        return !assignedBatch.programId
+          || String(assignedBatch.programId) === String(enrollment.programId);
+      }) || Boolean(
+        student?.batchId
+        && activeBatchIds.has(String(student.batchId))
+        && (() => {
+          const assignedBatch = activeBatchById.get(String(student.batchId));
+          return !assignedBatch?.programId
+            || String(assignedBatch.programId) === String(student.programId || req.user.programId || "");
+        })()
+      );
       const hasProgramAccess = enrollments.some((enrollment) => {
         const linkedProgram = linkedPrograms.find((candidate) => String(candidate._id) === String(enrollment.programId));
         return linkedProgram &&
@@ -722,11 +749,12 @@ export const getCourseById = async (req, res) => {
       const supportingIds = (batch?.supportingCourses || []).map(String);
       const assignedIds = (course.assignedBatchIds || []).map(String);
       const programCourseIds = (program?.courseIds || []).map(String);
-      const isAttached =
-        primaryId === courseIdStr ||
-        supportingIds.includes(courseIdStr) ||
-        (batch && assignedIds.includes(String(batch._id))) ||
-        programCourseIds.includes(courseIdStr);
+      const isAttached = schedule.programId
+        ? programCourseIds.includes(courseIdStr)
+        : primaryId === courseIdStr
+          || supportingIds.includes(courseIdStr)
+          || (batch && assignedIds.includes(String(batch._id)))
+          || programCourseIds.includes(courseIdStr);
 
       const scheduleOwnerIsActive = batch ? batch.status === "Active" : program?.status === "Active";
       if (scheduleOwnerIsActive && isAttached) {
@@ -737,9 +765,12 @@ export const getCourseById = async (req, res) => {
         isScheduleActive = true;
       }
 
-      // The first program course is the individual learner's primary course;
-      // a batch attachedCourse remains authoritative for cohort learners.
-      isPlacementPrimary = primaryId === courseIdStr || (!primaryId && String(programCourseIds[0] || "") === courseIdStr);
+      // The first Program course is the learner's primary course. A
+      // batch-level primary course is retained only for legacy batches that
+      // have no concrete Program assignment.
+      isPlacementPrimary = schedule.programId
+        ? String(programCourseIds[0] || "") === courseIdStr
+        : primaryId === courseIdStr || (!primaryId && String(programCourseIds[0] || "") === courseIdStr);
     }
 
     // Fetch topics using topicIds array and populate notesId

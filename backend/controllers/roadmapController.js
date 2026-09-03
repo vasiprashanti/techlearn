@@ -374,21 +374,47 @@ const getViewerContext = async (user) => {
   if (!user) return { student: null, schedule: null, batchExpired: false };
   const student = await findStudentForUser(user);
   const schedule = await resolveProgramSchedule({ user, student });
-  return { student, schedule, batchExpired: Boolean(schedule.batchExpired) };
+  const program = schedule?.programId
+    ? await Program.findById(schedule.programId).select("_id roadmapIds").lean()
+    : null;
+  return { student, schedule, program, batchExpired: Boolean(schedule.batchExpired) };
 };
 
-const isRoadmapEligibleForViewer = ({ roadmap, user, student, schedule }) => {
+const isRoadmapEligibleForViewer = ({ roadmap, user, student, schedule, programOwned = false }) => {
   // Published roadmaps are public to signed-out visitors. Once a learner is
   // authenticated, branch and legacy batch restrictions are enforced here.
   if (!user) return true;
 
   const assignedBatchIds = normalizeBatchIds(roadmap?.assignedBatchIds);
-  if (assignedBatchIds.length) {
+  if (assignedBatchIds.length && !programOwned) {
     const currentBatchId = schedule?.batchId ? String(getId(schedule.batchId)) : "";
     if (!currentBatchId || !assignedBatchIds.includes(currentBatchId)) return false;
   }
 
   return isRoadmapBranchEligible({ roadmap, user, student });
+};
+
+const findProgramRoadmaps = async ({ program, user, student, schedule }) => {
+  const roadmapIds = (program?.roadmapIds || [])
+    .map((roadmap) => getId(roadmap))
+    .filter(Boolean);
+  if (!roadmapIds.length) return [];
+
+  const roadmaps = await Roadmap.find({
+    _id: { $in: roadmapIds },
+    status: "Active",
+  }).lean();
+  const order = new Map(roadmapIds.map((id, index) => [String(id), index]));
+
+  return roadmaps
+    .filter((roadmap) => isRoadmapEligibleForViewer({
+      roadmap,
+      user,
+      student,
+      schedule,
+      programOwned: true,
+    }))
+    .sort((first, second) => (order.get(String(first._id)) ?? 0) - (order.get(String(second._id)) ?? 0));
 };
 
 const findActiveRoleRoadmap = async ({ targetRole, user, student, schedule }) => {
@@ -409,9 +435,27 @@ const findActiveRoleRoadmap = async ({ targetRole, user, student, schedule }) =>
 
 export const getRoadmapsForYou = async (req, res) => {
   try {
-    const { student, schedule, batchExpired } = await getViewerContext(req.user);
+    const { student, schedule, program, batchExpired } = await getViewerContext(req.user);
     if (batchExpired) {
       return res.status(403).json({ success: false, message: "This batch has ended and roadmap access has been revoked." });
+    }
+
+    // A concrete Program owns the learner's roadmap access. Do not substitute
+    // an unrelated role-matched or legacy batch roadmap when the selected
+    // Program has no roadmap attached.
+    if (schedule?.programId) {
+      const programRoadmap = (await findProgramRoadmaps({
+        program,
+        user: req.user,
+        student,
+        schedule,
+      }))[0] || null;
+      return res.status(200).json({
+        success: true,
+        data: programRoadmap ? formatRoadmap(programRoadmap) : null,
+        targetRole: student?.targetRole?.trim() || req.user?.targetRole?.trim() || "",
+        reason: programRoadmap ? null : "no-program-roadmap",
+      });
     }
 
     const targetRole = student?.targetRole?.trim() || req.user?.targetRole?.trim() || "";
@@ -434,16 +478,24 @@ export const getRoadmapsForYou = async (req, res) => {
 
 export const listPublishedRoadmaps = async (req, res) => {
   try {
-    const { student, schedule, batchExpired } = await getViewerContext(req.user);
+    const { student, schedule, program, batchExpired } = await getViewerContext(req.user);
     if (batchExpired) {
       return res.status(403).json({ success: false, message: "This batch has ended and roadmap access has been revoked." });
     }
 
-    const roadmaps = await Roadmap.find({ status: "Active" })
-      .sort({ updatedAt: -1, createdAt: -1 })
-      .lean();
+    const roadmaps = schedule?.programId
+      ? await findProgramRoadmaps({ program, user: req.user, student, schedule })
+      : await Roadmap.find({ status: "Active" })
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .lean();
     const eligible = roadmaps.filter((roadmap) =>
-      isRoadmapEligibleForViewer({ roadmap, user: req.user, student, schedule })
+      isRoadmapEligibleForViewer({
+        roadmap,
+        user: req.user,
+        student,
+        schedule,
+        programOwned: Boolean(schedule?.programId),
+      })
     ).map(formatRoadmap);
 
     return res.status(200).json({ success: true, data: eligible });
@@ -463,8 +515,21 @@ export const getPublishedRoadmapById = async (req, res) => {
     const roadmap = await Roadmap.findOne({ _id: roadmapId, status: "Active" }).lean();
     if (!roadmap) return res.status(404).json({ success: false, message: "Roadmap not found." });
 
-    const { student, schedule, batchExpired } = await getViewerContext(req.user);
-    if (batchExpired || !isRoadmapEligibleForViewer({ roadmap, user: req.user, student, schedule })) {
+    const { student, schedule, program, batchExpired } = await getViewerContext(req.user);
+    const programRoadmapIds = new Set(
+      (program?.roadmapIds || []).map((programRoadmap) => String(getId(programRoadmap)))
+    );
+    if (
+      batchExpired
+      || (schedule?.programId && !programRoadmapIds.has(String(roadmap._id)))
+      || !isRoadmapEligibleForViewer({
+        roadmap,
+        user: req.user,
+        student,
+        schedule,
+        programOwned: Boolean(schedule?.programId),
+      })
+    ) {
       return res.status(404).json({ success: false, message: "Roadmap not found." });
     }
 
@@ -477,7 +542,7 @@ export const getPublishedRoadmapById = async (req, res) => {
 
 export const getCurrentUserRoadmap = async (req, res) => {
   try {
-    const { student, schedule, batchExpired } = await getViewerContext(req.user);
+    const { student, schedule, program: viewerProgram, batchExpired } = await getViewerContext(req.user);
     if (batchExpired) {
       return res.status(403).json({
         success: false,
@@ -493,12 +558,32 @@ export const getCurrentUserRoadmap = async (req, res) => {
     const program = schedule?.programId
       ? await Program.findById(schedule.programId)
         .select("_id name programType roadmapIds")
-        .populate("roadmapIds")
         .lean()
       : null;
 
-    // Legacy batch-specific roadmaps still take precedence when the learner is
-    // explicitly on that batch schedule.
+    if (schedule?.programId) {
+      const programRoadmap = (await findProgramRoadmaps({
+        program: program || viewerProgram,
+        user: req.user,
+        student,
+        schedule,
+      }))[0] || null;
+      if (programRoadmap) {
+        return res.status(200).json({
+          success: true,
+          data: {
+            ...formatRoadmap(programRoadmap),
+            scheduleType: schedule.scheduleType || "individual",
+            programId: schedule.programId,
+          },
+        });
+      }
+
+      return res.status(200).json({ success: true, data: null });
+    }
+
+    // Legacy batch-specific roadmaps still apply to batches that predate the
+    // concrete Program relationship.
     if (schedule?.batchId) {
       const roadmap = await Roadmap.findOne({ assignedBatchIds: schedule.batchId, status: "Active" })
         .sort({ updatedAt: -1 })
@@ -507,7 +592,7 @@ export const getCurrentUserRoadmap = async (req, res) => {
       if (roadmap) {
         return res.status(200).json({
           success: true,
-          data: { ...formatRoadmap(roadmap), scheduleType: "batch", programId: schedule.programId || null },
+          data: { ...formatRoadmap(roadmap), scheduleType: "batch", programId: null },
         });
       }
     }

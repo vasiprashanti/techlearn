@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
+import Batch from "../models/Batch.js";
 import Program from "../models/Program.js";
 import Blueprint from "../models/Blueprint.js";
 import ProgramAssignment from "../models/ProgramAssignment.js";
@@ -145,6 +146,8 @@ const run = () => {
   assert.equal(String(fresh[0].question._id), String(questionA._id));
 
   assert.equal(Program.schema.path("programType").isRequired, true);
+  assert.equal(Batch.schema.path("programId").options.ref, "Program");
+  assert.deepEqual(Batch.schema.path("programType").enumValues, ["Placement", "Skill"]);
   assert.equal(Blueprint.schema.path("configurations").isRequired, true);
   assert.equal(ProgramAssignment.schema.path("phase").isRequired, true);
   assert.equal(ProgramReadinessLead.schema.path("status").enumValues.includes("Converted"), true);

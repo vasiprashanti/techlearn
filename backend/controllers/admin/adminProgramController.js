@@ -15,6 +15,8 @@ import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import Blueprint from "../../models/Blueprint.js";
 import {
   pauseProgramEnrollment,
+  assignProgramToBatch,
+  removeProgramFromBatch,
   syncPrimaryProgramPointers,
   upsertProgramEnrollment,
 } from "../../utils/programEnrollment.js";
@@ -29,13 +31,13 @@ export const ENTITY_CONFIG = {
     model: Batch,
     fieldKey: "batchIds",
     labelField: "name",
-    selectFields: "_id name startDate expiryDate status",
+    selectFields: "_id name startDate expiryDate status programId programType programSelection collegeId collegeIds",
   },
   students: {
     model: Student,
     fieldKey: "studentIds",
     labelField: "name",
-    selectFields: "_id name email rollNo status batchId userId accuracy overallAccuracy createdAt",
+    selectFields: "_id name email rollNo status batchId userId programId programSelection accuracy overallAccuracy createdAt",
   },
   courses: {
     model: Course,
@@ -1092,13 +1094,49 @@ export const attachEntities = async (req, res) => {
       }
 
       const students = await Student.find({ _id: { $in: existingEntityIds } }).lean();
+      const selectedBatchProgram = selectedBatch?.programId
+        ? await Program.findById(selectedBatch.programId).lean()
+        : null;
+
+      if (selectedBatch?.programId && !selectedBatchProgram) {
+        return res.status(409).json({
+          success: false,
+          message: "The selected batch points to a Program that is no longer available.",
+        });
+      }
+      if (selectedBatchProgram && String(selectedBatchProgram._id) !== String(programId)) {
+        return res.status(409).json({
+          success: false,
+          code: "BATCH_PROGRAM_CONFLICT",
+          message: `This batch is already assigned to ${selectedBatchProgram.name}. Attach students using that Program or update the batch first.`,
+        });
+      }
+
       for (const student of students) {
-        if (selectedBatch && student.collegeId && selectedBatch.collegeId && String(student.collegeId) !== String(selectedBatch.collegeId)) {
+        const batchCollegeIds = [
+          ...(selectedBatch?.collegeIds || []),
+          ...(selectedBatch?.collegeIds?.length ? [] : [selectedBatch?.collegeId]),
+        ].filter(Boolean).map((collegeId) => String(collegeId._id || collegeId));
+        if (selectedBatch && student.collegeId && batchCollegeIds.length && !batchCollegeIds.includes(String(student.collegeId))) {
           return res.status(400).json({
             success: false,
-            message: `Selected batch does not belong to ${student.name || "one of the selected students"}.`,
+            message: `Selected batch does not include the college for ${student.name || "one of the selected students"}.`,
           });
         }
+      }
+
+      // Selecting a batch for a Program also establishes the batch-level
+      // relationship when it has not been configured yet. Future students
+      // added from the Batch page will then inherit the same Program.
+      if (selectedBatch && !selectedBatchProgram) {
+        await assignProgramToBatch({
+          batchId: selectedBatch._id,
+          program,
+          source: "admin",
+        });
+      }
+
+      for (const student of students) {
 
         // Keep the legacy Student.batchId only as a compatibility pointer.
         // The enrollment created below is the authoritative program schedule.
@@ -1107,6 +1145,7 @@ export const attachEntities = async (req, res) => {
           {
             $set: {
               programId,
+              programSelection: program.programType,
               ...(selectedBatch ? { batchId: selectedBatch._id } : {}),
             },
           }
@@ -1125,6 +1164,7 @@ export const attachEntities = async (req, res) => {
             {
               $set: {
                 programId,
+                programSelection: program.programType,
                 ...(selectedBatch ? { batchId: selectedBatch._id, startDate: selectedBatch.startDate } : {}),
               },
             }
@@ -1156,6 +1196,36 @@ export const attachEntities = async (req, res) => {
       return res.json({
         success: true,
         message: `Successfully enrolled ${existingEntityIds.length} student${existingEntityIds.length === 1 ? "" : "s"} ${selectedBatch ? "on the selected batch schedule" : "on individual program schedules"}.`,
+        program: updatedProgram,
+        attachedEntities: updatedProgram[config.fieldKey],
+      });
+    }
+
+    if (entityType === "batches") {
+      const batches = await Batch.find({ _id: { $in: existingEntityIds } }).lean();
+      for (const batch of batches) {
+        await assignProgramToBatch({
+          batchId: batch._id,
+          program,
+          previousProgramId: batch.programId || null,
+          source: "admin",
+        });
+      }
+
+      const updatedProgram = await Program.findByIdAndUpdate(
+        programId,
+        {
+          $addToSet: { batchIds: { $each: existingEntityIds } },
+          $set: { updatedBy: req.user?._id || null },
+        },
+        { new: true, runValidators: true }
+      )
+        .populate(config.fieldKey, config.selectFields)
+        .lean();
+
+      return res.json({
+        success: true,
+        message: `Successfully assigned ${existingEntityIds.length} batch${existingEntityIds.length === 1 ? "" : "es"} to ${program.name}.`,
         program: updatedProgram,
         attachedEntities: updatedProgram[config.fieldKey],
       });
@@ -1211,6 +1281,31 @@ export const detachEntity = async (req, res) => {
     }
 
     const config = ENTITY_CONFIG[entityType];
+
+    if (entityType === "batches") {
+      await removeProgramFromBatch({ batchId: entityId, programId });
+
+      const updatedProgram = await Program.findByIdAndUpdate(
+        programId,
+        {
+          $pull: { batchIds: entityId },
+          $set: { updatedBy: req.user?._id || null },
+        },
+        { new: true, runValidators: true }
+      )
+        .populate(config.fieldKey, config.selectFields)
+        .lean();
+
+      if (!updatedProgram) {
+        return res.status(404).json({ success: false, message: "Program not found" });
+      }
+
+      return res.json({
+        success: true,
+        message: "Successfully detached the Program from the batch. Learners retain individual access.",
+        program: updatedProgram,
+      });
+    }
 
     if (entityType === "students") {
       const student = await Student.findById(entityId).lean();

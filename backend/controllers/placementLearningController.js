@@ -57,19 +57,19 @@ export const getPlacementLearningDashboard = async (req, res) => {
       });
     }
 
-    let targetCourseId = batch?.attachedCourse || null;
     let program = schedule.programId ? await Program.findById(schedule.programId).lean() : null;
 
-    if (!targetCourseId) {
-      if (!program && student.programSelection) {
-        program = await Program.findOne({ programType: student.programSelection, status: "Active" }).sort({ createdAt: -1 }).lean();
-      }
-      if (program?.courseIds?.length) {
-        targetCourseId = program.courseIds[0];
-      }
+    if (!program && student.programSelection) {
+      program = await Program.findOne({ programType: student.programSelection, status: "Active" }).sort({ createdAt: -1 }).lean();
     }
 
-    if (!targetCourseId) {
+    // A concrete Program owns the learner's course sequence. Batch-level
+    // course fields remain a compatibility fallback for legacy batches only.
+    let targetCourseId = program?.courseIds?.[0]
+      || (!schedule.programId ? batch?.attachedCourse : null)
+      || null;
+
+    if (!targetCourseId && !program) {
       const fallbackCourse = await Course.findOne({ status: "Active" }).sort({ createdAt: -1 }).lean();
       if (fallbackCourse) {
         targetCourseId = fallbackCourse._id;
@@ -122,9 +122,9 @@ export const getPlacementLearningDashboard = async (req, res) => {
 
     // Batch supporting courses are cohort-specific. Individual learners use
     // the remaining courses attached to their program.
-    const supportingCourseIds = batch?.supportingCourses?.length
-      ? batch.supportingCourses
-      : (program?.courseIds || []).filter((id) => String(id) !== String(targetCourseId));
+    const supportingCourseIds = program?.courseIds
+      ? program.courseIds.filter((id) => String(id) !== String(targetCourseId))
+      : (batch?.supportingCourses || []);
     const supportingCourses = supportingCourseIds.length > 0
       ? await Course.find({ _id: { $in: supportingCourseIds } }).select("title topicIds").lean()
       : [];

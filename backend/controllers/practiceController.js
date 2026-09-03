@@ -458,7 +458,12 @@ export const recordPracticeSubmission = async (req, res) => {
     // Intercept for Daily Task tracking
     try {
       const email = req.user.email.toLowerCase().trim();
-      const student = await mongoose.model("Student").findOne({ email });
+      const student = await mongoose.model("Student").findOne({
+        $or: [
+          { userId: req.user._id },
+          ...(email ? [{ email }] : []),
+        ],
+      });
       if (student) {
         const schedule = await resolveProgramSchedule({ user: req.user, student });
         if (schedule.batchExpired) {
@@ -467,10 +472,8 @@ export const recordPracticeSubmission = async (req, res) => {
         const batch = schedule.batchId
           ? await mongoose.model("Batch").findById(schedule.batchId)
           : null;
-        let trackTemplate = batch?.assignedDailyTaskTrack
-          ? await mongoose.model("TrackTemplate").findById(batch.assignedDailyTaskTrack)
-          : null;
-        if (!trackTemplate && schedule.programId) {
+        let trackTemplate = null;
+        if (schedule.programId) {
           const program = await mongoose.model("Program").findById(schedule.programId).select("trackTemplateIds").lean();
           if (program?.trackTemplateIds?.length) {
             trackTemplate = await mongoose.model("TrackTemplate").findOne({
@@ -479,6 +482,10 @@ export const recordPracticeSubmission = async (req, res) => {
               status: "Active",
             });
           }
+        } else if (batch?.assignedDailyTaskTrack) {
+          // Legacy batches without a concrete Program retain their original
+          // batch-level Daily Task tracking.
+          trackTemplate = await mongoose.model("TrackTemplate").findById(batch.assignedDailyTaskTrack);
         }
         if (trackTemplate) {
             const getISTDateParts = (date) => {
@@ -855,7 +862,13 @@ export const getPracticeStats = async (req, res) => {
       if (submission.isCorrect) correctByTrack[submission.track].add(submission.questionId);
     }
 
-    const studentObj = await mongoose.model("Student").findOne({ email: req.user.email.toLowerCase().trim() }).lean();
+    const email = req.user.email.toLowerCase().trim();
+    const studentObj = await mongoose.model("Student").findOne({
+      $or: [
+        { userId: req.user._id },
+        ...(email ? [{ email }] : []),
+      ],
+    }).lean();
     const currentStreak = studentObj ? (studentObj.streak || 0) : 0;
 
     for (const track of TRACKS) {

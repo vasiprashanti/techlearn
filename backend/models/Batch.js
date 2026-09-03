@@ -111,6 +111,20 @@ const batchSchema = new mongoose.Schema(
       enum: ["Skill", "Placement", "skill", "placement", "Placement Sprint", "Full Stack Project Program", "Both"],
       default: "Placement",
     },
+    // A batch may optionally provide the fixed schedule for one concrete
+    // Program. `programSelection` is retained only for legacy records that
+    // predate the Program entity relationship.
+    programId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Program",
+      default: null,
+      index: true,
+    },
+    programType: {
+      type: String,
+      enum: ["Placement", "Skill"],
+      default: null,
+    },
   },
   { timestamps: true }
 );
