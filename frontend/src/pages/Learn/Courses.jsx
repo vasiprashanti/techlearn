@@ -189,6 +189,14 @@ export default function Courses() {
     setSelectedWaitlistProgram(program);
   };
 
+  const handleProgramAction = (program) => {
+    if (program.pricingType === 'Free' && program._id) {
+      navigate(`/learn/programs/${program._id}`);
+      return;
+    }
+    handleJoinWaitlistClick(program);
+  };
+
   // Hook scroll boundaries trackers for Self-Paced Courses
   useEffect(() => {
     if (!selfPacedApi) return;
@@ -328,9 +336,6 @@ export default function Courses() {
                                 <div className="dashboard-icon-badge group-hover:scale-105 transition-transform duration-500 p-1.5 bg-[#3C83F6]/10 rounded-lg">
                                   <Code className="w-4 h-4 text-[#3C83F6] dark:text-[#8fd9ff]" />
                                 </div>
-                                <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                                  FREE
-                                </span>
                               </div>
 
                               <div className="relative z-10 mt-auto text-left">
@@ -435,10 +440,10 @@ export default function Courses() {
 
                         <button
                           type="button"
-                          onClick={() => handleJoinWaitlistClick(program)}
+                          onClick={() => handleProgramAction(program)}
                           className="w-full py-2.5 sm:py-3 flex items-center justify-center gap-2 rounded-xl bg-[#00113b] text-white text-xs sm:text-sm font-bold shadow-sm transition hover:bg-[#001b5c] dark:!bg-[#bceaff] dark:!text-[#020b23] dark:hover:!bg-[#daf0fa] cursor-pointer"
                         >
-                          <span>Join Waitlist</span>
+                          <span>{program.pricingType === 'Free' ? 'Explore Program' : 'Join Waitlist'}</span>
                           <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                       </div>
