@@ -1,5 +1,6 @@
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import Program from "../models/Program.js";
+import Batch from "../models/Batch.js";
 import { combineDateAndTime, getTrackAssignmentDate } from "./trackAssignmentSchedule.js";
 import { expireBatchIfNeeded } from "./batchLifecycle.js";
 
@@ -14,6 +15,20 @@ const getValidDate = (...values) => {
     if (!Number.isNaN(date.getTime())) return date;
   }
   return new Date();
+};
+
+const resolveLegacyBatchId = async ({ legacyBatchId, programId }) => {
+  if (!legacyBatchId) return null;
+
+  const batch = await Batch.findById(legacyBatchId).select("_id programId").lean();
+  if (!batch) return null;
+
+  const batchProgramId = getId(batch.programId);
+  if (batchProgramId && programId && String(batchProgramId) !== String(programId)) {
+    return null;
+  }
+
+  return legacyBatchId;
 };
 
 /**
@@ -41,13 +56,18 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
       .lean();
   }
 
-  const legacyBatchId = getId(student?.batchId) || getId(user?.batchId) || null;
+  const legacyBatchPointer = getId(student?.batchId) || getId(user?.batchId) || null;
   if (enrollment) {
     // Old records have no batchId property. Treat those as legacy records and
     // retain their existing student-level batch schedule until they are
     // touched by the new enrollment flow.
     const hasEnrollmentBatch = Object.prototype.hasOwnProperty.call(enrollment, "batchId");
-    const batchId = hasEnrollmentBatch ? getId(enrollment.batchId) : legacyBatchId;
+    const batchId = hasEnrollmentBatch
+      ? getId(enrollment.batchId)
+      : await resolveLegacyBatchId({
+          legacyBatchId: legacyBatchPointer,
+          programId: getId(enrollment.programId) || programId,
+        });
     const lifecycle = batchId ? await expireBatchIfNeeded(batchId) : { expired: false };
     const individualStartDate = getValidDate(
       enrollment.individualStartDate,
@@ -66,6 +86,7 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
     };
   }
 
+  const legacyBatchId = await resolveLegacyBatchId({ legacyBatchId: legacyBatchPointer, programId });
   const lifecycle = legacyBatchId
     ? await expireBatchIfNeeded(legacyBatchId)
     : { expired: false };

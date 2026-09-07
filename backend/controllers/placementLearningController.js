@@ -5,9 +5,10 @@ import Topic from "../models/Topic.js";
 import Program from "../models/Program.js";
 import { calculateProgramDayNumber } from "../utils/programSchedule.js";
 import { resolveProgramSchedule } from "../utils/programSchedule.js";
+import { getTopicDayNumber } from "../utils/courseTopicSchedule.js";
 
 const buildTopicPayload = (topic, index, currentDay, courseId) => {
-  const day = index + 1;
+  const day = getTopicDayNumber(topic, index);
   const isLocked = day > currentDay;
   const hasNotes = Boolean(topic.notesId);
   return {
@@ -102,13 +103,14 @@ export const getPlacementLearningDashboard = async (req, res) => {
       batch,
       individualStartDate: schedule.individualStartDate,
     });
-    const totalDays = topics.length;
-    const currentTopicIndex = Math.min(Math.max(currentDay - 1, 0), Math.max(totalDays - 1, 0));
-    const currentTopic = totalDays > 0 ? topics[currentTopicIndex] : null;
-
     const notes = topics.map((topic, index) =>
       buildTopicPayload(topic, index, currentDay, course._id)
     );
+    const totalDays = notes.reduce((maxDay, topic) => Math.max(maxDay, topic.day), 0);
+    const currentTopic = notes.find((topic) => topic.day === currentDay)
+      || notes.filter((topic) => topic.day < currentDay).at(-1)
+      || notes[0]
+      || null;
 
     const weeks = notes.reduce((acc, topic) => {
       const existing = acc.find((week) => week.week === topic.week);
@@ -154,9 +156,7 @@ export const getPlacementLearningDashboard = async (req, res) => {
         title: c.title,
         topicIds: c.topicIds || [],
       })),
-      todayTopic: currentTopic?.notesId
-        ? buildTopicPayload(currentTopic, currentTopicIndex, currentDay, course._id)
-        : null,
+      todayTopic: currentTopic?.notesId ? currentTopic : null,
       totalDays,
       weeks,
     });

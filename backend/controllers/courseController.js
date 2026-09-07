@@ -8,6 +8,7 @@ import Batch from "../models/Batch.js";
 import Program from "../models/Program.js";
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import { calculateProgramDayNumber, resolveProgramSchedule } from "../utils/programSchedule.js";
+import { getTopicDayNumber } from "../utils/courseTopicSchedule.js";
 import { expireBatchIfNeeded } from "../utils/batchLifecycle.js";
 import { isUserVisibleCourse } from "../utils/courseVisibility.js";
 import { v2 as cloudinary } from "cloudinary";
@@ -779,11 +780,13 @@ export const getCourseById = async (req, res) => {
       .sort({ index: 1, createdAt: 1 });
 
     const formattedTopics = topics.map((topic, idx) => {
-      const day = idx + 1;
+      const day = getTopicDayNumber(topic, idx);
       const isLocked = isScheduleActive && day > currentDay;
       return {
         topicId: topic._id,
         title: topic.title,
+        day,
+        week: Math.ceil(day / 7),
         notesId: topic.notesId ? topic.notesId._id : null,
         notes:
           topic.notesId && topic.notesId.parsedContent
