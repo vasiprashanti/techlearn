@@ -4,7 +4,7 @@ import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ScrollToTop from './components/ScrollToTop'
 import ExternalLinkHandler from './components/ExternalLinkHandler'
-import { ThemeProvider } from './context/ThemeContext'
+import { ThemeProvider, useTheme } from './context/ThemeContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { AuthModalProvider } from './context/AuthModalContext'
 import { UserProvider } from './context/UserContext'
@@ -187,6 +187,8 @@ function RouteFallback() {
 function LayoutWrapper() {
   const location = useLocation();
   const { isAuthenticated, user } = useAuth();
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
 
   useEffect(() => {
     if (!['/login', '/signup'].includes(location.pathname)) {
@@ -255,11 +257,22 @@ function LayoutWrapper() {
     <div className="relative z-10 flex flex-col min-h-screen">
       {location.pathname.startsWith('/onboarding') && (
         <div
-          className="fixed left-0 top-0 z-[100] h-[72px] w-full bg-[#02052e] dark:bg-[#080d25]"
-          style={{ position: 'fixed', top: 0, left: 0, right: 0 }}
+          className="fixed left-0 top-0 z-[100] h-[72px] w-full"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            background: isDarkMode ? '#080d25' : '#bceaff',
+          }}
         >
           <Link to="/" aria-label="TechLearn home" className="absolute left-[23px] top-[14px]">
-            <img src="/logoo2-small.webp" alt="TechLearn" className="block h-11 w-11 rounded-[9px] object-contain" />
+            <img
+              src="/logoo2-small.webp"
+              alt="TechLearn"
+              className="block h-11 w-11 rounded-[9px] object-contain"
+              style={{ filter: isDarkMode ? 'none' : 'brightness(0) saturate(100%)' }}
+            />
           </Link>
         </div>
       )}

@@ -169,8 +169,15 @@ export const registerUser = async (req, res) => {
     }
 
     const verifiedEmail = await getVerifiedEmailFromReq(req);
+    let otpVerifiedEmail = null;
+    if (req.body.emailVerificationToken) {
+      try {
+        const payload = jwt.verify(req.body.emailVerificationToken, process.env.JWT_SECRET);
+        if (payload.purpose === "signup-email-verification") otpVerifiedEmail = payload.email;
+      } catch {}
+    }
     const isGoogleAuthUser = Boolean(req.body.isGoogleUser || req.body.authProvider === "google" || req.body.authProvider === "firebase");
-    const isVerifiedSession = Boolean((verifiedEmail && verifiedEmail === emailCheck) || isGoogleAuthUser);
+    const isVerifiedSession = Boolean((verifiedEmail && verifiedEmail === emailCheck) || (otpVerifiedEmail && otpVerifiedEmail === emailCheck) || isGoogleAuthUser);
 
     if (!isVerifiedSession) {
       if (!password || !confirmPassword) {
@@ -256,7 +263,7 @@ export const registerUser = async (req, res) => {
         lastName: trimmedLastName,
         email: emailCheck,
         password: hashedPassword,
-        authProvider: isVerifiedSession ? "google" : "local",
+        authProvider: isGoogleAuthUser ? "google" : "local",
         isClub: isClub || false,
         mobileNumber: mobileNumber || "",
         collegeName: collegeNameText,
