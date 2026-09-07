@@ -814,6 +814,62 @@ export default function Signup({
             padding: 20px;
           }
         }
+
+        @media (max-width: 600px) {
+          /* Show the subject in the middle/lower part of the hero image on phones. */
+          .tl-product-image {
+            object-position: center 70%;
+          }
+        }
+
+        @media (min-width: 601px) and (max-width: 950px) {
+          .tl-visual-side {
+            flex: 0 0 31vh;
+            height: 31vh;
+            padding: 18px 32px 0;
+          }
+
+          .tl-product-preview {
+            width: min(100%, 760px);
+            height: 100%;
+            margin: 0 auto;
+          }
+
+          .tl-product-image {
+            width: 100%;
+            height: 100%;
+            border-radius: 16px;
+            object-fit: cover;
+            object-position: center 70%;
+          }
+
+          .tl-form-side {
+            max-width: 680px;
+            padding: 22px 40px 28px;
+          }
+        }
+
+        @media (min-width: 951px) and (max-width: 1200px) {
+          .tl-auth-page {
+            max-width: 1040px;
+            grid-template-columns: minmax(0, 1.08fr) minmax(460px, 0.92fr);
+            column-gap: 48px;
+          }
+
+          .tl-product-image {
+            width: 96%;
+            max-height: 480px;
+            object-position: center 70%;
+          }
+
+          .tl-form-side {
+            max-width: 520px;
+          }
+
+          .tl-auth-card {
+            padding: 30px;
+          }
+        }
       `}</style>
 
       {/* Top Left TechLearn Logo */}
@@ -1083,13 +1139,13 @@ export default function Signup({
           {!isLoginMode && !showForgotPassword && (
             <div className="tl-terms">
               By creating an account, you agree to our{' '}
-              <a href="#" className="underline text-[var(--muted)] hover:text-[var(--text)]">
+              <Link to="/terms-and-conditions" className="underline text-[var(--muted)] hover:text-[var(--text)]">
                 Terms
-              </a>{' '}
+              </Link>{' '}
               and{' '}
-              <a href="#" className="underline text-[var(--muted)] hover:text-[var(--text)]">
+              <Link to="/privacy" className="underline text-[var(--muted)] hover:text-[var(--text)]">
                 Privacy Policy
-              </a>
+              </Link>
               .
             </div>
           )}

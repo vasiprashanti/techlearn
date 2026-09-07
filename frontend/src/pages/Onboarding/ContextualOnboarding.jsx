@@ -406,7 +406,7 @@ export default function ContextualOnboarding() {
           --input-bg: rgba(255,255,255,.28);
 
           min-height: 100vh;
-          background: linear-gradient(to bottom right, #daf0fa, #bceaff, #bceaff);
+          background: #bceaff;
           color: var(--white);
           font-family: "Inter", sans-serif;
           transition: background .25s ease, color .25s ease;
@@ -422,7 +422,7 @@ export default function ContextualOnboarding() {
           background: var(--navy);
           --navy: #080d25;
           --navy-dark: #020416;
-          --chip-blue: #151d3a;
+          --chip-blue: #031553;
           --lime: #9bd45a;
           --lime-hover: #afe56b;
           --white: #f5f7ff;
