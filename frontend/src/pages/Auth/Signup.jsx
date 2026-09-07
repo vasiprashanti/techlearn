@@ -29,7 +29,11 @@ export default function Signup({
   const [isLoginMode, setIsLoginMode] = useState(initialMode === 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [emailVerificationToken, setEmailVerificationToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' });
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -171,8 +175,8 @@ export default function Signup({
       return;
     }
 
-    if (!isLoginMode && password.length < 6) {
-      setStatusMsg({ text: 'Password must be at least 6 characters long.', type: 'error' });
+    if (!isLoginMode && (password.length < 8 || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password))) {
+      setStatusMsg({ text: 'Please meet all password requirements before continuing.', type: 'error' });
       return;
     }
 
@@ -216,6 +220,38 @@ export default function Signup({
       }
     } else {
       try {
+        if (!otpSent) {
+          const otpRes = await fetch(`${getApiBase()}/auth/register/send-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim(), password }),
+          });
+          const otpData = await otpRes.json();
+          if (!otpRes.ok) {
+            setStatusMsg({ text: otpData.message || 'Unable to send verification OTP.', type: 'error' });
+            return;
+          }
+          setOtpSent(true);
+          setStatusMsg({ text: 'A verification OTP was sent to your email.', type: 'info' });
+          return;
+        }
+
+        let verificationToken = emailVerificationToken;
+        if (!verificationToken) {
+          const verifyRes = await fetch(`${getApiBase()}/auth/register/verify-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim(), otp }),
+          });
+          const verifyData = await verifyRes.json();
+          if (!verifyRes.ok) {
+            setStatusMsg({ text: verifyData.message || 'Invalid or expired OTP.', type: 'error' });
+            return;
+          }
+          verificationToken = verifyData.verificationToken;
+          setEmailVerificationToken(verificationToken);
+        }
+
         let draft = {};
         try {
           const draftRaw = localStorage.getItem('techlearn-onboarding-draft');
@@ -237,6 +273,7 @@ export default function Signup({
           skills: draft.skills || [],
           learningPath: draft.learningPath || '',
           completeOnboarding: Boolean(draft.targetRole || draft.skills?.length),
+          emailVerificationToken: verificationToken,
         };
 
         const regRes = await fetch(`${getApiBase()}/users/register`, {
@@ -758,6 +795,19 @@ export default function Signup({
           }
         }
 
+        .tl-password-checklist {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 4px 12px;
+          margin-top: 8px;
+          color: var(--muted);
+          font-size: 9px;
+        }
+
+        .tl-password-checklist span.valid { color: var(--lime); }
+
+        .tl-otp-field { margin-top: 14px; }
+
         @media (max-width: 560px) {
           .tl-auth-page {
             row-gap: 30px;
@@ -1013,6 +1063,8 @@ export default function Signup({
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      onFocus={() => setPasswordFocused(true)}
+                      onBlur={() => setPasswordFocused(false)}
                       required
                     />
                     <button
@@ -1024,7 +1076,32 @@ export default function Signup({
                       {showPassword ? 'Hide' : 'Show'}
                     </button>
                   </div>
+                  {!isLoginMode && passwordFocused && password.length > 0 && (
+                    <div className="tl-password-checklist" aria-live="polite">
+                      <span className={password.length >= 8 ? 'valid' : ''}>✓ Minimum 8 characters</span>
+                      <span className={/[^A-Za-z0-9]/.test(password) ? 'valid' : ''}>✓ One special character</span>
+                      <span className={/[A-Z]/.test(password) ? 'valid' : ''}>✓ One uppercase letter</span>
+                      <span className={/\d/.test(password) ? 'valid' : ''}>✓ One number</span>
+                    </div>
+                  )}
                 </div>
+
+                {!isLoginMode && otpSent && (
+                  <div className="tl-field tl-otp-field">
+                    <label htmlFor="signupOtp">Email verification OTP</label>
+                    <input
+                      className="tl-input"
+                      id="signupOtp"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      placeholder="Enter the 6-digit OTP"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      required
+                    />
+                  </div>
+                )}
 
                 {/* Forgot Password (Login mode only) */}
                 {isLoginMode && (

@@ -15,6 +15,7 @@ import { protect } from "../middleware/authMiddleware.js";
 import { isAdminIdentity } from "../utils/adminAccess.js";
 import { registerUser } from "../controllers/userController.js";
 import { buildUnifiedProfile } from "../utils/userProfile.js";
+import { generateOTP, storeOTP, verifyOTP, sendOTPEmail } from "../utils/mcqCodingUtils.js";
 
 const router = express.Router();
 const client = new OAuth2Client();
@@ -26,6 +27,35 @@ function generateToken(id) {
 }
 
 const normalizeEmail = (email = "") => String(email).trim().toLowerCase();
+
+/* Email signup verification */
+router.post("/register/send-otp", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const password = String(req.body.password || "");
+    if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+      return res.status(400).json({ message: "Password must meet all requirements" });
+    }
+    if (await User.findOne({ email })) return res.status(400).json({ message: "User already exists" });
+    const otp = generateOTP();
+    await storeOTP(`signup:${email}`, otp);
+    await sendOTPEmail(email, otp, "TechLearn email verification");
+    return res.json({ message: "Verification OTP sent" });
+  } catch (error) {
+    console.error("Signup OTP error:", error);
+    return res.status(500).json({ message: "Unable to send verification OTP" });
+  }
+});
+
+router.post("/register/verify-otp", async (req, res) => {
+  const email = normalizeEmail(req.body.email);
+  if (!email || !(await verifyOTP(`signup:${email}`, req.body.otp))) {
+    return res.status(400).json({ message: "Invalid or expired OTP" });
+  }
+  const verificationToken = jwt.sign({ email, purpose: "signup-email-verification" }, process.env.JWT_SECRET, { expiresIn: "15m" });
+  return res.json({ verificationToken });
+});
 
 const mapUserToStudentCohort = async (user) => {
   if (!user?.email) return { user, student: null, batch: null, schedule: null };
