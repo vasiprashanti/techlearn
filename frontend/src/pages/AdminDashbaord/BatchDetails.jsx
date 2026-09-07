@@ -914,7 +914,9 @@ const BatchDetails = () => {
               ) : (
                 <div className="space-y-2">
                   <p className="text-xs text-black/40 dark:text-white/40 mb-3">
-                    Select the <span className="font-semibold text-[#3C83F6]">Primary Course</span> — this is what students see on the Learn page. All other attached courses become supporting courses accessible via sidebar quick links.
+                    {batchDetail?.programId
+                      ? 'These courses come from the batch Program and are shared with every student in the batch.'
+                      : <>Select the <span className="font-semibold text-[#3C83F6]">Primary Course</span> — this is what students see on the Learn page. All other attached courses become supporting courses accessible via sidebar quick links.</>}
                   </p>
                   {attachedCourses.map((course) => {
                     const isPrimary = String(primaryCourseId) === String(course.id);
@@ -922,15 +924,15 @@ const BatchDetails = () => {
                       <div
                         key={course.id}
                         onClick={() => {
-                          if (!isPrimary) {
+                          if (!batchDetail?.programId && !isPrimary) {
                             setPrimaryCourseId(String(course.id));
                             savePrimaryCourse(String(course.id));
                           }
                         }}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all duration-200 ${
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 ${batchDetail?.programId ? 'cursor-default' : 'cursor-pointer'} ${
                           isPrimary
                             ? 'border-[#3C83F6]/50 bg-[#3C83F6]/8 dark:bg-[#3C83F6]/10 shadow-sm'
-                            : 'border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] hover:border-[#3C83F6]/30 hover:bg-black/2 dark:hover:bg-white/5'
+                            : `border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] ${batchDetail?.programId ? '' : 'hover:border-[#3C83F6]/30 hover:bg-black/2 dark:hover:bg-white/5'}`
                         }`}
                       >
                         {/* Radio indicator */}

@@ -49,6 +49,11 @@ const getProgramType = (value) => {
 
 const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
 
+const getTodayIsoDate = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
 const toValidDate = (value) => {
   if (!value) return null;
   const date = value instanceof Date ? new Date(value) : new Date(value);
@@ -571,7 +576,7 @@ export default function ProgramDetails() {
   });
   const [studentsSubTab, setStudentsSubTab] = useState('students');
   const [studentSearch, setStudentSearch] = useState('');
-  const [studentPeriodFilter, setStudentPeriodFilter] = useState('current');
+  const [studentPeriodFilter, setStudentPeriodFilter] = useState('active');
   const [studentStatusFilter, setStudentStatusFilter] = useState('Active');
   const [studentAccessFilter, setStudentAccessFilter] = useState('all');
   const [studentPlanFilter, setStudentPlanFilter] = useState('all');
@@ -591,6 +596,7 @@ export default function ProgramDetails() {
   const [batches, setBatches] = useState([]);
   const [colleges, setColleges] = useState([]);
   const [selectedBatchId, setSelectedBatchId] = useState('');
+  const [individualStartDate, setIndividualStartDate] = useState(getTodayIsoDate);
   const [studentAddMode, setStudentAddMode] = useState('existing');
   const [newStudentForm, setNewStudentForm] = useState({
     name: '',
@@ -713,6 +719,7 @@ export default function ProgramDetails() {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
+    const today = startOfDay(now);
 
     const getStartedTime = (student) => {
       const row = buildStudentTableRow(student, program);
@@ -733,8 +740,22 @@ export default function ProgramDetails() {
         .toLowerCase();
       if (search && !searchable.includes(search)) return false;
 
+      if (studentPeriodFilter === 'active') {
+        const started = startOfDay(row.started);
+        const expires = startOfDay(row.expires);
+        const storedStatus = String(row.status || '').trim().toLowerCase();
+        const isActiveNow = Boolean(
+          started
+          && today
+          && started <= today
+          && (!expires || expires >= today)
+          && !['completed', 'expired'].includes(storedStatus)
+        );
+        if (!isActiveNow) return false;
+      }
+
       if (studentPeriodFilter === 'current') {
-        const started = toValidDate(student.programStartDate) || row.started;
+        const started = startOfDay(row.started);
         if (!started || started.getFullYear() !== currentYear || started.getMonth() !== currentMonth) return false;
       }
 
@@ -792,6 +813,7 @@ export default function ProgramDetails() {
     setAttachModalType(entityType);
     setSelectedIds([]);
     setSelectedBatchId('');
+    setIndividualStartDate(getTodayIsoDate());
     setAvailableSearch('');
     setStudentAddMode('existing');
     setStudentFormError('');
@@ -855,6 +877,7 @@ export default function ProgramDetails() {
           programId,
           primaryTrack: newStudentForm.primaryTrack.trim() || 'General Track',
           status: newStudentForm.status,
+          ...(selectedBatchId ? {} : { individualStartDate }),
         });
         setAttachModalType(null);
         setToastMessage('Student added to Program successfully.');
@@ -874,7 +897,9 @@ export default function ProgramDetails() {
         programId,
         attachModalType,
         selectedIds,
-        attachModalType === 'students' ? { batchId: selectedBatchId || null } : {}
+        attachModalType === 'students'
+          ? { batchId: selectedBatchId || null, ...(selectedBatchId ? {} : { individualStartDate }) }
+          : {}
       );
       setAttachModalType(null);
       setSelectedIds([]);
@@ -1179,6 +1204,18 @@ export default function ProgramDetails() {
                 <p className="text-[11px] text-black/45 dark:text-white/45 mt-1.5">
                   Leave empty for Day 1 to start on the learner's enrollment date.
                 </p>
+                {!selectedBatchId && (
+                  <label className="block mt-3">
+                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-black/50 dark:text-white/50 mb-1.5">Individual start date</span>
+                    <input
+                      type="date"
+                      value={individualStartDate}
+                      onChange={(event) => setIndividualStartDate(event.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-sm text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    />
+                    <span className="block text-[11px] text-black/40 dark:text-white/45 mt-1">Admin can adjust this date without putting the learner in a batch.</span>
+                  </label>
+                )}
               </div>
             )}
 
@@ -1540,6 +1577,7 @@ export default function ProgramDetails() {
                       aria-label="Student period filter"
                       className="h-9 min-w-[125px] px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
                     >
+                      <option value="active">Current Active</option>
                       <option value="current">Current Month</option>
                       <option value="all">All Time</option>
                     </select>

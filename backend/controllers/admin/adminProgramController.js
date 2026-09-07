@@ -1125,6 +1125,14 @@ export const attachEntities = async (req, res) => {
         }
       }
 
+      let selectedIndividualStartDate = null;
+      if (!selectedBatch && req.body?.individualStartDate) {
+        selectedIndividualStartDate = new Date(req.body.individualStartDate);
+        if (Number.isNaN(selectedIndividualStartDate.getTime())) {
+          return res.status(400).json({ success: false, message: "individualStartDate must be a valid date." });
+        }
+      }
+
       // Selecting a batch for a Program also establishes the batch-level
       // relationship when it has not been configured yet. Future students
       // added from the Batch page will then inherit the same Program.
@@ -1158,6 +1166,20 @@ export const attachEntities = async (req, res) => {
           ],
         }).select("_id").lean();
 
+        const scheduleIdentifiers = [
+          { studentId: student._id },
+          user?._id ? { userId: user._id } : null,
+        ].filter(Boolean);
+        const hasOtherBatchSchedule = !selectedBatch && await ProgramEnrollment.exists({
+          status: "Active",
+          programId: { $ne: programId },
+          batchId: { $exists: true, $ne: null },
+          $or: scheduleIdentifiers,
+        });
+        if (!selectedBatch && !hasOtherBatchSchedule) {
+          await Student.updateOne({ _id: student._id }, { $set: { batchId: null } });
+        }
+
         if (user) {
           await User.updateOne(
             { _id: user._id },
@@ -1165,7 +1187,12 @@ export const attachEntities = async (req, res) => {
               $set: {
                 programId,
                 programSelection: program.programType,
-                ...(selectedBatch ? { batchId: selectedBatch._id, startDate: selectedBatch.startDate } : {}),
+                ...(selectedBatch
+                  ? { batchId: selectedBatch._id, startDate: selectedBatch.startDate }
+                  : {
+                      ...(hasOtherBatchSchedule ? {} : { batchId: null }),
+                      ...(selectedIndividualStartDate ? { startDate: selectedIndividualStartDate } : {}),
+                    }),
               },
             }
           );
@@ -1174,6 +1201,7 @@ export const attachEntities = async (req, res) => {
             student,
             program,
             batchId: selectedBatch?._id || null,
+            individualStartDate: selectedBatch ? undefined : selectedIndividualStartDate,
             source: "admin",
           });
         }

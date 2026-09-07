@@ -3,8 +3,11 @@ import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import User from "../models/User.js";
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
+import Course from "../models/Course.js";
+import TrackTemplate from "../models/TrackTemplate.js";
 import ProgramReadinessLead from "../models/ProgramReadinessLead.js";
 import { matchProgramsForUser } from "./programMatching.js";
+import { parseDurationDays } from "./programPhases.js";
 
 const escapeRegex = (value = "") =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -15,6 +18,36 @@ const getId = (value) => value?._id || value || null;
 
 const getAccessTier = (program, fallback) =>
   fallback || (program?.pricingType === "Paid" ? "Member" : "Free");
+const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
+
+const getReferenceIds = (values = []) => values
+  .map(getId)
+  .filter(Boolean)
+  .filter((id, index, ids) => ids.findIndex((candidate) => String(candidate) === String(id)) === index);
+
+const getProgramResourceIds = (program, key) => getReferenceIds(
+  Array.isArray(program?.[key]) ? program[key] : []
+);
+
+const getProgramExpiryDate = (startDate, program) => {
+  const start = new Date(startDate);
+  const durationDays = Number(program?.durationDays) || parseDurationDays(program?.duration);
+  if (Number.isNaN(start.getTime()) || !Number.isInteger(durationDays) || durationDays < 1) return null;
+  return new Date(start.getTime() + ((durationDays - 1) * DAY_IN_MILLISECONDS));
+};
+
+const getProgramTrackFields = (templates) => {
+  const ids = templates.map((template) => template._id);
+  const taskTemplate = templates.find((template) => template.trackType === "Daily Task") || null;
+  const challengeTemplate = templates.find((template) => template.trackType === "Daily Challenge") || null;
+  return {
+    assignedTrackTemplateIds: ids,
+    assignedTrackTemplate: templates[0]?._id || null,
+    assignedDailyTaskTrack: taskTemplate?._id || null,
+    assignedDailyChallengeTrack: challengeTemplate?._id || null,
+    assignedTrack: templates.map((template) => template.name).filter(Boolean).join(", "),
+  };
+};
 
 const getUserForStudent = async (student) => {
   const conditions = [
@@ -41,6 +74,19 @@ export const assignProgramToBatch = async ({ batchId, program, previousProgramId
 
   const batch = await Batch.findById(resolvedBatchId).lean();
   if (!batch) throw new Error("Batch not found.");
+
+  // Program-owned resources are canonical. Keep the legacy Batch references
+  // synchronized as a compatibility projection for older admin screens and
+  // APIs, so selecting a Program is enough to make every mapped resource
+  // available without a second manual assignment step.
+  const programCourseIds = getProgramResourceIds(program, "courseIds");
+  const programTrackTemplateIds = getProgramResourceIds(program, "trackTemplateIds");
+  const programTrackTemplates = programTrackTemplateIds.length
+    ? await TrackTemplate.find({
+        _id: { $in: programTrackTemplateIds },
+        status: "Active",
+      }).select("_id name trackType").lean()
+    : [];
 
   const students = await Student.find({ batchId: resolvedBatchId }).lean();
   const studentIds = students.map((student) => student._id).filter(Boolean);
@@ -131,9 +177,30 @@ export const assignProgramToBatch = async ({ batchId, program, previousProgramId
         programId: resolvedProgramId,
         programType: program.programType,
         programSelection: program.programType,
+        expiryDate: getProgramExpiryDate(batch.startDate, program) || batch.expiryDate,
+        attachedCourse: programCourseIds[0] || null,
+        supportingCourses: programCourseIds.slice(1),
+        ...getProgramTrackFields(programTrackTemplates),
       },
     }
   );
+
+  const previousCourseIds = getReferenceIds([
+    batch.attachedCourse,
+    ...(Array.isArray(batch.supportingCourses) ? batch.supportingCourses : []),
+  ]);
+  if (previousCourseIds.length) {
+    await Course.updateMany(
+      { _id: { $in: previousCourseIds }, assignedBatchIds: resolvedBatchId },
+      { $pull: { assignedBatchIds: resolvedBatchId } }
+    );
+  }
+  if (programCourseIds.length) {
+    await Course.updateMany(
+      { _id: { $in: programCourseIds } },
+      { $addToSet: { assignedBatchIds: resolvedBatchId } }
+    );
+  }
 
   return {
     batchId: resolvedBatchId,
@@ -205,6 +272,7 @@ export const upsertProgramEnrollment = async ({
   programId,
   batchId,
   accessTier,
+  individualStartDate,
   source = "admin",
 }) => {
   const userId = getId(user);
@@ -214,6 +282,12 @@ export const upsertProgramEnrollment = async ({
   if (!userId || !studentId || !resolvedProgramId) return null;
 
   const now = new Date();
+  const explicitIndividualStartDate = individualStartDate
+    ? new Date(individualStartDate)
+    : null;
+  if (explicitIndividualStartDate && Number.isNaN(explicitIndividualStartDate.getTime())) {
+    throw new Error("individualStartDate must be a valid date.");
+  }
   const existing = await ProgramEnrollment.findOne({
     userId,
     programId: resolvedProgramId,
@@ -247,7 +321,10 @@ export const upsertProgramEnrollment = async ({
       status: "Active",
       accessTier: getAccessTier(program, accessTier),
       batchId: resolvedBatchId || null,
-      individualStartDate: existing?.individualStartDate || existing?.assignedAt || now,
+      individualStartDate: explicitIndividualStartDate
+        || existing?.individualStartDate
+        || existing?.assignedAt
+        || now,
     },
     $setOnInsert: {
       assignedAt: now,

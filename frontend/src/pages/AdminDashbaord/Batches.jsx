@@ -71,6 +71,27 @@ const normalizeBatch = (batch) => {
   };
 };
 
+const getProgramDurationDays = (program) => {
+  const canonical = Number(program?.durationDays);
+  if (Number.isInteger(canonical) && canonical > 0) return canonical;
+  const match = String(program?.duration || '').match(/(\d+(?:\.\d+)?)\s*-?\s*(day|days|week|weeks|month|months|year|years)/i);
+  if (!match) return null;
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount)) return null;
+  const unit = match[2].toLowerCase();
+  const multiplier = unit.startsWith('year') ? 365 : unit.startsWith('month') ? 30 : unit.startsWith('week') ? 7 : 1;
+  return Math.max(1, Math.round(amount * multiplier));
+};
+
+const getProgramEndDate = (startDate, program) => {
+  const durationDays = getProgramDurationDays(program);
+  if (!startDate || !durationDays) return '';
+  const date = new Date(`${startDate}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return '';
+  date.setDate(date.getDate() + durationDays - 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
 const getBatchRelevance = (batch, query) => {
   if (!query) return 0;
   const q = query.trim().toLowerCase();
@@ -359,6 +380,8 @@ const Batches = () => {
   const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
   const batchFormInputClass = 'mt-1 w-full px-3 py-2 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
   const availablePrograms = programs.filter((program) => program.programType === createBatchForm.programType);
+  const selectedProgram = programs.find((program) => String(program.id) === String(createBatchForm.programId));
+  const selectedProgramDurationDays = getProgramDurationDays(selectedProgram);
 
   const loadBatchPageData = useCallback(async () => {
     const [remoteBatches, remoteColleges, remoteTrackTemplates, remoteCourses, remotePrograms] = await Promise.all([
@@ -400,6 +423,8 @@ const Batches = () => {
         id: program.id || program._id,
         name: program.name || 'Untitled Program',
         programType: program.programType,
+        duration: program.duration || '',
+        durationDays: program.durationDays || null,
       }))
       .filter((program) => program.id);
     setPrograms(assignablePrograms);
@@ -579,7 +604,9 @@ const Batches = () => {
       assignedTrackTemplateId: assignedTrackTemplateIds[0] || '',
       assignedTrackTemplateIds,
       originalAssignedTrackTemplateIds: assignedTrackTemplateIds,
-      endDate: batch.expiryDateValue || '',
+      endDate: selectedProgram
+        ? (getProgramEndDate(batch.startDateValue || '', selectedProgram) || batch.expiryDateValue || '')
+        : (batch.expiryDateValue || ''),
       batchSize: batch.batchSize ? String(batch.batchSize) : '',
       status: batch.status || 'Draft',
       programSelection: normalizedProgram,
@@ -599,8 +626,12 @@ const Batches = () => {
       setCreateError('At least one college is required');
       return;
     }
-    if (!createBatchForm.startDate || !createBatchForm.endDate) {
-      setCreateError('Start date and end date are required');
+    if (!createBatchForm.startDate) {
+      setCreateError('Start date is required');
+      return;
+    }
+    if (!createBatchForm.endDate) {
+      setCreateError('Select a Program to calculate the batch end date');
       return;
     }
     if (createBatchForm.startDate > createBatchForm.endDate) {
@@ -616,11 +647,6 @@ const Batches = () => {
       return;
     }
 
-    const selectedTemplateIds = Array.isArray(createBatchForm.assignedTrackTemplateIds)
-      ? createBatchForm.assignedTrackTemplateIds.map(String)
-      : [];
-    const selectedTemplateId = selectedTemplateIds[0] || null;
-
     setCreateError('');
     setIsSavingBatch(true);
 
@@ -631,15 +657,12 @@ const Batches = () => {
         name: createBatchForm.batchName.trim(),
         startDate: createBatchForm.startDate,
         expiryDate: createBatchForm.endDate,
-        assignedTrackTemplateId: selectedTemplateId,
-        assignedTrackTemplateIds: selectedTemplateIds,
-        confirmTrackReplacement: true,
         batchSize: createBatchForm.batchSize ? Number(createBatchForm.batchSize) : null,
         status: createBatchForm.status,
         programSelection: createBatchForm.programType || createBatchForm.programSelection || 'Placement',
         programType: createBatchForm.programType || 'Placement',
         programId: createBatchForm.programId,
-        courses: createBatchForm.courses || [],
+        confirmTrackReplacement: true,
       };
 
       if (editingBatchId) {
@@ -794,10 +817,8 @@ const Batches = () => {
                         setCreateBatchForm((prev) => ({
                           ...prev,
                           startDate: nextDate,
-                          endDate:
-                            prev.endDate && nextDate && prev.endDate < nextDate
-                              ? ''
-                              : prev.endDate,
+                          endDate: getProgramEndDate(nextDate, selectedProgram)
+                            || (prev.endDate && nextDate && prev.endDate < nextDate ? '' : prev.endDate),
                         }))
                       }
                       placeholder="Select start date"
@@ -808,23 +829,31 @@ const Batches = () => {
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">End Date*</label>
                   <div className="mt-1">
-                    <ModernDatePicker
-                      value={createBatchForm.endDate}
-                      onChange={(nextDate) =>
-                        setCreateBatchForm((prev) => ({
-                          ...prev,
-                          endDate: nextDate,
-                        }))
-                      }
-                      minDate={createBatchForm.startDate ? new Date(`${createBatchForm.startDate}T00:00:00`) : undefined}
-                      placeholder="Select end date"
-                      ariaLabel="End date"
-                    />
+                    {selectedProgram ? (
+                      <div className="w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.04] text-slate-700 dark:text-slate-200">
+                        {createBatchForm.endDate || 'Select a start date first'}
+                      </div>
+                    ) : (
+                      <ModernDatePicker
+                        value={createBatchForm.endDate}
+                        onChange={(nextDate) =>
+                          setCreateBatchForm((prev) => ({
+                            ...prev,
+                            endDate: nextDate,
+                          }))
+                        }
+                        minDate={createBatchForm.startDate ? new Date(`${createBatchForm.startDate}T00:00:00`) : undefined}
+                        placeholder="Select end date"
+                        ariaLabel="End date"
+                      />
+                    )}
                   </div>
+                  {selectedProgram && <p className="mt-1 text-[11px] text-black/40 dark:text-white/45">Calculated from the Program duration.</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {!createBatchForm.programId && (
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Track Templates*</label>
                   <div className="relative mt-1" ref={trackTemplateDropdownRef}>
@@ -923,6 +952,8 @@ const Batches = () => {
                   </div>
                 </div>
 
+                )}
+
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Batch Size</label>
                   <input
@@ -965,6 +996,7 @@ const Batches = () => {
                         programType: e.target.value,
                         programSelection: e.target.value,
                         programId: prev.programType === e.target.value ? prev.programId : '',
+                        endDate: prev.programType === e.target.value ? prev.endDate : '',
                       }))}
                       className="appearance-none w-full px-3 py-2 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                     >
@@ -980,7 +1012,15 @@ const Batches = () => {
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select
                       value={createBatchForm.programId || ''}
-                      onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, programId: e.target.value }))}
+                      onChange={(e) => {
+                        const nextProgramId = e.target.value;
+                        const nextProgram = programs.find((program) => String(program.id) === String(nextProgramId));
+                        setCreateBatchForm((prev) => ({
+                          ...prev,
+                          programId: nextProgramId,
+                          endDate: getProgramEndDate(prev.startDate, nextProgram),
+                        }));
+                      }}
                       className="appearance-none w-full px-3 py-2 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                     >
                       <option className={dropdownOptionClass} value="">Select a {createBatchForm.programType || 'program'} program</option>
@@ -997,10 +1037,16 @@ const Batches = () => {
                   ) : availablePrograms.length === 0 ? (
                     <p className="mt-1 text-[11px] text-black/40 dark:text-white/45">No active {createBatchForm.programType} Programs are available.</p>
                   ) : null}
+                  {selectedProgram && (
+                    <p className="mt-1 text-[11px] text-[#3C83F6] dark:text-blue-300">
+                      {selectedProgramDurationDays ? `${selectedProgramDurationDays}-day schedule. Resources come from this Program.` : 'Resources come from this Program.'}
+                    </p>
+                  )}
                 </div>
               </div>
 
               {/* Add Courses Multi-Select Dropdown */}
+              {!createBatchForm.programId && (
               <div className="border-t border-black/5 dark:border-white/5 pt-3.5">
                 <label className="admin-micro-label text-black/45 dark:text-white/45">Add Courses</label>
                 <div className="relative mt-1" ref={supportingCourseDropdownRef}>
@@ -1097,6 +1143,7 @@ const Batches = () => {
                   )}
                 </div>
               </div>
+              )}
 
               {createError && <p className="text-xs text-red-500">{createError}</p>}
             </div>

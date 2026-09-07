@@ -38,6 +38,11 @@ const getCurrentMonthLabel = () => {
   return now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 };
 
+const getTodayIsoDate = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
 const formatDateValue = (value) => {
   if (!value) return '—';
   const date = new Date(value);
@@ -133,7 +138,7 @@ export default function Students() {
   const [editingStudentId, setEditingStudentId] = useState(null);
   const [formError, setFormError] = useState('');
   const [isSavingStudent, setIsSavingStudent] = useState(false);
-  const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', programId: '', track: '', programSelection: 'Placement Sprint', status: 'Active' });
+  const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', programId: '', track: '', programSelection: 'Placement Sprint', status: 'Active', individualStartDate: getTodayIsoDate() });
 
   const isDarkMode = theme === 'dark';
   const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
@@ -282,7 +287,7 @@ export default function Students() {
   const openAddStudent = () => {
     setEditingStudentId(null);
     setFormError('');
-    setStudentForm({ name: '', email: '', collegeId: filterOptions.colleges[0]?._id || '', batchId: '', programId: filterOptions.programs[0]?._id || '', track: '', programSelection: 'Placement', status: 'Active' });
+    setStudentForm({ name: '', email: '', collegeId: filterOptions.colleges[0]?._id || '', batchId: '', programId: filterOptions.programs[0]?._id || '', track: '', programSelection: 'Placement', status: 'Active', individualStartDate: getTodayIsoDate() });
     setIsAddFormOpen(true);
   };
 
@@ -298,6 +303,7 @@ export default function Students() {
       track: student.track || '',
       programSelection: student.programSelection || 'Placement',
       status: student.status || 'Active',
+      individualStartDate: student.batchId ? '' : (student.individualStartDate || student.scheduleStartDate || ''),
     });
     setIsAddFormOpen(true);
   };
@@ -548,6 +554,20 @@ export default function Students() {
                     <option value="Suspended" className={dropdownOptionClass}>Suspended</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Individual start date</label>
+                <input
+                  type="date"
+                  value={studentForm.individualStartDate || ''}
+                  onChange={(e) => setStudentForm({ ...studentForm, individualStartDate: e.target.value })}
+                  disabled={Boolean(studentForm.batchId)}
+                  className={`${studentFormInputClass} disabled:cursor-not-allowed disabled:opacity-60`}
+                />
+                <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                  Used for an individual program schedule. Batch learners use the batch start date.
+                </p>
               </div>
 
               {formError && <p className="text-xs text-rose-500">{formError}</p>}
