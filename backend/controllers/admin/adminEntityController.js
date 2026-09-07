@@ -3986,11 +3986,27 @@ export const getGlobalStudentsAdmin = async (req, res) => {
 
     // Map pricing exit feedback by student/user ID
     const exitFeedbackMap = new Map();
+    const exitFeedbackCountMap = new Map();
+    const exitFeedbackReasonCounts = new Map();
     allExitFeedbacks.forEach((fb) => {
-      const key = String(fb.userId || fb.studentId || "");
-      if (!exitFeedbackMap.has(key)) {
-        exitFeedbackMap.set(key, fb.customReason || fb.reason || "Viewed pricing — didn't enroll");
+      const reason = fb.customReason || fb.reason || "Viewed pricing — didn't enroll";
+      const normalizedReason = String(reason).trim();
+      if (normalizedReason) {
+        exitFeedbackReasonCounts.set(
+          normalizedReason,
+          (exitFeedbackReasonCounts.get(normalizedReason) || 0) + 1,
+        );
       }
+
+      const keys = [fb.userId, fb.studentId]
+        .filter(Boolean)
+        .map((value) => String(value));
+      keys.forEach((key) => {
+        exitFeedbackCountMap.set(key, (exitFeedbackCountMap.get(key) || 0) + 1);
+        if (!exitFeedbackMap.has(key)) {
+          exitFeedbackMap.set(key, reason);
+        }
+      });
     });
 
     // Query all students
@@ -4137,6 +4153,7 @@ export const getGlobalStudentsAdmin = async (req, res) => {
       // Lead Source
       let leadSource = "Signup / Onboarding";
       const exitReason = exitFeedbackMap.get(uId) || exitFeedbackMap.get(sId);
+      const exitFeedbackCount = exitFeedbackCountMap.get(uId) || exitFeedbackCountMap.get(sId) || 0;
       if (exitReason) {
         leadSource = "Viewed Pricing";
       } else if (student.testsTaken && student.testsTaken > 0) {
@@ -4169,6 +4186,7 @@ export const getGlobalStudentsAdmin = async (req, res) => {
         targetCompanies: student.targetCompanies || user?.targetCompanies || [],
         source: leadSource,
         pricingExitReason: exitReason || null,
+        pricingExitFeedbackCount: exitFeedbackCount,
         lastActivity: student.lastActiveAt ? "Assessment completed" : "Onboarding completed",
         // Skill specific
         hasSkill: hasSkillProgram,
@@ -4246,6 +4264,9 @@ export const getGlobalStudentsAdmin = async (req, res) => {
           collegeCount,
           individualCount,
           completedCount,
+          leadFeedbackReasonCounts: Array.from(exitFeedbackReasonCounts.entries())
+            .map(([reason, count]) => ({ reason, count }))
+            .sort((a, b) => b.count - a.count),
         },
         items: paginatedItems,
         page,

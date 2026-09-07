@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { protect, isAdmin } from "../middleware/authMiddleware.js";
+import { protect, optionalProtect, isAdmin } from "../middleware/authMiddleware.js";
 import {
   initiatePayment,
   submitPayment,
@@ -21,7 +21,9 @@ paymentRouter.get("/eligibility", protect, checkPaymentEligibility);
 paymentRouter.post("/create-order", protect, createPaymentOrder);
 paymentRouter.post("/verify", protect, verifyPayment);
 paymentRouter.post("/webhook", handleRazorpayWebhook);
-paymentRouter.post("/exit-feedback", protect, savePricingExitFeedback);
+// Exit feedback is also collected before signup, so preserve anonymous
+// submissions and link them to a User when a valid token is available.
+paymentRouter.post("/exit-feedback", optionalProtect, savePricingExitFeedback);
 
 // Legacy / Certificate Payment Routes
 paymentRouter.get("/:courseId/initiate", protect, initiatePayment);

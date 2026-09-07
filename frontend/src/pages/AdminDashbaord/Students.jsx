@@ -121,7 +121,7 @@ export default function Students() {
 
   // Data states
   const [studentsData, setStudentsData] = useState({ items: [], total: 0 });
-  const [stats, setStats] = useState({ totalEnrolled: 0, activeThisMonth: 0, collegeCount: 0, individualCount: 0, completedCount: 0 });
+  const [stats, setStats] = useState({ totalEnrolled: 0, activeThisMonth: 0, collegeCount: 0, individualCount: 0, completedCount: 0, leadFeedbackReasonCounts: [] });
   const [filterOptions, setFilterOptions] = useState({ colleges: [], programs: [] });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -735,6 +735,17 @@ export default function Students() {
               </button>
             </div>
 
+            {activeTab === 'leads' && stats.leadFeedbackReasonCounts?.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+                <span className="font-bold uppercase tracking-wider text-black/40 dark:text-white/40">Feedback reasons:</span>
+                {stats.leadFeedbackReasonCounts.map(({ reason, count }) => (
+                  <span key={reason} className="rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-2 py-1">
+                    {reason} ({count})
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* Filter controls row */}
             <div className="flex flex-col gap-2.5">
               {/* Row 1: Select All, Search, Add Student */}
@@ -915,6 +926,7 @@ export default function Students() {
                           <th className="py-2.5 px-3">Goal / Target Role</th>
                           <th className="py-2.5 px-3">Target Companies</th>
                           <th className="py-2.5 px-3">Source</th>
+                          <th className="py-2.5 px-3">Reason</th>
                           <th className="py-2.5 px-3 whitespace-nowrap">Last Activity</th>
                           <th className="py-2.5 px-3">Status</th>
                           <th className="py-2.5 px-3 text-right">Actions</th>
@@ -1042,9 +1054,14 @@ export default function Students() {
                                   <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-medium bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300">
                                     {student.source}
                                   </span>
-                                  {student.pricingExitReason && (
-                                    <span className="block text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">
-                                      {student.pricingExitReason}
+                                </td>
+                                <td className="py-2.5 px-4 text-[11px] text-amber-600 dark:text-amber-400 font-medium max-w-[220px]">
+                                  <span className="block truncate" title={student.pricingExitReason || undefined}>
+                                    {student.pricingExitReason || '—'}
+                                  </span>
+                                  {student.pricingExitFeedbackCount > 1 && (
+                                    <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                                      {student.pricingExitFeedbackCount} responses
                                     </span>
                                   )}
                                 </td>

@@ -358,11 +358,14 @@ export default function ContextualOnboarding() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleFeedbackSubmit = () => {
+  const handleFeedbackSubmit = async () => {
     if (!feedbackReason) {
       setError("Please select an option before submitting.");
       return;
     }
+
+    setSaving(true);
+    setError("");
     try {
       const feedbackData = {
         reason: feedbackReason,
@@ -373,8 +376,25 @@ export default function ContextualOnboarding() {
         timestamp: new Date().toISOString(),
       };
       localStorage.setItem("techlearn_exit_feedback", JSON.stringify(feedbackData));
-    } catch {
-      // storage helper
+
+      // Keep a server-side record as well. This route accepts guests, so a
+      // visitor's reason is not lost before signup; authenticated feedback is
+      // linked to the existing User/Student and appears in the Leads table.
+      await API.post("/api/payments/exit-feedback", {
+        programId: location.state?.programId || null,
+        reason: feedbackReason,
+        source: "contextual_onboarding",
+        targetRole: effectiveRole,
+        opportunity,
+        targetCompanies: selectedCompanies,
+        skill: selectedSkill,
+      });
+    } catch (feedbackError) {
+      // localStorage remains a best-effort compatibility fallback if the API
+      // is temporarily unavailable; do not block the visitor from leaving.
+      console.warn("Could not persist contextual exit feedback:", feedbackError);
+    } finally {
+      setSaving(false);
     }
     navigate("/");
   };
@@ -1103,8 +1123,9 @@ export default function ContextualOnboarding() {
                 type="button"
                 className="tl-btn tl-btn-primary"
                 onClick={handleFeedbackSubmit}
+                disabled={saving}
               >
-                SUBMIT
+                {saving ? "SAVING..." : "SUBMIT"}
               </button>
             </div>
           </section>

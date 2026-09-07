@@ -431,14 +431,28 @@ export const handleRazorpayWebhook = async (req, res) => {
  */
 export const savePricingExitFeedback = async (req, res) => {
   try {
-    const userId = req.user._id;
-    const { programId, selectedPlan, reason, customReason } = req.body;
+    const userId = req.user?._id || null;
+    const {
+      programId,
+      selectedPlan,
+      reason,
+      customReason,
+      source = "pricing",
+      targetRole,
+      opportunity,
+      targetCompanies,
+      skill,
+    } = req.body;
 
     if (!reason) {
       return res.status(400).json({ success: false, message: "Feedback reason is required" });
     }
 
-    const student = await Student.findOne({ userId });
+    if (!["pricing", "contextual_onboarding"].includes(source)) {
+      return res.status(400).json({ success: false, message: "Invalid feedback source" });
+    }
+
+    const student = userId ? await Student.findOne({ userId }) : null;
 
     const feedback = await PricingExitFeedback.create({
       userId,
@@ -447,6 +461,11 @@ export const savePricingExitFeedback = async (req, res) => {
       selectedPlan,
       reason,
       customReason: customReason || "",
+      source,
+      targetRole: targetRole || "",
+      opportunity: opportunity || "",
+      targetCompanies: Array.isArray(targetCompanies) ? targetCompanies : [],
+      skill: skill || "",
     });
 
     res.status(201).json({
