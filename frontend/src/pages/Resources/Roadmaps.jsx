@@ -585,7 +585,7 @@ export default function Roadmaps() {
       <div className={`fixed inset-0 -z-10 transition-colors duration-300 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-[#d6eef4]"}`} />
 
       <main className="min-h-screen w-full">
-        <div className="mx-auto w-[calc(100%-2rem)] max-w-none px-0 pb-16 pt-[64px] sm:w-[calc(100%-3rem)] lg:w-[86%]">
+        <div className="mx-auto w-[calc(100%-2rem)] max-w-none px-0 pb-16 pt-28 sm:w-[calc(100%-3rem)] lg:w-[86%]">
           {roadmapId ? detailContent : listContent}
         </div>
       </main>

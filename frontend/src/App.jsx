@@ -237,20 +237,11 @@ function LayoutWrapper() {
     location.pathname === '/dashboard/profile' ||
     location.pathname.startsWith('/dashboard/profile/');
 
-  const isRoadmapsRoute =
-    location.pathname === '/roadmaps' ||
-    location.pathname.startsWith('/roadmaps/') ||
-    location.pathname === '/resources/roadmaps' ||
-    location.pathname.startsWith('/resources/roadmaps/') ||
-    location.pathname === '/dashboard/roadmap' ||
-    location.pathname.startsWith('/dashboard/roadmap/');
-
   const showNavbar = !['/mcq', '/signup', '/login'].includes(location.pathname) &&
                      !location.pathname.startsWith('/coding/') && 
                      !location.pathname.startsWith('/daily-challenge/') &&
                      !location.pathname.startsWith('/free-assessment') &&
-                     !location.pathname.startsWith('/onboarding') &&
-                     !isRoadmapsRoute;
+                     !location.pathname.startsWith('/onboarding');
 
   const showFooter = !['/mcq', '/signup', '/login'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
