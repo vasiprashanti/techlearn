@@ -89,6 +89,823 @@ const readStoredAnswers = () => {
   }
 };
 
+const skillCatalog = ["C", "C++", "Java", "Python", "JavaScript", "Web Development", "DSA", "SQL", "AI/ML", "Generative AI", "Aptitude", "Other"];
+const skillGoals = [
+  ["Learn the basics", "Start from the fundamentals and build a strong foundation."],
+  ["Build projects", "Learn by building practical projects."],
+  ["Master the skill", "Go deeper and become more confident with the skill."],
+];
+const skillLevelCards = [
+  ["Beginner", 'print("hello")', "I want to start from the basics."],
+  ["Basic", "if b > a:\n    print b", "I've seen code before and understand a little."],
+  ["Intermediate", "for i in range(5):", "I can write simple programs on my own."],
+  ["Advanced", "def circle(size):", "I've built programs and want to go further."],
+];
+
+function SkillOnboardingFlow() {
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const isDarkMode = theme === "dark";
+  const [step, setStep] = useState(1);
+  const [skill, setSkill] = useState("");
+  const [customSkill, setCustomSkill] = useState("");
+  const [goal, setGoal] = useState("");
+  const [level, setLevel] = useState("");
+  const [learningMode, setLearningMode] = useState("");
+  const [result, setResult] = useState(null);
+  const [programs, setPrograms] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const requestedSkill = (skill === "Other" ? customSkill : skill).trim();
+
+  const findMatch = (catalog) => {
+    const normalized = requestedSkill.toLowerCase();
+    const sameSkill = catalog.filter((program) => {
+      if (program.programType !== "Skill") return false;
+      const tags = [...(program.skillTags || []), program.name, program.description].join(" ").toLowerCase();
+      return tags.includes(normalized);
+    });
+    if (!sameSkill.length) return null;
+    const scored = sameSkill.map((program) => {
+      const tags = (program.skillTags || []).map((tag) => String(tag).toLowerCase());
+      const goals = (program.learningGoals || []).map((item) => String(item).toLowerCase());
+      const programMode = program.pricingType === "Paid" ? "Trainer-Led" : "Self-Paced";
+      let score = 0;
+      if (learningMode === "ANY" || programMode === learningMode) score += learningMode === "ANY" ? 0 : 4;
+      if (tags.includes(normalized)) score += 4;
+      if (goals.some((item) => item.includes(goal.toLowerCase()))) score += 2;
+      const courseLevels = (program.courseIds || []).map((course) => String(course.level || "").toLowerCase());
+      if (courseLevels.includes(level.toLowerCase())) score += 3;
+      return { program, score, programMode };
+    }).sort((a, b) => b.score - a.score)[0];
+    return { ...scored, matchType: scored.score >= 9 ? "exact" : "closest" };
+  };
+
+  const finish = async () => {
+    setLoading(true); setError("");
+    try {
+      const response = await API.get("/api/programs/public");
+      const catalog = response.data?.programs || [];
+      setPrograms(catalog);
+      const match = findMatch(catalog);
+      setResult(match || { matchType: "none" });
+      setStep(5);
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Could not find a matching program.");
+    } finally { setLoading(false); }
+  };
+
+  const answers = { skill: requestedSkill, skillSource: skill === "Other" ? "other" : "catalog", goal, level, learningMode };
+  const continueStep = () => {
+    if (step === 1 && (!requestedSkill || (skill === "Other" && !customSkill.trim()))) return setError("Please choose or enter a skill.");
+    if (step === 2 && !goal) return setError("Please choose your learning goal.");
+    if (step === 3 && !level) return setError("Please choose your current level.");
+    if (step === 4 && !learningMode) return setError("Please choose how you would like to learn.");
+    setError("");
+    if (step === 4) return finish();
+    setStep((current) => current + 1);
+  };
+  const goBack = () => step === 1 ? navigate("/") : setStep((current) => current - 1);
+  const startProgram = () => {
+    sessionStorage.setItem("techlearn-skill-onboarding", JSON.stringify({ ...answers, programId: result?.program?._id || null }));
+    if (!isAuthenticated || !user) return navigate("/signup", { state: { ...answers, skills: [requestedSkill], learningGoal: "Learn New Skills" } });
+    navigate("/onboarding/programs", { state: { ...answers, skills: [requestedSkill], learningGoal: "Learn New Skills", programId: result?.program?._id } });
+  };
+  const joinWaitlist = async () => {
+    if (!result?.program?._id) return;
+    try {
+      await API.post(`/api/programs/${result.program._id}/waitlist`, { email: user?.email || "", name: user?.firstName || "", learningMode: "Trainer-Led", message: `I am interested in joining this program: ${result.program.name}` });
+      setResult((current) => ({ ...current, waitlisted: true }));
+    } catch (requestError) { setError(requestError.response?.data?.message || "Could not join the waitlist."); }
+  };
+
+  return (
+    <div className={`tl-skill-page-wrapper ${isDarkMode ? "dark-mode" : ""}`}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,700;1,800&family=Press+Start+2P&display=swap');
+
+        .tl-skill-page-wrapper {
+          --bg-page: #bceaff;
+          --text-main: #050a5b;
+          --eyebrow-color: #050a5b;
+          --bar-bg: rgba(5, 10, 91, 0.13);
+          --bar-active: #b2e96a;
+          --chip-bg: #98d1f2;
+          --chip-border: #7bbfe8;
+          --chip-text: #020738;
+          --chip-selected-bg: #03082a;
+          --chip-selected-text: #ffffff;
+          --chip-selected-border: #03082a;
+          --btn-back-bg: #9ecce8;
+          --btn-back-text: #020738;
+          --btn-continue-bg: #b2e96a;
+          --btn-continue-text: #07101b;
+          --btn-continue-hover: #c4f385;
+          --header-btn-bg: rgba(255, 255, 255, 0.5);
+          --header-btn-border: rgba(5, 10, 91, 0.15);
+          --header-btn-icon: #02052e;
+          --card-white: #ffffff;
+          --card-border: rgba(2, 7, 56, 0.12);
+          --muted: #53647b;
+
+          height: 100vh;
+          max-height: 100vh;
+          overflow: hidden;
+          background: var(--bg-page);
+          color: var(--text-main);
+          font-family: 'Inter', system-ui, -apple-system, sans-serif;
+          position: relative;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-start;
+          padding: 0 20px;
+          transition: background 0.25s ease, color 0.25s ease;
+        }
+
+        .tl-skill-page-wrapper.dark-mode {
+          --bg-page: #080d25;
+          --text-main: #f5f7ff;
+          --eyebrow-color: #f5f7ff;
+          --bar-bg: rgba(255, 255, 255, 0.15);
+          --bar-active: #9bd45a;
+          --chip-bg: #141f42;
+          --chip-border: #23315e;
+          --chip-text: #dce4fc;
+          --chip-selected-bg: #9bd45a;
+          --chip-selected-text: #020738;
+          --chip-selected-border: #9bd45a;
+          --btn-back-bg: rgba(88, 90, 95, 0.22);
+          --btn-back-text: #f0f4ff;
+          --btn-continue-bg: #9bd45a;
+          --btn-continue-text: #07101b;
+          --btn-continue-hover: #afe56b;
+          --header-btn-bg: rgba(255, 255, 255, 0.08);
+          --header-btn-border: rgba(255, 255, 255, 0.18);
+          --header-btn-icon: #f5f7ff;
+          --card-white: #0f1738;
+          --card-border: #23315e;
+          --muted: #9fa9c4;
+        }
+
+        .tl-skill-header-logo {
+          position: absolute;
+          top: 20px;
+          left: 28px;
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+          user-select: none;
+          z-index: 10;
+        }
+
+        .tl-skill-header-logo img {
+          width: 40px;
+          height: 40px;
+          object-fit: contain;
+        }
+
+        .tl-skill-center-container {
+          width: 50vw;
+          max-width: 1050px;
+          height: 100vh;
+          max-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          margin: 0 auto;
+          box-sizing: border-box;
+          padding-top: 84px;
+          padding-bottom: 24px;
+          overflow: hidden;
+        }
+
+        .tl-skill-progress-wrapper {
+          width: 100%;
+          margin-bottom: 14px;
+          flex-shrink: 0;
+        }
+
+        .tl-skill-progress-steps {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 8px;
+          width: 100%;
+        }
+
+        .tl-skill-progress-step {
+          height: 4px;
+          min-height: 4px;
+          border-radius: 10px;
+          background: rgba(5, 10, 91, 0.16);
+          transition: background 0.25s ease;
+          display: block;
+        }
+
+        .tl-skill-page-wrapper.dark-mode .tl-skill-progress-step {
+          background: rgba(255, 255, 255, 0.15);
+        }
+
+        .tl-skill-progress-step.active {
+          background: #b2e96a !important;
+        }
+
+        .tl-skill-page-wrapper.dark-mode .tl-skill-progress-step.active {
+          background: #9bd45a !important;
+        }
+
+        .tl-skill-step-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+          overflow: hidden;
+        }
+
+        .tl-skill-eyebrow {
+          font-family: "Press Start 2P", monospace !important;
+          font-size: 8px;
+          line-height: 1.3;
+          color: var(--eyebrow-color);
+          letter-spacing: .7px;
+          margin-bottom: 6px;
+          flex-shrink: 0;
+        }
+
+        .tl-skill-title {
+          font-size: clamp(24px, 2.1vw, 32px);
+          line-height: 1.12;
+          letter-spacing: -1.2px;
+          font-weight: 700;
+          color: var(--text-main);
+          margin-bottom: 6px;
+          flex-shrink: 0;
+        }
+
+        .tl-skill-title em,
+        .tl-skill-title i {
+          font-style: italic;
+        }
+
+        .tl-skill-subhead {
+          font-size: 14.5px;
+          font-weight: 700;
+          color: var(--text-main);
+          margin-bottom: 10px;
+          letter-spacing: -0.01em;
+          flex-shrink: 0;
+        }
+
+        .tl-skill-subhead em {
+          font-style: italic;
+          font-weight: 700;
+        }
+
+        .tl-skill-grid-2col {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+          width: 100%;
+        }
+
+        .tl-skill-choice-btn {
+          border-radius: 9px;
+          border: 1px solid var(--chip-border);
+          background: var(--chip-bg);
+          color: var(--chip-text);
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.16s ease;
+          user-select: none;
+          outline: none;
+          box-sizing: border-box;
+          text-align: center;
+          padding: 0 14px;
+        }
+
+        .tl-skill-choice-btn:hover {
+          filter: brightness(0.96);
+          transform: translateY(-1px);
+        }
+
+        .tl-skill-choice-btn.selected {
+          background: var(--chip-selected-bg);
+          color: var(--chip-selected-text);
+          border-color: var(--chip-selected-border);
+          box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+        }
+
+        .tl-skill-nav-row {
+          display: flex;
+          gap: 10px;
+          margin-top: auto;
+          padding-top: 14px;
+          width: 100%;
+          flex-shrink: 0;
+        }
+
+        .tl-skill-action-btn {
+          height: 44px;
+          border-radius: 11px;
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: "Press Start 2P", monospace !important;
+          font-size: 8px;
+          letter-spacing: .02em;
+          cursor: pointer;
+          transition: .18s ease;
+          box-sizing: border-box;
+        }
+
+        .tl-skill-action-btn:hover {
+          transform: translateY(-1px);
+        }
+
+        .tl-skill-action-btn:active {
+          transform: scale(0.99);
+        }
+
+        .tl-skill-action-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        .tl-skill-btn-back {
+          width: 30%;
+          background: rgba(88, 90, 95, 0.22);
+          color: var(--text-main);
+          border: 1px solid var(--chip-border);
+        }
+
+        .tl-skill-btn-back:hover {
+          background: rgba(88, 90, 95, 0.35);
+        }
+
+        .tl-skill-btn-continue {
+          width: 70%;
+          background: var(--bar-active);
+          color: #07101b;
+        }
+
+        .tl-skill-btn-continue:hover {
+          background: var(--btn-continue-hover);
+        }
+
+        .tl-skill-error-text {
+          margin-top: 12px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #dc2626;
+        }
+
+        .tl-skill-custom-input {
+          width: 100%;
+          height: 44px;
+          margin-top: 10px;
+          border-radius: 9px;
+          border: 1px solid var(--chip-border);
+          background: rgba(255, 255, 255, 0.4);
+          color: var(--text-main);
+          padding: 0 16px;
+          font-size: 14px;
+          outline: none;
+          box-sizing: border-box;
+        }
+
+        .dark-mode .tl-skill-custom-input {
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .tl-skill-custom-input:focus {
+          border-color: var(--bar-active);
+          box-shadow: 0 0 0 2px rgba(149, 212, 51, 0.3);
+        }
+
+        /* Step 2 & 4 Goal Option Cards */
+        .tl-skill-goal-card {
+          border-radius: 10px;
+          border: 1px solid var(--chip-border);
+          background: var(--chip-bg);
+          color: var(--chip-text);
+          padding: 16px 20px;
+          cursor: pointer;
+          transition: all 0.16s ease;
+          text-align: left;
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+        }
+
+        .tl-skill-goal-card.selected {
+          background: var(--chip-selected-bg);
+          color: var(--chip-selected-text);
+          border-color: var(--chip-selected-border);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+        }
+
+        .tl-skill-goal-card strong {
+          font-size: 15.5px;
+          font-weight: 700;
+        }
+
+        .tl-skill-goal-card small {
+          font-size: 13px;
+          opacity: 0.85;
+        }
+
+        /* Step 3 Level Cards */
+        .tl-skill-level-card {
+          border-radius: 10px;
+          border: 1px solid var(--chip-border);
+          background: var(--chip-bg);
+          color: var(--chip-text);
+          padding: 18px 14px;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.16s ease;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+
+        .tl-skill-level-card.selected {
+          background: var(--chip-selected-bg);
+          color: var(--chip-selected-text);
+          border-color: var(--chip-selected-border);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+        }
+
+        .tl-skill-level-card strong {
+          font-size: 15px;
+          font-weight: 700;
+        }
+
+        .tl-skill-level-code {
+          font-family: monospace;
+          font-size: 12.5px;
+          min-height: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0.9;
+          white-space: pre-line;
+        }
+
+        /* Recommendation Card (Step 5) */
+        .tl-skill-rec-card {
+          background: #ffffff;
+          border-radius: 14px;
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+          padding: 24px 28px;
+          text-align: left;
+          width: 100%;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 10px;
+        }
+
+        .dark-mode .tl-skill-rec-card {
+          background: #0f1738;
+          border-color: #23315e;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        .tl-skill-rec-badge {
+          background: #95d433;
+          color: #07101b;
+          font-family: 'Inter', sans-serif;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.5px;
+          padding: 4px 10px;
+          border-radius: 6px;
+          display: inline-block;
+        }
+
+        .tl-skill-rec-title {
+          font-size: 24px;
+          font-weight: 800;
+          color: var(--text-main);
+          letter-spacing: -0.5px;
+          line-height: 1.2;
+          margin: 0;
+        }
+
+        .tl-skill-rec-meta {
+          font-size: 13px;
+          color: var(--muted);
+          font-weight: 500;
+          margin-top: -2px;
+        }
+
+        .tl-skill-rec-desc {
+          font-size: 13.5px;
+          color: var(--text-main);
+          line-height: 1.5;
+          margin: 0;
+        }
+
+        .tl-skill-rec-desc strong {
+          font-weight: 700;
+        }
+
+        @media (max-width: 700px) {
+          .tl-skill-center-container {
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding-top: 76px;
+            padding-bottom: 16px;
+          }
+          .tl-skill-page-wrapper {
+            padding: 0 16px;
+            justify-content: flex-start;
+          }
+          .tl-skill-header-logo {
+            top: 16px;
+            left: 18px;
+          }
+          .tl-skill-title {
+            font-size: 24px;
+            letter-spacing: -1.2px;
+          }
+          .tl-skill-grid-2col {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+          }
+          .tl-skill-choice-btn {
+            height: 38px;
+            font-size: 12.5px;
+          }
+          .tl-skill-nav-row {
+            padding-top: 10px;
+          }
+        }
+
+        @media (max-width: 430px) {
+          .tl-skill-title {
+            font-size: 22px;
+          }
+          .tl-skill-grid-2col {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+      `}</style>
+
+      {/* Top Left TLS Logo */}
+      <div
+        className="tl-skill-header-logo"
+        onClick={() => navigate("/")}
+        title="Return to Home"
+      >
+        <img
+          src={isDarkMode ? "/logoo2-small.webp" : "/logoo-small.webp"}
+          alt="TechLearn Solutions"
+        />
+      </div>
+
+      {/* Centered Content Container */}
+      <div className="tl-skill-center-container">
+        {/* Progress Bar (4 steps) */}
+        {step < 5 && (
+          <div className="tl-skill-progress-wrapper">
+            <div className="tl-skill-progress-steps">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className={`tl-skill-progress-step ${step >= i ? "active" : ""}`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step < 5 ? (
+          <div className="tl-skill-step-content">
+            <div className="tl-skill-eyebrow">STEP {step} OF 4</div>
+
+            <h1 className="tl-skill-title">
+              {step === 1 ? (
+                <>What do you want to <em>learn?</em></>
+              ) : step === 2 ? (
+                <>What do you want to <em>do</em> with this skill?</>
+              ) : step === 3 ? (
+                <>What level of programming are you <em>currently at?</em></>
+              ) : (
+                <>How would you like to <em>learn?</em></>
+              )}
+            </h1>
+
+            {/* Step 1: Pick your skill */}
+            {step === 1 && (
+              <>
+                <div className="tl-skill-subhead">
+                  Pick <em>your</em> skill
+                </div>
+
+                <div className="tl-skill-grid-2col">
+                  {skillCatalog.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      className={`tl-skill-choice-btn ${skill === item ? "selected" : ""}`}
+                      onClick={() => {
+                        setSkill(item);
+                        setError("");
+                      }}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+
+                {skill === "Other" && (
+                  <input
+                    type="text"
+                    className="tl-skill-custom-input"
+                    placeholder="Enter a skill, e.g. Rust, Kotlin, Go..."
+                    value={customSkill}
+                    onChange={(e) => setCustomSkill(e.target.value)}
+                    autoFocus
+                  />
+                )}
+              </>
+            )}
+
+            {/* Step 2: Choose your goal */}
+            {step === 2 && (
+              <>
+                <div className="tl-skill-subhead">
+                  Choose <em>your</em> goal
+                </div>
+                <div style={{ display: "grid", gap: 10 }}>
+                  {skillGoals.map(([title, description]) => (
+                    <button
+                      key={title}
+                      type="button"
+                      className={`tl-skill-goal-card ${goal === title ? "selected" : ""}`}
+                      onClick={() => setGoal(title)}
+                    >
+                      <strong>{title}</strong>
+                      <small>{description}</small>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Step 3: Choose programming level */}
+            {step === 3 && (
+              <>
+                <div className="tl-skill-subhead">
+                  Choose <em>your</em> current level
+                </div>
+                <div className="tl-skill-grid-2col">
+                  {skillLevelCards.map(([title, code, description]) => (
+                    <button
+                      key={title}
+                      type="button"
+                      className={`tl-skill-level-card ${level === title ? "selected" : ""}`}
+                      onClick={() => setLevel(title)}
+                    >
+                      <div className="tl-skill-level-code">{code}</div>
+                      <strong>{title}</strong>
+                      <small style={{ opacity: 0.85, fontSize: 12 }}>{description}</small>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Step 4: Learning style */}
+            {step === 4 && (
+              <>
+                <div className="tl-skill-subhead">
+                  Choose <em>your</em> learning style
+                </div>
+                <div style={{ display: "grid", gap: 10 }}>
+                  {[
+                    ["Self-Paced", "Learn at my own pace"],
+                    ["Trainer-Led", "Learn with a trainer"],
+                    ["ANY", "I'm not sure"],
+                  ].map(([value, title]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`tl-skill-goal-card ${learningMode === value ? "selected" : ""}`}
+                      onClick={() => setLearningMode(value)}
+                    >
+                      <strong>{title}</strong>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {error && <div className="tl-skill-error-text">{error}</div>}
+
+            {/* Bottom Back and Continue Actions */}
+            <div className="tl-skill-nav-row">
+              <button
+                type="button"
+                className="tl-skill-action-btn tl-skill-btn-back"
+                onClick={goBack}
+              >
+                BACK
+              </button>
+              <button
+                type="button"
+                className="tl-skill-action-btn tl-skill-btn-continue"
+                disabled={loading || (step === 1 && (!requestedSkill || (skill === "Other" && !customSkill.trim()))) || (step === 2 && !goal) || (step === 3 && !level) || (step === 4 && !learningMode)}
+                onClick={continueStep}
+              >
+                {loading
+                  ? "FINDING..."
+                  : step === 4
+                  ? "CONTINUE →"
+                  : "CONTINUE →"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Step 5: Result Match */
+          <div className="tl-skill-step-content" style={{ justifyContent: "flex-start" }}>
+            <div className="tl-skill-eyebrow">YOUR MATCH</div>
+            <h1 className="tl-skill-title" style={{ marginBottom: 20 }}>
+              Here's what fits <em>you.</em>
+            </h1>
+
+            {result?.matchType === "none" ? (
+              <div className="tl-skill-rec-card">
+                <div className="tl-skill-rec-badge">NOT AVAILABLE YET</div>
+                <h2 className="tl-skill-rec-title">
+                  We don't have this program yet.
+                </h2>
+                <div className="tl-skill-rec-meta">
+                  Level: {level || "All"} | Mode: {learningMode || "Self-Paced"}
+                </div>
+                <p className="tl-skill-rec-desc">
+                  We don't currently have a {requestedSkill} program available, but we've saved your request.
+                </p>
+              </div>
+            ) : (
+              <div className="tl-skill-rec-card">
+                <div className="tl-skill-rec-badge">
+                  {result?.matchType === "exact" ? "RECOMMENDED FOR YOU" : "RECOMMENDED FOR YOU"}
+                </div>
+                <h2 className="tl-skill-rec-title">
+                  {result?.program?.name || `${requestedSkill} Masterclass`}
+                </h2>
+                <div className="tl-skill-rec-meta">
+                  Level: {level || "Beginner"} | Mode: {result?.programMode || "Self-Paced"}
+                </div>
+                <p className="tl-skill-rec-desc">
+                  Designed specifically to help you reach your goal: <strong>"{goal || "Learn the basics"}"</strong>.
+                </p>
+              </div>
+            )}
+
+            <div className="tl-skill-nav-row">
+              <button
+                type="button"
+                className="tl-skill-action-btn tl-skill-btn-back"
+                onClick={() => setStep(1)}
+              >
+                CHANGE
+              </button>
+              <button
+                type="button"
+                className="tl-skill-action-btn tl-skill-btn-continue"
+                onClick={result?.matchType === "none" ? () => navigate("/learn/courses") : startProgram}
+              >
+                {result?.matchType === "none"
+                  ? "EXPLORE SKILLS →"
+                  : result?.programMode === "Trainer-Led" && !result?.program?.isPublished
+                  ? "JOIN WAITLIST →"
+                  : "VIEW PROGRAM →"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ContextualOnboarding() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -164,6 +981,8 @@ export default function ContextualOnboarding() {
     intent === "skill"
       ? !!selectedSkillLevel && !!selectedLearningOutcome
       : selectedCompanies.length > 0;
+
+  if (intent === "skill") return <SkillOnboardingFlow />;
 
   const handleRoleSelect = (r) => {
     setError("");
@@ -449,17 +1268,28 @@ export default function ContextualOnboarding() {
         .tl-page-container {
           width: 50vw;
           max-width: 1050px;
-          min-height: auto;
+          height: 100vh;
+          max-height: 100vh;
           margin: auto;
-          padding: 24px 0 28px;
+          padding: 84px 0 24px;
           display: flex;
           flex-direction: column;
-          justify-content: center;
+          box-sizing: border-box;
+          overflow: hidden;
+        }
+
+        .tl-screen {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+          overflow: hidden;
         }
 
         .tl-progress-wrapper {
           width: 100%;
-          margin-bottom: 24px;
+          margin-bottom: 20px;
+          flex-shrink: 0;
         }
 
         .tl-progress-steps {
@@ -489,16 +1319,18 @@ export default function ContextualOnboarding() {
           line-height: 1.4;
           color: var(--white);
           letter-spacing: .7px;
-          margin-bottom: 10px;
+          margin-bottom: 8px;
+          flex-shrink: 0;
         }
 
         .tl-title {
-          font-size: clamp(28px, 2.4vw, 38px);
+          font-size: clamp(26px, 2.3vw, 36px);
           line-height: 1.1;
           letter-spacing: -1.5px;
           font-weight: 700;
           color: var(--white);
           margin-bottom: 8px;
+          flex-shrink: 0;
         }
 
         .tl-description {
@@ -507,7 +1339,8 @@ export default function ContextualOnboarding() {
           font-size: 13.5px;
           line-height: 1.4;
           color: var(--navy-dark);
-          margin-bottom: 24px;
+          margin-bottom: 20px;
+          flex-shrink: 0;
         }
 
         .tl-onboarding-page-root.dark-mode .tl-description {
@@ -515,11 +1348,11 @@ export default function ContextualOnboarding() {
         }
 
         .tl-field {
-          margin-bottom: 24px;
+          margin-bottom: 20px;
         }
 
         .tl-field:first-of-type {
-          margin-top: 24px;
+          margin-top: 14px;
         }
 
         .tl-field-label {
@@ -660,8 +1493,9 @@ export default function ContextualOnboarding() {
           width: 100%;
           display: flex;
           gap: 10px;
-          margin-top: 24px;
-          padding-top: 12px;
+          margin-top: auto;
+          padding-top: 14px;
+          flex-shrink: 0;
         }
 
         .tl-btn {
@@ -715,7 +1549,7 @@ export default function ContextualOnboarding() {
 
         .tl-close-step {
           position: absolute;
-          top: -4px;
+          top: 6px;
           right: 0;
           width: 32px;
           height: 32px;
@@ -731,6 +1565,7 @@ export default function ContextualOnboarding() {
           justify-content: center;
           cursor: pointer;
           transition: .18s ease;
+          z-index: 10;
         }
 
         .tl-close-step:hover {
