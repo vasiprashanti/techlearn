@@ -3,6 +3,7 @@ import Program from "../models/Program.js";
 import Batch from "../models/Batch.js";
 import { combineDateAndTime, getTrackAssignmentDate } from "./trackAssignmentSchedule.js";
 import { expireBatchIfNeeded } from "./batchLifecycle.js";
+import { isProgramAccessibleToLearner } from "./programVisibility.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -114,14 +115,6 @@ export const assertProgramScheduleAccess = async ({ user, student, programId }) 
   const program = await Program.findById(resolvedProgramId)
     .select("pricingType status visibility")
     .lean();
-  if (!program || program.status !== "Active" || program.visibility !== "Public") {
-    const error = new Error("This program is not available.");
-    error.statusCode = 403;
-    throw error;
-  }
-
-  if (program.pricingType !== "Paid") return null;
-
   const identifiers = [
     user?._id ? { userId: user._id } : null,
     student?._id ? { studentId: student._id } : null,
@@ -130,12 +123,19 @@ export const assertProgramScheduleAccess = async ({ user, student, programId }) 
     ? await ProgramEnrollment.findOne({
         programId: resolvedProgramId,
         status: "Active",
-        accessTier: "Member",
         $or: identifiers,
-      }).select("_id accessTier").lean()
+      }).select("_id batchId accessTier").lean()
     : null;
 
-  if (!enrollment) {
+  if (!isProgramAccessibleToLearner({ program, enrollment })) {
+    const error = new Error("This program is not available.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (program.pricingType !== "Paid") return null;
+
+  if (!enrollment || enrollment.accessTier !== "Member") {
     const error = new Error("Paid program access requires a verified enrollment.");
     error.statusCode = 403;
     throw error;

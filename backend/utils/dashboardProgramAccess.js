@@ -86,7 +86,6 @@ export const resolveDashboardProgramAccess = async ({
   const programs = await Program.find({
     _id: { $in: programIds },
     status: "Active",
-    visibility: "Public",
   })
     .select("_id name programType duration durationDays status visibility pricingType")
     .lean();
@@ -112,6 +111,13 @@ export const resolveDashboardProgramAccess = async ({
       userBatchId,
       studentBatchId,
     });
+
+    // Private programs are never a general dashboard/catalog entry. They
+    // become a valid dashboard program only when this enrollment is tied to
+    // a batch, which is the explicit cohort access grant.
+    if (program.visibility !== "Public" && !batchId) {
+      continue;
+    }
 
     if (batchId) {
       const lifecycle = await expireBatchIfNeeded(batchId);

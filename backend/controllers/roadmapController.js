@@ -6,6 +6,7 @@ import Sequence from "../models/Sequence.js";
 import Student from "../models/Student.js";
 import { writeAuditLog } from "../utils/auditLogger.js";
 import { resolveProgramSchedule } from "../utils/programSchedule.js";
+import { isProgramAccessibleToLearner } from "../utils/programVisibility.js";
 import {
   formatRoadmapDuration,
   isRoadmapBranchEligible,
@@ -374,8 +375,15 @@ const getViewerContext = async (user) => {
   if (!user) return { student: null, schedule: null, batchExpired: false };
   const student = await findStudentForUser(user);
   const schedule = await resolveProgramSchedule({ user, student });
-  const program = schedule?.programId
-    ? await Program.findById(schedule.programId).select("_id roadmapIds").lean()
+  const candidateProgram = schedule?.programId
+    ? await Program.findById(schedule.programId).select("_id roadmapIds status visibility").lean()
+    : null;
+  const program = isProgramAccessibleToLearner({
+    program: candidateProgram,
+    enrollment: schedule?.enrollment,
+    isAdmin: user.role === "admin",
+  })
+    ? candidateProgram
     : null;
   return { student, schedule, program, batchExpired: Boolean(schedule.batchExpired) };
 };

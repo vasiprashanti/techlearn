@@ -18,7 +18,7 @@ import { ensureReadinessLead } from "../services/programAssignmentService.js";
 import { ensureStudentForUser } from "../utils/userProfile.js";
 import { syncPrimaryProgramPointers, upsertProgramEnrollment } from "../utils/programEnrollment.js";
 import { matchProgramsForUser } from "../utils/programMatching.js";
-import { isUserVisibleProgram } from "../utils/programVisibility.js";
+import { isProgramAccessibleToLearner, isUserVisibleProgram } from "../utils/programVisibility.js";
 import { isUserVisibleCourse } from "../utils/courseVisibility.js";
 import { expireAllActiveBatches } from "../utils/batchLifecycle.js";
 
@@ -478,8 +478,10 @@ export const getAssignedPrograms = async (req, res) => {
 
     let assignedPrograms = enrollments
       .filter((enrollment) => enrollment.programId
-        && enrollment.programId.status === "Active"
-        && enrollment.programId.visibility === "Public"
+        && isProgramAccessibleToLearner({
+          program: enrollment.programId,
+          enrollment,
+        })
         && (enrollment.programId.pricingType !== "Paid" || enrollment.accessTier === "Member"))
       .map((e) => e.programId);
     const enrollmentByProgramId = new Map(
@@ -614,9 +616,12 @@ export const selectActiveProgram = async (req, res) => {
       });
     }
 
-    const program = await Program.findOne({ _id: programId, status: "Active", visibility: "Public" }).lean();
+    const program = await Program.findOne({ _id: programId, status: "Active" }).lean();
     if (!program) {
       return res.status(404).json({ success: false, message: "Program not found or inactive" });
+    }
+    if (!isProgramAccessibleToLearner({ program, enrollment, isAdmin: req.user.role === "admin" })) {
+      return res.status(404).json({ success: false, message: "Program not found or inaccessible" });
     }
     if (req.user.role !== "admin" && program.pricingType === "Paid" && (!enrollment || enrollment.accessTier !== "Member")) {
       return res.status(403).json({ success: false, message: "Paid program access requires a verified enrollment" });
@@ -678,7 +683,6 @@ export const getProgramDetailForStudent = async (req, res) => {
     const programQuery = { _id: programId };
     if (req.user.role !== "admin") {
       programQuery.status = "Active";
-      programQuery.visibility = "Public";
     }
 
     const program = await Program.findOne(programQuery)
@@ -691,6 +695,9 @@ export const getProgramDetailForStudent = async (req, res) => {
       return res.status(404).json({ success: false, message: "Program not found or inaccessible" });
     }
     if (req.user.role !== "admin" && !isUserVisibleProgram(program)) {
+      return res.status(404).json({ success: false, message: "Program not found or inaccessible" });
+    }
+    if (req.user.role !== "admin" && !isProgramAccessibleToLearner({ program, enrollment })) {
       return res.status(404).json({ success: false, message: "Program not found or inaccessible" });
     }
     if (req.user.role !== "admin" && program.pricingType === "Paid" && (!enrollment || enrollment.accessTier !== "Member")) {

@@ -11,6 +11,7 @@ import { calculateProgramDayNumber, resolveProgramSchedule } from "../utils/prog
 import { getTopicDayNumber } from "../utils/courseTopicSchedule.js";
 import { expireBatchIfNeeded } from "../utils/batchLifecycle.js";
 import { isUserVisibleCourse } from "../utils/courseVisibility.js";
+import { isProgramAccessibleToLearner } from "../utils/programVisibility.js";
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 import {
@@ -511,8 +512,10 @@ export const getAllCourses = async (req, res) => {
         const programCourseIds = (program?.courseIds || []).map(String);
         const hasVerifiedProgramAccess = Boolean(
           program &&
-          program.status === "Active" &&
-          program.visibility === "Public" &&
+          isProgramAccessibleToLearner({
+            program,
+            enrollment: schedule.enrollment,
+          }) &&
           schedule.enrollment &&
           (program.pricingType !== "Paid" || schedule.enrollment.accessTier === "Member")
         );
@@ -692,6 +695,7 @@ export const getCourseById = async (req, res) => {
       const hasProgramAccess = enrollments.some((enrollment) => {
         const linkedProgram = linkedPrograms.find((candidate) => String(candidate._id) === String(enrollment.programId));
         return linkedProgram &&
+          isProgramAccessibleToLearner({ program: linkedProgram, enrollment }) &&
           (linkedProgram.pricingType !== "Paid" || enrollment.accessTier === "Member");
       });
 

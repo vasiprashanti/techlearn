@@ -4,7 +4,7 @@ import Student from "../models/Student.js";
 import Topic from "../models/Topic.js";
 import Program from "../models/Program.js";
 import { calculateProgramDayNumber } from "../utils/programSchedule.js";
-import { resolveProgramSchedule } from "../utils/programSchedule.js";
+import { assertProgramScheduleAccess, resolveProgramSchedule } from "../utils/programSchedule.js";
 import { getTopicDayNumber } from "../utils/courseTopicSchedule.js";
 
 const buildTopicPayload = (topic, index, currentDay, courseId) => {
@@ -44,6 +44,11 @@ export const getPlacementLearningDashboard = async (req, res) => {
     }
 
     const schedule = await resolveProgramSchedule({ user: req.user, student });
+    await assertProgramScheduleAccess({
+      user: req.user,
+      student,
+      programId: schedule.programId,
+    });
     if (schedule.batchExpired) {
       return res.status(403).json({
         success: false,

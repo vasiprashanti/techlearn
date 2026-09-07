@@ -13,6 +13,7 @@ import {
   normalizeBlueprintType,
 } from "../utils/blueprintTypes.js";
 import { calculateProgramDayNumber, resolveProgramSchedule } from "../utils/programSchedule.js";
+import { isProgramAccessibleToLearner } from "../utils/programVisibility.js";
 
 const PHASE_BLUEPRINT_TYPES = Object.freeze({
   revision: "revision",
@@ -123,13 +124,6 @@ export const getProgramLearningContext = async ({
     throw error;
   }
 
-  const isAdmin = userRecord?.role === "admin";
-  if (!isAdmin && (program.status !== "Active" || program.visibility !== "Public")) {
-    const error = new Error("Program is not available.");
-    error.statusCode = 404;
-    throw error;
-  }
-
   const enrollment = await ProgramEnrollment.findOne({
     userId: getId(userRecord || user),
     programId,
@@ -137,6 +131,13 @@ export const getProgramLearningContext = async ({
   })
     .sort({ assignedAt: -1, createdAt: -1 })
     .lean();
+
+  const isAdmin = userRecord?.role === "admin";
+  if (!isProgramAccessibleToLearner({ program, enrollment, isAdmin })) {
+    const error = new Error("Program is not available.");
+    error.statusCode = 404;
+    throw error;
+  }
 
   const legacyEnrollment =
     !enrollment &&
