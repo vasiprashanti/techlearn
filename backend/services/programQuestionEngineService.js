@@ -682,6 +682,15 @@ export const getCurrentProgramAssignment = async (context, { allowDraft = false 
   }
 
   if (!["revision", "company_preparation", "final_assessment"].includes(context.phase)) {
+    if (context.program?.programType === "Placement") {
+      const existingReadiness = await ProgramAssignment.findOne({
+        programId: context.program._id,
+        userId: getId(context.user),
+        phase: "day_0_readiness",
+        programDay: 0,
+      });
+      if (existingReadiness) return existingReadiness;
+    }
     return null;
   }
 

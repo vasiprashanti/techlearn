@@ -10,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.use(protect, requireProjectProgram);
+router.use(protect);
 router.get("/active", getActiveProject);
-router.get("/overview", getProjectOverview);
-router.get("/day-notes/:dayNumber", getDayNotes);
-router.post("/tasks/:taskId/toggle", toggleTask);
+router.get("/overview", requireProjectProgram, getProjectOverview);
+router.get("/day-notes/:dayNumber", requireProjectProgram, getDayNotes);
+router.post("/tasks/:taskId/toggle", requireProjectProgram, toggleTask);
 
 export default router;

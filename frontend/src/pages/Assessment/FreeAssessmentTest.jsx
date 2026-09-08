@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import {
   Clock,
@@ -60,6 +60,9 @@ export default function FreeAssessmentTest() {
   const { user } = useAuth();
   const isDarkMode = theme === 'dark';
 
+  const location = useLocation();
+  const stateAssignmentId = location.state?.assignmentId;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [assignment, setAssignment] = useState(null);
@@ -99,12 +102,12 @@ export default function FreeAssessmentTest() {
       const saved = localStorage.getItem(timerStorageKey);
       if (saved !== null) {
         const parsed = parseInt(saved, 10);
-        return isNaN(parsed) || parsed <= 0 ? 30 * 60 : parsed;
+        return isNaN(parsed) ? 1800 : parsed;
       }
-    } catch (e) {
-      console.warn('Could not read timer from localStorage:', e);
+    } catch {
+      // ignore
     }
-    return 30 * 60; // 30 minutes
+    return 1800; // 30 minutes
   });
 
   const currentRunsUsed = runCounts[activeQuestionIndex] || 0;
@@ -118,7 +121,7 @@ export default function FreeAssessmentTest() {
         setLoading(true);
         setError('');
 
-        const response = await programLearningAPI.getAssignment(programId);
+        const response = await programLearningAPI.getAssignment(programId, stateAssignmentId);
         if (!isMounted) return;
 
         if (response?.success && response?.assignment) {
