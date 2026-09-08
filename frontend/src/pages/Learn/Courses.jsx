@@ -353,12 +353,20 @@ export default function Courses() {
               .dark .tl-card-banner {
                 background: #0d1117;
               }
+              .tl-card-banner-bg {
+                position: absolute;
+                inset: -10px;
+                background-size: cover;
+                background-position: center;
+                filter: blur(8px) brightness(0.6);
+              }
               .tl-card-banner img {
+                position: relative;
                 width: 100%;
                 height: 100%;
                 display: block;
-                object-fit: cover;
-                object-position: center center;
+                object-fit: contain;
+                z-index: 1;
                 transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
               }
               .tl-learn-card:hover .tl-card-banner img {
@@ -548,6 +556,10 @@ export default function Courses() {
                           >
                             {/* IMAGE */}
                             <div className="tl-card-banner">
+                              <div
+                                className="tl-card-banner-bg"
+                                style={{ backgroundImage: `url(${getCourseImage(course)})` }}
+                              />
                               <img
                                 src={getCourseImage(course)}
                                 alt={course.title}
