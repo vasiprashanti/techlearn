@@ -468,17 +468,35 @@ export const dataAdapters = {
     // Default gradients, icons, and images for different course types
     const getDefaultVisuals = (title) => {
       const titleLower = title.toLowerCase();
-      if (titleLower.includes('java') && !titleLower.includes('javascript')) {
+      if (titleLower.includes('genai') || titleLower.includes('generative ai') || titleLower.includes('gen ai')) {
+        return {
+          gradient: 'from-blue-500 via-cyan-400 to-teal-400',
+          icon: '🤖',
+          image: '/genai.jpg'
+        };
+      } else if (titleLower.includes('fullstack') || titleLower.includes('full stack') || titleLower.includes('full-stack')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
           icon: '☕',
-          image: '/java.png'
+          image: '/java-fullstack.jpg'
+        };
+      } else if (titleLower.includes('java') && !titleLower.includes('javascript')) {
+        return {
+          gradient: 'from-blue-500 via-cyan-400 to-teal-400',
+          icon: '☕',
+          image: '/java.jpg'
+        };
+      } else if (titleLower.includes('aptitude') || titleLower.includes('quantitative') || titleLower.includes('reasoning')) {
+        return {
+          gradient: 'from-blue-500 via-cyan-400 to-teal-400',
+          icon: '🧮',
+          image: '/aptitude.jpg'
         };
       } else if (titleLower.includes('python')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
           icon: '🐍',
-          image: '/python.png'
+          image: '/python.jpg'
         };
       } else if (titleLower.includes('dsa') || titleLower.includes('data structures') || titleLower.includes('algorithms')) {
         return {
@@ -504,11 +522,11 @@ export const dataAdapters = {
           icon: '⚙️',
           image: '/c.png'
         };
-      } else if (titleLower.includes('c ') || titleLower.includes('c programming')) {
+      } else if (titleLower.includes('c programming') || titleLower === 'c' || titleLower.startsWith('c ')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
           icon: '🔧',
-          image: '/c.png'
+          image: '/c-programming.jpg'
         };
       } else if (titleLower.includes('html') || titleLower.includes('css')) {
         return {
@@ -520,7 +538,7 @@ export const dataAdapters = {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
           icon: '📚',
-          image: '/python.png' // Default fallback
+          image: '/python.jpg'
         };
       }
     };
@@ -533,7 +551,7 @@ export const dataAdapters = {
       if (titleLower.includes('java') || titleLower.includes('python')) {
         return {
           status: 'available',
-          price: '₹1499',
+          price: '\u20B91499',
           certificationPrice: 1499,
           certificationDiscountedPrice: 999,
           xpDiscount: 500,

@@ -65,7 +65,13 @@ export default function FreeAssessmentSetup() {
     try {
       const response = await programLearningAPI.startFreeAssessment(payload);
       if (response?.success && response?.programId) {
-        navigate(`/free-assessment/${response.programId}`);
+        navigate(`/free-assessment/${response.programId}`, {
+          state: {
+            assignmentId: response.assignmentId,
+            targetRole: finalRole,
+            targetCompany: finalCompany,
+          },
+        });
       } else {
         throw new Error(response?.message || 'Could not generate interview assessment.');
       }
@@ -628,7 +634,7 @@ export default function FreeAssessmentSetup() {
         </div>
 
         <h1 className="page-title">
-          <i>Your</i> interview is ready.
+          <i style={{ fontStyle: "italic", marginRight: "0.28em" }}>Your</i> interview is ready.
         </h1>
 
         {error && (

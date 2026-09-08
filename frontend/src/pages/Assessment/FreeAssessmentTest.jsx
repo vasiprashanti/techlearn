@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import {
   Clock,
@@ -60,6 +60,9 @@ export default function FreeAssessmentTest() {
   const { user } = useAuth();
   const isDarkMode = theme === 'dark';
 
+  const location = useLocation();
+  const stateAssignmentId = location.state?.assignmentId;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [assignment, setAssignment] = useState(null);
@@ -99,12 +102,12 @@ export default function FreeAssessmentTest() {
       const saved = localStorage.getItem(timerStorageKey);
       if (saved !== null) {
         const parsed = parseInt(saved, 10);
-        return isNaN(parsed) || parsed <= 0 ? 30 * 60 : parsed;
+        return isNaN(parsed) ? 1800 : parsed;
       }
-    } catch (e) {
-      console.warn('Could not read timer from localStorage:', e);
+    } catch {
+      // ignore
     }
-    return 30 * 60; // 30 minutes
+    return 1800; // 30 minutes
   });
 
   const currentRunsUsed = runCounts[activeQuestionIndex] || 0;
@@ -118,7 +121,7 @@ export default function FreeAssessmentTest() {
         setLoading(true);
         setError('');
 
-        const response = await programLearningAPI.getAssignment(programId);
+        const response = await programLearningAPI.getAssignment(programId, stateAssignmentId);
         if (!isMounted) return;
 
         if (response?.success && response?.assignment) {
@@ -829,8 +832,8 @@ export default function FreeAssessmentTest() {
       {/* Main Content Area */}
       {isMcq ? (
         <div className="flex-grow flex-1 overflow-y-auto p-4 md:p-6 flex flex-col items-center justify-center">
-          {/* Uniform Fixed-Size Container for all MCQ questions */}
-          <div className="w-full max-w-3xl min-h-[580px] h-[580px] md:h-[600px] border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-2xl flex flex-col justify-between my-auto select-none">
+          {/* Uniform Fixed-Size Container for all MCQ questions - matching coding assessment card color */}
+          <div className="w-full max-w-3xl min-h-[580px] h-[580px] md:h-[600px] border border-black/10 dark:border-white/10 bg-white/40 dark:bg-[#071330] shadow-sm backdrop-blur-xl p-5 md:p-6 rounded-2xl flex flex-col justify-between my-auto select-none">
             
             {/* Top: Palette & Tag Row */}
             <div className="w-full space-y-3 shrink-0">
@@ -871,7 +874,7 @@ export default function FreeAssessmentTest() {
             </div>
 
             {/* Middle: Question Title & Description Card (Fixed Height) */}
-            <div className="relative w-full h-[140px] md:h-[155px] overflow-y-auto thin-scrollbar border border-[#2563eb]/20 dark:border-white/10 bg-[#e5f3ff]/45 dark:bg-[#091b40]/75 rounded-xl p-4 shadow-sm text-center flex flex-col justify-center shrink-0">
+            <div className="relative w-full h-[140px] md:h-[155px] overflow-y-auto thin-scrollbar border border-black/5 dark:border-white/10 bg-slate-50/70 dark:bg-black/20 rounded-xl p-4 shadow-sm text-center flex flex-col justify-center shrink-0">
               <h2 className="text-sm md:text-base font-bold text-gray-900 dark:text-white leading-relaxed select-none whitespace-pre-line">
                 {questionDetails.title || currentItem.title || 'Question Prompt'}
               </h2>

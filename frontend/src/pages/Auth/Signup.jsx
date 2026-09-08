@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
@@ -31,12 +31,37 @@ export default function Signup({
   const [password, setPassword] = useState('');
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
+  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
+  const [otpError, setOtpError] = useState('');
+  const [resendTimer, setResendTimer] = useState(30);
   const [emailVerificationToken, setEmailVerificationToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' });
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+  const otpInputRefs = useRef([]);
+
+  const maskEmail = (rawEmail) => {
+    if (!rawEmail || !rawEmail.includes('@')) return rawEmail;
+    const [name, domain] = rawEmail.split('@');
+    if (name.length <= 2) {
+      return `${name}•••@${domain}`;
+    }
+    return `${name.slice(0, 2)}•••@${domain}`;
+  };
+
+  useEffect(() => {
+    let interval = null;
+    if (otpSent && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [otpSent, resendTimer]);
 
   useEffect(() => {
     setIsLoginMode(initialMode === 'login');
@@ -220,101 +245,196 @@ export default function Signup({
       }
     } else {
       try {
-        if (!otpSent) {
-          const otpRes = await fetch(`${getApiBase()}/auth/register/send-otp`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email.trim(), password }),
-          });
-          const otpData = await otpRes.json();
-          if (!otpRes.ok) {
-            setStatusMsg({ text: otpData.message || 'Unable to send verification OTP.', type: 'error' });
-            return;
-          }
-          setOtpSent(true);
-          setStatusMsg({ text: 'A verification OTP was sent to your email.', type: 'info' });
-          return;
-        }
-
-        let verificationToken = emailVerificationToken;
-        if (!verificationToken) {
-          const verifyRes = await fetch(`${getApiBase()}/auth/register/verify-otp`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email.trim(), otp }),
-          });
-          const verifyData = await verifyRes.json();
-          if (!verifyRes.ok) {
-            setStatusMsg({ text: verifyData.message || 'Invalid or expired OTP.', type: 'error' });
-            return;
-          }
-          verificationToken = verifyData.verificationToken;
-          setEmailVerificationToken(verificationToken);
-        }
-
-        let draft = {};
-        try {
-          const draftRaw = localStorage.getItem('techlearn-onboarding-draft');
-          if (draftRaw) draft = JSON.parse(draftRaw);
-        } catch (e) {
-          console.warn('Could not read onboarding draft:', e);
-        }
-
-        const regPayload = {
-          email: email.trim(),
-          password,
-          confirmPassword: password,
-          fullName: email.split('@')[0],
-          learningGoal: draft.learningGoal || '',
-          targetRole: draft.targetRole || '',
-          targetRoleOther: draft.targetRoleOther || draft.otherTargetRole || '',
-          placementCategory: draft.placementCategory || '',
-          targetCompanies: draft.targetCompanies || [],
-          skills: draft.skills || [],
-          learningPath: draft.learningPath || '',
-          completeOnboarding: Boolean(draft.targetRole || draft.skills?.length),
-          emailVerificationToken: verificationToken,
-        };
-
-        const regRes = await fetch(`${getApiBase()}/users/register`, {
+        const otpRes = await fetch(`${getApiBase()}/auth/register/send-otp`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(regPayload),
+          body: JSON.stringify({ email: email.trim(), password }),
         });
-
-        const regData = await regRes.json();
-
-        if (regRes.ok && regData.token) {
-          try {
-            localStorage.removeItem('techlearn-onboarding-draft');
-          } catch (e) {}
-
-          localStorage.setItem('token', regData.token);
-          localStorage.setItem('userData', JSON.stringify(regData.user));
-          if (setSession) setSession(regData.user, regData.token);
-          if (refetchUserData) await refetchUserData();
-
-          if (await handlePendingAssessmentIfPresent()) {
-            return;
-          }
-
-          handleClose();
-          navigateUserByProgram(regData.user, navigate);
-        } else {
-          setStatusMsg({
-            text: regData.message || 'Account creation failed. Please check your details.',
-            type: 'error',
-          });
+        const otpData = await otpRes.json();
+        if (!otpRes.ok) {
+          setStatusMsg({ text: otpData.message || 'Unable to send verification OTP.', type: 'error' });
+          return;
         }
+        setOtpSent(true);
+        setOtpDigits(['', '', '', '', '', '']);
+        setOtpError('');
+        setResendTimer(30);
+        setTimeout(() => {
+          if (otpInputRefs.current[0]) {
+            otpInputRefs.current[0].focus();
+          }
+        }, 50);
+        return;
       } catch (err) {
-        console.error('Signup error:', err);
+        console.error('Signup OTP error:', err);
         setStatusMsg({
-          text: 'Network error during signup. Please try again.',
+          text: 'Network error while sending verification code. Please try again.',
           type: 'error',
         });
       } finally {
         setLoading(false);
       }
+    }
+  };
+
+  const handleOtpDigitChange = (index, value) => {
+    // Keep only the last character entered, only digits
+    const cleaned = value.replace(/\D/g, '');
+    const char = cleaned ? cleaned[cleaned.length - 1] : '';
+
+    const newDigits = [...otpDigits];
+    newDigits[index] = char;
+    setOtpDigits(newDigits);
+    setOtpError('');
+
+    if (char && index < 5) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace') {
+      if (!otpDigits[index] && index > 0) {
+        otpInputRefs.current[index - 1]?.focus();
+      }
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    } else if (e.key === 'ArrowRight' && index < 5) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pasted) return;
+
+    const newDigits = [...otpDigits];
+    for (let i = 0; i < 6; i++) {
+      newDigits[i] = pasted[i] || '';
+    }
+    setOtpDigits(newDigits);
+    setOtpError('');
+
+    const nextIndex = Math.min(pasted.length, 5);
+    otpInputRefs.current[nextIndex]?.focus();
+  };
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0 || loading) return;
+    setLoading(true);
+    setOtpError('');
+    try {
+      const otpRes = await fetch(`${getApiBase()}/auth/register/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const otpData = await otpRes.json();
+      if (!otpRes.ok) {
+        setOtpError(otpData.message || 'Unable to resend code.');
+        return;
+      }
+      setResendTimer(30);
+      setOtpDigits(['', '', '', '', '', '']);
+      otpInputRefs.current[0]?.focus();
+    } catch (err) {
+      setOtpError('Failed to resend code. Please check your network.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUseDifferentEmail = () => {
+    setOtpSent(false);
+    setOtpDigits(['', '', '', '', '', '']);
+    setOtpError('');
+    setStatusMsg({ text: '', type: '' });
+  };
+
+  const handleVerifyOtpAndRegister = async (e) => {
+    if (e) e.preventDefault();
+    const fullOtp = otpDigits.join('');
+    if (fullOtp.length < 6) {
+      setOtpError('Please enter all 6 digits of the verification code.');
+      return;
+    }
+
+    setLoading(true);
+    setOtpError('');
+
+    try {
+      const verifyRes = await fetch(`${getApiBase()}/auth/register/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), otp: fullOtp }),
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok) {
+        setOtpError(verifyData.message || 'Incorrect verification code. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      const verificationToken = verifyData.verificationToken;
+      setEmailVerificationToken(verificationToken);
+
+      let draft = {};
+      try {
+        const draftRaw = localStorage.getItem('techlearn-onboarding-draft');
+        if (draftRaw) draft = JSON.parse(draftRaw);
+      } catch (err) {
+        console.warn('Could not read onboarding draft:', err);
+      }
+
+      const regPayload = {
+        email: email.trim(),
+        password,
+        confirmPassword: password,
+        fullName: email.split('@')[0],
+        learningGoal: draft.learningGoal || '',
+        targetRole: draft.targetRole || '',
+        targetRoleOther: draft.targetRoleOther || draft.otherTargetRole || '',
+        placementCategory: draft.placementCategory || '',
+        targetCompanies: draft.targetCompanies || [],
+        skills: draft.skills || [],
+        learningPath: draft.learningPath || '',
+        completeOnboarding: Boolean(draft.targetRole || draft.skills?.length),
+        emailVerificationToken: verificationToken,
+      };
+
+      const regRes = await fetch(`${getApiBase()}/users/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(regPayload),
+      });
+
+      const regData = await regRes.json();
+
+      if (regRes.ok && regData.token) {
+        try {
+          localStorage.removeItem('techlearn-onboarding-draft');
+        } catch (err) {}
+
+        localStorage.setItem('token', regData.token);
+        localStorage.setItem('userData', JSON.stringify(regData.user));
+        if (setSession) setSession(regData.user, regData.token);
+        if (refetchUserData) await refetchUserData();
+
+        if (await handlePendingAssessmentIfPresent()) {
+          return;
+        }
+
+        handleClose();
+        navigateUserByProgram(regData.user, navigate);
+      } else {
+        setOtpError(regData.message || 'Account creation failed. Please check your details.');
+      }
+    } catch (err) {
+      console.error('Verification/Registration error:', err);
+      setOtpError('Network error during registration. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -464,26 +584,26 @@ export default function Signup({
 
         .tl-form-side {
           width: 100%;
-          max-width: 400px;
+          max-width: 370px;
           justify-self: end;
           margin: 0;
         }
 
         .tl-eyebrow {
           font-family: "Press Start 2P", cursive;
-          font-size: 8px;
-          line-height: 1.7;
+          font-size: 7.5px;
+          line-height: 1.6;
           color: var(--muted);
-          margin-bottom: 15px;
+          margin-bottom: 8px;
           letter-spacing: 0.5px;
         }
 
         .tl-auth-title {
-          font-size: 36px;
-          line-height: 1.05;
-          letter-spacing: -1.8px;
+          font-size: 32px;
+          line-height: 1.08;
+          letter-spacing: -1.5px;
           font-weight: 800;
-          margin-bottom: 27px;
+          margin-bottom: 20px;
           color: var(--text);
         }
 
@@ -491,9 +611,9 @@ export default function Signup({
           width: 100%;
           background: var(--card);
           border: 1px solid var(--border);
-          border-radius: 14px;
-          padding: 26px;
-          box-shadow: 0 20px 55px rgba(5, 10, 91, 0.09);
+          border-radius: 13px;
+          padding: 22px 20px;
+          box-shadow: 0 18px 48px rgba(5, 10, 91, 0.08);
         }
 
         .tl-field {
@@ -732,6 +852,169 @@ export default function Signup({
           color: #3b82f6;
         }
 
+        /* OTP Verification Screen Styles */
+        .tl-otp-card-inner {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          width: 100%;
+        }
+
+        .tl-otp-title {
+          font-size: 23px;
+          font-weight: 800;
+          color: var(--text);
+          letter-spacing: -0.7px;
+          margin-bottom: 6px;
+          text-align: center;
+          width: 100%;
+        }
+
+        .tl-otp-subtitle {
+          font-size: 12px;
+          color: var(--muted);
+          line-height: 1.45;
+          margin-bottom: 18px;
+          text-align: center;
+          max-width: 290px;
+        }
+
+        .tl-otp-subtitle strong {
+          color: var(--text);
+          font-weight: 700;
+        }
+
+        .tl-otp-inputs {
+          display: flex;
+          justify-content: center;
+          gap: 8px;
+          margin-bottom: 6px;
+          width: 100%;
+        }
+
+        .tl-otp-digit {
+          width: 40px;
+          height: 46px;
+          border-radius: 9px;
+          border: 1px solid var(--border);
+          background: var(--card);
+          color: var(--text);
+          font-size: 19px;
+          font-weight: 700;
+          text-align: center;
+          outline: none;
+          transition: all 0.18s ease;
+        }
+
+        .tl-otp-digit:focus {
+          border-color: var(--lime);
+          box-shadow: 0 0 0 3px rgba(140, 191, 74, 0.25);
+        }
+
+        .tl-otp-inputs.has-error .tl-otp-digit {
+          border-color: #ef4444 !important;
+          color: #ef4444;
+        }
+
+        .tl-otp-inputs.has-error .tl-otp-digit:focus {
+          box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);
+        }
+
+        .tl-otp-error-msg {
+          color: #ef4444;
+          font-size: 11.5px;
+          font-weight: 500;
+          margin-top: 5px;
+          margin-bottom: 3px;
+          text-align: center;
+        }
+
+        .tl-otp-verify-btn {
+          width: 100%;
+          height: 44px;
+          margin-top: 14px;
+          border: none;
+          border-radius: 9px;
+          background: var(--lime);
+          color: #07101b;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.7px;
+          cursor: pointer;
+          box-shadow: 0 5px 14px rgba(140, 191, 74, 0.22);
+          transition: all 0.18s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .tl-otp-verify-btn:hover:not(:disabled) {
+          background: var(--lime-hover);
+          transform: translateY(-1px);
+          box-shadow: 0 8px 20px rgba(140, 191, 74, 0.35);
+        }
+
+        .tl-otp-verify-btn:active:not(:disabled) {
+          transform: translateY(0);
+        }
+
+        .tl-otp-verify-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .tl-otp-footer {
+          margin-top: 20px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          width: 100%;
+        }
+
+        .tl-otp-resend-text {
+          font-size: 12px;
+          color: var(--muted);
+        }
+
+        .tl-otp-resend-btn {
+          background: transparent;
+          border: none;
+          color: var(--text);
+          font-weight: 700;
+          font-size: 12px;
+          cursor: pointer;
+          padding: 0;
+          text-decoration: underline;
+        }
+
+        .tl-otp-resend-btn:hover {
+          color: var(--lime);
+        }
+
+        .tl-otp-resend-btn:disabled {
+          color: var(--muted);
+          cursor: not-allowed;
+          text-decoration: none;
+        }
+
+        .tl-otp-diff-btn {
+          background: transparent;
+          border: none;
+          color: var(--text);
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+          padding: 4px 8px;
+          transition: color 0.18s ease;
+        }
+
+        .tl-otp-diff-btn:hover {
+          text-decoration: underline;
+          color: var(--lime);
+        }
+
         @media (max-width: 950px) {
           .tl-auth-shell {
             height: 100dvh;
@@ -850,19 +1133,16 @@ export default function Signup({
             zoom: 1;
           }
 
-          .tl-auth-title { margin-bottom: 14px; }
-          .tl-auth-card { padding: 16px; }
+          .tl-auth-title {
+            font-size: 26px;
+            letter-spacing: -1px;
+            margin-bottom: 14px;
+          }
+          .tl-auth-card {
+            padding: 18px 16px;
+          }
           .tl-field { margin-bottom: 10px; }
           .tl-input { height: 40px; }
-
-          .tl-auth-title {
-            font-size: 28px;
-            letter-spacing: -1px;
-          }
-
-          .tl-auth-card {
-            padding: 20px;
-          }
         }
 
         @media (max-width: 600px) {
@@ -917,7 +1197,7 @@ export default function Signup({
           }
 
           .tl-auth-card {
-            padding: 30px;
+            padding: 24px 22px;
           }
         }
       `}</style>
@@ -972,7 +1252,7 @@ export default function Signup({
         {/* RIGHT / FORM */}
         <section className="tl-form-side">
           {/* Header Eyebrow & Title */}
-          {showForgotPassword ? (
+          {!isLoginMode && otpSent ? null : showForgotPassword ? (
             <div>
               <div className="tl-eyebrow">ACCOUNT RECOVERY</div>
               <h1 className="tl-auth-title">Reset password</h1>
@@ -991,229 +1271,282 @@ export default function Signup({
 
           {/* Form Card */}
           <div className="tl-auth-card">
-            {statusMsg.text && (
-              <div className={`tl-status-box ${statusMsg.type}`}>
-                {statusMsg.text}
-              </div>
-            )}
+            {!isLoginMode && otpSent ? (
+              /* DEDICATED OTP VERIFICATION CARD */
+              <div className="tl-otp-card-inner">
+                <h2 className="tl-otp-title">Verify your account</h2>
+                <p className="tl-otp-subtitle">
+                  We sent a 6-digit verification code to <strong>{maskEmail(email)}</strong>
+                </p>
 
-            {showForgotPassword ? (
-              /* FORGOT PASSWORD FORM */
-              <form onSubmit={handleForgotPasswordSubmit}>
-                <div className="tl-field">
-                  <label htmlFor="resetEmail">Email</label>
-                  <input
-                    className="tl-input"
-                    id="resetEmail"
-                    type="email"
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="tl-submit-btn"
-                  disabled={loading}
-                >
-                  {loading ? 'SENDING...' : 'SEND RESET LINK'}
-                </button>
-
-                <div className="tl-switch-auth">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowForgotPassword(false);
-                      setStatusMsg({ text: '', type: '' });
-                    }}
-                  >
-                    Back to Log in
-                  </button>
-                </div>
-              </form>
-            ) : (
-              /* LOGIN / SIGNUP FORM */
-              <form onSubmit={handleEmailAuth} id="authForm">
-                {/* Email Field */}
-                <div className="tl-field">
-                  <label htmlFor="email">Email</label>
-                  <input
-                    className="tl-input"
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-
-                {/* Password Field */}
-                <div className="tl-field">
-                  <label htmlFor="password">Password</label>
-                  <div className="tl-input-wrap">
+                <div className={`tl-otp-inputs ${otpError ? 'has-error' : ''}`}>
+                  {otpDigits.map((digit, idx) => (
                     <input
-                      className="tl-input tl-password-input"
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      onFocus={() => setPasswordFocused(true)}
-                      onBlur={() => setPasswordFocused(false)}
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="tl-password-toggle"
-                      id="passwordToggle"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? 'Hide' : 'Show'}
-                    </button>
-                  </div>
-                  {!isLoginMode && passwordFocused && password.length > 0 && (
-                    <div className="tl-password-checklist" aria-live="polite">
-                      <span className={password.length >= 8 ? 'valid' : ''}>✓ Minimum 8 characters</span>
-                      <span className={/[^A-Za-z0-9]/.test(password) ? 'valid' : ''}>✓ One special character</span>
-                      <span className={/[A-Z]/.test(password) ? 'valid' : ''}>✓ One uppercase letter</span>
-                      <span className={/\d/.test(password) ? 'valid' : ''}>✓ One number</span>
-                    </div>
-                  )}
-                </div>
-
-                {!isLoginMode && otpSent && (
-                  <div className="tl-field tl-otp-field">
-                    <label htmlFor="signupOtp">Email verification OTP</label>
-                    <input
-                      className="tl-input"
-                      id="signupOtp"
+                      key={idx}
+                      ref={(el) => (otpInputRefs.current[idx] = el)}
+                      type="text"
                       inputMode="numeric"
-                      autoComplete="one-time-code"
-                      maxLength={6}
-                      placeholder="Enter the 6-digit OTP"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      required
+                      pattern="[0-9]*"
+                      maxLength={1}
+                      className="tl-otp-digit"
+                      value={digit}
+                      onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                      onPaste={handleOtpPaste}
+                      autoFocus={idx === 0}
                     />
-                  </div>
+                  ))}
+                </div>
+
+                {otpError && (
+                  <div className="tl-otp-error-msg">{otpError}</div>
                 )}
 
-                {/* Forgot Password (Login mode only) */}
-                {isLoginMode && (
-                  <div className="tl-forgot">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowForgotPassword(true);
-                        setStatusMsg({ text: '', type: '' });
-                      }}
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
-                )}
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  className="tl-submit-btn"
-                  id="submitBtn"
-                  disabled={loading}
-                >
-                  {loading
-                    ? 'PLEASE WAIT...'
-                    : isLoginMode
-                    ? 'LOG IN'
-                    : 'CREATE ACCOUNT'}
-                </button>
-              </form>
-            )}
-
-            {!showForgotPassword && (
-              <>
-                {/* Divider */}
-                <div className="tl-divider">OR</div>
-
-                {/* Google Button */}
                 <button
                   type="button"
-                  className="tl-google-btn"
-                  id="googleBtn"
-                  onClick={handleGoogleAuth}
+                  className="tl-otp-verify-btn"
+                  onClick={handleVerifyOtpAndRegister}
                   disabled={loading}
                 >
-                  <svg className="tl-google-icon" viewBox="0 0 24 24">
-                    <path
-                      fill="#4285F4"
-                      d="M21.35 12.27c0-.79-.07-1.55-.23-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.42z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 21.75c2.63 0 4.84-.87 6.45-2.36l-3.14-2.45c-.87.58-1.98.93-3.31.93-2.54 0-4.69-1.72-5.46-4.03H3.29v2.53A9.75 9.75 0 0 0 12 21.75z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M6.54 13.84a5.86 5.86 0 0 1 0-3.68V7.63H3.29a9.76 9.76 0 0 0 0 8.74l3.25-2.53z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 6.13c1.43 0 2.72.49 3.73 1.46l2.8-2.8C16.84 3.16 14.63 2.25 12 2.25a9.75 9.75 0 0 0-8.71 5.38l3.25 2.53C7.31 7.85 9.46 6.13 12 6.13z"
-                    />
-                  </svg>
-                  Continue with Google
+                  {loading ? 'VERIFYING...' : 'VERIFY ACCOUNT'}
                 </button>
 
-                {/* Switch Login / Signup */}
-                <div className="tl-switch-auth">
-                  {isLoginMode ? (
-                    <span>
-                      Don't have an account?{' '}
+                <div className="tl-otp-footer">
+                  <div className="tl-otp-resend-text">
+                    Didn't receive the code?{' '}
+                    {resendTimer > 0 ? (
+                      <span>Resend in {resendTimer}s</span>
+                    ) : (
                       <button
                         type="button"
-                        onClick={() => {
-                          setIsLoginMode(false);
-                          setStatusMsg({ text: '', type: '' });
-                          if (isModal) {
-                            if (onSwitchToSignup) onSwitchToSignup();
-                          } else {
-                            navigate('/signup', { replace: true });
-                          }
-                        }}
+                        className="tl-otp-resend-btn"
+                        onClick={handleResendOtp}
+                        disabled={loading}
                       >
-                        Sign up
+                        Resend code
                       </button>
-                    </span>
-                  ) : (
-                    <span>
-                      Already have an account?{' '}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsLoginMode(true);
-                          setStatusMsg({ text: '', type: '' });
-                          if (isModal) {
-                            if (onSwitchToLogin) onSwitchToLogin();
-                          } else {
-                            navigate('/login', { replace: true });
-                          }
-                        }}
-                      >
-                        Log in
-                      </button>
-                    </span>
-                  )}
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="tl-otp-diff-btn"
+                    onClick={handleUseDifferentEmail}
+                  >
+                    Use a different email
+                  </button>
                 </div>
+              </div>
+            ) : (
+              <>
+                {statusMsg.text && (
+                  <div className={`tl-status-box ${statusMsg.type}`}>
+                    {statusMsg.text}
+                  </div>
+                )}
+
+                {showForgotPassword ? (
+                  /* FORGOT PASSWORD FORM */
+                  <form onSubmit={handleForgotPasswordSubmit}>
+                    <div className="tl-field">
+                      <label htmlFor="resetEmail">Email</label>
+                      <input
+                        className="tl-input"
+                        id="resetEmail"
+                        type="email"
+                        placeholder="you@example.com"
+                        autoComplete="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="tl-submit-btn"
+                      disabled={loading}
+                    >
+                      {loading ? 'SENDING...' : 'SEND RESET LINK'}
+                    </button>
+
+                    <div className="tl-switch-auth">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowForgotPassword(false);
+                          setStatusMsg({ text: '', type: '' });
+                        }}
+                      >
+                        Back to Log in
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  /* LOGIN / SIGNUP FORM */
+                  <form onSubmit={handleEmailAuth} id="authForm">
+                    {/* Email Field */}
+                    <div className="tl-field">
+                      <label htmlFor="email">Email</label>
+                      <input
+                        className="tl-input"
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        autoComplete="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    {/* Password Field */}
+                    <div className="tl-field">
+                      <label htmlFor="password">Password</label>
+                      <div className="tl-input-wrap">
+                        <input
+                          className="tl-input tl-password-input"
+                          id="password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="Enter your password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          onFocus={() => setPasswordFocused(true)}
+                          onBlur={() => setPasswordFocused(false)}
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="tl-password-toggle"
+                          id="passwordToggle"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? 'Hide' : 'Show'}
+                        </button>
+                      </div>
+                      {!isLoginMode && passwordFocused && password.length > 0 && (
+                        <div className="tl-password-checklist" aria-live="polite">
+                          <span className={password.length >= 8 ? 'valid' : ''}>✓ Minimum 8 characters</span>
+                          <span className={/[^A-Za-z0-9]/.test(password) ? 'valid' : ''}>✓ One special character</span>
+                          <span className={/[A-Z]/.test(password) ? 'valid' : ''}>✓ One uppercase letter</span>
+                          <span className={/\d/.test(password) ? 'valid' : ''}>✓ One number</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Forgot Password (Login mode only) */}
+                    {isLoginMode && (
+                      <div className="tl-forgot">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowForgotPassword(true);
+                            setStatusMsg({ text: '', type: '' });
+                          }}
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Submit Button */}
+                    <button
+                      type="submit"
+                      className="tl-submit-btn"
+                      id="submitBtn"
+                      disabled={loading}
+                    >
+                      {loading
+                        ? 'PLEASE WAIT...'
+                        : isLoginMode
+                        ? 'LOG IN'
+                        : 'CREATE ACCOUNT'}
+                    </button>
+                  </form>
+                )}
+
+                {!showForgotPassword && (
+                  <>
+                    {/* Divider */}
+                    <div className="tl-divider">OR</div>
+
+                    {/* Google Button */}
+                    <button
+                      type="button"
+                      className="tl-google-btn"
+                      id="googleBtn"
+                      onClick={handleGoogleAuth}
+                      disabled={loading}
+                    >
+                      <svg className="tl-google-icon" viewBox="0 0 24 24">
+                        <path
+                          fill="#4285F4"
+                          d="M21.35 12.27c0-.79-.07-1.55-.23-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.42z"
+                        />
+                        <path
+                          fill="#34A853"
+                          d="M12 21.75c2.63 0 4.84-.87 6.45-2.36l-3.14-2.45c-.87.58-1.98.93-3.31.93-2.54 0-4.69-1.72-5.46-4.03H3.29v2.53A9.75 9.75 0 0 0 12 21.75z"
+                        />
+                        <path
+                          fill="#FBBC05"
+                          d="M6.54 13.84a5.86 5.86 0 0 1 0-3.68V7.63H3.29a9.76 9.76 0 0 0 0 8.74l3.25-2.53z"
+                        />
+                        <path
+                          fill="#EA4335"
+                          d="M12 6.13c1.43 0 2.72.49 3.73 1.46l2.8-2.8C16.84 3.16 14.63 2.25 12 2.25a9.75 9.75 0 0 0-8.71 5.38l3.25 2.53C7.31 7.85 9.46 6.13 12 6.13z"
+                        />
+                      </svg>
+                      Continue with Google
+                    </button>
+
+                    {/* Switch Login / Signup */}
+                    <div className="tl-switch-auth">
+                      {isLoginMode ? (
+                        <span>
+                          Don't have an account?{' '}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsLoginMode(false);
+                              setStatusMsg({ text: '', type: '' });
+                              if (isModal) {
+                                if (onSwitchToSignup) onSwitchToSignup();
+                              } else {
+                                navigate('/signup', { replace: true });
+                              }
+                            }}
+                          >
+                            Sign up
+                          </button>
+                        </span>
+                      ) : (
+                        <span>
+                          Already have an account?{' '}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsLoginMode(true);
+                              setStatusMsg({ text: '', type: '' });
+                              if (isModal) {
+                                if (onSwitchToLogin) onSwitchToLogin();
+                              } else {
+                                navigate('/login', { replace: true });
+                              }
+                            }}
+                          >
+                            Log in
+                          </button>
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>
 
           {/* Terms (Signup mode only) */}
-          {!isLoginMode && !showForgotPassword && (
+          {!isLoginMode && !showForgotPassword && !otpSent && (
             <div className="tl-terms">
               By creating an account, you agree to our{' '}
               <Link to="/terms-and-conditions" className="underline text-[var(--muted)] hover:text-[var(--text)]">
