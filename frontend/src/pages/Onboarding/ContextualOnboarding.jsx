@@ -1128,17 +1128,6 @@ function SkillOnboardingFlow() {
         }
       `}</style>
 
-      {/* Theme Toggle Button */}
-      <button
-        type="button"
-        className="tl-skill-theme-toggle"
-        onClick={toggleTheme}
-        aria-label="Toggle dark mode"
-        title="Toggle dark mode"
-      >
-        {isDarkMode ? "🌙" : "☀️"}
-      </button>
-
       {/* Main Page Container */}
       <div className="tl-skill-page">
         {/* Progress Bar (4 steps) */}
@@ -2212,6 +2201,17 @@ export default function ContextualOnboarding() {
           padding-bottom: 50px;
           scrollbar-width: thin;
           padding-right: 4px;
+        }
+
+        .tl-plan-screen .tl-plan-description,
+        .tl-plan-screen p.tl-plan-description {
+          display: block !important;
+          visibility: visible !important;
+          font-size: 14px;
+          line-height: 1.5;
+          color: var(--muted-light);
+          margin-top: -16px;
+          margin-bottom: 20px !important;
         }
 
         .tl-plans {
