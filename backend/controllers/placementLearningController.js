@@ -4,10 +4,13 @@ import Student from "../models/Student.js";
 import Topic from "../models/Topic.js";
 import Program from "../models/Program.js";
 import { calculateProgramDayNumber } from "../utils/programSchedule.js";
-import { resolveProgramSchedule } from "../utils/programSchedule.js";
+import { assertProgramScheduleAccess, resolveProgramSchedule } from "../utils/programSchedule.js";
+import { getTopicDayNumber } from "../utils/courseTopicSchedule.js";
+import { resolveProgramPrimaryCourseId } from "../utils/programPrimaryCourse.js";
+import { getProgramTypeQueryValues } from "../utils/programTypeNormalization.js";
 
 const buildTopicPayload = (topic, index, currentDay, courseId) => {
-  const day = index + 1;
+  const day = getTopicDayNumber(topic, index);
   const isLocked = day > currentDay;
   const hasNotes = Boolean(topic.notesId);
   return {
@@ -43,6 +46,11 @@ export const getPlacementLearningDashboard = async (req, res) => {
     }
 
     const schedule = await resolveProgramSchedule({ user: req.user, student });
+    await assertProgramScheduleAccess({
+      user: req.user,
+      student,
+      programId: schedule.programId,
+    });
     if (schedule.batchExpired) {
       return res.status(403).json({
         success: false,
@@ -57,19 +65,22 @@ export const getPlacementLearningDashboard = async (req, res) => {
       });
     }
 
-    let targetCourseId = batch?.attachedCourse || null;
     let program = schedule.programId ? await Program.findById(schedule.programId).lean() : null;
 
-    if (!targetCourseId) {
-      if (!program && student.programSelection) {
-        program = await Program.findOne({ programType: student.programSelection, status: "Active" }).sort({ createdAt: -1 }).lean();
-      }
-      if (program?.courseIds?.length) {
-        targetCourseId = program.courseIds[0];
+    if (!program && student.programSelection) {
+      const programTypeValues = getProgramTypeQueryValues(student.programSelection);
+      if (programTypeValues.length) {
+        program = await Program.findOne({ programType: { $in: programTypeValues }, status: "Active" }).sort({ createdAt: -1 }).lean();
       }
     }
 
-    if (!targetCourseId) {
+    // A concrete Program owns the learner's course sequence. Batch-level
+    // course fields remain a compatibility fallback for legacy batches only.
+    let targetCourseId = resolveProgramPrimaryCourseId(program)
+      || (!schedule.programId ? batch?.attachedCourse : null)
+      || null;
+
+    if (!targetCourseId && !program) {
       const fallbackCourse = await Course.findOne({ status: "Active" }).sort({ createdAt: -1 }).lean();
       if (fallbackCourse) {
         targetCourseId = fallbackCourse._id;
@@ -102,13 +113,20 @@ export const getPlacementLearningDashboard = async (req, res) => {
       batch,
       individualStartDate: schedule.individualStartDate,
     });
-    const totalDays = topics.length;
-    const currentTopicIndex = Math.min(Math.max(currentDay - 1, 0), Math.max(totalDays - 1, 0));
-    const currentTopic = totalDays > 0 ? topics[currentTopicIndex] : null;
-
     const notes = topics.map((topic, index) =>
       buildTopicPayload(topic, index, currentDay, course._id)
     );
+    const totalDays = notes.reduce((maxDay, topic) => Math.max(maxDay, topic.day), 0);
+    // A missing exact day is a curriculum/configuration gap, not permission
+    // to relabel yesterday's topic as today's. Earlier unlocked topics remain
+    // in `weeks` so learners can still revisit them.
+    const currentTopic = notes.find((topic) => topic.day === currentDay) || null;
+    const currentDayTopic = currentTopic?.notesId ? currentTopic : null;
+    const todayTopicStatus = !currentTopic
+      ? "unconfigured"
+      : currentTopic.notesId
+        ? "available"
+        : "notes_unpublished";
 
     const weeks = notes.reduce((acc, topic) => {
       const existing = acc.find((week) => week.week === topic.week);
@@ -122,9 +140,9 @@ export const getPlacementLearningDashboard = async (req, res) => {
 
     // Batch supporting courses are cohort-specific. Individual learners use
     // the remaining courses attached to their program.
-    const supportingCourseIds = batch?.supportingCourses?.length
-      ? batch.supportingCourses
-      : (program?.courseIds || []).filter((id) => String(id) !== String(targetCourseId));
+    const supportingCourseIds = program?.courseIds
+      ? program.courseIds.filter((id) => String(id?._id || id) !== String(targetCourseId))
+      : (batch?.supportingCourses || []);
     const supportingCourses = supportingCourseIds.length > 0
       ? await Course.find({ _id: { $in: supportingCourseIds } }).select("title topicIds").lean()
       : [];
@@ -154,9 +172,13 @@ export const getPlacementLearningDashboard = async (req, res) => {
         title: c.title,
         topicIds: c.topicIds || [],
       })),
-      todayTopic: currentTopic?.notesId
-        ? buildTopicPayload(currentTopic, currentTopicIndex, currentDay, course._id)
-        : null,
+      todayTopic: currentDayTopic,
+      todayTopicStatus,
+      todayTopicMessage: todayTopicStatus === "unconfigured"
+        ? `No Placement Learning topic is configured for Day ${currentDay}.`
+        : todayTopicStatus === "notes_unpublished"
+          ? `Placement Learning topic for Day ${currentDay} has no published notes yet.`
+          : null,
       totalDays,
       weeks,
     });

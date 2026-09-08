@@ -5,11 +5,13 @@ import {
   listPrograms,
   createProgram,
   getProgramById,
+  getProgramDiagnostics,
   updateProgram,
   deleteProgram,
   getAvailableEntities,
   attachEntities,
   detachEntity,
+  reorderProgramEntities,
 } from "../controllers/admin/adminProgramController.js";
 import {
   listBlueprints,
@@ -38,6 +40,7 @@ router.delete("/:programId/blueprints/:blueprintId", requireAdminPermission(ADMI
 router.get("/:programId/performance", getProgramPerformance);
 router.post("/:programId/performance/sync", requireAdminPermission(ADMIN_PERMISSIONS.PROGRAMS_WRITE), syncProgramPerformanceReport);
 router.get("/:programId/readiness-leads", listProgramReadinessLeads);
+router.get("/:programId/diagnostics", getProgramDiagnostics);
 router.get("/:programId", getProgramById);
 router.patch("/:programId", requireAdminPermission(ADMIN_PERMISSIONS.PROGRAMS_WRITE), updateProgram);
 router.delete("/:programId", requireAdminPermission(ADMIN_PERMISSIONS.PROGRAMS_WRITE), deleteProgram);
@@ -45,6 +48,7 @@ router.delete("/:programId", requireAdminPermission(ADMIN_PERMISSIONS.PROGRAMS_W
 // Attachment routes
 router.get("/:programId/available/:entityType", getAvailableEntities);
 router.post("/:programId/attachments/:entityType", requireAdminPermission(ADMIN_PERMISSIONS.PROGRAMS_WRITE), attachEntities);
+router.patch("/:programId/attachments/:entityType/order", requireAdminPermission(ADMIN_PERMISSIONS.PROGRAMS_WRITE), reorderProgramEntities);
 router.delete("/:programId/attachments/:entityType/:entityId", requireAdminPermission(ADMIN_PERMISSIONS.PROGRAMS_WRITE), detachEntity);
 
 export default router;

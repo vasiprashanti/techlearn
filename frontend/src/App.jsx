@@ -239,7 +239,7 @@ function LayoutWrapper() {
     location.pathname === '/dashboard/profile' ||
     location.pathname.startsWith('/dashboard/profile/');
 
-  const showNavbar = !['/mcq', '/signup', '/login'].includes(location.pathname) && 
+  const showNavbar = !['/mcq', '/signup', '/login'].includes(location.pathname) &&
                      !location.pathname.startsWith('/coding/') && 
                      !location.pathname.startsWith('/daily-challenge/') &&
                      !location.pathname.startsWith('/free-assessment') &&
@@ -255,33 +255,27 @@ function LayoutWrapper() {
 
   return (
     <div className="relative z-10 flex flex-col min-h-screen">
-      {location.pathname.startsWith('/onboarding') && (() => {
-        const isPlacement = location.search.includes('intent=placement') || (!location.search.includes('intent=skill'));
-        const navBg = isPlacement
-          ? (isDarkMode ? '#080d25' : '#bceaff')
-          : (isDarkMode ? '#00092f' : '#c0e9ff');
-        return (
-          <div
-            className="fixed left-0 top-0 z-[100] h-[72px] w-full"
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              background: navBg,
-            }}
-          >
-            <Link to="/" aria-label="TechLearn home" className="absolute left-[23px] top-[14px]">
-              <img
-                src="/logoo2-small.webp"
-                alt="TechLearn"
-                className="block h-11 w-11 rounded-[9px] object-contain"
-                style={{ filter: isDarkMode ? 'none' : 'brightness(0) saturate(100%)' }}
-              />
-            </Link>
-          </div>
-        );
-      })()}
+      {location.pathname.startsWith('/onboarding') && (
+        <div
+          className="fixed left-0 top-0 z-[100] h-[72px] w-full"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            background: isDarkMode ? '#080d25' : '#bceaff',
+          }}
+        >
+          <Link to="/" aria-label="TechLearn home" className="absolute left-[23px] top-[14px]">
+            <img
+              src="/logoo2-small.webp"
+              alt="TechLearn"
+              className="block h-11 w-11 rounded-[9px] object-contain"
+              style={{ filter: isDarkMode ? 'none' : 'brightness(0) saturate(100%)' }}
+            />
+          </Link>
+        </div>
+      )}
       {showNavbar && <Navbar />}
 
       <Suspense fallback={<main className="flex-grow"><RouteFallback /></main>}>

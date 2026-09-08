@@ -2,11 +2,14 @@ import Program from "../models/Program.js";
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import User from "../models/User.js";
 import Student from "../models/Student.js";
+import Batch from "../models/Batch.js";
+import Course from "../models/Course.js";
+import TrackTemplate from "../models/TrackTemplate.js";
 import ProgramReadinessLead from "../models/ProgramReadinessLead.js";
 import { matchProgramsForUser } from "./programMatching.js";
-
-const escapeRegex = (value = "") =>
-  String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+import { parseDurationDays } from "./programPhases.js";
+import { resolveProgramPrimaryCourseId } from "./programPrimaryCourse.js";
+import { getProgramTypeQueryValues, normalizeProgramType } from "./programTypeNormalization.js";
 
 const normalizeSelection = (selection) => String(selection || "").trim();
 
@@ -14,14 +17,331 @@ const getId = (value) => value?._id || value || null;
 
 const getAccessTier = (program, fallback) =>
   fallback || (program?.pricingType === "Paid" ? "Member" : "Free");
+const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
+
+const getReferenceIds = (values = []) => values
+  .map(getId)
+  .filter(Boolean)
+  .filter((id, index, ids) => ids.findIndex((candidate) => String(candidate) === String(id)) === index);
+
+const getProgramResourceIds = (program, key) => getReferenceIds(
+  Array.isArray(program?.[key]) ? program[key] : []
+);
+
+const getProgramExpiryDate = (startDate, program) => {
+  const start = new Date(startDate);
+  const durationDays = Number(program?.durationDays) || parseDurationDays(program?.duration);
+  if (Number.isNaN(start.getTime()) || !Number.isInteger(durationDays) || durationDays < 1) return null;
+  return new Date(start.getTime() + ((durationDays - 1) * DAY_IN_MILLISECONDS));
+};
+
+const getProgramTrackFields = (templates) => {
+  const ids = templates.map((template) => template._id);
+  const taskTemplate = templates.find((template) => template.trackType === "Daily Task") || null;
+  const challengeTemplate = templates.find((template) => template.trackType === "Daily Challenge") || null;
+  return {
+    assignedTrackTemplateIds: ids,
+    assignedTrackTemplate: templates[0]?._id || null,
+    assignedDailyTaskTrack: taskTemplate?._id || null,
+    assignedDailyChallengeTrack: challengeTemplate?._id || null,
+    assignedTrack: templates.map((template) => template.name).filter(Boolean).join(", "),
+  };
+};
+
+const getProgramCourseProjection = (program) => {
+  const courseIds = getProgramResourceIds(program, "courseIds");
+  const primaryCourseId = getId(resolveProgramPrimaryCourseId(program));
+  const orderedCourseIds = primaryCourseId
+    ? [primaryCourseId, ...courseIds.filter((id) => String(id) !== String(primaryCourseId))]
+    : courseIds;
+  return {
+    primaryCourseId,
+    courseIds: orderedCourseIds,
+    supportingCourseIds: orderedCourseIds.slice(1),
+  };
+};
+
+const getUserForStudent = async (student) => {
+  const conditions = [
+    student?.userId ? { _id: getId(student.userId) } : null,
+    student?.email ? { email: String(student.email).trim().toLowerCase() } : null,
+  ].filter(Boolean);
+
+  return conditions.length ? User.findOne({ $or: conditions }).lean() : null;
+};
+
+const getEnrollmentIdentifiers = ({ userId, studentId }) => [
+  userId ? { userId } : null,
+  studentId ? { studentId } : null,
+].filter(Boolean);
+
+const pauseOtherActiveProgramEnrollments = async ({ userId, studentId, programId }) => {
+  const identifiers = getEnrollmentIdentifiers({ userId, studentId });
+  if (!identifiers.length || !programId) return [];
+
+  const otherEnrollments = await ProgramEnrollment.find({
+    status: "Active",
+    programId: { $ne: programId },
+    $or: identifiers,
+  })
+    .select("_id programId")
+    .lean();
+
+  if (!otherEnrollments.length) return [];
+
+  await ProgramEnrollment.updateMany(
+    { _id: { $in: otherEnrollments.map((enrollment) => enrollment._id) } },
+    { $set: { status: "Paused" } }
+  );
+
+  const previousProgramIds = [
+    ...new Set(
+      otherEnrollments
+        .map((enrollment) => getId(enrollment.programId))
+        .filter(Boolean)
+        .map((id) => String(id))
+    ),
+  ];
+  if (studentId && previousProgramIds.length) {
+    await Program.updateMany(
+      { _id: { $in: previousProgramIds } },
+      { $pull: { studentIds: studentId } }
+    );
+  }
+
+  return previousProgramIds;
+};
+
+/**
+ * Make one concrete Program the canonical schedule/content source for a
+ * batch. A batch has one optional program; every learner already in that
+ * batch is moved onto that program's batch schedule while preserving their
+ * individualStartDate for a later return to an individual schedule.
+ */
+export const assignProgramToBatch = async ({ batchId, program, previousProgramId = null, source = "admin" }) => {
+  const resolvedBatchId = getId(batchId);
+  const resolvedProgramId = getId(program);
+
+  if (!resolvedBatchId || !resolvedProgramId || !program?.programType) {
+    throw new Error("A valid batch and concrete Program are required.");
+  }
+  const normalizedProgramType = normalizeProgramType(program.programType);
+  if (!normalizedProgramType) throw new Error("Program has an unknown program type.");
+
+  const batch = await Batch.findById(resolvedBatchId).lean();
+  if (!batch) throw new Error("Batch not found.");
+
+  // Program-owned resources are canonical. Keep the legacy Batch references
+  // synchronized as a compatibility projection for older admin screens and
+  // APIs, so selecting a Program is enough to make every mapped resource
+  // available without a second manual assignment step.
+  const programCourseProjection = getProgramCourseProjection(program);
+  const programCourseIds = programCourseProjection.courseIds;
+  const programTrackTemplateIds = getProgramResourceIds(program, "trackTemplateIds");
+  const programTrackTemplates = programTrackTemplateIds.length
+    ? await TrackTemplate.find({
+        _id: { $in: programTrackTemplateIds },
+        status: "Active",
+      }).select("_id name trackType").lean()
+    : [];
+
+  const students = await Student.find({ batchId: resolvedBatchId }).lean();
+  const studentIds = students.map((student) => student._id).filter(Boolean);
+  const existingBatchProgramIds = await ProgramEnrollment.find({
+    batchId: resolvedBatchId,
+    status: "Active",
+  }).distinct("programId");
+  const oldProgramIds = [
+    getId(previousProgramId),
+    getId(batch.programId),
+    ...existingBatchProgramIds.map(getId),
+  ]
+    .filter(Boolean)
+    .filter((id, index, ids) => ids.findIndex((candidate) => String(candidate) === String(id)) === index)
+    .filter((id) => String(id) !== String(resolvedProgramId));
+
+  for (const student of students) {
+    const user = await getUserForStudent(student);
+    const identifiers = [
+      { studentId: student._id },
+      user?._id ? { userId: user._id } : null,
+    ].filter(Boolean);
+
+    // If this batch used to provide another Program, move that old
+    // enrollment back to its own individual schedule instead of letting the
+    // new batch assignment silently rewrite an unrelated Program.
+    if (identifiers.length) {
+      await ProgramEnrollment.updateMany(
+        {
+          batchId: resolvedBatchId,
+          status: "Active",
+          programId: { $ne: resolvedProgramId },
+          $or: identifiers,
+        },
+        { $set: { batchId: null } }
+      );
+    }
+
+    await Student.updateOne(
+      { _id: student._id },
+      { $set: { programId: resolvedProgramId, programSelection: normalizedProgramType } }
+    );
+
+    if (user?._id) {
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            batchId: resolvedBatchId,
+            programId: resolvedProgramId,
+            programSelection: normalizedProgramType,
+            ...(batch.startDate ? { startDate: batch.startDate } : {}),
+          },
+        }
+      );
+
+      await upsertProgramEnrollment({
+        user,
+        student,
+        program,
+        batchId: resolvedBatchId,
+        source,
+      });
+    }
+  }
+
+  await Program.updateOne(
+    { _id: resolvedProgramId },
+    {
+      $addToSet: {
+        batchIds: resolvedBatchId,
+        ...(studentIds.length ? { studentIds: { $each: studentIds } } : {}),
+      },
+      ...(String(getId(program.primaryCourseId) || "") === String(programCourseProjection.primaryCourseId || "")
+        ? {}
+        : { $set: { primaryCourseId: programCourseProjection.primaryCourseId } }),
+    }
+  );
+
+  if (oldProgramIds.length) {
+    await Program.updateMany(
+      { _id: { $in: oldProgramIds } },
+      { $pull: { batchIds: resolvedBatchId } }
+    );
+  }
+
+  await Batch.updateOne(
+    { _id: resolvedBatchId },
+    {
+      $set: {
+        programId: resolvedProgramId,
+        programType: normalizedProgramType,
+        programSelection: normalizedProgramType,
+        expiryDate: getProgramExpiryDate(batch.startDate, program) || batch.expiryDate,
+        attachedCourse: programCourseProjection.primaryCourseId || null,
+        supportingCourses: programCourseProjection.supportingCourseIds,
+        ...getProgramTrackFields(programTrackTemplates),
+      },
+    }
+  );
+
+  const previousCourseIds = getReferenceIds([
+    batch.attachedCourse,
+    ...(Array.isArray(batch.supportingCourses) ? batch.supportingCourses : []),
+  ]);
+  if (previousCourseIds.length) {
+    await Course.updateMany(
+      { _id: { $in: previousCourseIds }, assignedBatchIds: resolvedBatchId },
+      { $pull: { assignedBatchIds: resolvedBatchId } }
+    );
+  }
+  if (programCourseIds.length) {
+    await Course.updateMany(
+      { _id: { $in: programCourseIds } },
+      { $addToSet: { assignedBatchIds: resolvedBatchId } }
+    );
+  }
+
+  return {
+    batchId: resolvedBatchId,
+    programId: resolvedProgramId,
+    studentCount: students.length,
+    reassignedStudentCount: students.length,
+  };
+};
+
+/**
+ * Rebuild legacy Batch course/track projections from the current Program.
+ * Program remains canonical; these fields exist only for older batch APIs and
+ * screens. This is intentionally idempotent and safe to run after every
+ * attachment, detachment, or ordering change.
+ */
+export const syncProgramCompatibilityProjections = async ({ programId }) => {
+  const resolvedProgramId = getId(programId);
+  if (!resolvedProgramId) return { programId: null, batchCount: 0 };
+
+  const program = await Program.findById(resolvedProgramId).lean();
+  if (!program) return { programId: resolvedProgramId, batchCount: 0 };
+
+  const linkedBatchIds = await Batch.find({
+    $or: [
+      { programId: resolvedProgramId },
+      { _id: { $in: program.batchIds || [] } },
+    ],
+  }).distinct("_id");
+
+  for (const batchId of linkedBatchIds) {
+    await assignProgramToBatch({
+      batchId,
+      program,
+      source: "admin",
+    });
+  }
+
+  return { programId: resolvedProgramId, batchCount: linkedBatchIds.length };
+};
+
+/**
+ * Remove a Program from a batch without removing the learners from the
+ * batch. Their enrollment for that Program becomes individual, so the
+ * learner keeps access and returns to the original individual Day 1 anchor.
+ */
+export const removeProgramFromBatch = async ({ batchId, programId }) => {
+  const resolvedBatchId = getId(batchId);
+  const resolvedProgramId = getId(programId);
+  if (!resolvedBatchId || !resolvedProgramId) return { modifiedCount: 0 };
+
+  const batch = await Batch.findById(resolvedBatchId).lean();
+  if (!batch) return { modifiedCount: 0 };
+
+  const result = await ProgramEnrollment.updateMany(
+    { batchId: resolvedBatchId, programId: resolvedProgramId, status: "Active" },
+    { $set: { batchId: null } }
+  );
+
+  if (String(getId(batch.programId) || "") === String(resolvedProgramId)) {
+    await Batch.updateOne(
+      { _id: resolvedBatchId, programId: resolvedProgramId },
+      { $set: { programId: null, programType: null } }
+    );
+  }
+
+  await Program.updateOne(
+    { _id: resolvedProgramId },
+    { $pull: { batchIds: resolvedBatchId } }
+  );
+
+  return result;
+};
 
 export const resolveProgramForSelection = async (programSelection) => {
   const selection = normalizeSelection(programSelection);
+  const queryValues = getProgramTypeQueryValues(selection);
 
-  if (!selection || selection === "Both") return null;
+  if (!selection || selection === "Both" || !queryValues.length) return null;
 
   return Program.findOne({
-    programType: new RegExp(`^${escapeRegex(selection)}$`, "i"),
+    programType: { $in: queryValues },
     status: "Active",
     visibility: "Public",
   })
@@ -35,7 +355,7 @@ export const resolveProgramForSelection = async (programSelection) => {
  * `batchId` is intentionally explicit: null means individual schedule,
  * while an ObjectId means the batch controls the schedule. Keeping both
  * values on the enrollment prevents a student's legacy/global batch field
- * from changing an unrelated program's roadmap.
+ * from changing the learner's current Program roadmap.
  */
 export const upsertProgramEnrollment = async ({
   user,
@@ -44,6 +364,7 @@ export const upsertProgramEnrollment = async ({
   programId,
   batchId,
   accessTier,
+  individualStartDate,
   source = "admin",
 }) => {
   const userId = getId(user);
@@ -53,6 +374,12 @@ export const upsertProgramEnrollment = async ({
   if (!userId || !studentId || !resolvedProgramId) return null;
 
   const now = new Date();
+  const explicitIndividualStartDate = individualStartDate
+    ? new Date(individualStartDate)
+    : null;
+  if (explicitIndividualStartDate && Number.isNaN(explicitIndividualStartDate.getTime())) {
+    throw new Error("individualStartDate must be a valid date.");
+  }
   const existing = await ProgramEnrollment.findOne({
     userId,
     programId: resolvedProgramId,
@@ -78,6 +405,12 @@ export const upsertProgramEnrollment = async ({
     }
   }
 
+  const individualStartDateSource = explicitIndividualStartDate
+    ? (source === "admin" || source === "admin_bulk"
+      ? "explicit_admin"
+      : source === "payment" ? "explicit_payment" : "explicit")
+    : null;
+
   const update = {
     $set: {
       userId,
@@ -86,11 +419,19 @@ export const upsertProgramEnrollment = async ({
       status: "Active",
       accessTier: getAccessTier(program, accessTier),
       batchId: resolvedBatchId || null,
-      individualStartDate: existing?.individualStartDate || existing?.assignedAt || now,
+      individualStartDate: explicitIndividualStartDate
+        || existing?.individualStartDate
+        || existing?.assignedAt
+        || now,
+      ...(individualStartDateSource ? { individualStartDateSource } : {}),
     },
     $setOnInsert: {
       assignedAt: now,
       source,
+      // MongoDB rejects an upsert when the same path exists in both
+      // $set and $setOnInsert. An explicit admin/payment date is already
+      // present in $set, so only add the inferred source on first insert.
+      ...(individualStartDateSource ? {} : { individualStartDateSource: "enrollment" }),
     },
   };
 
@@ -99,6 +440,15 @@ export const upsertProgramEnrollment = async ({
     update,
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
+
+  // A learner may have only one active Program. Keep older enrollments for
+  // history, but pause them and remove their learner-facing Program links as
+  // soon as the new enrollment has been written successfully.
+  await pauseOtherActiveProgramEnrollments({
+    userId,
+    studentId,
+    programId: resolvedProgramId,
+  });
 
   await Program.updateOne(
     { _id: resolvedProgramId },
@@ -183,10 +533,7 @@ export const pauseProgramEnrollment = async ({ student, user, programId }) => {
 export const syncPrimaryProgramPointers = async ({ user, student }) => {
   const userId = getId(user);
   const studentId = getId(student);
-  const identifiers = [
-    userId ? { userId } : null,
-    studentId ? { studentId } : null,
-  ].filter(Boolean);
+  const identifiers = getEnrollmentIdentifiers({ userId, studentId });
 
   if (!identifiers.length) return null;
 
@@ -198,8 +545,13 @@ export const syncPrimaryProgramPointers = async ({ user, student }) => {
     .lean();
 
   const primaryProgramId = activeEnrollment?.programId || null;
-  if (userId) await User.updateOne({ _id: userId }, { $set: { programId: primaryProgramId } });
-  if (studentId) await Student.updateOne({ _id: studentId }, { $set: { programId: primaryProgramId } });
+  const hasEnrollmentBatch = activeEnrollment
+    && Object.prototype.hasOwnProperty.call(activeEnrollment, "batchId");
+  const batchPatch = hasEnrollmentBatch
+    ? { batchId: getId(activeEnrollment.batchId) }
+    : {};
+  if (userId) await User.updateOne({ _id: userId }, { $set: { programId: primaryProgramId, ...batchPatch } });
+  if (studentId) await Student.updateOne({ _id: studentId }, { $set: { programId: primaryProgramId, ...batchPatch } });
 
   return activeEnrollment;
 };
@@ -261,6 +613,11 @@ export const syncProgramEnrollment = async ({
   if (!matchedPrograms || matchedPrograms.length === 0) {
     return [];
   }
+
+  // Matching can return several recommendations, but enrollment is a single
+  // current learning path. The catalog/recommendation endpoints may still
+  // return multiple options; this synchronizer activates only the best match.
+  matchedPrograms = matchedPrograms.slice(0, 1);
 
   // If user is on Free tier, pause any previous enrollments for Paid / Member-only programs
   // Do not infer a Free choice for legacy accounts that never stored a

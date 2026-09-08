@@ -458,7 +458,12 @@ export const recordPracticeSubmission = async (req, res) => {
     // Intercept for Daily Task tracking
     try {
       const email = req.user.email.toLowerCase().trim();
-      const student = await mongoose.model("Student").findOne({ email });
+      const student = await mongoose.model("Student").findOne({
+        $or: [
+          { userId: req.user._id },
+          ...(email ? [{ email }] : []),
+        ],
+      });
       if (student) {
         const schedule = await resolveProgramSchedule({ user: req.user, student });
         if (schedule.batchExpired) {
@@ -467,11 +472,20 @@ export const recordPracticeSubmission = async (req, res) => {
         const batch = schedule.batchId
           ? await mongoose.model("Batch").findById(schedule.batchId)
           : null;
-        let trackTemplate = batch?.assignedDailyTaskTrack
-          ? await mongoose.model("TrackTemplate").findById(batch.assignedDailyTaskTrack)
-          : null;
-        if (!trackTemplate && schedule.programId) {
-          const program = await mongoose.model("Program").findById(schedule.programId).select("trackTemplateIds").lean();
+        let trackTemplate = null;
+        let programDurationDays = null;
+        if (schedule.programId) {
+          const program = await mongoose.model("Program").findById(schedule.programId).select("trackTemplateIds durationDays duration").lean();
+          programDurationDays = program?.durationDays || null;
+          if (!programDurationDays && program?.duration) {
+            const durationMatch = String(program.duration).match(/(\d+(?:\.\d+)?)\s*-?\s*(day|days|week|weeks|month|months|year|years)/i);
+            if (durationMatch) {
+              const amount = Number(durationMatch[1]);
+              const unit = durationMatch[2].toLowerCase();
+              const multiplier = unit.startsWith("year") ? 365 : unit.startsWith("month") ? 30 : unit.startsWith("week") ? 7 : 1;
+              programDurationDays = Math.max(1, Math.round(amount * multiplier));
+            }
+          }
           if (program?.trackTemplateIds?.length) {
             trackTemplate = await mongoose.model("TrackTemplate").findOne({
               _id: { $in: program.trackTemplateIds },
@@ -479,6 +493,10 @@ export const recordPracticeSubmission = async (req, res) => {
               status: "Active",
             });
           }
+        } else if (batch?.assignedDailyTaskTrack) {
+          // Legacy batches without a concrete Program retain their original
+          // batch-level Daily Task tracking.
+          trackTemplate = await mongoose.model("TrackTemplate").findById(batch.assignedDailyTaskTrack);
         }
         if (trackTemplate) {
             const getISTDateParts = (date) => {
@@ -502,7 +520,8 @@ export const recordPracticeSubmission = async (req, res) => {
               batch,
               trackTemplate,
               "Daily Task",
-              batch ? null : schedule.individualStartDate
+              batch ? null : schedule.individualStartDate,
+              { programDurationDays },
             );
             
             let attempt = await mongoose.model("DailyTaskAttempt").findOne({
@@ -855,7 +874,13 @@ export const getPracticeStats = async (req, res) => {
       if (submission.isCorrect) correctByTrack[submission.track].add(submission.questionId);
     }
 
-    const studentObj = await mongoose.model("Student").findOne({ email: req.user.email.toLowerCase().trim() }).lean();
+    const email = req.user.email.toLowerCase().trim();
+    const studentObj = await mongoose.model("Student").findOne({
+      $or: [
+        { userId: req.user._id },
+        ...(email ? [{ email }] : []),
+      ],
+    }).lean();
     const currentStreak = studentObj ? (studentObj.streak || 0) : 0;
 
     for (const track of TRACKS) {

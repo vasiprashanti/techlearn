@@ -49,6 +49,11 @@ const getProgramType = (value) => {
 
 const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
 
+const getTodayIsoDate = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
 const toValidDate = (value) => {
   if (!value) return null;
   const date = value instanceof Date ? new Date(value) : new Date(value);
@@ -67,6 +72,12 @@ const formatCompactDate = (value) => {
   return date
     ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '—';
+};
+
+const formatDateInputValue = (value) => {
+  const date = toValidDate(value);
+  if (!date) return '';
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
 
 const parseDurationDays = (duration) => {
@@ -149,7 +160,7 @@ const buildStudentTableRow = (student, program) => {
   };
 };
 
-const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach }) => (
+const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach, onEditStartDate }) => (
   <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] overflow-hidden">
     <div className="overflow-x-auto">
       <table className="min-w-[860px] w-full text-left">
@@ -228,7 +239,21 @@ const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach }) =>
                   {row.plan}
                 </td>
                 <td className="px-4 py-3.5 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                  {formatCompactDate(row.started)}
+                  <div className="flex items-center gap-1.5">
+                    <span>{formatCompactDate(row.started)}</span>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onEditStartDate(student);
+                      }}
+                      title="Edit this Program's individual start date"
+                      aria-label={`Edit start date for ${student.name || 'student'}`}
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#3C83F6] opacity-0 transition-opacity hover:bg-[#3C83F6]/10 group-hover:opacity-100 focus:opacity-100 dark:text-[#bceaff]"
+                    >
+                      <FiClock className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </td>
                 <td className="px-4 py-3.5 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
                   {formatCompactDate(row.expires)}
@@ -571,7 +596,7 @@ export default function ProgramDetails() {
   });
   const [studentsSubTab, setStudentsSubTab] = useState('students');
   const [studentSearch, setStudentSearch] = useState('');
-  const [studentPeriodFilter, setStudentPeriodFilter] = useState('current');
+  const [studentPeriodFilter, setStudentPeriodFilter] = useState('active');
   const [studentStatusFilter, setStudentStatusFilter] = useState('Active');
   const [studentAccessFilter, setStudentAccessFilter] = useState('all');
   const [studentPlanFilter, setStudentPlanFilter] = useState('all');
@@ -591,6 +616,7 @@ export default function ProgramDetails() {
   const [batches, setBatches] = useState([]);
   const [colleges, setColleges] = useState([]);
   const [selectedBatchId, setSelectedBatchId] = useState('');
+  const [individualStartDate, setIndividualStartDate] = useState(getTodayIsoDate);
   const [studentAddMode, setStudentAddMode] = useState('existing');
   const [newStudentForm, setNewStudentForm] = useState({
     name: '',
@@ -606,6 +632,9 @@ export default function ProgramDetails() {
   const [detachItem, setDetachItem] = useState(null);
   const [detaching, setDetaching] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [startDateEdit, setStartDateEdit] = useState(null);
+  const [savingStartDate, setSavingStartDate] = useState(false);
+  const [startDateError, setStartDateError] = useState('');
 
   const [toastMessage, setToastMessage] = useState(searchParams.get('msg') || '');
 
@@ -713,6 +742,7 @@ export default function ProgramDetails() {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
+    const today = startOfDay(now);
 
     const getStartedTime = (student) => {
       const row = buildStudentTableRow(student, program);
@@ -733,8 +763,22 @@ export default function ProgramDetails() {
         .toLowerCase();
       if (search && !searchable.includes(search)) return false;
 
+      if (studentPeriodFilter === 'active') {
+        const started = startOfDay(row.started);
+        const expires = startOfDay(row.expires);
+        const storedStatus = String(row.status || '').trim().toLowerCase();
+        const isActiveNow = Boolean(
+          started
+          && today
+          && started <= today
+          && (!expires || expires >= today)
+          && !['completed', 'expired'].includes(storedStatus)
+        );
+        if (!isActiveNow) return false;
+      }
+
       if (studentPeriodFilter === 'current') {
-        const started = toValidDate(student.programStartDate) || row.started;
+        const started = startOfDay(row.started);
         if (!started || started.getFullYear() !== currentYear || started.getMonth() !== currentMonth) return false;
       }
 
@@ -792,6 +836,7 @@ export default function ProgramDetails() {
     setAttachModalType(entityType);
     setSelectedIds([]);
     setSelectedBatchId('');
+    setIndividualStartDate(getTodayIsoDate());
     setAvailableSearch('');
     setStudentAddMode('existing');
     setStudentFormError('');
@@ -855,6 +900,7 @@ export default function ProgramDetails() {
           programId,
           primaryTrack: newStudentForm.primaryTrack.trim() || 'General Track',
           status: newStudentForm.status,
+          ...(selectedBatchId ? {} : { individualStartDate }),
         });
         setAttachModalType(null);
         setToastMessage('Student added to Program successfully.');
@@ -874,7 +920,9 @@ export default function ProgramDetails() {
         programId,
         attachModalType,
         selectedIds,
-        attachModalType === 'students' ? { batchId: selectedBatchId || null } : {}
+        attachModalType === 'students'
+          ? { batchId: selectedBatchId || null, ...(selectedBatchId ? {} : { individualStartDate }) }
+          : {}
       );
       setAttachModalType(null);
       setSelectedIds([]);
@@ -901,6 +949,39 @@ export default function ProgramDetails() {
       alert(err.message || 'Failed to detach entity');
     } finally {
       setDetaching(false);
+    }
+  };
+
+  const handleEditStartDate = (student) => {
+    const enrollment = student?.enrollment || null;
+    const batch = findStudentBatch(student, enrollment, program);
+    setStartDateError('');
+    setStartDateEdit({
+      student,
+      value: formatDateInputValue(
+        enrollment?.individualStartDate
+          || student?.scheduleStartDate
+          || student?.programStartDate
+          || batch?.startDate
+          || student?.createdAt
+      ),
+      batch,
+    });
+  };
+
+  const handleSaveStartDate = async () => {
+    if (!startDateEdit?.student?._id || !startDateEdit.value || startDateEdit.batch) return;
+    try {
+      setSavingStartDate(true);
+      setStartDateError('');
+      await adminAPI.updateStudentProgramStartDate(startDateEdit.student._id, programId, startDateEdit.value);
+      setStartDateEdit(null);
+      setToastMessage('Program start date updated.');
+      fetchProgramDetail();
+    } catch (err) {
+      setStartDateError(err.message || 'Failed to update the Program start date.');
+    } finally {
+      setSavingStartDate(false);
     }
   };
 
@@ -1038,6 +1119,56 @@ export default function ProgramDetails() {
         isOpen={Boolean(selectedStudent)}
         context="program"
       />
+
+      {startDateEdit && (
+        <div className="fixed inset-0 z-[145] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setStartDateEdit(null)} />
+          <div className="relative w-full max-w-md rounded-xl border border-black/10 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#0a1737]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-base font-semibold text-[#3C83F6] dark:text-[#bceaff]">Edit Program start date</h3>
+                <p className="mt-1 text-xs text-black/50 dark:text-white/50">
+                  {startDateEdit.student?.name || startDateEdit.student?.email || 'Learner'}
+                </p>
+              </div>
+              <button type="button" onClick={() => setStartDateEdit(null)} className="text-black/40 hover:text-black/70 dark:text-white/40 dark:hover:text-white">
+                <FiX className="h-4 w-4" />
+              </button>
+            </div>
+
+            {startDateEdit.batch ? (
+              <div className="mt-5 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-3 text-xs text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-200">
+                This learner is assigned to {startDateEdit.batch.name || 'a batch'}. The batch controls this Program schedule; remove the batch assignment before choosing an individual date.
+              </div>
+            ) : (
+              <label className="mt-5 block text-xs font-semibold text-slate-700 dark:text-slate-200">
+                Individual start date
+                <input
+                  type="date"
+                  value={startDateEdit.value}
+                  onChange={(event) => setStartDateEdit((current) => ({ ...current, value: event.target.value }))}
+                  className="mt-2 block w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-normal text-slate-800 outline-none focus:border-[#3C83F6] dark:border-white/10 dark:bg-white/5 dark:text-white"
+                />
+              </label>
+            )}
+
+            {startDateError && <p className="mt-3 text-xs text-red-600 dark:text-red-300">{startDateError}</p>}
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" onClick={() => setStartDateEdit(null)} className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/5">
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingStartDate || Boolean(startDateEdit.batch) || !startDateEdit.value}
+                onClick={handleSaveStartDate}
+                className="rounded-lg bg-[#3C83F6] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[#2f73e0] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {savingStartDate ? 'Saving…' : 'Save date'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Attach Existing Modal ───────────────────────────────────────────── */}
       {attachModalType && (
@@ -1179,6 +1310,18 @@ export default function ProgramDetails() {
                 <p className="text-[11px] text-black/45 dark:text-white/45 mt-1.5">
                   Leave empty for Day 1 to start on the learner's enrollment date.
                 </p>
+                {!selectedBatchId && (
+                  <label className="block mt-3">
+                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-black/50 dark:text-white/50 mb-1.5">Individual start date</span>
+                    <input
+                      type="date"
+                      value={individualStartDate}
+                      onChange={(event) => setIndividualStartDate(event.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-sm text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    />
+                    <span className="block text-[11px] text-black/40 dark:text-white/45 mt-1">Admin can adjust this date without putting the learner in a batch.</span>
+                  </label>
+                )}
               </div>
             )}
 
@@ -1540,6 +1683,7 @@ export default function ProgramDetails() {
                       aria-label="Student period filter"
                       className="h-9 min-w-[125px] px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
                     >
+                      <option value="active">Current Active</option>
                       <option value="current">Current Month</option>
                       <option value="all">All Time</option>
                     </select>
@@ -1626,6 +1770,7 @@ export default function ProgramDetails() {
                     students={visibleStudentItems}
                     program={program}
                     onOpenStudent={setSelectedStudent}
+                    onEditStartDate={handleEditStartDate}
                     onDetach={(student) => setDetachItem({ typeKey: currentSection.key, item: student })}
                   />
                 )}

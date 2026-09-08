@@ -569,7 +569,9 @@ export default function Dashboard() {
     day: 'numeric',
   });
 
-  const hasPlacementLearning = !projectLoading && !hasActiveProject && !!placementLearning?.hasPlacementLearning;
+  // A Program can legitimately include both project work and Placement
+  // Learning. Project activity must not hide the Program's other resources.
+  const hasPlacementLearning = !projectLoading && !!placementLearning?.hasPlacementLearning;
   const todayNotesHref = placementLearning?.todayTopic?.href || (
     placementLearning?.course?.id
       ? `/learn/courses/${placementLearning.course.id}/topics?day=${placementLearning.batch?.currentDay || 1}`

@@ -50,6 +50,7 @@ const CourseTopics = () => {
   
   const [isSyllabusOpen, setIsSyllabusOpen] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState(0);
+  const [missingDay, setMissingDay] = useState(null);
 
   // Cached course data is only a write-through optimization. The server must
   // authorize the request before any course content is rendered.
@@ -98,10 +99,16 @@ const CourseTopics = () => {
         description: backendCourse.description || "",
         topics: backendCourse.topics.map((topic, index) => {
           const topicId = topic._id || topic.topicId || topic.id || `topic_${index}`;
+          const day = Number(topic.day) > 0
+            ? Number(topic.day)
+            : Number(topic.index) > 0
+              ? Number(topic.index)
+              : index + 1;
           const cleanTitle = (topic.title || '').replace(/^CORE\s+(\w+)\s+NOTES\s*[-–]\s*\d+$/i, '$1').replace(/^\d+\.\s*/, '').replace(/\s*[-–]\s*\d+$/, '');
 
           return {
             id: topicId,
+            day,
             title: cleanTitle,
             description: topic.description || "",
             completed: false,
@@ -116,7 +123,7 @@ const CourseTopics = () => {
     return null;
   })();
 
-  const currentTopic = currentCourse?.topics[selectedTopic];
+  const currentTopic = missingDay ? null : currentCourse?.topics[selectedTopic];
   const totalTopics = currentCourse?.topics?.length || 0;
   const isFirstTopic = selectedTopic === 0;
   const isLastTopic = selectedTopic === totalTopics - 1;
@@ -148,7 +155,14 @@ const CourseTopics = () => {
     if (!totalTopics || !currentCourse) return;
     const requestedDay = Number(searchParams.get("day"));
     if (!Number.isFinite(requestedDay) || requestedDay <= 0) return;
-    let nextIndex = Math.min(Math.max(requestedDay - 1, 0), totalTopics - 1);
+    let nextIndex = currentCourse.topics.findIndex((topic) => topic.day === requestedDay);
+    if (nextIndex === -1) {
+      // Do not silently relabel an earlier/later topic as the requested day.
+      // The learner can still use the syllabus to open any genuinely mapped
+      // and unlocked earlier topic.
+      setMissingDay(requestedDay);
+      return;
+    }
     
     // Redirect/fallback if requested day is locked
     if (currentCourse.topics[nextIndex]?.isLocked) {
@@ -157,6 +171,7 @@ const CourseTopics = () => {
         nextIndex = Math.max(0, firstLockedIdx - 1);
       }
     }
+    setMissingDay(null);
     setSelectedTopic(nextIndex);
   }, [searchParams, totalTopics, currentCourse]);
 
@@ -242,7 +257,7 @@ const CourseTopics = () => {
                         key={topic.id}
                         onClick={() => {
                           if (topic.isLocked) return;
-                          setSearchParams({ day: index + 1 });
+                          setSearchParams({ day: topic.day });
                           setIsSyllabusOpen(false);
                         }}
                         disabled={topic.isLocked}
@@ -285,7 +300,7 @@ const CourseTopics = () => {
                       key={topic.id}
                       onClick={() => {
                         if (topic.isLocked) return;
-                        setSearchParams({ day: index + 1 });
+                        setSearchParams({ day: topic.day });
                       }}
                       disabled={topic.isLocked}
                       className={`group flex w-full items-center justify-between gap-3 rounded-2xl border px-5 py-3.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
@@ -320,12 +335,20 @@ const CourseTopics = () => {
                   key={selectedTopic}
                   className="text-4xl md:text-5xl lg:text-[3.5rem] font-semibold text-[#001862] dark:text-white tracking-tight leading-[1.1]"
                 >
-                  {currentTopic?.title}
+                  {currentTopic?.title || (missingDay ? `Day ${missingDay} is not configured` : "Select a topic")}
                 </h1>
               </div>
 
               {/* Dynamic Content */}
-              {currentTopic?.hasNotes && currentTopic?.notesContent ? (
+              {missingDay ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center h-full">
+                  <div className="w-16 h-16 rounded-2xl bg-black/5 dark:bg-white/5 flex items-center justify-center mb-5 border border-black/5 dark:border-white/5">
+                    <AlertCircle className="w-7 h-7 text-[#001862]/30 dark:text-white/30" />
+                  </div>
+                  <h3 className="text-lg font-medium text-[#001862] dark:text-white mb-2">This program day is not configured</h3>
+                  <p className="text-sm text-[#001862]/60 dark:text-white/50 max-w-sm">Day {missingDay} has no mapped topic yet. Earlier unlocked topics remain available from the syllabus.</p>
+                </div>
+              ) : currentTopic?.hasNotes && currentTopic?.notesContent ? (
                 <div className="w-full [&>*:first-child]:mt-0 [&>*:first-child>*:first-child]:mt-0">
                   <Suspense fallback={<div className="h-48 animate-pulse rounded-2xl bg-white/20 dark:bg-white/5" />}>
                     <MarkdownContent>{currentTopic.notesContent}</MarkdownContent>
@@ -359,11 +382,11 @@ const CourseTopics = () => {
               ) : <div className="w-24" />}
 
               <span className="shrink-0 text-[10px] uppercase tracking-widest font-bold text-[#001862] dark:text-white/40 px-3 sm:px-5 py-2.5 bg-black/5 dark:bg-white/5 rounded-xl">
-                {selectedTopic + 1} / {totalTopics}
+                {currentTopic?.day || selectedTopic + 1} / {Math.max(...(currentCourse.topics.map((topic) => topic.day)), totalTopics)}
               </span>
 
               {!isLastTopic && !currentCourse?.topics[selectedTopic + 1]?.isLocked ? (
-                <button onClick={() => setSearchParams({ day: selectedTopic + 2 })} className="dashboard-primary-btn flex shrink-0 items-center gap-2 px-4 sm:px-8 py-3.5">
+                <button onClick={() => setSearchParams({ day: currentCourse.topics[selectedTopic + 1]?.day || selectedTopic + 2 })} className="dashboard-primary-btn flex shrink-0 items-center gap-2 px-4 sm:px-8 py-3.5">
                   <span className="hidden sm:inline">Next</span> <ChevronRight className="w-4 h-4" />
                 </button>
               ) : !isLastTopic ? (
@@ -401,7 +424,7 @@ const CourseTopics = () => {
 
                   {!backendCourse?.isPlacementPrimary && placementData?.attachedCourse && (
                     <button
-                      onClick={() => navigate(`/learn/courses/${placementData.attachedCourse.id || placementData.attachedCourse._id}/topics?day=${selectedTopic + 1}`)}
+                      onClick={() => navigate(`/learn/courses/${placementData.attachedCourse.id || placementData.attachedCourse._id}/topics?day=${currentTopic?.day || selectedTopic + 1}`)}
                       className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
                     >
                       <span className="block min-w-0 flex-1 text-sm leading-tight">
@@ -437,7 +460,7 @@ const CourseTopics = () => {
                   {backendCourse?.isPlacementPrimary && (placementData?.supportingCourses || []).map((course) => (
                     <button
                       key={course.id || course._id}
-                      onClick={() => navigate(`/learn/courses/${course.id || course._id}/topics?day=${selectedTopic + 1}`)}
+                      onClick={() => navigate(`/learn/courses/${course.id || course._id}/topics?day=${currentTopic?.day || selectedTopic + 1}`)}
                       className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
                     >
                       <span className="block min-w-0 flex-1 text-sm leading-tight">

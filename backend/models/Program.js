@@ -5,6 +5,7 @@ import {
   PROGRAM_PHASE_TYPES,
   validateAndNormalizeProgramPhases,
 } from "../utils/programPhases.js";
+import { normalizeProgramType } from "../utils/programTypeNormalization.js";
 
 export const PROGRAM_TYPES = Object.freeze(["Placement", "Skill"]);
 export const PROGRAM_PLACEMENT_CATEGORIES = Object.freeze(["On-Campus", "Off-Campus", "Both"]);
@@ -182,6 +183,13 @@ const programSchema = new mongoose.Schema(
         ref: "Course",
       },
     ],
+    // Stable Placement Learning course. Legacy records without this field
+    // continue to resolve to courseIds[0] until the next safe admin update.
+    primaryCourseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+      default: null,
+    },
     roadmapIds: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -227,6 +235,9 @@ programSchema.index({ status: 1, programType: 1, createdAt: -1 });
 programSchema.index({ name: "text", description: "text" });
 
 programSchema.pre("validate", function populateProgramStructure(next) {
+  const normalizedProgramType = normalizeProgramType(this.programType);
+  if (normalizedProgramType) this.programType = normalizedProgramType;
+
   if (!this.durationDays && this.duration) {
     const parsedDurationDays = parseDurationDays(this.duration);
     if (parsedDurationDays) this.durationDays = parsedDurationDays;

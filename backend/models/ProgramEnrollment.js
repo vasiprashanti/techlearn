@@ -21,8 +21,8 @@ const programEnrollmentSchema = new mongoose.Schema(
     },
     // A program enrollment may be individual (null) or cohort based.
     // This is deliberately stored on the enrollment instead of relying on
-    // Student.batchId, because one learner can take multiple programs with
-    // different schedules.
+    // Student.batchId. A learner has one current Program; paused/completed
+    // records remain only as history.
     batchId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Batch",
@@ -59,6 +59,14 @@ const programEnrollmentSchema = new mongoose.Schema(
     individualStartDate: {
       type: Date,
       default: Date.now,
+    },
+    // Tracks whether the individual anchor was explicitly chosen or is an
+    // inferred legacy value. This prevents reconciliation from overwriting a
+    // valid admin/payment date simply because it resembles createdAt.
+    individualStartDateSource: {
+      type: String,
+      enum: ["explicit_admin", "explicit_payment", "explicit", "enrollment", "legacy_inferred"],
+      default: "legacy_inferred",
     },
     source: {
       type: String,

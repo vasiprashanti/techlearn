@@ -40,11 +40,18 @@ const BatchDetails = () => {
   const [tracks, setTracks] = useState([]);
   const [courses, setCourses] = useState([]);
   const attachedCourses = useMemo(() => {
+    const mappedProgramCourses = Array.isArray(batchDetail?.programCourses)
+      ? batchDetail.programCourses.filter(Boolean)
+      : [];
+    if (mappedProgramCourses.length > 0) {
+      return mappedProgramCourses;
+    }
+
     return courses.filter((course) =>
       Array.isArray(course.assignedBatchIds) &&
       course.assignedBatchIds.map(String).includes(String(batchId))
     );
-  }, [courses, batchId]);
+  }, [batchDetail?.programCourses, courses, batchId]);
   const [selectedAttachedCourseId, setSelectedAttachedCourseId] = useState('');
   const [primaryCourseId, setPrimaryCourseId] = useState('');
   const [isSavingAttachedCourse, setIsSavingAttachedCourse] = useState(false);
@@ -213,9 +220,12 @@ const BatchDetails = () => {
 
   const openAddStudent = () => {
     setFormError('');
-    const currentBatchCollegeName = batch.college;
-    const matchingCollege = colleges.find((college) => college.name === currentBatchCollegeName);
-    
+    const batchCollegeIds = Array.isArray(batch.collegeIds)
+      ? batch.collegeIds.map((collegeId) => String(collegeId?._id || collegeId))
+      : [];
+    const matchingCollege = colleges.find((college) => batchCollegeIds.includes(String(college.id)))
+      || colleges.find((college) => college.name === String(batch.college || '').split(',')[0].trim());
+
     setStudentForm({
       name: '',
       email: '',
@@ -287,13 +297,17 @@ const BatchDetails = () => {
       setFormError('');
       setIsSavingStudent(true);
       try {
+        const batchProgramId = batch.programId?._id || batch.programId || '';
         await adminAPI.updateStudent(selectedStudent.id || selectedStudent._id, {
           name: selectedStudent.name,
           email: selectedStudent.email,
           collegeId: selectedStudent.collegeId || studentForm.collegeId,
           batchId: studentForm.batchId || batch.id || batchId,
+          ...(batchProgramId || selectedStudent.programId
+            ? { programId: batchProgramId || selectedStudent.programId?._id || selectedStudent.programId }
+            : {}),
           primaryTrack: studentForm.track || selectedStudent.track || 'General Track',
-          programSelection: selectedStudent.programSelection || batch.programSelection || 'Placement',
+          programSelection: batch.programType || selectedStudent.programSelection || batch.programSelection || 'Placement',
           status: studentForm.status || selectedStudent.status || 'Active',
         });
         const remoteBatch = await adminAPI.getBatch(batchId);
@@ -320,6 +334,9 @@ const BatchDetails = () => {
         email: studentForm.email.trim().toLowerCase(),
         collegeId: studentForm.collegeId,
         batchId: studentForm.batchId,
+        ...(batch.programId?._id || batch.programId
+          ? { programId: batch.programId?._id || batch.programId }
+          : {}),
         primaryTrack: studentForm.track.trim() || 'General Track',
         status: studentForm.status,
       };
@@ -897,7 +914,9 @@ const BatchDetails = () => {
               ) : (
                 <div className="space-y-2">
                   <p className="text-xs text-black/40 dark:text-white/40 mb-3">
-                    Select the <span className="font-semibold text-[#3C83F6]">Primary Course</span> — this is what students see on the Learn page. All other attached courses become supporting courses accessible via sidebar quick links.
+                    {batchDetail?.programId
+                      ? 'These courses come from the batch Program and are shared with every student in the batch.'
+                      : <>Select the <span className="font-semibold text-[#3C83F6]">Primary Course</span> — this is what students see on the Learn page. All other attached courses become supporting courses accessible via sidebar quick links.</>}
                   </p>
                   {attachedCourses.map((course) => {
                     const isPrimary = String(primaryCourseId) === String(course.id);
@@ -905,15 +924,15 @@ const BatchDetails = () => {
                       <div
                         key={course.id}
                         onClick={() => {
-                          if (!isPrimary) {
+                          if (!batchDetail?.programId && !isPrimary) {
                             setPrimaryCourseId(String(course.id));
                             savePrimaryCourse(String(course.id));
                           }
                         }}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all duration-200 ${
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 ${batchDetail?.programId ? 'cursor-default' : 'cursor-pointer'} ${
                           isPrimary
                             ? 'border-[#3C83F6]/50 bg-[#3C83F6]/8 dark:bg-[#3C83F6]/10 shadow-sm'
-                            : 'border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] hover:border-[#3C83F6]/30 hover:bg-black/2 dark:hover:bg-white/5'
+                            : `border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] ${batchDetail?.programId ? '' : 'hover:border-[#3C83F6]/30 hover:bg-black/2 dark:hover:bg-white/5'}`
                         }`}
                       >
                         {/* Radio indicator */}

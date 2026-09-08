@@ -15,6 +15,9 @@ import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import Blueprint from "../../models/Blueprint.js";
 import {
   pauseProgramEnrollment,
+  assignProgramToBatch,
+  removeProgramFromBatch,
+  syncProgramCompatibilityProjections,
   syncPrimaryProgramPointers,
   upsertProgramEnrollment,
 } from "../../utils/programEnrollment.js";
@@ -22,6 +25,8 @@ import { expireAllActiveBatches } from "../../utils/batchLifecycle.js";
 import { validateAndNormalizeProgramPhases } from "../../utils/programPhases.js";
 import { deleteProgramPerformance } from "../../services/programPerformanceService.js";
 import { syncProgramEnrollmentsForProgram } from "../../services/programCompletionService.js";
+import { buildProgramDiagnostics } from "../../services/programDiagnostics.js";
+import { getProgramTypeQueryValues, normalizeProgramType } from "../../utils/programTypeNormalization.js";
 
 // Whitelist mapping for attachment entity types
 export const ENTITY_CONFIG = {
@@ -29,13 +34,13 @@ export const ENTITY_CONFIG = {
     model: Batch,
     fieldKey: "batchIds",
     labelField: "name",
-    selectFields: "_id name startDate expiryDate status",
+    selectFields: "_id name startDate expiryDate status programId programType programSelection collegeId collegeIds",
   },
   students: {
     model: Student,
     fieldKey: "studentIds",
     labelField: "name",
-    selectFields: "_id name email rollNo status batchId userId accuracy overallAccuracy createdAt",
+    selectFields: "_id name email rollNo status batchId userId programId programSelection accuracy overallAccuracy createdAt",
   },
   courses: {
     model: Course,
@@ -501,7 +506,8 @@ export const listPrograms = async (req, res) => {
 
     // Program Type filter
     if (programType.trim()) {
-      query.programType = programType.trim();
+      const programTypeValues = getProgramTypeQueryValues(programType.trim());
+      query.programType = programTypeValues.length ? { $in: programTypeValues } : programType.trim();
     }
 
     // Status filter
@@ -622,7 +628,7 @@ export const createProgram = async (req, res) => {
       });
     }
 
-    const normalizedProgramType = String(programType).trim();
+    const normalizedProgramType = normalizeProgramType(programType);
     if (!PROGRAM_TYPES.includes(normalizedProgramType)) {
       return res.status(400).json({
         success: false,
@@ -780,6 +786,18 @@ export const getProgramById = async (req, res) => {
   }
 };
 
+/** GET /api/admin/programs/:programId/diagnostics */
+export const getProgramDiagnostics = async (req, res) => {
+  try {
+    const diagnostics = await buildProgramDiagnostics({ programId: req.params.programId });
+    return res.json({ success: true, diagnostics });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    if (statusCode >= 500) console.error("Error building Program diagnostics:", error);
+    return res.status(statusCode).json({ success: false, message: error.message || "Failed to build Program diagnostics." });
+  }
+};
+
 /**
  * PATCH /api/admin/programs/:programId
  * Update program metadata and pricing
@@ -814,11 +832,12 @@ export const updateProgram = async (req, res) => {
       targetCompanies,
       skillTags,
       targetRoles,
+      primaryCourseId,
     } = req.body;
 
-    const nextProgramType = programType === undefined
+    const nextProgramType = normalizeProgramType(programType === undefined
       ? program.programType
-      : String(programType).trim();
+      : programType);
     if (!PROGRAM_TYPES.includes(nextProgramType)) {
       return res.status(400).json({
         success: false,
@@ -878,6 +897,20 @@ export const updateProgram = async (req, res) => {
     if (targetCompanies !== undefined) program.targetCompanies = Array.isArray(targetCompanies) ? targetCompanies : [];
     if (skillTags !== undefined) program.skillTags = Array.isArray(skillTags) ? skillTags : [];
     if (targetRoles !== undefined) program.targetRoles = Array.isArray(targetRoles) ? targetRoles : [];
+    if (primaryCourseId !== undefined) {
+      if (primaryCourseId && !mongoose.Types.ObjectId.isValid(primaryCourseId)) {
+        return res.status(400).json({ success: false, message: "primaryCourseId must be a valid Course ID." });
+      }
+      const attachedCourseIds = (program.courseIds || []).map((id) => String(id));
+      if (primaryCourseId && !attachedCourseIds.includes(String(primaryCourseId))) {
+        return res.status(400).json({ success: false, message: "primaryCourseId must reference an attached Program course." });
+      }
+      program.primaryCourseId = primaryCourseId || null;
+    } else if (!program.primaryCourseId && program.courseIds?.length) {
+      // Backfill only when an admin already touches this Program. Legacy
+      // records remain readable and are not bulk-rewritten.
+      program.primaryCourseId = program.courseIds[0];
+    }
     if (pricingPlans !== undefined) {
       const normalizedPlans = normalizePricingPlans(pricingPlans);
       if (program.pricingType === "Paid" && normalizedPlans.length === 0) {
@@ -913,6 +946,7 @@ export const updateProgram = async (req, res) => {
 
     program.updatedBy = req.user?._id || program.updatedBy;
     await program.save();
+    await syncProgramCompatibilityProjections({ programId });
 
     res.json({
       success: true,
@@ -1092,13 +1126,57 @@ export const attachEntities = async (req, res) => {
       }
 
       const students = await Student.find({ _id: { $in: existingEntityIds } }).lean();
+      const selectedBatchProgram = selectedBatch?.programId
+        ? await Program.findById(selectedBatch.programId).lean()
+        : null;
+
+      if (selectedBatch?.programId && !selectedBatchProgram) {
+        return res.status(409).json({
+          success: false,
+          message: "The selected batch points to a Program that is no longer available.",
+        });
+      }
+      if (selectedBatchProgram && String(selectedBatchProgram._id) !== String(programId)) {
+        return res.status(409).json({
+          success: false,
+          code: "BATCH_PROGRAM_CONFLICT",
+          message: `This batch is already assigned to ${selectedBatchProgram.name}. Attach students using that Program or update the batch first.`,
+        });
+      }
+
       for (const student of students) {
-        if (selectedBatch && student.collegeId && selectedBatch.collegeId && String(student.collegeId) !== String(selectedBatch.collegeId)) {
+        const batchCollegeIds = [
+          ...(selectedBatch?.collegeIds || []),
+          ...(selectedBatch?.collegeIds?.length ? [] : [selectedBatch?.collegeId]),
+        ].filter(Boolean).map((collegeId) => String(collegeId._id || collegeId));
+        if (selectedBatch && student.collegeId && batchCollegeIds.length && !batchCollegeIds.includes(String(student.collegeId))) {
           return res.status(400).json({
             success: false,
-            message: `Selected batch does not belong to ${student.name || "one of the selected students"}.`,
+            message: `Selected batch does not include the college for ${student.name || "one of the selected students"}.`,
           });
         }
+      }
+
+      let selectedIndividualStartDate = null;
+      if (!selectedBatch && req.body?.individualStartDate) {
+        selectedIndividualStartDate = new Date(req.body.individualStartDate);
+        if (Number.isNaN(selectedIndividualStartDate.getTime())) {
+          return res.status(400).json({ success: false, message: "individualStartDate must be a valid date." });
+        }
+      }
+
+      // Selecting a batch for a Program also establishes the batch-level
+      // relationship when it has not been configured yet. Future students
+      // added from the Batch page will then inherit the same Program.
+      if (selectedBatch && !selectedBatchProgram) {
+        await assignProgramToBatch({
+          batchId: selectedBatch._id,
+          program,
+          source: "admin",
+        });
+      }
+
+      for (const student of students) {
 
         // Keep the legacy Student.batchId only as a compatibility pointer.
         // The enrollment created below is the authoritative program schedule.
@@ -1107,6 +1185,7 @@ export const attachEntities = async (req, res) => {
           {
             $set: {
               programId,
+              programSelection: program.programType,
               ...(selectedBatch ? { batchId: selectedBatch._id } : {}),
             },
           }
@@ -1119,13 +1198,27 @@ export const attachEntities = async (req, res) => {
           ],
         }).select("_id").lean();
 
+        // A direct Program enrollment is intentionally independent of every
+        // batch. The learner can have only one active Program, so retaining a
+        // legacy batch pointer here would incorrectly switch the new Program
+        // back to a cohort schedule on the next login.
+        if (!selectedBatch) {
+          await Student.updateOne({ _id: student._id }, { $set: { batchId: null } });
+        }
+
         if (user) {
           await User.updateOne(
             { _id: user._id },
             {
               $set: {
                 programId,
-                ...(selectedBatch ? { batchId: selectedBatch._id, startDate: selectedBatch.startDate } : {}),
+                programSelection: program.programType,
+                ...(selectedBatch
+                  ? { batchId: selectedBatch._id, startDate: selectedBatch.startDate }
+                  : {
+                      batchId: null,
+                      ...(selectedIndividualStartDate ? { startDate: selectedIndividualStartDate } : {}),
+                    }),
               },
             }
           );
@@ -1134,6 +1227,7 @@ export const attachEntities = async (req, res) => {
             student,
             program,
             batchId: selectedBatch?._id || null,
+            individualStartDate: selectedBatch ? undefined : selectedIndividualStartDate,
             source: "admin",
           });
         }
@@ -1161,14 +1255,51 @@ export const attachEntities = async (req, res) => {
       });
     }
 
+    if (entityType === "batches") {
+      const batches = await Batch.find({ _id: { $in: existingEntityIds } }).lean();
+      for (const batch of batches) {
+        await assignProgramToBatch({
+          batchId: batch._id,
+          program,
+          previousProgramId: batch.programId || null,
+          source: "admin",
+        });
+      }
+
+      const updatedProgram = await Program.findByIdAndUpdate(
+        programId,
+        {
+          $addToSet: { batchIds: { $each: existingEntityIds } },
+          $set: { updatedBy: req.user?._id || null },
+        },
+        { new: true, runValidators: true }
+      )
+        .populate(config.fieldKey, config.selectFields)
+        .lean();
+
+      return res.json({
+        success: true,
+        message: `Successfully assigned ${existingEntityIds.length} batch${existingEntityIds.length === 1 ? "" : "es"} to ${program.name}.`,
+        program: updatedProgram,
+        attachedEntities: updatedProgram[config.fieldKey],
+      });
+    }
+
     const updateQuery = {};
     updateQuery[config.fieldKey] = { $each: existingEntityIds };
+
+    const primaryCourseBackfill = entityType === "courses" && !program.primaryCourseId
+      ? (program.courseIds?.[0] || existingEntityIds[0] || null)
+      : null;
 
     const updatedProgram = await Program.findByIdAndUpdate(
       programId,
       {
         $addToSet: updateQuery,
-        $set: { updatedBy: req.user?._id || null },
+        $set: {
+          updatedBy: req.user?._id || null,
+          ...(primaryCourseBackfill ? { primaryCourseId: primaryCourseBackfill } : {}),
+        },
       },
       { new: true, runValidators: true }
     )
@@ -1177,6 +1308,10 @@ export const attachEntities = async (req, res) => {
 
     if (!updatedProgram) {
       return res.status(404).json({ success: false, message: "Program not found" });
+    }
+
+    if (["courses", "track-templates"].includes(entityType)) {
+      await syncProgramCompatibilityProjections({ programId });
     }
 
     res.json({
@@ -1211,6 +1346,35 @@ export const detachEntity = async (req, res) => {
     }
 
     const config = ENTITY_CONFIG[entityType];
+    const program = await Program.findById(programId).select("primaryCourseId courseIds").lean();
+    if (!program) {
+      return res.status(404).json({ success: false, message: "Program not found" });
+    }
+
+    if (entityType === "batches") {
+      await removeProgramFromBatch({ batchId: entityId, programId });
+
+      const updatedProgram = await Program.findByIdAndUpdate(
+        programId,
+        {
+          $pull: { batchIds: entityId },
+          $set: { updatedBy: req.user?._id || null },
+        },
+        { new: true, runValidators: true }
+      )
+        .populate(config.fieldKey, config.selectFields)
+        .lean();
+
+      if (!updatedProgram) {
+        return res.status(404).json({ success: false, message: "Program not found" });
+      }
+
+      return res.json({
+        success: true,
+        message: "Successfully detached the Program from the batch. Learners retain individual access.",
+        program: updatedProgram,
+      });
+    }
 
     if (entityType === "students") {
       const student = await Student.findById(entityId).lean();
@@ -1228,12 +1392,17 @@ export const detachEntity = async (req, res) => {
 
     const updateQuery = {};
     updateQuery[config.fieldKey] = entityId;
+    const clearPrimaryCourse = entityType === "courses"
+      && String(program?.primaryCourseId || "") === String(entityId);
 
     const updatedProgram = await Program.findByIdAndUpdate(
       programId,
       {
         $pull: updateQuery,
-        $set: { updatedBy: req.user?._id || null },
+        $set: {
+          updatedBy: req.user?._id || null,
+          ...(clearPrimaryCourse ? { primaryCourseId: null } : {}),
+        },
       },
       { new: true, runValidators: true }
     )
@@ -1244,6 +1413,10 @@ export const detachEntity = async (req, res) => {
       return res.status(404).json({ success: false, message: "Program not found" });
     }
 
+    if (["courses", "track-templates"].includes(entityType)) {
+      await syncProgramCompatibilityProjections({ programId });
+    }
+
     res.json({
       success: true,
       message: `Successfully detached entity from ${entityType}`,
@@ -1252,5 +1425,53 @@ export const detachEntity = async (req, res) => {
   } catch (error) {
     console.error("Error detaching entity:", error);
     res.status(500).json({ success: false, message: error.message || "Failed to detach entity" });
+  }
+};
+
+/**
+ * PATCH /api/admin/programs/:programId/attachments/:entityType/order
+ * Persist an attachment order without changing the canonical membership.
+ */
+export const reorderProgramEntities = async (req, res) => {
+  try {
+    const { programId, entityType } = req.params;
+    if (!ENTITY_CONFIG[entityType]) {
+      return res.status(400).json({ success: false, message: `Unsupported entity type '${entityType}'.` });
+    }
+    if (!mongoose.Types.ObjectId.isValid(programId) || !["courses", "track-templates"].includes(entityType)) {
+      return res.status(400).json({ success: false, message: "Only Program courses and track templates can be reordered." });
+    }
+    if (!Array.isArray(req.body?.ids) || req.body.ids.some((id) => !mongoose.Types.ObjectId.isValid(id))) {
+      return res.status(400).json({ success: false, message: "ids must be an array of valid ObjectIds." });
+    }
+
+    const config = ENTITY_CONFIG[entityType];
+    const program = await Program.findById(programId).select(`${config.fieldKey} primaryCourseId`).lean();
+    if (!program) return res.status(404).json({ success: false, message: "Program not found." });
+
+    const requestedIds = [...new Set(req.body.ids.map(String))];
+    const currentIds = [...new Set((program[config.fieldKey] || []).map(String))];
+    if (requestedIds.length !== currentIds.length || requestedIds.some((id) => !currentIds.includes(id))) {
+      return res.status(400).json({ success: false, message: "Reorder ids must match the Program's current attachments." });
+    }
+
+    const update = {
+      $set: {
+        [config.fieldKey]: requestedIds,
+        updatedBy: req.user?._id || null,
+      },
+    };
+    if (entityType === "courses" && !program.primaryCourseId) {
+      update.$set.primaryCourseId = requestedIds[0] || null;
+    }
+
+    const updatedProgram = await Program.findByIdAndUpdate(programId, update, { new: true, runValidators: true })
+      .populate(config.fieldKey, config.selectFields)
+      .lean();
+    await syncProgramCompatibilityProjections({ programId });
+    return res.json({ success: true, program: updatedProgram, attachedEntities: updatedProgram?.[config.fieldKey] || [] });
+  } catch (error) {
+    console.error("Error reordering Program entities:", error);
+    return res.status(500).json({ success: false, message: error.message || "Failed to reorder Program entities." });
   }
 };

@@ -34,6 +34,27 @@ const getTodayIsoDate = () => {
   return `${year}-${month}-${day}`;
 };
 
+const getProgramDurationDays = (program) => {
+  const durationDays = Number(program?.durationDays);
+  if (Number.isInteger(durationDays) && durationDays > 0) return durationDays;
+  const match = String(program?.duration || '').match(/(\d+(?:\.\d+)?)\s*-?\s*(day|days|week|weeks|month|months|year|years)/i);
+  if (!match) return null;
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount)) return null;
+  const unit = match[2].toLowerCase();
+  const multiplier = unit.startsWith('year') ? 365 : unit.startsWith('month') ? 30 : unit.startsWith('week') ? 7 : 1;
+  return Math.max(1, Math.round(amount * multiplier));
+};
+
+const getProgramEndDate = (startDate, program) => {
+  const durationDays = getProgramDurationDays(program);
+  if (!startDate || !durationDays) return '';
+  const date = new Date(`${startDate}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return '';
+  date.setDate(date.getDate() + durationDays - 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
 const statusPillClass = (status) =>
   status === 'Active'
     ? 'bg-[#16a34a] text-white'
@@ -54,6 +75,8 @@ const emptyBatchForm = {
   endDate: '',
   batchSize: '',
   status: 'Draft',
+  programType: 'Placement',
+  programId: '',
 };
 
 const CollegeDetails = () => {
@@ -76,7 +99,9 @@ const CollegeDetails = () => {
   const [isSavingBatch, setIsSavingBatch] = useState(false);
   const [isDeletingBatch, setIsDeletingBatch] = useState(false);
   const [batchForm, setBatchForm] = useState(emptyBatchForm);
+  const [programs, setPrograms] = useState([]);
   const todayIsoDate = getTodayIsoDate();
+  const selectedProgram = programs.find((program) => String(program.id) === String(batchForm.programId));
 
   useEffect(() => {
     setMounted(true);
@@ -122,8 +147,22 @@ const CollegeDetails = () => {
   }, [collegeDetail, location.state, collegeId]);
 
   const loadCollegeDetail = useCallback(async () => {
-    const remoteCollege = await adminAPI.getCollege(collegeId);
+    const [remoteCollege, remotePrograms] = await Promise.all([
+      adminAPI.getCollege(collegeId),
+      adminAPI.getPrograms({ status: 'Active', limit: 100 }).catch(() => ({ programs: [] })),
+    ]);
     setCollegeDetail(preferRemoteData(remoteCollege, null));
+    const programItems = remotePrograms?.programs || remotePrograms?.data || remotePrograms || [];
+    setPrograms(programItems
+      .filter((program) => program?.status === 'Active' && ['Placement', 'Skill'].includes(program.programType))
+      .map((program) => ({
+        id: program.id || program._id,
+        name: program.name || 'Untitled Program',
+        programType: program.programType,
+        duration: program.duration || '',
+        durationDays: program.durationDays || null,
+      }))
+      .filter((program) => program.id));
   }, [collegeId]);
 
   useEffect(() => {
@@ -166,9 +205,13 @@ const CollegeDetails = () => {
         batchName: batchDetail?.name || '',
         startDate: batchDetail?.startDateValue || '',
         assignedTrack: batchDetail?.assignedTrack || '',
-        endDate: batchDetail?.expiryDateValue || '',
+        endDate: batchDetail?.programId
+          ? (getProgramEndDate(batchDetail?.startDateValue || '', programs.find((program) => String(program.id) === String(batchDetail.programId?._id || batchDetail.programId))) || batchDetail?.expiryDateValue || '')
+          : (batchDetail?.expiryDateValue || ''),
         batchSize: batchDetail?.batchSize ? String(batchDetail.batchSize) : '',
         status: batchDetail?.status || 'Draft',
+        programType: batchDetail?.programType || batchDetail?.program?.programType || 'Placement',
+        programId: String(batchDetail?.programId?._id || batchDetail?.programId || ''),
       });
     } catch (error) {
       setBatchForm(emptyBatchForm);
@@ -181,8 +224,16 @@ const CollegeDetails = () => {
       setBatchFormError('Batch name is required');
       return;
     }
-    if (!batchForm.startDate || !batchForm.endDate) {
-      setBatchFormError('Start date and end date are required');
+    if (!batchForm.startDate) {
+      setBatchFormError('Start date is required');
+      return;
+    }
+    if (!editingBatchId && !batchForm.programId) {
+      setBatchFormError('Select a Program for this batch');
+      return;
+    }
+    if (!batchForm.endDate) {
+      setBatchFormError('Select a Program to calculate the batch end date');
       return;
     }
     if (batchForm.startDate > batchForm.endDate) {
@@ -206,10 +257,25 @@ const CollegeDetails = () => {
         assignedTrack: batchForm.assignedTrack,
         batchSize: batchForm.batchSize ? Number(batchForm.batchSize) : null,
         status: batchForm.status,
+        ...(batchForm.programId
+          ? { programType: batchForm.programType, programId: batchForm.programId, confirmTrackReplacement: true }
+          : {}),
       };
 
       if (editingBatchId) {
-        await adminAPI.updateBatch(editingBatchId, payload);
+        try {
+          await adminAPI.updateBatch(editingBatchId, payload);
+        } catch (error) {
+          if (error.code !== 'PROGRAM_REPLACEMENT_CONFIRMATION_REQUIRED') throw error;
+          const confirmed = window.confirm(
+            `This batch has ${error.data?.studentCount || 'some'} students. Changing the Program will update their schedule and resources. Continue?`
+          );
+          if (!confirmed) return;
+          await adminAPI.updateBatch(editingBatchId, {
+            ...payload,
+            confirmProgramReplacement: true,
+          });
+        }
       } else {
         await adminAPI.createBatch(payload);
       }
@@ -288,6 +354,56 @@ const CollegeDetails = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Program Type*</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={batchForm.programType || 'Placement'}
+                      onChange={(event) => setBatchForm((current) => ({
+                        ...current,
+                        programType: event.target.value,
+                        programId: '',
+                        endDate: '',
+                      }))}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className={dropdownOptionClass} value="Placement">Placement</option>
+                      <option className={dropdownOptionClass} value="Skill">Skill</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Program*</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(15,23,42,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={batchForm.programId || ''}
+                      onChange={(event) => {
+                        const nextProgramId = event.target.value;
+                        const nextProgram = programs.find((program) => String(program.id) === String(nextProgramId));
+                        setBatchForm((current) => ({
+                          ...current,
+                          programId: nextProgramId,
+                          endDate: getProgramEndDate(current.startDate, nextProgram),
+                        }));
+                      }}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className={dropdownOptionClass} value="">Select a {batchForm.programType || 'program'} program</option>
+                      {programs
+                        .filter((program) => program.programType === batchForm.programType)
+                        .map((program) => (
+                          <option className={dropdownOptionClass} key={program.id} value={program.id}>{program.name}</option>
+                        ))}
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                  {selectedProgram && <p className="mt-1 text-[11px] text-[#3C83F6] dark:text-blue-300">Resources and duration come from this Program.</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Start Date*</label>
                   <div className="mt-1">
                     <ModernDatePicker
@@ -296,10 +412,8 @@ const CollegeDetails = () => {
                         setBatchForm((prev) => ({
                           ...prev,
                           startDate: nextDate,
-                          endDate:
-                            prev.endDate && nextDate && prev.endDate < nextDate
-                              ? ''
-                              : prev.endDate,
+                          endDate: getProgramEndDate(nextDate, selectedProgram)
+                            || (prev.endDate && nextDate && prev.endDate < nextDate ? '' : prev.endDate),
                         }))
                       }
                       placeholder="Select start date"
@@ -310,19 +424,26 @@ const CollegeDetails = () => {
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">End Date*</label>
                   <div className="mt-1">
-                    <ModernDatePicker
-                      value={batchForm.endDate}
-                      onChange={(nextDate) => setBatchForm((prev) => ({ ...prev, endDate: nextDate }))}
-                      minDate={batchForm.startDate ? new Date(`${batchForm.startDate}T00:00:00`) : undefined}
-                      placeholder="Select end date"
-                      ariaLabel="End date"
-                    />
+                    {selectedProgram ? (
+                      <div className="w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.04] text-slate-700 dark:text-slate-200">
+                        {batchForm.endDate || 'Select a start date first'}
+                      </div>
+                    ) : (
+                      <ModernDatePicker
+                        value={batchForm.endDate}
+                        onChange={(nextDate) => setBatchForm((prev) => ({ ...prev, endDate: nextDate }))}
+                        minDate={batchForm.startDate ? new Date(`${batchForm.startDate}T00:00:00`) : undefined}
+                        placeholder="Select end date"
+                        ariaLabel="End date"
+                      />
+                    )}
                   </div>
+                  {selectedProgram && <p className="mt-1 text-[11px] text-black/40 dark:text-white/45">Calculated from the Program duration.</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                {!selectedProgram && (<div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Assigned Track</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select
@@ -337,7 +458,7 @@ const CollegeDetails = () => {
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                   </div>
-                </div>
+                </div>)}
 
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Batch Size</label>

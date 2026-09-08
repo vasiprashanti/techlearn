@@ -86,7 +86,6 @@ export const resolveDashboardProgramAccess = async ({
   const programs = await Program.find({
     _id: { $in: programIds },
     status: "Active",
-    visibility: "Public",
   })
     .select("_id name programType duration durationDays status visibility pricingType")
     .lean();
@@ -112,6 +111,13 @@ export const resolveDashboardProgramAccess = async ({
       userBatchId,
       studentBatchId,
     });
+
+    // Private programs are never a general dashboard/catalog entry. An
+    // explicit enrollment is still a valid access grant for an individual
+    // learner, even when it has no batch schedule.
+    if (program.visibility !== "Public" && !enrollment) {
+      continue;
+    }
 
     if (batchId) {
       const lifecycle = await expireBatchIfNeeded(batchId);

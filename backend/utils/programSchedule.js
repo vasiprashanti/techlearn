@@ -1,7 +1,12 @@
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import Program from "../models/Program.js";
+import Batch from "../models/Batch.js";
+import User from "../models/User.js";
+import Student from "../models/Student.js";
 import { combineDateAndTime, getTrackAssignmentDate } from "./trackAssignmentSchedule.js";
 import { expireBatchIfNeeded } from "./batchLifecycle.js";
+import { isProgramAccessibleToLearner } from "./programVisibility.js";
+import { resolveSafeLegacyIndividualStartDate } from "./programEnrollmentDate.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -14,6 +19,20 @@ const getValidDate = (...values) => {
     if (!Number.isNaN(date.getTime())) return date;
   }
   return new Date();
+};
+
+const resolveLegacyBatchId = async ({ legacyBatchId, programId }) => {
+  if (!legacyBatchId) return null;
+
+  const batch = await Batch.findById(legacyBatchId).select("_id programId").lean();
+  if (!batch) return null;
+
+  const batchProgramId = getId(batch.programId);
+  if (batchProgramId && programId && String(batchProgramId) !== String(programId)) {
+    return null;
+  }
+
+  return legacyBatchId;
 };
 
 /**
@@ -41,16 +60,30 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
       .lean();
   }
 
-  const legacyBatchId = getId(student?.batchId) || getId(user?.batchId) || null;
+  const legacyBatchPointer = getId(student?.batchId) || getId(user?.batchId) || null;
   if (enrollment) {
     // Old records have no batchId property. Treat those as legacy records and
     // retain their existing student-level batch schedule until they are
     // touched by the new enrollment flow.
     const hasEnrollmentBatch = Object.prototype.hasOwnProperty.call(enrollment, "batchId");
-    const batchId = hasEnrollmentBatch ? getId(enrollment.batchId) : legacyBatchId;
+    const batchId = hasEnrollmentBatch
+      ? getId(enrollment.batchId)
+      : await resolveLegacyBatchId({
+          legacyBatchId: legacyBatchPointer,
+          programId: getId(enrollment.programId) || programId,
+        });
     const lifecycle = batchId ? await expireBatchIfNeeded(batchId) : { expired: false };
+    const [userRecord, studentRecord] = await Promise.all([
+      user?._id ? User.findById(user._id).select("_id startDate createdAt").lean() : null,
+      student?._id ? Student.findById(student._id).select("_id createdAt").lean() : null,
+    ]);
+    const reconciled = await resolveSafeLegacyIndividualStartDate({
+      enrollment,
+      user: userRecord || user,
+      student: studentRecord || student,
+    });
     const individualStartDate = getValidDate(
-      enrollment.individualStartDate,
+      reconciled.date,
       enrollment.assignedAt,
       student?.createdAt,
       user?.createdAt
@@ -62,10 +95,13 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
       batchId,
       scheduleType: batchId ? "batch" : "individual",
       individualStartDate,
+      individualStartDateReconciled: reconciled.reconciled,
+      individualStartDateReconciliationReason: reconciled.reason,
       batchExpired: Boolean(lifecycle.expired),
     };
   }
 
+  const legacyBatchId = await resolveLegacyBatchId({ legacyBatchId: legacyBatchPointer, programId });
   const lifecycle = legacyBatchId
     ? await expireBatchIfNeeded(legacyBatchId)
     : { expired: false };
@@ -93,14 +129,6 @@ export const assertProgramScheduleAccess = async ({ user, student, programId }) 
   const program = await Program.findById(resolvedProgramId)
     .select("pricingType status visibility")
     .lean();
-  if (!program || program.status !== "Active" || program.visibility !== "Public") {
-    const error = new Error("This program is not available.");
-    error.statusCode = 403;
-    throw error;
-  }
-
-  if (program.pricingType !== "Paid") return null;
-
   const identifiers = [
     user?._id ? { userId: user._id } : null,
     student?._id ? { studentId: student._id } : null,
@@ -109,12 +137,19 @@ export const assertProgramScheduleAccess = async ({ user, student, programId }) 
     ? await ProgramEnrollment.findOne({
         programId: resolvedProgramId,
         status: "Active",
-        accessTier: "Member",
         $or: identifiers,
-      }).select("_id accessTier").lean()
+      }).select("_id batchId accessTier").lean()
     : null;
 
-  if (!enrollment) {
+  if (!isProgramAccessibleToLearner({ program, enrollment })) {
+    const error = new Error("This program is not available.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (program.pricingType !== "Paid") return null;
+
+  if (!enrollment || enrollment.accessTier !== "Member") {
     const error = new Error("Paid program access requires a verified enrollment.");
     error.statusCode = 403;
     throw error;

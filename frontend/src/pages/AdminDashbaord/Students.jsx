@@ -38,6 +38,11 @@ const getCurrentMonthLabel = () => {
   return now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 };
 
+const getTodayIsoDate = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
 const formatDateValue = (value) => {
   if (!value) return '—';
   const date = new Date(value);
@@ -116,7 +121,7 @@ export default function Students() {
 
   // Data states
   const [studentsData, setStudentsData] = useState({ items: [], total: 0 });
-  const [stats, setStats] = useState({ totalEnrolled: 0, activeThisMonth: 0, collegeCount: 0, individualCount: 0, completedCount: 0 });
+  const [stats, setStats] = useState({ totalEnrolled: 0, activeThisMonth: 0, collegeCount: 0, individualCount: 0, completedCount: 0, leadFeedbackReasonCounts: [] });
   const [filterOptions, setFilterOptions] = useState({ colleges: [], programs: [] });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -133,7 +138,7 @@ export default function Students() {
   const [editingStudentId, setEditingStudentId] = useState(null);
   const [formError, setFormError] = useState('');
   const [isSavingStudent, setIsSavingStudent] = useState(false);
-  const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', programId: '', track: '', programSelection: 'Placement Sprint', status: 'Active' });
+  const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', programId: '', track: '', programSelection: 'Placement Sprint', status: 'Active', individualStartDate: getTodayIsoDate() });
 
   const isDarkMode = theme === 'dark';
   const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
@@ -282,7 +287,7 @@ export default function Students() {
   const openAddStudent = () => {
     setEditingStudentId(null);
     setFormError('');
-    setStudentForm({ name: '', email: '', collegeId: filterOptions.colleges[0]?._id || '', batchId: '', programId: filterOptions.programs[0]?._id || '', track: '', programSelection: 'Placement', status: 'Active' });
+    setStudentForm({ name: '', email: '', collegeId: filterOptions.colleges[0]?._id || '', batchId: '', programId: filterOptions.programs[0]?._id || '', track: '', programSelection: 'Placement', status: 'Active', individualStartDate: getTodayIsoDate() });
     setIsAddFormOpen(true);
   };
 
@@ -298,6 +303,7 @@ export default function Students() {
       track: student.track || '',
       programSelection: student.programSelection || 'Placement',
       status: student.status || 'Active',
+      individualStartDate: student.batchId ? '' : (student.individualStartDate || student.scheduleStartDate || ''),
     });
     setIsAddFormOpen(true);
   };
@@ -550,6 +556,20 @@ export default function Students() {
                 </div>
               </div>
 
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Individual start date</label>
+                <input
+                  type="date"
+                  value={studentForm.individualStartDate || ''}
+                  onChange={(e) => setStudentForm({ ...studentForm, individualStartDate: e.target.value })}
+                  disabled={Boolean(studentForm.batchId)}
+                  className={`${studentFormInputClass} disabled:cursor-not-allowed disabled:opacity-60`}
+                />
+                <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                  Used for an individual program schedule. Batch learners use the batch start date.
+                </p>
+              </div>
+
               {formError && <p className="text-xs text-rose-500">{formError}</p>}
 
               <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-black/5 dark:border-white/5">
@@ -714,6 +734,17 @@ export default function Students() {
                 Exploring
               </button>
             </div>
+
+            {activeTab === 'leads' && stats.leadFeedbackReasonCounts?.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+                <span className="font-bold uppercase tracking-wider text-black/40 dark:text-white/40">Feedback reasons:</span>
+                {stats.leadFeedbackReasonCounts.map(({ reason, count }) => (
+                  <span key={reason} className="rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-2 py-1">
+                    {reason} ({count})
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Filter controls row */}
             <div className="flex flex-col gap-2.5">
@@ -895,6 +926,7 @@ export default function Students() {
                           <th className="py-2.5 px-3">Goal / Target Role</th>
                           <th className="py-2.5 px-3">Target Companies</th>
                           <th className="py-2.5 px-3">Source</th>
+                          <th className="py-2.5 px-3">Reason</th>
                           <th className="py-2.5 px-3 whitespace-nowrap">Last Activity</th>
                           <th className="py-2.5 px-3">Status</th>
                           <th className="py-2.5 px-3 text-right">Actions</th>
@@ -1022,9 +1054,14 @@ export default function Students() {
                                   <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-medium bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300">
                                     {student.source}
                                   </span>
-                                  {student.pricingExitReason && (
-                                    <span className="block text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">
-                                      {student.pricingExitReason}
+                                </td>
+                                <td className="py-2.5 px-4 text-[11px] text-amber-600 dark:text-amber-400 font-medium max-w-[220px]">
+                                  <span className="block truncate" title={student.pricingExitReason || undefined}>
+                                    {student.pricingExitReason || '—'}
+                                  </span>
+                                  {student.pricingExitFeedbackCount > 1 && (
+                                    <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                                      {student.pricingExitFeedbackCount} responses
                                     </span>
                                   )}
                                 </td>
