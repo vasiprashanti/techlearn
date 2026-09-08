@@ -300,6 +300,203 @@ export default function Courses() {
               </div>
             </div>
 
+            {/* Styles for Courses cards matching learnlight.html & learndark.html */}
+            <style dangerouslySetInnerHTML={{ __html: `
+              .tl-learn-card {
+                width: 100%;
+                background: #ffffff;
+                border-radius: 28px;
+                overflow: hidden;
+                box-shadow: 0 12px 35px rgba(3, 4, 50, 0.08);
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+                text-align: left;
+                cursor: pointer;
+              }
+              .tl-learn-card:hover {
+                transform: translateY(-6px);
+                box-shadow: 0 22px 50px rgba(3, 4, 50, 0.12);
+              }
+              .dark .tl-learn-card {
+                background: #0b1238;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+              }
+              .dark .tl-learn-card:hover {
+                box-shadow: 0 24px 55px rgba(0, 0, 0, 0.38);
+                border-color: rgba(137, 198, 56, 0.18);
+              }
+              .tl-card-banner {
+                position: relative;
+                height: 190px;
+                overflow: hidden;
+                background: #e5e9ed;
+              }
+              .dark .tl-card-banner {
+                background: #111a42;
+              }
+              .tl-card-banner img {
+                width: 100%;
+                height: 100%;
+                display: block;
+                object-fit: cover;
+                transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+              }
+              .tl-learn-card:hover .tl-card-banner img {
+                transform: scale(1.04);
+              }
+              .tl-category-badge {
+                position: absolute;
+                top: 14px;
+                right: 14px;
+                padding: 6px 11px;
+                background: rgba(255, 255, 255, 0.94);
+                color: #02107a;
+                border-radius: 20px;
+                font-size: 10px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                box-shadow: 0 4px 12px rgba(3, 4, 50, 0.08);
+                backdrop-filter: blur(10px);
+                z-index: 2;
+              }
+              .dark .tl-category-badge {
+                background: rgba(5, 11, 46, 0.88);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+              }
+              .tl-card-content {
+                background: #ffffff;
+                padding: 20px 22px 18px;
+                border-top-right-radius: 28px;
+                margin-top: -12px;
+                position: relative;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                z-index: 1;
+              }
+              .dark .tl-card-content {
+                background: #0b1238;
+              }
+              .tl-card-title {
+                font-size: 20px;
+                font-weight: 750;
+                color: #02107a;
+                margin-top: 2px;
+                margin-bottom: 0;
+                line-height: 1.25;
+                letter-spacing: -0.5px;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+              }
+              .dark .tl-card-title {
+                color: #ffffff;
+              }
+              .tl-card-description {
+                font-size: 13px;
+                color: #02107a;
+                line-height: 1.5;
+                margin-top: 10px;
+                margin-bottom: 16px;
+                min-height: 38px;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+              }
+              .dark .tl-card-description {
+                color: #ffffff;
+              }
+              .tl-content-divider {
+                width: 100%;
+                height: 1px;
+                background: rgba(2, 16, 122, 0.12);
+                margin-bottom: 14px;
+                margin-top: auto;
+              }
+              .dark .tl-content-divider {
+                background: rgba(255, 255, 255, 0.12);
+              }
+              .tl-card-footer {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              }
+              .tl-price {
+                font-size: 22px;
+                font-weight: 800;
+                color: #89c638;
+                letter-spacing: -0.7px;
+                display: inline-flex;
+                align-items: baseline;
+                line-height: 1;
+                transform: translateY(-9px);
+                transition: color 0.25s ease;
+              }
+              .tl-price-type {
+                margin-left: 4px;
+                font-size: 9px;
+                font-weight: 600;
+                color: #89c638;
+                transition: color 0.25s ease;
+              }
+              .tl-start-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 7px;
+                color: #89c638;
+                text-decoration: none;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: -0.1px;
+                transition: color 0.25s ease, gap 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+              }
+              .tl-start-link .tl-arrow {
+                font-size: 18px;
+                font-weight: 400;
+                line-height: 1;
+                color: #89c638;
+                transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), color 0.25s ease;
+              }
+              .tl-learn-card:hover .tl-start-link {
+                color: #02107a;
+                gap: 10px;
+              }
+              .tl-learn-card:hover .tl-start-link .tl-arrow {
+                color: #02107a;
+                transform: translateX(3px);
+              }
+              .dark .tl-learn-card:hover .tl-start-link {
+                color: #ffffff;
+                gap: 10px;
+              }
+              .dark .tl-learn-card:hover .tl-start-link .tl-arrow {
+                color: #ffffff;
+                transform: translateX(3px);
+              }
+              @media (max-width: 500px) {
+                .tl-card-banner {
+                  height: 180px;
+                }
+                .tl-card-content {
+                  padding: 18px 16px 16px;
+                }
+                .tl-card-title {
+                  font-size: 18px;
+                }
+                .tl-card-description {
+                  font-size: 12px;
+                }
+              }
+            ` }} />
+
             <div className="relative px-2 group">
               <Carousel
                 setApi={setSelfPacedApi}
@@ -307,51 +504,71 @@ export default function Courses() {
                 className="w-full max-w-full"
               >
                 <CarouselContent className="-ml-2 py-4">
-                  {(() => {
-                    const selfPacedCourses = coursesData.filter(course => course.courseType !== 'Trainer-led');
-                    const groupedSelfPaced = [];
-                    for (let i = 0; i < selfPacedCourses.length; i += 2) {
-                      groupedSelfPaced.push(selfPacedCourses.slice(i, i + 2));
-                    }
-                    return groupedSelfPaced.map((pair, index) => (
-                      <CarouselItem
-                        key={index}
-                        className="basis-1/2 sm:basis-1/2 md:basis-1/3 lg:basis-1/4 px-3"
-                      >
-                        <div className="flex flex-col gap-4">
-                          {pair.map((course) => (
-                            <div
-                              key={course.id}
-                              onMouseEnter={() => prefetchCourseTopics(course)}
-                              onFocus={() => prefetchCourseTopics(course)}
-                              onClick={() => {
-                                prefetchCourseTopics(course);
-                                navigate(getCourseTopicsPath(course));
-                              }}
-                              className="dashboard-surface group p-3.5 md:p-4 transition-all duration-500 cursor-pointer flex flex-col justify-between min-h-[160px] md:min-h-[180px] relative overflow-hidden hover:-translate-y-1 h-[160px] md:h-[180px] rounded-2xl border border-black/5 bg-white/40 shadow-[0_8px_20px_rgba(60,131,246,0.04)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]"
-                            >
-                              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#7ec9ff]/15 to-transparent rounded-full blur-2xl -mr-8 -mt-8 transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
+                  {coursesData
+                    .filter(course => course.courseType !== 'Trainer-led')
+                    .map((course) => {
+                      const displayPrice = course.price && course.price !== 'Free' && course.price !== 'Coming Soon'
+                        ? (course.price.startsWith('₹') ? course.price : `₹${course.price}`)
+                        : '₹399';
 
-                              <div className="relative z-10 flex items-start justify-between mb-3">
-                                <div className="dashboard-icon-badge group-hover:scale-105 transition-transform duration-500 p-1.5 bg-[#3C83F6]/10 rounded-lg">
-                                  <Code className="w-4 h-4 text-[#3C83F6] dark:text-[#8fd9ff]" />
-                                </div>
-                              </div>
-
-                              <div className="relative z-10 mt-auto text-left">
-                                <h3 className="text-sm md:text-base font-bold text-[#00113b] dark:text-[#8fd9ff] group-hover:text-[#001b5c] dark:group-hover:text-[#96ddff] transition-colors mb-1.5 leading-snug line-clamp-2">
-                                  {course.title}
-                                </h3>
-                                <p className="text-[11px] md:text-xs text-[#00113b] dark:text-[#7fb8e2] leading-relaxed line-clamp-2">
-                                  {course.description}
-                                </p>
+                      return (
+                        <CarouselItem
+                          key={course.id}
+                          className="basis-full sm:basis-1/2 md:basis-1/2 lg:basis-1/3 xl:basis-1/3 px-3"
+                        >
+                          <div
+                            onMouseEnter={() => prefetchCourseTopics(course)}
+                            onFocus={() => prefetchCourseTopics(course)}
+                            onClick={() => {
+                              prefetchCourseTopics(course);
+                              navigate(getCourseTopicsPath(course));
+                            }}
+                            className="tl-learn-card h-full"
+                          >
+                            {/* IMAGE */}
+                            <div className="tl-card-banner">
+                              <img
+                                src={course.image || course.bannerImage || '/c.png'}
+                                alt={course.title}
+                                onError={(e) => {
+                                  e.currentTarget.onerror = null;
+                                  e.currentTarget.src = '/c.png';
+                                }}
+                              />
+                              <div className="tl-category-badge">
+                                Skill
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      </CarouselItem>
-                    ));
-                  })()}
+
+                            {/* CONTENT */}
+                            <div className="tl-card-content">
+                              <h2 className="tl-card-title">
+                                {course.title}
+                              </h2>
+
+                              <p className="tl-card-description">
+                                {course.description}
+                              </p>
+
+                              <div className="tl-content-divider"></div>
+
+                              {/* FOOTER */}
+                              <div className="tl-card-footer">
+                                <div className="tl-price">
+                                  {displayPrice}
+                                  <span className="tl-price-type">/ Year</span>
+                                </div>
+
+                                <span className="tl-start-link">
+                                  Start Now
+                                  <span className="tl-arrow">→</span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </CarouselItem>
+                      );
+                    })}
                 </CarouselContent>
               </Carousel>
 
