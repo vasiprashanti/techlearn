@@ -5,6 +5,7 @@ import { calculateCurrentDayNumber } from "../utils/trackAssignmentSchedule.js";
 import { getTopicDayNumber } from "../utils/courseTopicSchedule.js";
 import { resolveProgramPrimaryCourseId, isProgramPrimaryCourseMappingValid } from "../utils/programPrimaryCourse.js";
 import { getProgramTypeQueryValues, normalizeProgramType } from "../utils/programTypeNormalization.js";
+import { upsertProgramEnrollment } from "../utils/programEnrollment.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const id = () => new mongoose.Types.ObjectId();
@@ -50,4 +51,42 @@ test("legacy Program types normalize to canonical values and query aliases", () 
   assert.equal(normalizeProgramType("Placement Sprint"), "Placement");
   assert.equal(normalizeProgramType("Full Stack Project Program"), "Skill");
   assert.deepEqual(getProgramTypeQueryValues("Placement"), ["Placement", "Placement Sprint", "Placement Program", "placement", "placement sprint", "placement program"]);
+});
+
+test("individual enrollment with an explicit start date does not duplicate its source update", async () => {
+  const originalFindOne = (await import("../models/ProgramEnrollment.js")).default.findOne;
+  const originalFindOneAndUpdate = (await import("../models/ProgramEnrollment.js")).default.findOneAndUpdate;
+  const originalProgramUpdateOne = (await import("../models/Program.js")).default.updateOne;
+  const originalLeadUpdateOne = (await import("../models/ProgramReadinessLead.js")).default.updateOne;
+  const enrollmentModel = (await import("../models/ProgramEnrollment.js")).default;
+  const programModel = (await import("../models/Program.js")).default;
+  const leadModel = (await import("../models/ProgramReadinessLead.js")).default;
+  let capturedUpdate;
+
+  enrollmentModel.findOne = () => ({ lean: async () => null });
+  enrollmentModel.findOneAndUpdate = async (_query, update) => {
+    capturedUpdate = update;
+    return update;
+  };
+  programModel.updateOne = async () => ({});
+  leadModel.updateOne = async () => ({});
+
+  try {
+    await upsertProgramEnrollment({
+      user: { _id: id() },
+      student: { _id: id() },
+      program: { _id: id(), pricingType: "Free" },
+      batchId: null,
+      individualStartDate: "2026-08-07T00:00:00.000Z",
+      source: "admin",
+    });
+
+    assert.equal(capturedUpdate.$set.individualStartDateSource, "explicit_admin");
+    assert.equal(Object.prototype.hasOwnProperty.call(capturedUpdate.$setOnInsert, "individualStartDateSource"), false);
+  } finally {
+    enrollmentModel.findOne = originalFindOne;
+    enrollmentModel.findOneAndUpdate = originalFindOneAndUpdate;
+    programModel.updateOne = originalProgramUpdateOne;
+    leadModel.updateOne = originalLeadUpdateOne;
+  }
 });

@@ -363,6 +363,12 @@ export const upsertProgramEnrollment = async ({
     }
   }
 
+  const individualStartDateSource = explicitIndividualStartDate
+    ? (source === "admin" || source === "admin_bulk"
+      ? "explicit_admin"
+      : source === "payment" ? "explicit_payment" : "explicit")
+    : null;
+
   const update = {
     $set: {
       userId,
@@ -375,24 +381,15 @@ export const upsertProgramEnrollment = async ({
         || existing?.individualStartDate
         || existing?.assignedAt
         || now,
-      ...(explicitIndividualStartDate
-        ? {
-            individualStartDateSource: source === "admin" || source === "admin_bulk"
-              ? "explicit_admin"
-              : source === "payment"
-                ? "explicit_payment"
-                : "explicit",
-          }
-        : {}),
+      ...(individualStartDateSource ? { individualStartDateSource } : {}),
     },
     $setOnInsert: {
       assignedAt: now,
       source,
-      individualStartDateSource: explicitIndividualStartDate
-        ? (source === "admin" || source === "admin_bulk"
-          ? "explicit_admin"
-          : source === "payment" ? "explicit_payment" : "explicit")
-        : "enrollment",
+      // MongoDB rejects an upsert when the same path exists in both
+      // $set and $setOnInsert. An explicit admin/payment date is already
+      // present in $set, so only add the inferred source on first insert.
+      ...(individualStartDateSource ? {} : { individualStartDateSource: "enrollment" }),
     },
   };
 
