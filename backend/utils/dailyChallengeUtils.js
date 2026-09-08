@@ -9,6 +9,8 @@ import Student from "../models/Student.js";
 import Track from "../models/Track.js";
 import DailyChallengeAttempt from "../models/DailyChallengeAttempt.js";
 import { assertProgramScheduleAccess, resolveProgramSchedule } from "./programSchedule.js";
+import { parseDurationDays } from "./programPhases.js";
+import { getProgramTypeQueryValues } from "./programTypeNormalization.js";
 
 export const DAILY_CHALLENGE_RULES = {
   timerLimitMinutes: 60,
@@ -246,7 +248,10 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     ? await Program.findById(schedule.programId).lean()
     : null;
   if (!program && studentProgram) {
-    program = await Program.findOne({ programType: studentProgram, status: "Active" }).sort({ createdAt: -1 }).lean();
+    const programTypeValues = getProgramTypeQueryValues(studentProgram);
+    if (programTypeValues.length) {
+      program = await Program.findOne({ programType: { $in: programTypeValues }, status: "Active" }).sort({ createdAt: -1 }).lean();
+    }
   }
 
   let trackTemplate = null;
@@ -284,7 +289,13 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
   }
 
   const individualStartDate = batch ? null : (schedule.individualStartDate || studentContext.student?.createdAt || user?.createdAt || new Date());
-  const dayNumber = calculateCurrentDayNumber(batch, trackTemplate, "Daily Challenge", individualStartDate);
+  const dayNumber = calculateCurrentDayNumber(
+    batch,
+    trackTemplate,
+    "Daily Challenge",
+    individualStartDate,
+    { programDurationDays: program?.durationDays || parseDurationDays(program?.duration) },
+  );
   const now = new Date();
 
   if (dayNumber === 0) {

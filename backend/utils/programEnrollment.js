@@ -8,9 +8,8 @@ import TrackTemplate from "../models/TrackTemplate.js";
 import ProgramReadinessLead from "../models/ProgramReadinessLead.js";
 import { matchProgramsForUser } from "./programMatching.js";
 import { parseDurationDays } from "./programPhases.js";
-
-const escapeRegex = (value = "") =>
-  String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+import { resolveProgramPrimaryCourseId } from "./programPrimaryCourse.js";
+import { getProgramTypeQueryValues, normalizeProgramType } from "./programTypeNormalization.js";
 
 const normalizeSelection = (selection) => String(selection || "").trim();
 
@@ -49,6 +48,19 @@ const getProgramTrackFields = (templates) => {
   };
 };
 
+const getProgramCourseProjection = (program) => {
+  const courseIds = getProgramResourceIds(program, "courseIds");
+  const primaryCourseId = getId(resolveProgramPrimaryCourseId(program));
+  const orderedCourseIds = primaryCourseId
+    ? [primaryCourseId, ...courseIds.filter((id) => String(id) !== String(primaryCourseId))]
+    : courseIds;
+  return {
+    primaryCourseId,
+    courseIds: orderedCourseIds,
+    supportingCourseIds: orderedCourseIds.slice(1),
+  };
+};
+
 const getUserForStudent = async (student) => {
   const conditions = [
     student?.userId ? { _id: getId(student.userId) } : null,
@@ -71,6 +83,8 @@ export const assignProgramToBatch = async ({ batchId, program, previousProgramId
   if (!resolvedBatchId || !resolvedProgramId || !program?.programType) {
     throw new Error("A valid batch and concrete Program are required.");
   }
+  const normalizedProgramType = normalizeProgramType(program.programType);
+  if (!normalizedProgramType) throw new Error("Program has an unknown program type.");
 
   const batch = await Batch.findById(resolvedBatchId).lean();
   if (!batch) throw new Error("Batch not found.");
@@ -79,7 +93,8 @@ export const assignProgramToBatch = async ({ batchId, program, previousProgramId
   // synchronized as a compatibility projection for older admin screens and
   // APIs, so selecting a Program is enough to make every mapped resource
   // available without a second manual assignment step.
-  const programCourseIds = getProgramResourceIds(program, "courseIds");
+  const programCourseProjection = getProgramCourseProjection(program);
+  const programCourseIds = programCourseProjection.courseIds;
   const programTrackTemplateIds = getProgramResourceIds(program, "trackTemplateIds");
   const programTrackTemplates = programTrackTemplateIds.length
     ? await TrackTemplate.find({
@@ -127,7 +142,7 @@ export const assignProgramToBatch = async ({ batchId, program, previousProgramId
 
     await Student.updateOne(
       { _id: student._id },
-      { $set: { programId: resolvedProgramId, programSelection: program.programType } }
+      { $set: { programId: resolvedProgramId, programSelection: normalizedProgramType } }
     );
 
     if (user?._id) {
@@ -137,7 +152,7 @@ export const assignProgramToBatch = async ({ batchId, program, previousProgramId
           $set: {
             batchId: resolvedBatchId,
             programId: resolvedProgramId,
-            programSelection: program.programType,
+            programSelection: normalizedProgramType,
             ...(batch.startDate ? { startDate: batch.startDate } : {}),
           },
         }
@@ -160,6 +175,9 @@ export const assignProgramToBatch = async ({ batchId, program, previousProgramId
         batchIds: resolvedBatchId,
         ...(studentIds.length ? { studentIds: { $each: studentIds } } : {}),
       },
+      ...(String(getId(program.primaryCourseId) || "") === String(programCourseProjection.primaryCourseId || "")
+        ? {}
+        : { $set: { primaryCourseId: programCourseProjection.primaryCourseId } }),
     }
   );
 
@@ -175,11 +193,11 @@ export const assignProgramToBatch = async ({ batchId, program, previousProgramId
     {
       $set: {
         programId: resolvedProgramId,
-        programType: program.programType,
-        programSelection: program.programType,
+        programType: normalizedProgramType,
+        programSelection: normalizedProgramType,
         expiryDate: getProgramExpiryDate(batch.startDate, program) || batch.expiryDate,
-        attachedCourse: programCourseIds[0] || null,
-        supportingCourses: programCourseIds.slice(1),
+        attachedCourse: programCourseProjection.primaryCourseId || null,
+        supportingCourses: programCourseProjection.supportingCourseIds,
         ...getProgramTrackFields(programTrackTemplates),
       },
     }
@@ -208,6 +226,37 @@ export const assignProgramToBatch = async ({ batchId, program, previousProgramId
     studentCount: students.length,
     reassignedStudentCount: students.length,
   };
+};
+
+/**
+ * Rebuild legacy Batch course/track projections from the current Program.
+ * Program remains canonical; these fields exist only for older batch APIs and
+ * screens. This is intentionally idempotent and safe to run after every
+ * attachment, detachment, or ordering change.
+ */
+export const syncProgramCompatibilityProjections = async ({ programId }) => {
+  const resolvedProgramId = getId(programId);
+  if (!resolvedProgramId) return { programId: null, batchCount: 0 };
+
+  const program = await Program.findById(resolvedProgramId).lean();
+  if (!program) return { programId: resolvedProgramId, batchCount: 0 };
+
+  const linkedBatchIds = await Batch.find({
+    $or: [
+      { programId: resolvedProgramId },
+      { _id: { $in: program.batchIds || [] } },
+    ],
+  }).distinct("_id");
+
+  for (const batchId of linkedBatchIds) {
+    await assignProgramToBatch({
+      batchId,
+      program,
+      source: "admin",
+    });
+  }
+
+  return { programId: resolvedProgramId, batchCount: linkedBatchIds.length };
 };
 
 /**
@@ -245,11 +294,12 @@ export const removeProgramFromBatch = async ({ batchId, programId }) => {
 
 export const resolveProgramForSelection = async (programSelection) => {
   const selection = normalizeSelection(programSelection);
+  const queryValues = getProgramTypeQueryValues(selection);
 
-  if (!selection || selection === "Both") return null;
+  if (!selection || selection === "Both" || !queryValues.length) return null;
 
   return Program.findOne({
-    programType: new RegExp(`^${escapeRegex(selection)}$`, "i"),
+    programType: { $in: queryValues },
     status: "Active",
     visibility: "Public",
   })
@@ -325,10 +375,24 @@ export const upsertProgramEnrollment = async ({
         || existing?.individualStartDate
         || existing?.assignedAt
         || now,
+      ...(explicitIndividualStartDate
+        ? {
+            individualStartDateSource: source === "admin" || source === "admin_bulk"
+              ? "explicit_admin"
+              : source === "payment"
+                ? "explicit_payment"
+                : "explicit",
+          }
+        : {}),
     },
     $setOnInsert: {
       assignedAt: now,
       source,
+      individualStartDateSource: explicitIndividualStartDate
+        ? (source === "admin" || source === "admin_bulk"
+          ? "explicit_admin"
+          : source === "payment" ? "explicit_payment" : "explicit")
+        : "enrollment",
     },
   };
 

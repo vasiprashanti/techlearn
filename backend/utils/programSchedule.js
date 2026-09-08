@@ -1,9 +1,12 @@
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import Program from "../models/Program.js";
 import Batch from "../models/Batch.js";
+import User from "../models/User.js";
+import Student from "../models/Student.js";
 import { combineDateAndTime, getTrackAssignmentDate } from "./trackAssignmentSchedule.js";
 import { expireBatchIfNeeded } from "./batchLifecycle.js";
 import { isProgramAccessibleToLearner } from "./programVisibility.js";
+import { resolveSafeLegacyIndividualStartDate } from "./programEnrollmentDate.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -70,8 +73,17 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
           programId: getId(enrollment.programId) || programId,
         });
     const lifecycle = batchId ? await expireBatchIfNeeded(batchId) : { expired: false };
+    const [userRecord, studentRecord] = await Promise.all([
+      user?._id ? User.findById(user._id).select("_id startDate createdAt").lean() : null,
+      student?._id ? Student.findById(student._id).select("_id createdAt").lean() : null,
+    ]);
+    const reconciled = await resolveSafeLegacyIndividualStartDate({
+      enrollment,
+      user: userRecord || user,
+      student: studentRecord || student,
+    });
     const individualStartDate = getValidDate(
-      enrollment.individualStartDate,
+      reconciled.date,
       enrollment.assignedAt,
       student?.createdAt,
       user?.createdAt
@@ -83,6 +95,8 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
       batchId,
       scheduleType: batchId ? "batch" : "individual",
       individualStartDate,
+      individualStartDateReconciled: reconciled.reconciled,
+      individualStartDateReconciliationReason: reconciled.reason,
       batchExpired: Boolean(lifecycle.expired),
     };
   }

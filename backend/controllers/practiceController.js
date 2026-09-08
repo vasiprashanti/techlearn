@@ -473,8 +473,19 @@ export const recordPracticeSubmission = async (req, res) => {
           ? await mongoose.model("Batch").findById(schedule.batchId)
           : null;
         let trackTemplate = null;
+        let programDurationDays = null;
         if (schedule.programId) {
-          const program = await mongoose.model("Program").findById(schedule.programId).select("trackTemplateIds").lean();
+          const program = await mongoose.model("Program").findById(schedule.programId).select("trackTemplateIds durationDays duration").lean();
+          programDurationDays = program?.durationDays || null;
+          if (!programDurationDays && program?.duration) {
+            const durationMatch = String(program.duration).match(/(\d+(?:\.\d+)?)\s*-?\s*(day|days|week|weeks|month|months|year|years)/i);
+            if (durationMatch) {
+              const amount = Number(durationMatch[1]);
+              const unit = durationMatch[2].toLowerCase();
+              const multiplier = unit.startsWith("year") ? 365 : unit.startsWith("month") ? 30 : unit.startsWith("week") ? 7 : 1;
+              programDurationDays = Math.max(1, Math.round(amount * multiplier));
+            }
+          }
           if (program?.trackTemplateIds?.length) {
             trackTemplate = await mongoose.model("TrackTemplate").findOne({
               _id: { $in: program.trackTemplateIds },
@@ -509,7 +520,8 @@ export const recordPracticeSubmission = async (req, res) => {
               batch,
               trackTemplate,
               "Daily Task",
-              batch ? null : schedule.individualStartDate
+              batch ? null : schedule.individualStartDate,
+              { programDurationDays },
             );
             
             let attempt = await mongoose.model("DailyTaskAttempt").findOne({

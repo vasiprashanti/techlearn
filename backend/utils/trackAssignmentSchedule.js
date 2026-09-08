@@ -47,22 +47,68 @@ export const combineDateAndTime = (date, timeString = "00:00") => {
   return new Date(utcTime - 5.5 * 60 * 60 * 1000);
 };
 
-export const calculateCurrentDayNumber = (batch, trackTemplate, trackType, individualStartDate) => {
+const toPositiveInteger = (value) => {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : null;
+};
+
+const getCalendarDaysBetween = (startDate, endDate) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return null;
+  return Math.floor((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+};
+
+/**
+ * Return the effective number of calendar days for a daily track.
+ *
+ * TrackTemplate.totalDays is useful metadata, but it is not safe as the only
+ * bound: imported templates can retain totalDays=1 while containing a
+ * multi-day assignment, and Program/batch schedules are the real entitlement
+ * bounds. A known Program or batch duration therefore wins over the legacy
+ * template value. The old template fields remain a fallback for standalone
+ * legacy tracks.
+ */
+export const getTrackScheduleDays = ({
+  batch,
+  trackTemplate,
+  programDurationDays = null,
+} = {}) => {
+  const programDays = toPositiveInteger(programDurationDays);
+  const batchDays = batch?.startDate && batch?.expiryDate
+    ? getCalendarDaysBetween(batch.startDate, batch.expiryDate)
+    : null;
+  const assignmentDays = (trackTemplate?.dayAssignments || [])
+    .map((assignment) => toPositiveInteger(assignment?.dayNumber))
+    .filter(Boolean);
+  const highestAssignmentDay = assignmentDays.length ? Math.max(...assignmentDays) : null;
+  const templateDays = toPositiveInteger(trackTemplate?.totalDays);
+
+  const entitlementBounds = [programDays, batchDays].filter(Boolean);
+  if (entitlementBounds.length) return Math.min(...entitlementBounds);
+  return highestAssignmentDay || templateDays || 1;
+};
+
+export const calculateCurrentDayNumber = (
+  batch,
+  trackTemplate,
+  trackType,
+  individualStartDate,
+  { programDurationDays = null, now = new Date() } = {},
+) => {
   const trackAssignmentDate = getTrackAssignmentDate(batch, trackType, individualStartDate);
-  const now = new Date();
-  
+  const currentTime = new Date(now);
+
   let currentDay = 0;
-  const maxDays = (trackTemplate?.totalDays || 365) + 10;
+  const maxDays = getTrackScheduleDays({ batch, trackTemplate, programDurationDays });
   
   for (let d = 1; d <= maxDays; d++) {
     const dayDate = new Date(trackAssignmentDate.getTime() + (d - 1) * 24 * 60 * 60 * 1000);
     
     let releaseTime = batch?.releaseTime || "00:00";
     if (trackTemplate) {
-      const totalTemplateDays = trackTemplate.totalDays || trackTemplate.dayAssignments?.length || 1;
-      const lookupDay = ((d - 1) % totalTemplateDays) + 1;
       const dayAssignment = (trackTemplate.dayAssignments || []).find(
-        (da) => Number(da.dayNumber) === Number(lookupDay)
+        (da) => Number(da.dayNumber) === Number(d)
       );
       if (dayAssignment && dayAssignment.releaseTimeOverride) {
         releaseTime = dayAssignment.releaseTimeOverride;
@@ -72,7 +118,7 @@ export const calculateCurrentDayNumber = (batch, trackTemplate, trackType, indiv
     }
     
     const releaseStart = combineDateAndTime(dayDate, releaseTime);
-    if (now >= releaseStart) {
+    if (currentTime >= releaseStart) {
       currentDay = d;
     } else {
       break;

@@ -8,6 +8,7 @@ import College from "../models/College.js";
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import PricingExitFeedback from "../models/PricingExitFeedback.js";
 import { upsertProgramEnrollment, syncPrimaryProgramPointers } from "../utils/programEnrollment.js";
+import { normalizeProgramType } from "../utils/programTypeNormalization.js";
 
 // Helper to get or initialize Razorpay instance safely
 const getRazorpayInstance = () => {
@@ -31,7 +32,7 @@ const DEFAULT_PRICING_PLANS = {
 };
 
 const getPricingPlan = (program, planId) => {
-  const type = program?.programType === "Skill" ? "Skill" : "Placement";
+  const type = normalizeProgramType(program?.programType) === "Skill" ? "Skill" : "Placement";
   const configuredPlans = Array.isArray(program?.pricingPlans)
     ? program.pricingPlans.filter((plan) => plan.active !== false)
     : [];
@@ -101,7 +102,7 @@ export const checkPaymentEligibility = async (req, res) => {
       }
     }
 
-    const type = program?.programType || requestedType || "Placement";
+    const type = normalizeProgramType(program?.programType || requestedType) || "Placement";
 
     if (type === "Placement") {
       const plan = getPricingPlan(program, planId);
@@ -162,7 +163,7 @@ export const createPaymentOrder = async (req, res) => {
 
     // Fallback program lookup by type if specific ID not provided
     let rawType = program?.programType || requestedProgramType || "";
-    let programType = rawType.toLowerCase().includes("skill") ? "Skill" : "Placement";
+    let programType = normalizeProgramType(rawType) || "Placement";
 
     if (!program) {
       program = await Program.findOne({

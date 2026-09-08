@@ -21,6 +21,7 @@ import { matchProgramsForUser } from "../utils/programMatching.js";
 import { isProgramAccessibleToLearner, isUserVisibleProgram } from "../utils/programVisibility.js";
 import { isUserVisibleCourse } from "../utils/courseVisibility.js";
 import { expireAllActiveBatches } from "../utils/batchLifecycle.js";
+import { getProgramTypeQueryValues } from "../utils/programTypeNormalization.js";
 
 /**
  * GET /api/programs/public
@@ -250,7 +251,7 @@ export const startFreeAssessment = async (req, res) => {
     let programId = requestedProgramId;
     if (!programId) {
       const publicPlacements = await Program.find({
-        programType: { $in: ["Placement", "Placement Sprint"] },
+        programType: { $in: getProgramTypeQueryValues("Placement") },
         status: "Active",
       }).sort({ createdAt: -1 }).lean();
 

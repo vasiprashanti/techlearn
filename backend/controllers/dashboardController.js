@@ -12,6 +12,7 @@ import mongoose from "mongoose";
 import { updateStudentStreak } from "../utils/streakUtil.js";
 import { resolveDashboardProgramAccess } from "../utils/dashboardProgramAccess.js";
 import { buildUnifiedProfile } from "../utils/userProfile.js";
+import { getProgramTypeQueryValues } from "../utils/programTypeNormalization.js";
 
 const DASHBOARD_CACHE_TTL_MS = 30 * 1000;
 const dashboardCache = new Map();
@@ -199,18 +200,21 @@ export const getDashboardData = async (req, res) => {
 
     // Backfill resource delivery for older accounts that predate programId.
     if (!program && selectedProgram && selectedProgram !== "Both") {
-      program = await Program.findOne({
-        programType: new RegExp(`^${String(selectedProgram).replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}$`, "i"),
-        status: "Active",
-        visibility: "Public",
-      })
-        .sort({ createdAt: -1 })
-        .populate("courseIds", "_id title description level courseType numTopics")
-        .populate("roadmapIds", "_id title status")
-        .populate("trackTemplateIds", "_id name trackType status")
-        .populate("certificateTemplateIds", "_id name status")
-        .populate("projectIds", "_id title category duration_days status")
-        .lean();
+      const programTypeValues = getProgramTypeQueryValues(selectedProgram);
+      if (programTypeValues.length) {
+        program = await Program.findOne({
+          programType: { $in: programTypeValues },
+          status: "Active",
+          visibility: "Public",
+        })
+          .sort({ createdAt: -1 })
+          .populate("courseIds", "_id title description level courseType numTopics")
+          .populate("roadmapIds", "_id title status")
+          .populate("trackTemplateIds", "_id name trackType status")
+          .populate("certificateTemplateIds", "_id name status")
+          .populate("projectIds", "_id title category duration_days status")
+          .lean();
+      }
     }
 
     const programPayload = program

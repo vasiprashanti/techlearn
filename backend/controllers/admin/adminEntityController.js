@@ -36,6 +36,8 @@ import {
 import { expireAllActiveBatches, expireBatchIfNeeded, isBatchExpired } from "../../utils/batchLifecycle.js";
 import { buildUnifiedProfile } from "../../utils/userProfile.js";
 import { parseDurationDays } from "../../utils/programPhases.js";
+import { resolveProgramPrimaryCourseId } from "../../utils/programPrimaryCourse.js";
+import { invalidateDashboardCache } from "../dashboardController.js";
 
 const LEGACY_PROGRAM_SELECTIONS = ["Placement", "Skill", "placement", "skill", "Placement Sprint", "Full Stack Project Program", "Both"];
 const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
@@ -932,7 +934,7 @@ export const getBatchDetail = async (req, res) => {
       .populate("supportingCourses", "title description numTopics topicIds")
       .populate({
         path: "programId",
-        select: "_id name programType status duration durationDays courseIds roadmapIds trackTemplateIds",
+        select: "_id name programType status duration durationDays primaryCourseId courseIds roadmapIds trackTemplateIds",
         populate: [
           { path: "courseIds", select: "_id title description numTopics topicIds status" },
           { path: "roadmapIds", select: "_id title description status" },
@@ -2702,9 +2704,16 @@ todayXp = todayChallengeXp + todayTaskXp;
     const mappedProgramCourses = batch.programId && Array.isArray(batch.programId.courseIds)
       ? batch.programId.courseIds.filter(Boolean)
       : [];
-    const effectiveAttachedCourse = mappedProgramCourses[0] || batch.attachedCourse || null;
-    const effectiveSupportingCourses = mappedProgramCourses.length > 0
-      ? mappedProgramCourses.slice(1)
+    const primaryCourseId = resolveProgramPrimaryCourseId(batch.programId);
+    const orderedProgramCourses = primaryCourseId
+      ? [
+          ...mappedProgramCourses.filter((course) => String(course?._id || course) === String(primaryCourseId)),
+          ...mappedProgramCourses.filter((course) => String(course?._id || course) !== String(primaryCourseId)),
+        ]
+      : mappedProgramCourses;
+    const effectiveAttachedCourse = orderedProgramCourses[0] || batch.attachedCourse || null;
+    const effectiveSupportingCourses = orderedProgramCourses.length > 0
+      ? orderedProgramCourses.slice(1)
       : (batch.supportingCourses || []);
 
     return res.status(200).json({
@@ -2758,7 +2767,7 @@ todayXp = todayChallengeXp + todayTaskXp;
               numTopics: c.numTopics || c.topicIds?.length || 0,
             }))
           : [],
-        programCourses: mappedProgramCourses.map((course) => ({
+        programCourses: orderedProgramCourses.map((course) => ({
           id: course._id,
           title: course.title || "Untitled Course",
           description: course.description || "",
@@ -3835,6 +3844,79 @@ export const updateStudentAdmin = async (req, res) => {
   } catch (error) {
     console.error("updateStudentAdmin error:", error);
     return res.status(500).json({ success: false, message: "Failed to update student.", error: error.message });
+  }
+};
+
+/**
+ * Update one learner's individual schedule for one concrete Program.
+ * This endpoint is intentionally ProgramEnrollment-scoped so a multi-program
+ * learner's primary User/Student pointer cannot redirect the update.
+ */
+export const updateStudentProgramStartDateAdmin = async (req, res) => {
+  try {
+    const { studentId, programId } = req.params;
+    if (!assertObjectId(studentId, "studentId", res) || !assertObjectId(programId, "programId", res)) return;
+
+    if (!Object.prototype.hasOwnProperty.call(req.body || {}, "individualStartDate") || !req.body.individualStartDate) {
+      return res.status(400).json({ success: false, message: "individualStartDate is required." });
+    }
+    const parsedDate = new Date(req.body.individualStartDate);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ success: false, message: "individualStartDate must be a valid date." });
+    }
+
+    const student = await Student.findById(studentId).lean();
+    if (!student) return res.status(404).json({ success: false, message: "Student not found." });
+
+    const identifiers = [
+      { studentId: student._id },
+      ...(student.userId ? [{ userId: student.userId }] : []),
+    ];
+    const enrollment = await ProgramEnrollment.findOne({
+      programId,
+      status: { $in: ["Active", "Completed"] },
+      $or: identifiers,
+    }).sort({ assignedAt: -1, createdAt: -1 });
+    if (!enrollment) {
+      return res.status(404).json({ success: false, message: "Program enrollment not found for this learner." });
+    }
+
+    if (enrollment.batchId) {
+      return res.status(409).json({
+        success: false,
+        code: "BATCH_CONTROLLED_SCHEDULE",
+        message: "This learner's start date is controlled by the assigned batch.",
+      });
+    }
+
+    enrollment.individualStartDate = parsedDate;
+    enrollment.individualStartDateSource = "explicit_admin";
+    enrollment.source = "admin";
+    await enrollment.save();
+
+    const user = student.userId
+      ? await User.findById(student.userId).select("_id programId").lean()
+      : await User.findOne({ email: String(student.email || "").trim().toLowerCase() }).select("_id programId").lean();
+    if (user && String(user.programId || "") === String(programId)) {
+      await User.updateOne({ _id: user._id }, { $set: { startDate: parsedDate } });
+    }
+    if (user) invalidateDashboardCache(user._id);
+
+    return res.json({
+      success: true,
+      enrollment: {
+        id: enrollment._id,
+        studentId: enrollment.studentId,
+        userId: enrollment.userId,
+        programId: enrollment.programId,
+        batchId: null,
+        individualStartDate: enrollment.individualStartDate,
+        individualStartDateSource: enrollment.individualStartDateSource,
+      },
+    });
+  } catch (error) {
+    console.error("updateStudentProgramStartDateAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Failed to update the Program start date.", error: error.message });
   }
 };
 

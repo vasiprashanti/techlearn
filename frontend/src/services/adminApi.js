@@ -318,6 +318,10 @@ export const adminAPI = {
   getStudent: (studentId) => request(`/admin/students/${studentId}`),
   createStudent: (body) => request('/admin/students', { method: 'POST', body: JSON.stringify(body) }),
   updateStudent: (studentId, body) => request(`/admin/students/${studentId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  updateStudentProgramStartDate: (studentId, programId, individualStartDate) => request(
+    `/admin/students/${studentId}/programs/${programId}/start-date`,
+    { method: 'PATCH', body: JSON.stringify({ individualStartDate }) },
+  ),
   resetStudentXp: (studentId) => request(`/admin/students/${studentId}/reset-xp`, { method: 'POST' }),
   removeStudentFromBatch: (studentId, batchId) => request(`/admin/students/${studentId}/remove-batch`, { method: 'PATCH', body: JSON.stringify({ batchId }) }),
   deleteStudent: (studentId) => request(`/admin/students/${studentId}`, { method: 'DELETE' }),
@@ -557,6 +561,11 @@ export const adminAPI = {
     }),
   detachProgramEntity: (programId, entityType, entityId) =>
     request(`/admin/programs/${programId}/attachments/${entityType}/${entityId}`, { method: 'DELETE' }),
+  reorderProgramEntities: (programId, entityType, ids) =>
+    request(`/admin/programs/${programId}/attachments/${entityType}/order`, {
+      method: 'PATCH',
+      body: JSON.stringify({ ids }),
+    }),
 
   // Hiring Jobs API
 getJobs: (params = {}) => {

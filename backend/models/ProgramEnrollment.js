@@ -60,6 +60,14 @@ const programEnrollmentSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    // Tracks whether the individual anchor was explicitly chosen or is an
+    // inferred legacy value. This prevents reconciliation from overwriting a
+    // valid admin/payment date simply because it resembles createdAt.
+    individualStartDateSource: {
+      type: String,
+      enum: ["explicit_admin", "explicit_payment", "explicit", "enrollment", "legacy_inferred"],
+      default: "legacy_inferred",
+    },
     source: {
       type: String,
       enum: ["onboarding", "admin", "admin_bulk", "payment", "preference_update"],

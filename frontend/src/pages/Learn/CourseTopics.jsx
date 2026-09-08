@@ -50,6 +50,7 @@ const CourseTopics = () => {
   
   const [isSyllabusOpen, setIsSyllabusOpen] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState(0);
+  const [missingDay, setMissingDay] = useState(null);
 
   // Cached course data is only a write-through optimization. The server must
   // authorize the request before any course content is rendered.
@@ -122,7 +123,7 @@ const CourseTopics = () => {
     return null;
   })();
 
-  const currentTopic = currentCourse?.topics[selectedTopic];
+  const currentTopic = missingDay ? null : currentCourse?.topics[selectedTopic];
   const totalTopics = currentCourse?.topics?.length || 0;
   const isFirstTopic = selectedTopic === 0;
   const isLastTopic = selectedTopic === totalTopics - 1;
@@ -156,8 +157,11 @@ const CourseTopics = () => {
     if (!Number.isFinite(requestedDay) || requestedDay <= 0) return;
     let nextIndex = currentCourse.topics.findIndex((topic) => topic.day === requestedDay);
     if (nextIndex === -1) {
-      nextIndex = currentCourse.topics.findIndex((topic) => topic.day > requestedDay);
-      if (nextIndex === -1) nextIndex = totalTopics - 1;
+      // Do not silently relabel an earlier/later topic as the requested day.
+      // The learner can still use the syllabus to open any genuinely mapped
+      // and unlocked earlier topic.
+      setMissingDay(requestedDay);
+      return;
     }
     
     // Redirect/fallback if requested day is locked
@@ -167,6 +171,7 @@ const CourseTopics = () => {
         nextIndex = Math.max(0, firstLockedIdx - 1);
       }
     }
+    setMissingDay(null);
     setSelectedTopic(nextIndex);
   }, [searchParams, totalTopics, currentCourse]);
 
@@ -330,12 +335,20 @@ const CourseTopics = () => {
                   key={selectedTopic}
                   className="text-4xl md:text-5xl lg:text-[3.5rem] font-semibold text-[#001862] dark:text-white tracking-tight leading-[1.1]"
                 >
-                  {currentTopic?.title}
+                  {currentTopic?.title || (missingDay ? `Day ${missingDay} is not configured` : "Select a topic")}
                 </h1>
               </div>
 
               {/* Dynamic Content */}
-              {currentTopic?.hasNotes && currentTopic?.notesContent ? (
+              {missingDay ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center h-full">
+                  <div className="w-16 h-16 rounded-2xl bg-black/5 dark:bg-white/5 flex items-center justify-center mb-5 border border-black/5 dark:border-white/5">
+                    <AlertCircle className="w-7 h-7 text-[#001862]/30 dark:text-white/30" />
+                  </div>
+                  <h3 className="text-lg font-medium text-[#001862] dark:text-white mb-2">This program day is not configured</h3>
+                  <p className="text-sm text-[#001862]/60 dark:text-white/50 max-w-sm">Day {missingDay} has no mapped topic yet. Earlier unlocked topics remain available from the syllabus.</p>
+                </div>
+              ) : currentTopic?.hasNotes && currentTopic?.notesContent ? (
                 <div className="w-full [&>*:first-child]:mt-0 [&>*:first-child>*:first-child]:mt-0">
                   <Suspense fallback={<div className="h-48 animate-pulse rounded-2xl bg-white/20 dark:bg-white/5" />}>
                     <MarkdownContent>{currentTopic.notesContent}</MarkdownContent>

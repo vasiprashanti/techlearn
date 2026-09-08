@@ -10,6 +10,8 @@ import { invalidateDashboardCache } from "./dashboardController.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
 import { calculateCurrentDayNumber } from "../utils/trackAssignmentSchedule.js";
 import { assertProgramScheduleAccess, resolveProgramSchedule } from "../utils/programSchedule.js";
+import { parseDurationDays } from "../utils/programPhases.js";
+import { getProgramTypeQueryValues } from "../utils/programTypeNormalization.js";
 
 const getISTDateParts = (date) => {
   const d = new Date(date);
@@ -33,7 +35,10 @@ const resolveTrackTemplateForStudent = async (student, batch, programId) => {
     program = await Program.findById(programId).lean();
   }
   if (!program && student.programSelection) {
-    program = await Program.findOne({ programType: student.programSelection, status: "Active" }).sort({ createdAt: -1 }).lean();
+    const programTypeValues = getProgramTypeQueryValues(student.programSelection);
+    if (programTypeValues.length) {
+      program = await Program.findOne({ programType: { $in: programTypeValues }, status: "Active" }).sort({ createdAt: -1 }).lean();
+    }
   }
 
   // A concrete Program owns its Daily Task track. Do not let a legacy batch
@@ -62,6 +67,12 @@ const resolveTrackTemplateForStudent = async (student, batch, programId) => {
   }
 
   return TrackTemplate.findOne({ trackType: "Daily Task", status: "Active" }).sort({ createdAt: -1 });
+};
+
+const resolveProgramDurationDays = async (programId) => {
+  if (!programId) return null;
+  const program = await Program.findById(programId).select("duration durationDays").lean();
+  return program?.durationDays || parseDurationDays(program?.duration) || null;
 };
 
 export const getTodayDailyTasks = async (req, res) => {
@@ -109,7 +120,14 @@ export const getTodayDailyTasks = async (req, res) => {
 
     // 3. Resolve active day number
     const individualStartDate = batch ? null : schedule.individualStartDate;
-    const dayNumber = calculateCurrentDayNumber(batch, trackTemplate, "Daily Task", individualStartDate);
+    const programDurationDays = await resolveProgramDurationDays(schedule.programId);
+    const dayNumber = calculateCurrentDayNumber(
+      batch,
+      trackTemplate,
+      "Daily Task",
+      individualStartDate,
+      { programDurationDays },
+    );
     const now = new Date();
 
     if (batch?.expiryDate && now > endOfDay(batch.expiryDate)) {
@@ -337,7 +355,14 @@ export const submitDailyTask = async (req, res) => {
     }
 
     const individualStartDate = batch ? null : schedule.individualStartDate;
-    const dayNumber = calculateCurrentDayNumber(batch, trackTemplate, "Daily Task", individualStartDate);
+    const programDurationDays = await resolveProgramDurationDays(schedule.programId);
+    const dayNumber = calculateCurrentDayNumber(
+      batch,
+      trackTemplate,
+      "Daily Task",
+      individualStartDate,
+      { programDurationDays },
+    );
 
     let attempt = await DailyTaskAttempt.findOne({
       userId,

@@ -6,6 +6,8 @@ import Program from "../models/Program.js";
 import { calculateProgramDayNumber } from "../utils/programSchedule.js";
 import { assertProgramScheduleAccess, resolveProgramSchedule } from "../utils/programSchedule.js";
 import { getTopicDayNumber } from "../utils/courseTopicSchedule.js";
+import { resolveProgramPrimaryCourseId } from "../utils/programPrimaryCourse.js";
+import { getProgramTypeQueryValues } from "../utils/programTypeNormalization.js";
 
 const buildTopicPayload = (topic, index, currentDay, courseId) => {
   const day = getTopicDayNumber(topic, index);
@@ -66,12 +68,15 @@ export const getPlacementLearningDashboard = async (req, res) => {
     let program = schedule.programId ? await Program.findById(schedule.programId).lean() : null;
 
     if (!program && student.programSelection) {
-      program = await Program.findOne({ programType: student.programSelection, status: "Active" }).sort({ createdAt: -1 }).lean();
+      const programTypeValues = getProgramTypeQueryValues(student.programSelection);
+      if (programTypeValues.length) {
+        program = await Program.findOne({ programType: { $in: programTypeValues }, status: "Active" }).sort({ createdAt: -1 }).lean();
+      }
     }
 
     // A concrete Program owns the learner's course sequence. Batch-level
     // course fields remain a compatibility fallback for legacy batches only.
-    let targetCourseId = program?.courseIds?.[0]
+    let targetCourseId = resolveProgramPrimaryCourseId(program)
       || (!schedule.programId ? batch?.attachedCourse : null)
       || null;
 
@@ -112,10 +117,16 @@ export const getPlacementLearningDashboard = async (req, res) => {
       buildTopicPayload(topic, index, currentDay, course._id)
     );
     const totalDays = notes.reduce((maxDay, topic) => Math.max(maxDay, topic.day), 0);
-    const currentTopic = notes.find((topic) => topic.day === currentDay)
-      || notes.filter((topic) => topic.day < currentDay).at(-1)
-      || notes[0]
-      || null;
+    // A missing exact day is a curriculum/configuration gap, not permission
+    // to relabel yesterday's topic as today's. Earlier unlocked topics remain
+    // in `weeks` so learners can still revisit them.
+    const currentTopic = notes.find((topic) => topic.day === currentDay) || null;
+    const currentDayTopic = currentTopic?.notesId ? currentTopic : null;
+    const todayTopicStatus = !currentTopic
+      ? "unconfigured"
+      : currentTopic.notesId
+        ? "available"
+        : "notes_unpublished";
 
     const weeks = notes.reduce((acc, topic) => {
       const existing = acc.find((week) => week.week === topic.week);
@@ -130,7 +141,7 @@ export const getPlacementLearningDashboard = async (req, res) => {
     // Batch supporting courses are cohort-specific. Individual learners use
     // the remaining courses attached to their program.
     const supportingCourseIds = program?.courseIds
-      ? program.courseIds.filter((id) => String(id) !== String(targetCourseId))
+      ? program.courseIds.filter((id) => String(id?._id || id) !== String(targetCourseId))
       : (batch?.supportingCourses || []);
     const supportingCourses = supportingCourseIds.length > 0
       ? await Course.find({ _id: { $in: supportingCourseIds } }).select("title topicIds").lean()
@@ -161,7 +172,13 @@ export const getPlacementLearningDashboard = async (req, res) => {
         title: c.title,
         topicIds: c.topicIds || [],
       })),
-      todayTopic: currentTopic?.notesId ? currentTopic : null,
+      todayTopic: currentDayTopic,
+      todayTopicStatus,
+      todayTopicMessage: todayTopicStatus === "unconfigured"
+        ? `No Placement Learning topic is configured for Day ${currentDay}.`
+        : todayTopicStatus === "notes_unpublished"
+          ? `Placement Learning topic for Day ${currentDay} has no published notes yet.`
+          : null,
       totalDays,
       weeks,
     });

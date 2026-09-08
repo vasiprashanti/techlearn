@@ -12,6 +12,7 @@ import { getTopicDayNumber } from "../utils/courseTopicSchedule.js";
 import { expireBatchIfNeeded } from "../utils/batchLifecycle.js";
 import { isUserVisibleCourse } from "../utils/courseVisibility.js";
 import { isProgramAccessibleToLearner } from "../utils/programVisibility.js";
+import { resolveProgramPrimaryCourseId } from "../utils/programPrimaryCourse.js";
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 import {
@@ -774,8 +775,8 @@ export const getCourseById = async (req, res) => {
       // batch-level primary course is retained only for legacy batches that
       // have no concrete Program assignment.
       isPlacementPrimary = schedule.programId
-        ? String(programCourseIds[0] || "") === courseIdStr
-        : primaryId === courseIdStr || (!primaryId && String(programCourseIds[0] || "") === courseIdStr);
+        ? String(resolveProgramPrimaryCourseId(program) || "") === courseIdStr
+        : primaryId === courseIdStr || (!primaryId && String(resolveProgramPrimaryCourseId(program) || "") === courseIdStr);
     }
 
     // Fetch topics using topicIds array and populate notesId
