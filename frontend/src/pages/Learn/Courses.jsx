@@ -357,7 +357,8 @@ export default function Courses() {
                 width: 100%;
                 height: 100%;
                 display: block;
-                object-fit: contain;
+                object-fit: cover;
+                object-position: center center;
                 transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
               }
               .tl-learn-card:hover .tl-card-banner img {
