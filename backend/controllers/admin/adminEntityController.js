@@ -3671,6 +3671,14 @@ export const updateStudentAdmin = async (req, res) => {
       }
     }
 
+    // A concrete Program change without an explicit batch is an individual
+    // enrollment. Do not carry a learner's old cohort pointer into the new
+    // Program; batch membership must be deliberately supplied by the admin.
+    if (hasProgramId && !hasBatchId) {
+      nextBatchId = null;
+      update.batchId = null;
+    }
+
     const hasIndividualStartDate = Object.prototype.hasOwnProperty.call(req.body, "individualStartDate");
     const parsedIndividualStartDate = hasIndividualStartDate && req.body.individualStartDate
       ? new Date(req.body.individualStartDate)
@@ -3747,6 +3755,10 @@ export const updateStudentAdmin = async (req, res) => {
       update.programSelection = batchProgram.programType;
     }
 
+    if (requestedProgram && !batch) {
+      update.programSelection = requestedProgram.programType;
+    }
+
     if (batch && requestedProgram && !batchProgram) {
       await assignProgramToBatch({
         batchId: batch._id,
@@ -3793,7 +3805,7 @@ export const updateStudentAdmin = async (req, res) => {
 
       const enrollmentBatchId = hasBatchId
         ? nextBatchId
-        : (existingStudent.batchId || batchProgram?._id || null);
+        : (hasProgramId ? nextBatchId : (existingStudent.batchId || batchProgram?._id || null));
       if (requestedProgram && (hasProgramId || hasBatchId || batchProgram || hasIndividualStartDate)) {
         await upsertProgramEnrollment({
           user: linkedUser,
@@ -4536,6 +4548,7 @@ export const bulkUploadStudentsAdmin = async (req, res) => {
           batchId: batch?._id || null,
           source: "admin_bulk",
         });
+        await syncPrimaryProgramPointers({ user: linkedUser, student });
       }
 
       createdCount++;

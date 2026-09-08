@@ -1198,17 +1198,11 @@ export const attachEntities = async (req, res) => {
           ],
         }).select("_id").lean();
 
-        const scheduleIdentifiers = [
-          { studentId: student._id },
-          user?._id ? { userId: user._id } : null,
-        ].filter(Boolean);
-        const hasOtherBatchSchedule = !selectedBatch && await ProgramEnrollment.exists({
-          status: "Active",
-          programId: { $ne: programId },
-          batchId: { $exists: true, $ne: null },
-          $or: scheduleIdentifiers,
-        });
-        if (!selectedBatch && !hasOtherBatchSchedule) {
+        // A direct Program enrollment is intentionally independent of every
+        // batch. The learner can have only one active Program, so retaining a
+        // legacy batch pointer here would incorrectly switch the new Program
+        // back to a cohort schedule on the next login.
+        if (!selectedBatch) {
           await Student.updateOne({ _id: student._id }, { $set: { batchId: null } });
         }
 
@@ -1222,7 +1216,7 @@ export const attachEntities = async (req, res) => {
                 ...(selectedBatch
                   ? { batchId: selectedBatch._id, startDate: selectedBatch.startDate }
                   : {
-                      ...(hasOtherBatchSchedule ? {} : { batchId: null }),
+                      batchId: null,
                       ...(selectedIndividualStartDate ? { startDate: selectedIndividualStartDate } : {}),
                     }),
               },

@@ -6,6 +6,7 @@ import { getTopicDayNumber } from "../utils/courseTopicSchedule.js";
 import { resolveProgramPrimaryCourseId, isProgramPrimaryCourseMappingValid } from "../utils/programPrimaryCourse.js";
 import { getProgramTypeQueryValues, normalizeProgramType } from "../utils/programTypeNormalization.js";
 import { upsertProgramEnrollment } from "../utils/programEnrollment.js";
+import { isProgramAccessibleToLearner } from "../utils/programVisibility.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const id = () => new mongoose.Types.ObjectId();
@@ -64,6 +65,13 @@ test("individual enrollment with an explicit start date does not duplicate its s
   let capturedUpdate;
 
   enrollmentModel.findOne = () => ({ lean: async () => null });
+  const originalFind = enrollmentModel.find;
+  enrollmentModel.find = () => ({
+    select() {
+      return this;
+    },
+    lean: async () => [],
+  });
   enrollmentModel.findOneAndUpdate = async (_query, update) => {
     capturedUpdate = update;
     return update;
@@ -85,8 +93,16 @@ test("individual enrollment with an explicit start date does not duplicate its s
     assert.equal(Object.prototype.hasOwnProperty.call(capturedUpdate.$setOnInsert, "individualStartDateSource"), false);
   } finally {
     enrollmentModel.findOne = originalFindOne;
+    enrollmentModel.find = originalFind;
     enrollmentModel.findOneAndUpdate = originalFindOneAndUpdate;
     programModel.updateOne = originalProgramUpdateOne;
     leadModel.updateOne = originalLeadUpdateOne;
   }
+});
+
+test("an explicit individual enrollment grants access to a private Program", () => {
+  assert.equal(isProgramAccessibleToLearner({
+    program: { status: "Active", visibility: "Private" },
+    enrollment: { status: "Active", batchId: null },
+  }), true);
 });

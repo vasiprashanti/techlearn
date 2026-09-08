@@ -402,6 +402,10 @@ export const handleRazorpayWebhook = async (req, res) => {
               accessTier: "Member",
               source: "payment",
             });
+            await syncPrimaryProgramPointers({
+              user: { _id: payment.userId },
+              student,
+            });
             if (enrollment) {
               payment.enrollmentId = enrollment._id;
               await payment.save();

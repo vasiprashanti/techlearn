@@ -21,8 +21,8 @@ const programEnrollmentSchema = new mongoose.Schema(
     },
     // A program enrollment may be individual (null) or cohort based.
     // This is deliberately stored on the enrollment instead of relying on
-    // Student.batchId, because one learner can take multiple programs with
-    // different schedules.
+    // Student.batchId. A learner has one current Program; paused/completed
+    // records remain only as history.
     batchId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Batch",

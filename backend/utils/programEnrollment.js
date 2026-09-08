@@ -70,6 +70,48 @@ const getUserForStudent = async (student) => {
   return conditions.length ? User.findOne({ $or: conditions }).lean() : null;
 };
 
+const getEnrollmentIdentifiers = ({ userId, studentId }) => [
+  userId ? { userId } : null,
+  studentId ? { studentId } : null,
+].filter(Boolean);
+
+const pauseOtherActiveProgramEnrollments = async ({ userId, studentId, programId }) => {
+  const identifiers = getEnrollmentIdentifiers({ userId, studentId });
+  if (!identifiers.length || !programId) return [];
+
+  const otherEnrollments = await ProgramEnrollment.find({
+    status: "Active",
+    programId: { $ne: programId },
+    $or: identifiers,
+  })
+    .select("_id programId")
+    .lean();
+
+  if (!otherEnrollments.length) return [];
+
+  await ProgramEnrollment.updateMany(
+    { _id: { $in: otherEnrollments.map((enrollment) => enrollment._id) } },
+    { $set: { status: "Paused" } }
+  );
+
+  const previousProgramIds = [
+    ...new Set(
+      otherEnrollments
+        .map((enrollment) => getId(enrollment.programId))
+        .filter(Boolean)
+        .map((id) => String(id))
+    ),
+  ];
+  if (studentId && previousProgramIds.length) {
+    await Program.updateMany(
+      { _id: { $in: previousProgramIds } },
+      { $pull: { studentIds: studentId } }
+    );
+  }
+
+  return previousProgramIds;
+};
+
 /**
  * Make one concrete Program the canonical schedule/content source for a
  * batch. A batch has one optional program; every learner already in that
@@ -313,7 +355,7 @@ export const resolveProgramForSelection = async (programSelection) => {
  * `batchId` is intentionally explicit: null means individual schedule,
  * while an ObjectId means the batch controls the schedule. Keeping both
  * values on the enrollment prevents a student's legacy/global batch field
- * from changing an unrelated program's roadmap.
+ * from changing the learner's current Program roadmap.
  */
 export const upsertProgramEnrollment = async ({
   user,
@@ -399,6 +441,15 @@ export const upsertProgramEnrollment = async ({
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
 
+  // A learner may have only one active Program. Keep older enrollments for
+  // history, but pause them and remove their learner-facing Program links as
+  // soon as the new enrollment has been written successfully.
+  await pauseOtherActiveProgramEnrollments({
+    userId,
+    studentId,
+    programId: resolvedProgramId,
+  });
+
   await Program.updateOne(
     { _id: resolvedProgramId },
     {
@@ -482,10 +533,7 @@ export const pauseProgramEnrollment = async ({ student, user, programId }) => {
 export const syncPrimaryProgramPointers = async ({ user, student }) => {
   const userId = getId(user);
   const studentId = getId(student);
-  const identifiers = [
-    userId ? { userId } : null,
-    studentId ? { studentId } : null,
-  ].filter(Boolean);
+  const identifiers = getEnrollmentIdentifiers({ userId, studentId });
 
   if (!identifiers.length) return null;
 
@@ -497,8 +545,13 @@ export const syncPrimaryProgramPointers = async ({ user, student }) => {
     .lean();
 
   const primaryProgramId = activeEnrollment?.programId || null;
-  if (userId) await User.updateOne({ _id: userId }, { $set: { programId: primaryProgramId } });
-  if (studentId) await Student.updateOne({ _id: studentId }, { $set: { programId: primaryProgramId } });
+  const hasEnrollmentBatch = activeEnrollment
+    && Object.prototype.hasOwnProperty.call(activeEnrollment, "batchId");
+  const batchPatch = hasEnrollmentBatch
+    ? { batchId: getId(activeEnrollment.batchId) }
+    : {};
+  if (userId) await User.updateOne({ _id: userId }, { $set: { programId: primaryProgramId, ...batchPatch } });
+  if (studentId) await Student.updateOne({ _id: studentId }, { $set: { programId: primaryProgramId, ...batchPatch } });
 
   return activeEnrollment;
 };
@@ -560,6 +613,11 @@ export const syncProgramEnrollment = async ({
   if (!matchedPrograms || matchedPrograms.length === 0) {
     return [];
   }
+
+  // Matching can return several recommendations, but enrollment is a single
+  // current learning path. The catalog/recommendation endpoints may still
+  // return multiple options; this synchronizer activates only the best match.
+  matchedPrograms = matchedPrograms.slice(0, 1);
 
   // If user is on Free tier, pause any previous enrollments for Paid / Member-only programs
   // Do not infer a Free choice for legacy accounts that never stored a

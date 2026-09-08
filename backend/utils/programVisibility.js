@@ -11,15 +11,14 @@ export const isUserVisibleProgram = (program) => {
 
 /**
  * Public programs may be used by any eligible learner. Private programs are
- * intentionally not discoverable; they are only available to an admin or to
- * a learner whose enrollment explicitly points at a batch. The enrollment
- * level batch reference is important here because a learner can have more
- * than one program with different schedules.
+ * intentionally not discoverable; they are available to an admin or to a
+ * learner with an explicit enrollment, whether that enrollment is individual
+ * or batch-based.
  */
 export const isProgramAccessibleToLearner = ({ program, enrollment, isAdmin = false } = {}) => {
   if (isAdmin) return true;
   if (!program || program.status !== "Active") return false;
-  return program.visibility === "Public" || Boolean(enrollment?.batchId);
+  return program.visibility === "Public" || Boolean(enrollment);
 };
 
 export default isUserVisibleProgram;
