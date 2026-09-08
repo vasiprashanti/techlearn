@@ -347,16 +347,16 @@ export default function Courses() {
                 position: relative;
                 height: 240px;
                 overflow: hidden;
-                background: #e5e9ed;
+                background: #0d1117;
               }
               .dark .tl-card-banner {
-                background: #111a42;
+                background: #0d1117;
               }
               .tl-card-banner img {
                 width: 100%;
                 height: 100%;
                 display: block;
-                object-fit: cover;
+                object-fit: contain;
                 transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
               }
               .tl-learn-card:hover .tl-card-banner img {
@@ -524,9 +524,11 @@ export default function Courses() {
                   {coursesData
                     .filter(course => course.courseType !== 'Trainer-led')
                     .map((course) => {
-                      const displayPrice = course.price && course.price !== 'Free' && course.price !== 'Coming Soon'
-                        ? (course.price.startsWith('₹') ? course.price : `₹${course.price}`)
-                        : '₹399';
+                      const rupee = '\u20B9';
+                      const rawPrice = course.price || '';
+                      const displayPrice = rawPrice && rawPrice !== 'Free' && rawPrice !== 'Coming Soon'
+                        ? (rawPrice.includes('1499') || rawPrice.includes('399') ? `${rupee}${rawPrice.replace(/[^\d]/g, '')}` : rawPrice)
+                        : `${rupee}399`;
 
                       return (
                         <CarouselItem

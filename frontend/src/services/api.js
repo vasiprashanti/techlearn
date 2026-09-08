@@ -545,7 +545,7 @@ export const dataAdapters = {
       if (titleLower.includes('java') || titleLower.includes('python')) {
         return {
           status: 'available',
-          price: 'â‚¹1499',
+          price: '\u20B91499',
           certificationPrice: 1499,
           certificationDiscountedPrice: 999,
           xpDiscount: 500,
