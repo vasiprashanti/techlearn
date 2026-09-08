@@ -634,7 +634,7 @@ export default function FreeAssessmentSetup() {
         </div>
 
         <h1 className="page-title">
-          <i>Your</i> interview is ready.
+          <i style={{ fontStyle: "italic", marginRight: "0.28em" }}>Your</i> interview is ready.
         </h1>
 
         {error && (

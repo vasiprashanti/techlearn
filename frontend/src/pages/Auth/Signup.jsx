@@ -584,26 +584,26 @@ export default function Signup({
 
         .tl-form-side {
           width: 100%;
-          max-width: 400px;
+          max-width: 370px;
           justify-self: end;
           margin: 0;
         }
 
         .tl-eyebrow {
           font-family: "Press Start 2P", cursive;
-          font-size: 8px;
-          line-height: 1.7;
+          font-size: 7.5px;
+          line-height: 1.6;
           color: var(--muted);
-          margin-bottom: 15px;
+          margin-bottom: 8px;
           letter-spacing: 0.5px;
         }
 
         .tl-auth-title {
-          font-size: 36px;
-          line-height: 1.05;
-          letter-spacing: -1.8px;
+          font-size: 32px;
+          line-height: 1.08;
+          letter-spacing: -1.5px;
           font-weight: 800;
-          margin-bottom: 27px;
+          margin-bottom: 20px;
           color: var(--text);
         }
 
@@ -611,9 +611,9 @@ export default function Signup({
           width: 100%;
           background: var(--card);
           border: 1px solid var(--border);
-          border-radius: 14px;
-          padding: 26px;
-          box-shadow: 0 20px 55px rgba(5, 10, 91, 0.09);
+          border-radius: 13px;
+          padding: 22px 20px;
+          box-shadow: 0 18px 48px rgba(5, 10, 91, 0.08);
         }
 
         .tl-field {
@@ -862,22 +862,22 @@ export default function Signup({
         }
 
         .tl-otp-title {
-          font-size: 26px;
+          font-size: 23px;
           font-weight: 800;
           color: var(--text);
-          letter-spacing: -0.8px;
-          margin-bottom: 8px;
+          letter-spacing: -0.7px;
+          margin-bottom: 6px;
           text-align: center;
           width: 100%;
         }
 
         .tl-otp-subtitle {
-          font-size: 13px;
+          font-size: 12px;
           color: var(--muted);
-          line-height: 1.5;
-          margin-bottom: 24px;
+          line-height: 1.45;
+          margin-bottom: 18px;
           text-align: center;
-          max-width: 320px;
+          max-width: 290px;
         }
 
         .tl-otp-subtitle strong {
@@ -888,19 +888,19 @@ export default function Signup({
         .tl-otp-inputs {
           display: flex;
           justify-content: center;
-          gap: 10px;
-          margin-bottom: 8px;
+          gap: 8px;
+          margin-bottom: 6px;
           width: 100%;
         }
 
         .tl-otp-digit {
-          width: 46px;
-          height: 52px;
-          border-radius: 10px;
+          width: 40px;
+          height: 46px;
+          border-radius: 9px;
           border: 1px solid var(--border);
           background: var(--card);
           color: var(--text);
-          font-size: 22px;
+          font-size: 19px;
           font-weight: 700;
           text-align: center;
           outline: none;
@@ -923,26 +923,26 @@ export default function Signup({
 
         .tl-otp-error-msg {
           color: #ef4444;
-          font-size: 12px;
+          font-size: 11.5px;
           font-weight: 500;
-          margin-top: 6px;
-          margin-bottom: 4px;
+          margin-top: 5px;
+          margin-bottom: 3px;
           text-align: center;
         }
 
         .tl-otp-verify-btn {
           width: 100%;
-          height: 48px;
-          margin-top: 18px;
+          height: 44px;
+          margin-top: 14px;
           border: none;
-          border-radius: 10px;
+          border-radius: 9px;
           background: var(--lime);
           color: #07101b;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 800;
-          letter-spacing: 0.8px;
+          letter-spacing: 0.7px;
           cursor: pointer;
-          box-shadow: 0 6px 16px rgba(140, 191, 74, 0.25);
+          box-shadow: 0 5px 14px rgba(140, 191, 74, 0.22);
           transition: all 0.18s ease;
           display: flex;
           align-items: center;
@@ -1133,19 +1133,16 @@ export default function Signup({
             zoom: 1;
           }
 
-          .tl-auth-title { margin-bottom: 14px; }
-          .tl-auth-card { padding: 16px; }
+          .tl-auth-title {
+            font-size: 26px;
+            letter-spacing: -1px;
+            margin-bottom: 14px;
+          }
+          .tl-auth-card {
+            padding: 18px 16px;
+          }
           .tl-field { margin-bottom: 10px; }
           .tl-input { height: 40px; }
-
-          .tl-auth-title {
-            font-size: 28px;
-            letter-spacing: -1px;
-          }
-
-          .tl-auth-card {
-            padding: 20px;
-          }
         }
 
         @media (max-width: 600px) {
@@ -1200,7 +1197,7 @@ export default function Signup({
           }
 
           .tl-auth-card {
-            padding: 30px;
+            padding: 24px 22px;
           }
         }
       `}</style>

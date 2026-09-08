@@ -117,6 +117,9 @@ function SkillOnboardingFlow() {
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [feedbackReason, setFeedbackReason] = useState("");
+  const [feedbackOther, setFeedbackOther] = useState("");
   const requestedSkill = (skill === "Other" ? customSkill : skill).trim();
 
   const findMatch = (catalog) => {
@@ -166,7 +169,33 @@ function SkillOnboardingFlow() {
     if (step === 4) return finish();
     setStep((current) => current + 1);
   };
-  const goBack = () => step === 1 ? navigate("/") : setStep((current) => current - 1);
+  const goBack = () => {
+    if (step === 4) {
+      setIsFeedbackOpen(true);
+      return;
+    }
+    if (step === 1) {
+      navigate("/");
+    } else {
+      setStep((current) => current - 1);
+    }
+  };
+
+  const handleFeedbackExit = () => {
+    try {
+      const feedbackData = {
+        reason: feedbackReason === "Other" ? feedbackOther : feedbackReason,
+        skill: requestedSkill,
+        goal,
+        level,
+        timestamp: new Date().toISOString(),
+      };
+      localStorage.setItem("techlearn_skill_exit_feedback", JSON.stringify(feedbackData));
+    } catch {
+      // storage helper
+    }
+    navigate("/");
+  };
   const startProgram = () => {
     sessionStorage.setItem("techlearn-skill-onboarding", JSON.stringify({ ...answers, programId: result?.program?._id || null }));
     if (!isAuthenticated || !user) return navigate("/signup", { state: { ...answers, skills: [requestedSkill], learningGoal: "Learn New Skills" } });
@@ -183,108 +212,121 @@ function SkillOnboardingFlow() {
   return (
     <div className={`tl-skill-page-wrapper ${isDarkMode ? "dark-mode" : ""}`}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,700;1,800&family=Press+Start+2P&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap');
 
         .tl-skill-page-wrapper {
-          --bg-page: #bceaff;
-          --text-main: #050a5b;
-          --eyebrow-color: #050a5b;
-          --bar-bg: rgba(5, 10, 91, 0.13);
-          --bar-active: #b2e96a;
-          --chip-bg: #98d1f2;
-          --chip-border: #7bbfe8;
-          --chip-text: #020738;
-          --chip-selected-bg: #03082a;
-          --chip-selected-text: #ffffff;
-          --chip-selected-border: #03082a;
-          --btn-back-bg: #9ecce8;
-          --btn-back-text: #020738;
-          --btn-continue-bg: #b2e96a;
-          --btn-continue-text: #07101b;
-          --btn-continue-hover: #c4f385;
-          --header-btn-bg: rgba(255, 255, 255, 0.5);
-          --header-btn-border: rgba(5, 10, 91, 0.15);
-          --header-btn-icon: #02052e;
+          --navy: #c0e9ff;
+          --navy-dark: #02052e;
+          --chip-blue: #a5d8f4;
+          --lime: #8cbf4a;
+          --lime-hover: #a2d354;
+          --white: #050a5b;
+          --muted: #6f7894;
+          --muted-light: #59657d;
+          --border: rgba(5, 10, 91, .14);
+          --border-hover: rgba(5, 10, 91, .30);
           --card-white: #ffffff;
-          --card-border: rgba(2, 7, 56, 0.12);
-          --muted: #53647b;
+          --card-border: #e2e5eb;
+          --danger: #d83b52;
+          --toggle-bg: rgba(255, 255, 255, .55);
+          --toggle-border: rgba(5, 10, 91, .16);
+          --toggle-icon: #02052e;
+          --input-bg: rgba(255, 255, 255, .28);
 
+          min-height: 100vh;
           height: 100vh;
           max-height: 100vh;
+          background: var(--navy);
+          color: var(--white);
+          font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
           overflow: hidden;
-          background: var(--bg-page);
-          color: var(--text-main);
-          font-family: 'Inter', system-ui, -apple-system, sans-serif;
+          transition: background .25s ease, color .25s ease;
           position: relative;
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
-          align-items: center;
-          justify-content: flex-start;
-          padding: 0 20px;
-          transition: background 0.25s ease, color 0.25s ease;
         }
 
         .tl-skill-page-wrapper.dark-mode {
-          --bg-page: #080d25;
-          --text-main: #f5f7ff;
-          --eyebrow-color: #f5f7ff;
-          --bar-bg: rgba(255, 255, 255, 0.15);
-          --bar-active: #9bd45a;
-          --chip-bg: #141f42;
-          --chip-border: #23315e;
-          --chip-text: #dce4fc;
-          --chip-selected-bg: #9bd45a;
-          --chip-selected-text: #020738;
-          --chip-selected-border: #9bd45a;
-          --btn-back-bg: rgba(88, 90, 95, 0.22);
-          --btn-back-text: #f0f4ff;
-          --btn-continue-bg: #9bd45a;
-          --btn-continue-text: #07101b;
-          --btn-continue-hover: #afe56b;
-          --header-btn-bg: rgba(255, 255, 255, 0.08);
-          --header-btn-border: rgba(255, 255, 255, 0.18);
-          --header-btn-icon: #f5f7ff;
-          --card-white: #0f1738;
-          --card-border: #23315e;
-          --muted: #9fa9c4;
+          --navy: #00092f;
+          --navy-dark: #000537;
+          --chip-blue: #031553;
+          --lime: #9bd45a;
+          --lime-hover: #afe56b;
+          --white: #f5f7ff;
+          --muted: #9da7c2;
+          --muted-light: #b7bfd4;
+          --border: rgba(255, 255, 255, .12);
+          --border-hover: rgba(255, 255, 255, .25);
+          --card-white: #11172d;
+          --card-border: #252d46;
+          --danger: #ff8f9d;
+          --toggle-bg: rgba(255, 255, 255, .08);
+          --toggle-border: rgba(255, 255, 255, .16);
+          --toggle-icon: #f5f7ff;
+          --input-bg: rgba(255, 255, 255, .05);
         }
 
-        .tl-skill-header-logo {
-          position: absolute;
-          top: 20px;
-          left: 28px;
+        .tl-skill-page-wrapper button,
+        .tl-skill-page-wrapper input,
+        .tl-skill-page-wrapper textarea {
+          font-family: inherit;
+        }
+
+        .tl-skill-page-wrapper button {
+          cursor: pointer;
+        }
+
+        .tl-skill-theme-toggle {
+          position: fixed;
+          top: 15px;
+          right: 24px;
+          width: 42px;
+          height: 42px;
+          border-radius: 50%;
+          border: 1px solid var(--toggle-border);
+          background: var(--toggle-bg);
+          color: var(--toggle-icon);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
           display: flex;
           align-items: center;
-          cursor: pointer;
-          user-select: none;
-          z-index: 10;
+          justify-content: center;
+          font-size: 15px;
+          z-index: 101;
+          transition: background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
         }
 
-        .tl-skill-header-logo img {
-          width: 40px;
-          height: 40px;
-          object-fit: contain;
+        .tl-skill-theme-toggle:hover {
+          transform: translateY(-1px);
+          border-color: var(--border-hover);
         }
 
-        .tl-skill-center-container {
+        .tl-skill-theme-toggle:active {
+          transform: scale(.94);
+        }
+
+        .tl-skill-page {
           width: 50vw;
-          max-width: 1050px;
+          max-width: 1100px;
           height: 100vh;
           max-height: 100vh;
+          margin: 0 auto;
+          padding: 80px 0 0;
           display: flex;
           flex-direction: column;
-          margin: 0 auto;
           box-sizing: border-box;
-          padding-top: 84px;
-          padding-bottom: 24px;
           overflow: hidden;
+          position: relative;
         }
 
         .tl-skill-progress-wrapper {
           width: 100%;
-          margin-bottom: 14px;
+          margin-top: 2px;
+          margin-bottom: 20px;
           flex-shrink: 0;
+          position: relative;
+          z-index: 10;
         }
 
         .tl-skill-progress-steps {
@@ -292,396 +334,815 @@ function SkillOnboardingFlow() {
           grid-template-columns: repeat(4, 1fr);
           gap: 8px;
           width: 100%;
+          align-items: center;
         }
 
         .tl-skill-progress-step {
-          height: 4px;
-          min-height: 4px;
+          height: 5px;
           border-radius: 10px;
-          background: rgba(5, 10, 91, 0.16);
-          transition: background 0.25s ease;
-          display: block;
+          background: rgba(5, 10, 91, .15);
+          transition: background .25s ease;
+          width: 100%;
         }
 
         .tl-skill-page-wrapper.dark-mode .tl-skill-progress-step {
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, .15);
         }
 
         .tl-skill-progress-step.active {
-          background: #b2e96a !important;
+          background: var(--lime) !important;
         }
 
-        .tl-skill-page-wrapper.dark-mode .tl-skill-progress-step.active {
-          background: #9bd45a !important;
-        }
-
-        .tl-skill-step-content {
-          flex: 1;
+        .tl-skill-screen {
           display: flex;
+          flex: 1;
           flex-direction: column;
           min-height: 0;
+          position: relative;
           overflow: hidden;
+          animation: tlSkillScreenIn .25s ease;
+        }
+
+        .tl-skill-screen-body {
+          flex: 1;
+          overflow-y: auto;
+          overflow-x: hidden;
+          min-height: 0;
+          padding-bottom: 110px;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+        }
+
+        .tl-skill-screen-body::-webkit-scrollbar {
+          width: 5px;
+        }
+
+        .tl-skill-screen-body::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 4px;
+        }
+
+        @keyframes tlSkillScreenIn {
+          from {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+          to {
+            opacity: 1;
+          }
         }
 
         .tl-skill-eyebrow {
           font-family: "Press Start 2P", monospace !important;
-          font-size: 8px;
+          font-size: 8.5px;
+          line-height: 1.4;
+          color: var(--white);
+          letter-spacing: .6px;
+          margin-top: 14px;
+          margin-bottom: 22px;
+          flex-shrink: 0;
+        }
+
+        .tl-skill-page h1 {
+          font-size: clamp(30px, 2.5vw, 46px);
+          line-height: 1.1;
+          letter-spacing: -1.4px;
+          font-weight: 600;
+          color: var(--white);
+          margin-top: 0;
+          margin-bottom: 28px;
+          flex-shrink: 0;
+        }
+
+        .tl-skill-page h1 i,
+        .tl-skill-page h1 em {
+          font-style: italic;
+        }
+
+        /* Specific per-step heading adjustments if needed */
+        .tl-skill-step-1 h1 {
+          font-size: clamp(32px, 2.7vw, 50px);
+          margin-bottom: 24px;
+        }
+
+        .tl-skill-step-2 h1 {
+          font-size: clamp(30px, 2.6vw, 48px);
+          margin-bottom: 30px;
+        }
+
+        .tl-skill-step-3 h1 {
+          font-size: clamp(28px, 2.4vw, 44px);
+          margin-bottom: 24px;
+        }
+
+        .tl-skill-step-4 h1 {
+          font-size: clamp(30px, 2.6vw, 48px);
+          margin-bottom: 30px;
+        }
+
+        .tl-skill-field {
+          margin-bottom: 16px;
+          flex: 1;
+          min-height: 0;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .tl-skill-field-label {
+          display: block;
+          font-size: 16px;
           line-height: 1.3;
-          color: var(--eyebrow-color);
-          letter-spacing: .7px;
-          margin-bottom: 6px;
-          flex-shrink: 0;
+          font-weight: 600;
+          color: var(--white);
+          margin-bottom: 14px;
+          letter-spacing: -.2px;
         }
 
-        .tl-skill-title {
-          font-size: clamp(24px, 2.1vw, 32px);
-          line-height: 1.12;
-          letter-spacing: -1.2px;
-          font-weight: 700;
-          color: var(--text-main);
-          margin-bottom: 6px;
-          flex-shrink: 0;
+        .tl-skill-chips {
+          display: grid;
+          gap: 10px;
         }
 
-        .tl-skill-title em,
-        .tl-skill-title i {
-          font-style: italic;
-        }
-
-        .tl-skill-subhead {
-          font-size: 14.5px;
-          font-weight: 700;
-          color: var(--text-main);
-          margin-bottom: 10px;
-          letter-spacing: -0.01em;
-          flex-shrink: 0;
-        }
-
-        .tl-skill-subhead em {
-          font-style: italic;
-          font-weight: 700;
-        }
-
-        .tl-skill-grid-2col {
+        .tl-skill-chips-2col {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 8px;
-          width: 100%;
         }
 
-        .tl-skill-choice-btn {
-          border-radius: 9px;
-          border: 1px solid var(--chip-border);
-          background: var(--chip-bg);
-          color: var(--chip-text);
-          height: 44px;
+        .tl-skill-chips-50centered {
           display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 100%;
+          gap: 14px;
+        }
+
+        .tl-skill-chips-50centered .tl-skill-chip {
+          width: 70%;
+          max-width: 440px;
+          min-height: 52px;
+          font-size: 14.5px;
+          padding: 12px 18px;
+          border-radius: 10px;
+        }
+
+        .tl-skill-chip {
+          appearance: none;
+          width: 100%;
+          border: 1px solid var(--border);
+          background: var(--chip-blue);
+          color: var(--white);
+          border-radius: 8px;
+          padding: 8px 12px;
+          min-height: 42px;
+          font-size: 13px;
+          font-weight: 500;
+          line-height: 1.3;
+          display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.16s ease;
-          user-select: none;
-          outline: none;
-          box-sizing: border-box;
           text-align: center;
-          padding: 0 14px;
+          font-family: "Inter", sans-serif;
+          transition: background .18s ease, border-color .18s ease, transform .12s ease, color .18s ease;
+          box-sizing: border-box;
         }
 
-        .tl-skill-choice-btn:hover {
-          filter: brightness(0.96);
-          transform: translateY(-1px);
+        .tl-skill-chip .sub-desc {
+          display: block;
+          font-size: 11.5px;
+          opacity: 0.85;
+          margin-top: 3px;
+          font-weight: 400;
         }
 
-        .tl-skill-choice-btn.selected {
-          background: var(--chip-selected-bg);
-          color: var(--chip-selected-text);
-          border-color: var(--chip-selected-border);
-          box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+        .tl-skill-chip:hover {
+          background: var(--lime);
+          color: #000f45;
         }
 
-        .tl-skill-nav-row {
-          display: flex;
-          gap: 10px;
-          margin-top: auto;
-          padding-top: 14px;
+        .tl-skill-chip:active {
+          transform: scale(.98);
+        }
+
+        .tl-skill-chip.selected {
+          background: #000f45;
+          color: var(--navy);
+        }
+
+        .tl-skill-page-wrapper.dark-mode .tl-skill-chip.selected {
+          background: var(--lime);
+          color: #000f45;
+        }
+
+        .tl-skill-other-wrapper {
+          margin-top: 10px;
+          animation: tlSkillFadeIn .2s ease;
+        }
+
+        .tl-skill-other-input {
           width: 100%;
-          flex-shrink: 0;
+          height: 38px;
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          background: var(--input-bg);
+          color: var(--white);
+          padding: 0 12px;
+          font-size: 13px;
+          outline: none;
+          transition: background .2s ease, border-color .2s ease;
+          box-sizing: border-box;
         }
 
-        .tl-skill-action-btn {
-          height: 44px;
+        .tl-skill-other-input::placeholder {
+          color: var(--muted);
+        }
+
+        .tl-skill-other-input:focus {
+          border-color: var(--lime);
+          box-shadow: 0 0 0 3px rgba(140, 191, 74, .12);
+        }
+
+        @keyframes tlSkillFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        /* Step 3: Level Cards */
+        .tl-skill-cards-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+          margin-top: 4px;
+          margin-bottom: 12px;
+        }
+
+        .tl-skill-card-option {
+          background: var(--chip-blue);
+          border: 1px solid var(--border);
+          color: var(--white);
           border-radius: 11px;
-          border: none;
+          padding: 15px 16px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          cursor: pointer;
+          transition: background .18s ease, border-color .18s ease, transform .12s ease, color .18s ease;
+          box-sizing: border-box;
+        }
+
+        .tl-skill-card-option:hover {
+          background: var(--lime);
+          color: #000f45;
+          border-color: var(--lime);
+        }
+
+        .tl-skill-card-option:hover .tl-skill-code-block {
+          color: #000f45;
+        }
+
+        .tl-skill-card-option:hover p {
+          color: #1e293b;
+        }
+
+        .tl-skill-card-option:active {
+          transform: scale(.98);
+        }
+
+        .tl-skill-card-option.selected {
+          background: #000f45;
+          color: var(--navy);
+          border-color: var(--border-hover);
+        }
+
+        .tl-skill-page-wrapper.dark-mode .tl-skill-card-option.selected {
+          background: var(--lime);
+          color: #000f45;
+        }
+
+        .tl-skill-page-wrapper.dark-mode .tl-skill-card-option.selected .tl-skill-code-block,
+        .tl-skill-page-wrapper.dark-mode .tl-skill-card-option.selected p {
+          color: #000f45;
+        }
+
+        .tl-skill-code-block {
+          height: 38px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-family: "Press Start 2P", monospace !important;
+          font-family: 'Courier New', Courier, monospace;
+          font-size: 0.82rem;
+          font-weight: 700;
+          color: inherit;
+          margin-bottom: 6px;
+          white-space: pre;
+          transition: color .18s ease;
+        }
+
+        .tl-skill-card-option h3 {
+          font-size: 1.02rem;
+          font-weight: 700;
+          margin-bottom: 5px;
+          color: inherit;
+        }
+
+        .tl-skill-card-option p {
+          font-size: 0.8rem;
+          color: var(--muted-light);
+          line-height: 1.35;
+          transition: color .18s ease;
+        }
+
+        /* Mismatch Notice */
+        .tl-skill-mismatch-notice {
+          background: rgba(255, 180, 0, 0.12);
+          border: 1px solid rgba(255, 180, 0, 0.35);
+          border-radius: 10px;
+          padding: 10px 14px;
+          margin-bottom: 12px;
+          font-size: 11.5px;
+          line-height: 1.4;
+          color: var(--white);
+        }
+
+        .tl-skill-mismatch-notice strong {
+          display: block;
+          font-family: "Press Start 2P", monospace;
           font-size: 8px;
+          margin-bottom: 4px;
+          color: var(--lime);
+        }
+
+        /* Actions */
+        .tl-skill-actions {
+          position: fixed;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 50vw;
+          max-width: 1100px;
+          display: flex;
+          gap: 12px;
+          padding: 16px 0 24px;
+          background: var(--navy);
+          z-index: 50;
+          box-sizing: border-box;
+          transition: background .25s ease;
+        }
+
+        .tl-skill-btn {
+          height: 46px;
+          border: none;
+          border-radius: 10px;
+          font-family: "Press Start 2P", monospace !important;
+          font-size: 8px !important;
           letter-spacing: .02em;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           cursor: pointer;
           transition: .18s ease;
           box-sizing: border-box;
         }
 
-        .tl-skill-action-btn:hover {
+        .tl-skill-btn:hover {
           transform: translateY(-1px);
         }
 
-        .tl-skill-action-btn:active {
-          transform: scale(0.99);
-        }
-
-        .tl-skill-action-btn:disabled {
-          opacity: 0.4;
-          cursor: not-allowed;
-          transform: none;
+        .tl-skill-btn:active {
+          transform: scale(.99);
         }
 
         .tl-skill-btn-back {
           width: 30%;
-          background: rgba(88, 90, 95, 0.22);
-          color: var(--text-main);
-          border: 1px solid var(--chip-border);
+          background: rgba(88, 90, 95, .22) !important;
+          color: var(--white) !important;
+          border: 1px solid var(--border) !important;
         }
 
         .tl-skill-btn-back:hover {
-          background: rgba(88, 90, 95, 0.35);
+          background: rgba(88, 90, 95, .35) !important;
         }
 
-        .tl-skill-btn-continue {
+        .tl-skill-btn-primary {
           width: 70%;
-          background: var(--bar-active);
-          color: #07101b;
+          background: var(--lime) !important;
+          color: #07101b !important;
         }
 
-        .tl-skill-btn-continue:hover {
-          background: var(--btn-continue-hover);
+        .tl-skill-btn-primary:hover {
+          background: var(--lime-hover) !important;
+        }
+
+        .tl-skill-btn:disabled {
+          opacity: .4 !important;
+          cursor: not-allowed !important;
+          transform: none !important;
+        }
+
+        /* Recommendation Match Card */
+        .tl-skill-rec-container {
+          display: flex;
+          justify-content: center;
+          width: 100%;
+          margin-top: 10px;
+        }
+
+        .tl-skill-card {
+          width: 100%;
+          max-width: 380px;
+          background: var(--card-white);
+          border-radius: 20px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+          overflow: hidden;
+          border: 1px solid #eaeaea;
+          display: flex;
+          flex-direction: column;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.25s ease;
+          box-sizing: border-box;
+        }
+
+        .tl-skill-page-wrapper.dark-mode .tl-skill-card {
+          border-color: var(--card-border);
+        }
+
+        .tl-skill-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .tl-skill-card-banner {
+          position: relative;
+          width: 100%;
+          height: 180px;
+          background-color: #2d2d2d;
+          background-image: radial-gradient(circle at 50% 50%, #3a3a3a 0%, #1a1a1a 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .tl-skill-banner-badge-top {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          background-color: #fdf0a6;
+          color: #111111;
+          font-size: 13px;
+          font-weight: 600;
+          padding: 6px 14px;
+          border-radius: 20px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .tl-skill-card-logo {
+          position: absolute;
+          bottom: -20px;
+          left: 20px;
+          width: 56px;
+          height: 56px;
+          background-color: #ffffff;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+          font-size: 28px;
+          font-weight: 800;
+          color: #00599c;
+          z-index: 2;
+        }
+
+        .tl-skill-card-body {
+          padding: 30px 20px 18px 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          text-align: left;
+        }
+
+        .tl-skill-title-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .tl-skill-card-title {
+          font-size: 20px;
+          font-weight: 700;
+          color: var(--white);
+          line-height: 1.25;
+          margin: 0;
+        }
+
+        .tl-skill-tag-badge {
+          border: 1px solid #e0e0e0;
+          color: var(--white);
+          font-size: 13px;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 8px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          white-space: nowrap;
+        }
+
+        .tl-skill-page-wrapper.dark-mode .tl-skill-tag-badge {
+          border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .tl-skill-card-description {
+          font-size: 13px;
+          color: var(--muted-light);
+          line-height: 1.45;
+          margin: 0;
+        }
+
+        .tl-skill-divider {
+          height: 1px;
+          background-color: #eeeeee;
+          margin: 4px 0;
+        }
+
+        .tl-skill-page-wrapper.dark-mode .tl-skill-divider {
+          background-color: var(--card-border);
+        }
+
+        .tl-skill-pricing-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+        }
+
+        .tl-skill-price-main {
+          font-size: 26px;
+          font-weight: 800;
+          color: var(--white);
+        }
+
+        .tl-skill-price-subtext {
+          font-size: 12px;
+          color: var(--muted);
+          margin-top: 2px;
+        }
+
+        .tl-skill-trainer-badge {
+          font-family: "Press Start 2P", monospace;
+          font-size: 9px;
+          color: var(--lime);
+          letter-spacing: 0.5px;
+        }
+
+        /* Saved Box (No Program Found) */
+        .tl-skill-saved-box {
+          background: var(--chip-blue);
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          padding: 32px 24px;
+          text-align: center;
+          margin-top: 20px;
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        .tl-skill-saved-box-icon {
+          font-size: 42px;
+          color: var(--lime);
+          margin-bottom: 16px;
+        }
+
+        .tl-skill-saved-box h2 {
+          font-size: 20px;
+          font-weight: 700;
+          margin-bottom: 12px;
+          color: var(--white);
+        }
+
+        .tl-skill-saved-box p {
+          font-size: 14px;
+          color: var(--muted-light);
+          line-height: 1.5;
+          margin-bottom: 16px;
+        }
+
+        .tl-skill-saved-pref-chip {
+          display: inline-block;
+          background: rgba(5, 10, 91, .15);
+          border: 1px solid var(--border);
+          padding: 6px 14px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--white);
+        }
+
+        .tl-skill-page-wrapper.dark-mode .tl-skill-saved-pref-chip {
+          background: rgba(255, 255, 255, .1);
         }
 
         .tl-skill-error-text {
           margin-top: 12px;
           font-size: 13px;
           font-weight: 600;
-          color: #dc2626;
+          color: var(--danger);
         }
 
-        .tl-skill-custom-input {
+        .tl-skill-other-textarea {
           width: 100%;
-          height: 44px;
-          margin-top: 10px;
+          height: 80px;
+          border: 1px solid var(--border);
           border-radius: 9px;
-          border: 1px solid var(--chip-border);
-          background: rgba(255, 255, 255, 0.4);
-          color: var(--text-main);
-          padding: 0 16px;
-          font-size: 14px;
+          background: var(--input-bg);
+          color: var(--white);
+          padding: 12px;
+          font-size: 13px;
           outline: none;
+          resize: none;
+          transition: background .2s ease, border-color .2s ease;
           box-sizing: border-box;
         }
 
-        .dark-mode .tl-skill-custom-input {
-          background: rgba(255, 255, 255, 0.06);
-        }
-
-        .tl-skill-custom-input:focus {
-          border-color: var(--bar-active);
-          box-shadow: 0 0 0 2px rgba(149, 212, 51, 0.3);
-        }
-
-        /* Step 2 & 4 Goal Option Cards */
-        .tl-skill-goal-card {
-          border-radius: 10px;
-          border: 1px solid var(--chip-border);
-          background: var(--chip-bg);
-          color: var(--chip-text);
-          padding: 16px 20px;
-          cursor: pointer;
-          transition: all 0.16s ease;
-          text-align: left;
-          display: flex;
-          flex-direction: column;
-          gap: 5px;
-        }
-
-        .tl-skill-goal-card.selected {
-          background: var(--chip-selected-bg);
-          color: var(--chip-selected-text);
-          border-color: var(--chip-selected-border);
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-        }
-
-        .tl-skill-goal-card strong {
-          font-size: 15.5px;
-          font-weight: 700;
-        }
-
-        .tl-skill-goal-card small {
-          font-size: 13px;
-          opacity: 0.85;
-        }
-
-        /* Step 3 Level Cards */
-        .tl-skill-level-card {
-          border-radius: 10px;
-          border: 1px solid var(--chip-border);
-          background: var(--chip-bg);
-          color: var(--chip-text);
-          padding: 18px 14px;
-          text-align: center;
-          cursor: pointer;
-          transition: all 0.16s ease;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-        }
-
-        .tl-skill-level-card.selected {
-          background: var(--chip-selected-bg);
-          color: var(--chip-selected-text);
-          border-color: var(--chip-selected-border);
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-        }
-
-        .tl-skill-level-card strong {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .tl-skill-level-code {
-          font-family: monospace;
-          font-size: 12.5px;
-          min-height: 30px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          opacity: 0.9;
-          white-space: pre-line;
-        }
-
-        /* Recommendation Card (Step 5) */
-        .tl-skill-rec-card {
-          background: #ffffff;
-          border-radius: 14px;
-          border: 1px solid rgba(0, 0, 0, 0.06);
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-          padding: 24px 28px;
-          text-align: left;
-          width: 100%;
-          box-sizing: border-box;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 10px;
-        }
-
-        .dark-mode .tl-skill-rec-card {
-          background: #0f1738;
-          border-color: #23315e;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-        }
-
-        .tl-skill-rec-badge {
-          background: #95d433;
-          color: #07101b;
-          font-family: 'Inter', sans-serif;
-          font-size: 10px;
-          font-weight: 800;
-          letter-spacing: 0.5px;
-          padding: 4px 10px;
-          border-radius: 6px;
-          display: inline-block;
-        }
-
-        .tl-skill-rec-title {
-          font-size: 24px;
-          font-weight: 800;
-          color: var(--text-main);
-          letter-spacing: -0.5px;
-          line-height: 1.2;
-          margin: 0;
-        }
-
-        .tl-skill-rec-meta {
-          font-size: 13px;
+        .tl-skill-other-textarea::placeholder {
           color: var(--muted);
-          font-weight: 500;
-          margin-top: -2px;
         }
 
-        .tl-skill-rec-desc {
+        .tl-skill-other-textarea:focus {
+          border-color: var(--lime);
+          box-shadow: 0 0 0 3px rgba(140, 191, 74, .12);
+        }
+
+        /* Before You Go Exit Feedback Screen Sizing (Laptops and Tablets) */
+        .tl-skill-feedback-screen .tl-skill-eyebrow {
+          margin-top: 6px;
+          margin-bottom: 12px;
+        }
+
+        .tl-skill-feedback-screen h1 {
+          font-size: clamp(24px, 2.2vw, 36px);
+          margin-bottom: 16px;
+        }
+
+        .tl-skill-feedback-screen .tl-skill-chips-50centered {
+          gap: 9px;
+        }
+
+        .tl-skill-feedback-screen .tl-skill-chips-50centered .tl-skill-chip {
+          width: 78%;
+          max-width: 460px;
+          min-height: 42px;
           font-size: 13.5px;
-          color: var(--text-main);
-          line-height: 1.5;
-          margin: 0;
+          padding: 8px 14px;
+          border-radius: 9px;
         }
 
-        .tl-skill-rec-desc strong {
-          font-weight: 700;
+        .tl-skill-feedback-screen .tl-skill-other-textarea {
+          height: 60px;
+          font-size: 12.5px;
+          padding: 8px 12px;
+        }
+
+        /* Media Queries */
+        @media (min-width: 701px) and (max-width: 1200px) {
+          .tl-skill-page {
+            width: 75vw;
+            max-width: 850px;
+            min-width: 580px;
+            padding-top: 86px;
+          }
+          .tl-skill-actions {
+            width: 75vw;
+            max-width: 850px;
+            min-width: 580px;
+          }
+          .tl-skill-page h1 {
+            font-size: clamp(34px, 3.2vw, 48px);
+          }
+          .tl-skill-chips-50centered .tl-skill-chip {
+            width: 85%;
+            max-width: 520px;
+            min-height: 56px;
+            font-size: 15.5px;
+            padding: 14px 20px;
+          }
+          /* Keep Before You Go compact on tablets so it does not get cut off */
+          .tl-skill-feedback-screen h1 {
+            font-size: clamp(24px, 2.8vw, 34px);
+            margin-bottom: 14px;
+          }
+          .tl-skill-feedback-screen .tl-skill-chips-50centered {
+            gap: 8px;
+          }
+          .tl-skill-feedback-screen .tl-skill-chips-50centered .tl-skill-chip {
+            width: 85%;
+            max-width: 480px;
+            min-height: 42px !important;
+            font-size: 13.5px !important;
+            padding: 8px 14px !important;
+          }
+          .tl-skill-feedback-screen .tl-skill-other-textarea {
+            height: 56px;
+            font-size: 12.5px;
+            padding: 8px 12px;
+          }
+          .tl-skill-chip {
+            font-size: 14px;
+            min-height: 48px;
+            padding: 10px 14px;
+          }
+          .tl-skill-card-option {
+            padding: 18px 18px;
+          }
+          .tl-skill-card-option h3 {
+            font-size: 1.15rem;
+          }
+          .tl-skill-card-option p {
+            font-size: 0.88rem;
+          }
         }
 
         @media (max-width: 700px) {
-          .tl-skill-center-container {
+          .tl-skill-theme-toggle {
+            top: 15px;
+            right: 16px;
+            width: 38px;
+            height: 38px;
+            font-size: 13px;
+          }
+          .tl-skill-page {
             width: 100%;
             max-width: none;
-            margin: 0;
-            padding-top: 76px;
-            padding-bottom: 16px;
+            padding: 82px 16px 0;
           }
-          .tl-skill-page-wrapper {
-            padding: 0 16px;
-            justify-content: flex-start;
+          .tl-skill-actions {
+            width: 100%;
+            left: 0;
+            transform: none;
+            padding: 14px 16px 20px;
           }
-          .tl-skill-header-logo {
-            top: 16px;
-            left: 18px;
+          .tl-skill-chips-50centered .tl-skill-chip {
+            width: 100%;
           }
-          .tl-skill-title {
-            font-size: 24px;
-            letter-spacing: -1.2px;
+          .tl-skill-chip {
+            font-size: 12px;
+            padding: 9px 8px;
+            min-height: 44px;
           }
-          .tl-skill-grid-2col {
+          .tl-skill-cards-grid {
             grid-template-columns: repeat(2, 1fr);
-            gap: 6px;
+            gap: 8px;
           }
-          .tl-skill-choice-btn {
-            height: 38px;
-            font-size: 12.5px;
+          .tl-skill-card-option {
+            padding: 10px 8px;
+            border-radius: 9px;
           }
-          .tl-skill-nav-row {
-            padding-top: 10px;
+          .tl-skill-code-block {
+            height: 30px;
+            font-size: 0.72rem;
+            margin-bottom: 3px;
           }
-        }
-
-        @media (max-width: 430px) {
-          .tl-skill-title {
-            font-size: 22px;
+          .tl-skill-card-option h3 {
+            font-size: 0.88rem;
+            margin-bottom: 3px;
           }
-          .tl-skill-grid-2col {
-            grid-template-columns: repeat(2, 1fr);
+          .tl-skill-card-option p {
+            font-size: 0.72rem;
+            line-height: 1.25;
+          }
+          .tl-skill-btn {
+            height: 46px;
+            font-size: 8px;
+          }
+          .tl-skill-progress-wrapper {
+            margin-top: 4px;
+            margin-bottom: 16px;
+            display: block;
+            position: relative;
+            z-index: 10;
           }
         }
       `}</style>
 
-      {/* Top Left TLS Logo */}
-      <div
-        className="tl-skill-header-logo"
-        onClick={() => navigate("/")}
-        title="Return to Home"
+      {/* Theme Toggle Button */}
+      <button
+        type="button"
+        className="tl-skill-theme-toggle"
+        onClick={toggleTheme}
+        aria-label="Toggle dark mode"
+        title="Toggle dark mode"
       >
-        <img
-          src={isDarkMode ? "/logoo2-small.webp" : "/logoo-small.webp"}
-          alt="TechLearn Solutions"
-        />
-      </div>
+        {isDarkMode ? "🌙" : "☀️"}
+      </button>
 
-      {/* Centered Content Container */}
-      <div className="tl-skill-center-container">
+      {/* Main Page Container */}
+      <div className="tl-skill-page">
         {/* Progress Bar (4 steps) */}
-        {step < 5 && (
+        {!isFeedbackOpen && step < 5 && (
           <div className="tl-skill-progress-wrapper">
             <div className="tl-skill-progress-steps">
               {[1, 2, 3, 4].map((i) => (
@@ -694,37 +1155,31 @@ function SkillOnboardingFlow() {
           </div>
         )}
 
-        {step < 5 ? (
-          <div className="tl-skill-step-content">
-            <div className="tl-skill-eyebrow">STEP {step} OF 4</div>
+        {isFeedbackOpen ? (
+          /* Before You Go Exit Feedback Screen */
+          <div className="tl-skill-screen tl-skill-feedback-screen">
+            <div className="tl-skill-screen-body">
+              <div className="tl-skill-eyebrow">BEFORE YOU GO...</div>
+              <h1>
+                What made you want to <i>go back?</i>
+              </h1>
 
-            <h1 className="tl-skill-title">
-              {step === 1 ? (
-                <>What do you want to <em>learn?</em></>
-              ) : step === 2 ? (
-                <>What do you want to <em>do</em> with this skill?</>
-              ) : step === 3 ? (
-                <>What level of programming are you <em>currently at?</em></>
-              ) : (
-                <>How would you like to <em>learn?</em></>
-              )}
-            </h1>
-
-            {/* Step 1: Pick your skill */}
-            {step === 1 && (
-              <>
-                <div className="tl-skill-subhead">
-                  Pick <em>your</em> skill
-                </div>
-
-                <div className="tl-skill-grid-2col">
-                  {skillCatalog.map((item) => (
+              <div className="tl-skill-field">
+                <div className="tl-skill-chips-50centered">
+                  {[
+                    "I want to change my skill",
+                    "I'm not sure what I want to learn",
+                    "I couldn't find what I was looking for",
+                    "I need more information",
+                    "I'm just exploring",
+                    "Other",
+                  ].map((item) => (
                     <button
                       key={item}
                       type="button"
-                      className={`tl-skill-choice-btn ${skill === item ? "selected" : ""}`}
+                      className={`tl-skill-chip ${feedbackReason === item ? "selected" : ""}`}
                       onClick={() => {
-                        setSkill(item);
+                        setFeedbackReason(item);
                         setError("");
                       }}
                     >
@@ -733,170 +1188,314 @@ function SkillOnboardingFlow() {
                   ))}
                 </div>
 
-                {skill === "Other" && (
-                  <input
-                    type="text"
-                    className="tl-skill-custom-input"
-                    placeholder="Enter a skill, e.g. Rust, Kotlin, Go..."
-                    value={customSkill}
-                    onChange={(e) => setCustomSkill(e.target.value)}
-                    autoFocus
-                  />
+                {feedbackReason === "Other" && (
+                  <div className="tl-skill-other-wrapper" style={{ width: "85%", maxWidth: "520px", margin: "14px auto 0" }}>
+                    <label
+                      className="tl-skill-field-label"
+                      style={{ fontSize: 14, marginBottom: 8 }}
+                    >
+                      Tell us more
+                    </label>
+                    <textarea
+                      className="tl-skill-other-textarea"
+                      placeholder="Tell us what you're looking for..."
+                      value={feedbackOther}
+                      onChange={(e) => setFeedbackOther(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
                 )}
-              </>
-            )}
+              </div>
+            </div>
 
-            {/* Step 2: Choose your goal */}
-            {step === 2 && (
-              <>
-                <div className="tl-skill-subhead">
-                  Choose <em>your</em> goal
-                </div>
-                <div style={{ display: "grid", gap: 10 }}>
-                  {skillGoals.map(([title, description]) => (
-                    <button
-                      key={title}
-                      type="button"
-                      className={`tl-skill-goal-card ${goal === title ? "selected" : ""}`}
-                      onClick={() => setGoal(title)}
-                    >
-                      <strong>{title}</strong>
-                      <small>{description}</small>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* Step 3: Choose programming level */}
-            {step === 3 && (
-              <>
-                <div className="tl-skill-subhead">
-                  Choose <em>your</em> current level
-                </div>
-                <div className="tl-skill-grid-2col">
-                  {skillLevelCards.map(([title, code, description]) => (
-                    <button
-                      key={title}
-                      type="button"
-                      className={`tl-skill-level-card ${level === title ? "selected" : ""}`}
-                      onClick={() => setLevel(title)}
-                    >
-                      <div className="tl-skill-level-code">{code}</div>
-                      <strong>{title}</strong>
-                      <small style={{ opacity: 0.85, fontSize: 12 }}>{description}</small>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* Step 4: Learning style */}
-            {step === 4 && (
-              <>
-                <div className="tl-skill-subhead">
-                  Choose <em>your</em> learning style
-                </div>
-                <div style={{ display: "grid", gap: 10 }}>
-                  {[
-                    ["Self-Paced", "Learn at my own pace"],
-                    ["Trainer-Led", "Learn with a trainer"],
-                    ["ANY", "I'm not sure"],
-                  ].map(([value, title]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      className={`tl-skill-goal-card ${learningMode === value ? "selected" : ""}`}
-                      onClick={() => setLearningMode(value)}
-                    >
-                      <strong>{title}</strong>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {error && <div className="tl-skill-error-text">{error}</div>}
-
-            {/* Bottom Back and Continue Actions */}
-            <div className="tl-skill-nav-row">
+            {/* Feedback Screen Action Buttons */}
+            <div className="tl-skill-actions">
               <button
                 type="button"
-                className="tl-skill-action-btn tl-skill-btn-back"
+                className="tl-skill-btn tl-skill-btn-back"
+                onClick={handleFeedbackExit}
+              >
+                EXIT
+              </button>
+              <button
+                type="button"
+                className="tl-skill-btn tl-skill-btn-primary"
+                onClick={() => setIsFeedbackOpen(false)}
+              >
+                CONTINUE ONBOARDING
+              </button>
+            </div>
+          </div>
+        ) : step < 5 ? (
+          <div className={`tl-skill-screen tl-skill-step-${step}`}>
+            <div className="tl-skill-screen-body">
+              <div className="tl-skill-eyebrow">STEP {step} OF 4</div>
+
+              <h1>
+                {step === 1 ? (
+                  <>What do you want to <i>learn?</i></>
+                ) : step === 2 ? (
+                  <>What do you want to <i>do</i> with this skill?</>
+                ) : step === 3 ? (
+                  <>What level of programming are you <i>currently at?</i></>
+                ) : (
+                  <>How would you like to <i>learn?</i></>
+                )}
+              </h1>
+
+              {/* Step 1: Skill */}
+              {step === 1 && (
+                <div className="tl-skill-field">
+                  <div className="tl-skill-chips tl-skill-chips-2col">
+                    {skillCatalog.map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        className={`tl-skill-chip ${skill === item ? "selected" : ""}`}
+                        onClick={() => {
+                          setSkill(item);
+                          setError("");
+                        }}
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+
+                  {skill === "Other" && (
+                    <div className="tl-skill-other-wrapper">
+                      <label
+                        className="tl-skill-field-label"
+                        style={{ fontSize: 14, marginBottom: 8 }}
+                      >
+                        What skill do you want to learn?
+                      </label>
+                      <input
+                        type="text"
+                        className="tl-skill-other-input"
+                        placeholder="Enter a skill, e.g. Rust, Kotlin, Go..."
+                        maxLength={60}
+                        value={customSkill}
+                        onChange={(e) => setCustomSkill(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 2: Goal */}
+              {step === 2 && (
+                <div className="tl-skill-field">
+                  <div className="tl-skill-chips-50centered">
+                    {["Learn the basics", "Build projects", "Master the skill"].map((title) => (
+                      <button
+                        key={title}
+                        type="button"
+                        className={`tl-skill-chip ${goal === title ? "selected" : ""}`}
+                        onClick={() => {
+                          setGoal(title);
+                          setError("");
+                        }}
+                      >
+                        {title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Current Level */}
+              {step === 3 && (
+                <div className="tl-skill-cards-grid">
+                  {skillLevelCards.map(([title, code, description]) => (
+                    <div
+                      key={title}
+                      className={`tl-skill-card-option ${level === title ? "selected" : ""}`}
+                      onClick={() => {
+                        setLevel(title);
+                        setError("");
+                      }}
+                    >
+                      <div className="tl-skill-code-block">{code}</div>
+                      <h3>{title}</h3>
+                      <p>{description}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Step 4: Learning Mode */}
+              {step === 4 && (
+                <div className="tl-skill-field">
+                  <div className="tl-skill-chips-50centered">
+                    {[
+                      ["Self-Paced", "Learn at my own pace"],
+                      ["Trainer-Led", "Learn with a trainer"],
+                      ["ANY", "I'm not sure"],
+                    ].map(([value, title]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        className={`tl-skill-chip ${learningMode === value ? "selected" : ""}`}
+                        onClick={() => {
+                          setLearningMode(value);
+                          setError("");
+                        }}
+                      >
+                        {title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {error && <div className="tl-skill-error-text">{error}</div>}
+            </div>
+
+            {/* Step Action Buttons */}
+            <div className="tl-skill-actions">
+              <button
+                type="button"
+                className="tl-skill-btn tl-skill-btn-back"
                 onClick={goBack}
               >
                 BACK
               </button>
               <button
                 type="button"
-                className="tl-skill-action-btn tl-skill-btn-continue"
-                disabled={loading || (step === 1 && (!requestedSkill || (skill === "Other" && !customSkill.trim()))) || (step === 2 && !goal) || (step === 3 && !level) || (step === 4 && !learningMode)}
+                className="tl-skill-btn tl-skill-btn-primary"
+                disabled={
+                  loading ||
+                  (step === 1 && (!requestedSkill || (skill === "Other" && !customSkill.trim()))) ||
+                  (step === 2 && !goal) ||
+                  (step === 3 && !level) ||
+                  (step === 4 && !learningMode)
+                }
                 onClick={continueStep}
               >
-                {loading
-                  ? "FINDING..."
-                  : step === 4
-                  ? "CONTINUE →"
-                  : "CONTINUE →"}
+                {loading ? "FINDING..." : "CONTINUE →"}
               </button>
             </div>
           </div>
         ) : (
-          /* Step 5: Result Match */
-          <div className="tl-skill-step-content" style={{ justifyContent: "flex-start" }}>
-            <div className="tl-skill-eyebrow">YOUR MATCH</div>
-            <h1 className="tl-skill-title" style={{ marginBottom: 20 }}>
-              Here's what fits <em>you.</em>
-            </h1>
+          /* Step 5: Recommendation / Match Screen */
+          <div className="tl-skill-screen">
+            <div className="tl-skill-screen-body">
+              <div className="tl-skill-eyebrow">YOUR MATCH</div>
 
-            {result?.matchType === "none" ? (
-              <div className="tl-skill-rec-card">
-                <div className="tl-skill-rec-badge">NOT AVAILABLE YET</div>
-                <h2 className="tl-skill-rec-title">
-                  We don't have this program yet.
-                </h2>
-                <div className="tl-skill-rec-meta">
-                  Level: {level || "All"} | Mode: {learningMode || "Self-Paced"}
-                </div>
-                <p className="tl-skill-rec-desc">
-                  We don't currently have a {requestedSkill} program available, but we've saved your request.
-                </p>
-              </div>
-            ) : (
-              <div className="tl-skill-rec-card">
-                <div className="tl-skill-rec-badge">
-                  {result?.matchType === "exact" ? "RECOMMENDED FOR YOU" : "RECOMMENDED FOR YOU"}
-                </div>
-                <h2 className="tl-skill-rec-title">
-                  {result?.program?.name || `${requestedSkill} Masterclass`}
-                </h2>
-                <div className="tl-skill-rec-meta">
-                  Level: {level || "Beginner"} | Mode: {result?.programMode || "Self-Paced"}
-                </div>
-                <p className="tl-skill-rec-desc">
-                  Designed specifically to help you reach your goal: <strong>"{goal || "Learn the basics"}"</strong>.
-                </p>
-              </div>
-            )}
+              <h1>
+                {result?.matchType === "none" ? (
+                  <>We don't have this program <i>yet.</i></>
+                ) : (
+                  <>Here's what fits <i>you.</i></>
+                )}
+              </h1>
 
-            <div className="tl-skill-nav-row">
+              {/* Mismatch Warning Notice */}
+              {result?.matchType === "closest" && (
+                <div className="tl-skill-mismatch-notice">
+                  <strong>CLOSEST MATCH AVAILABLE</strong>
+                  <span>
+                    {learningMode !== "ANY" && result?.programMode && result.programMode !== learningMode
+                      ? `You selected ${learningMode.toLowerCase()} learning. This program is currently ${result.programMode.toLowerCase()}.`
+                      : result?.program?.level && result.program.level !== level
+                      ? `The available program is currently designed for ${result.program.level.toLowerCase()}s.`
+                      : "This is the closest program to your preferences."}
+                  </span>
+                </div>
+              )}
+
+              {/* Card or Saved Box */}
+              {result?.matchType === "none" ? (
+                <div className="tl-skill-saved-box">
+                  <div className="tl-skill-saved-box-icon">✓</div>
+                  <h2>We don't have this program yet.</h2>
+                  <p>
+                    We don't currently have a {requestedSkill} program available, but we've saved your request.
+                  </p>
+                  <div className="tl-skill-saved-pref-chip">
+                    {skill === "Other"
+                      ? `${requestedSkill} · ${goal} · ${level} · ${learningMode}`
+                      : `${requestedSkill} Requested`}
+                  </div>
+                </div>
+              ) : (
+                <div className="tl-skill-rec-container">
+                  <div className="tl-skill-card">
+                    {/* Top Image/Banner */}
+                    <div className="tl-skill-card-banner">
+                      <div className="tl-skill-banner-badge-top">
+                        YOUR MATCH
+                      </div>
+                      <div className="tl-skill-card-logo">
+                        {requestedSkill ? requestedSkill.charAt(0).toUpperCase() : "S"}
+                      </div>
+                    </div>
+
+                    {/* Main Content Body */}
+                    <div className="tl-skill-card-body">
+                      <div className="tl-skill-title-row">
+                        <h2 className="tl-skill-card-title">
+                          {result?.program?.name || `${requestedSkill} Programming`}
+                        </h2>
+                        <span className="tl-skill-tag-badge">SKILL</span>
+                      </div>
+
+                      <p className="tl-skill-card-description">
+                        {result?.program?.description ||
+                          `Learn ${requestedSkill} through structured lessons, practice, challenges, and projects.`}
+                      </p>
+
+                      <div className="tl-skill-divider" />
+
+                      {result?.programMode === "Trainer-Led" ? (
+                        <div className="tl-skill-trainer-badge">
+                          TRAINER-LED PROGRAM
+                        </div>
+                      ) : (
+                        <div className="tl-skill-pricing-row">
+                          <div>
+                            <div className="tl-skill-price-main">
+                              {result?.program?.price ? `₹${result.program.price}` : "₹399"}
+                            </div>
+                            <div className="tl-skill-price-subtext">
+                              One-time payment · 1 year access
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Recommendation Screen Actions */}
+            <div className="tl-skill-actions">
               <button
                 type="button"
-                className="tl-skill-action-btn tl-skill-btn-back"
+                className="tl-skill-btn tl-skill-btn-back"
                 onClick={() => setStep(1)}
               >
                 CHANGE
               </button>
               <button
                 type="button"
-                className="tl-skill-action-btn tl-skill-btn-continue"
-                onClick={result?.matchType === "none" ? () => navigate("/learn/courses") : startProgram}
+                className="tl-skill-btn tl-skill-btn-primary"
+                onClick={
+                  result?.matchType === "none"
+                    ? () => navigate("/learn/courses")
+                    : result?.programMode === "Trainer-Led" && !result?.program?.isPublished
+                    ? joinWaitlist
+                    : startProgram
+                }
               >
                 {result?.matchType === "none"
                   ? "EXPLORE SKILLS →"
-                  : result?.programMode === "Trainer-Led" && !result?.program?.isPublished
-                  ? "JOIN WAITLIST →"
-                  : "VIEW PROGRAM →"}
+                  : result?.programMode === "Trainer-Led"
+                  ? (result?.waitlisted ? "WAITLISTED ✓" : "JOIN WAITLIST →")
+                  : "START LEARNING →"}
               </button>
             </div>
           </div>
@@ -924,18 +1523,18 @@ export default function ContextualOnboarding() {
       skill: "",
       skillLevel: "",
       learningOutcome: "",
-      ...readStoredAnswers(),
+      // Only retain stored answers if coming from explicit state (e.g. back navigation or prefilled state)
       ...(location.state?.answers || {}),
     }),
     [location.state]
   );
 
   const [step, setStep] = useState(1);
-  const [role, setRole] = useState(initial.role || initial.targetRole || "");
-  const [otherRole, setOtherRole] = useState(initial.otherRole || initial.targetRoleOther || "");
-  const [opportunity, setOpportunity] = useState(initial.opportunity || initial.placementCategory || "");
+  const [role, setRole] = useState(initial.role || "");
+  const [otherRole, setOtherRole] = useState(initial.otherRole || "");
+  const [opportunity, setOpportunity] = useState(initial.opportunity || "");
   const [selectedCompanies, setSelectedCompanies] = useState(
-    Array.isArray(initial.companies) ? initial.companies : initial.targetCompanies || []
+    Array.isArray(initial.companies) ? initial.companies : []
   );
 
   // Skill intent fields
@@ -1267,15 +1866,16 @@ export default function ContextualOnboarding() {
 
         .tl-page-container {
           width: 50vw;
-          max-width: 1050px;
+          max-width: 1100px;
           height: 100vh;
           max-height: 100vh;
-          margin: auto;
-          padding: 84px 0 24px;
+          margin: 0 auto;
+          padding: 80px 0 0;
           display: flex;
           flex-direction: column;
           box-sizing: border-box;
           overflow: hidden;
+          position: relative;
         }
 
         .tl-screen {
@@ -1283,30 +1883,51 @@ export default function ContextualOnboarding() {
           display: flex;
           flex-direction: column;
           min-height: 0;
-          overflow: hidden;
+          position: relative;
+          overflow-y: auto;
+          overflow-x: hidden;
+          padding-bottom: 110px;
+          box-sizing: border-box;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+        }
+
+        .tl-screen::-webkit-scrollbar {
+          width: 5px;
+        }
+
+        .tl-screen::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 4px;
         }
 
         .tl-progress-wrapper {
           width: 100%;
+          margin-top: 2px;
           margin-bottom: 20px;
           flex-shrink: 0;
+          position: relative;
+          z-index: 10;
         }
 
         .tl-progress-steps {
           display: grid;
           grid-template-columns: repeat(${totalSteps}, 1fr);
           gap: 8px;
+          width: 100%;
+          align-items: center;
         }
 
         .tl-progress-step {
-          height: 4px;
+          height: 5px;
           border-radius: 10px;
-          background: rgba(5,10,91,.13);
-          transition: .25s ease;
+          background: rgba(5, 10, 91, .15);
+          transition: background .25s ease;
+          width: 100%;
         }
 
         .tl-onboarding-page-root.dark-mode .tl-progress-step {
-          background: rgba(255,255,255,.10);
+          background: rgba(255, 255, 255, .15);
         }
 
         .tl-progress-step.active {
@@ -1318,51 +1939,54 @@ export default function ContextualOnboarding() {
           font-size: 8.5px;
           line-height: 1.4;
           color: var(--white);
-          letter-spacing: .7px;
-          margin-bottom: 8px;
+          letter-spacing: .6px;
+          margin-top: 14px;
+          margin-bottom: 22px;
           flex-shrink: 0;
         }
 
         .tl-title {
-          font-size: clamp(26px, 2.3vw, 36px);
+          font-size: clamp(30px, 2.5vw, 46px);
           line-height: 1.1;
-          letter-spacing: -1.5px;
-          font-weight: 700;
+          letter-spacing: -1.4px;
+          font-weight: 600;
           color: var(--white);
-          margin-bottom: 8px;
+          margin-top: 0;
+          margin-bottom: 28px;
           flex-shrink: 0;
+        }
+
+        .tl-title i,
+        .tl-title em {
+          font-style: italic;
         }
 
         .tl-description {
-          width: 100%;
-          max-width: 700px;
-          font-size: 13.5px;
-          line-height: 1.4;
-          color: var(--navy-dark);
-          margin-bottom: 20px;
-          flex-shrink: 0;
-        }
-
-        .tl-onboarding-page-root.dark-mode .tl-description {
-          color: #b9c1d7;
+          display: none;
         }
 
         .tl-field {
-          margin-bottom: 20px;
+          margin-bottom: 24px;
+          flex-shrink: 0;
         }
 
         .tl-field:first-of-type {
-          margin-top: 14px;
+          margin-top: 0;
         }
 
         .tl-field-label {
           display: block;
-          font-size: 14px;
+          font-size: 16px;
           line-height: 1.3;
-          font-weight: 700;
+          font-weight: 600;
           color: var(--white);
-          margin-bottom: 10px;
+          margin-bottom: 14px;
           letter-spacing: -.2px;
+        }
+
+        .tl-field-label i,
+        .tl-field-label em {
+          font-style: italic;
         }
 
         .tl-chips {
@@ -1490,26 +2114,34 @@ export default function ContextualOnboarding() {
         }
 
         .tl-actions {
-          width: 100%;
+          position: fixed;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 50vw;
+          max-width: 1100px;
           display: flex;
-          gap: 10px;
-          margin-top: auto;
-          padding-top: 14px;
-          flex-shrink: 0;
+          gap: 12px;
+          padding: 16px 0 24px;
+          background: var(--navy);
+          z-index: 50;
+          box-sizing: border-box;
+          transition: background .25s ease;
         }
 
         .tl-btn {
-          height: 44px;
+          height: 46px;
           border: none;
-          border-radius: 11px;
+          border-radius: 10px;
           font-family: "Press Start 2P", monospace !important;
-          font-size: 8px;
+          font-size: 8px !important;
           letter-spacing: .02em;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           transition: .18s ease;
+          box-sizing: border-box;
         }
 
         .tl-btn:hover {
@@ -1522,29 +2154,29 @@ export default function ContextualOnboarding() {
 
         .tl-btn-back {
           width: 30%;
-          background: rgba(88,90,95,.22);
-          color: var(--white);
-          border: 1px solid var(--border);
+          background: rgba(88, 90, 95, .22) !important;
+          color: var(--white) !important;
+          border: 1px solid var(--border) !important;
         }
 
         .tl-btn-back:hover {
-          background: rgba(88,90,95,.35);
+          background: rgba(88, 90, 95, .35) !important;
         }
 
         .tl-btn-primary {
           width: 70%;
-          background: var(--lime);
-          color: #07101b;
+          background: var(--lime) !important;
+          color: #07101b !important;
         }
 
         .tl-btn-primary:hover {
-          background: var(--lime-hover);
+          background: var(--lime-hover) !important;
         }
 
         .tl-btn:disabled {
-          opacity: .4;
-          cursor: not-allowed;
-          transform: none;
+          opacity: .4 !important;
+          cursor: not-allowed !important;
+          transform: none !important;
         }
 
         .tl-close-step {
@@ -1572,6 +2204,14 @@ export default function ContextualOnboarding() {
           background: rgba(255,255,255,.12);
           border-color: var(--border-hover);
           transform: rotate(5deg);
+        }
+
+        .tl-screen.tl-plan-screen {
+          overflow-y: auto !important;
+          max-height: calc(100vh - 100px);
+          padding-bottom: 50px;
+          scrollbar-width: thin;
+          padding-right: 4px;
         }
 
         .tl-plans {
@@ -1804,13 +2444,19 @@ export default function ContextualOnboarding() {
         /* Responsive Breakpoints */
         @media (min-width: 701px) and (max-width: 1200px) {
           .tl-page-container {
-            width: 50vw;
-            min-width: 500px;
-            min-height: 580px;
-            padding-top: 30px;
+            width: 75vw;
+            max-width: 850px;
+            min-width: 580px;
+            padding-top: 86px;
           }
-          .tl-title { font-size: 42px; }
-          .tl-description { font-size: 14px; }
+          .tl-actions {
+            width: 75vw;
+            max-width: 850px;
+            min-width: 580px;
+          }
+          .tl-title {
+            font-size: clamp(34px, 3.2vw, 48px);
+          }
           .tl-plans { gap: 15px; }
           .tl-plan-card { padding: 19px; }
           .tl-plan-title { font-size: 20px; }
@@ -1821,44 +2467,29 @@ export default function ContextualOnboarding() {
           .tl-page-container {
             width: 100%;
             max-width: none;
-            min-height: 100vh;
-            margin: 0;
-            padding: 15vh 20px 35px;
-            justify-content: flex-start;
+            padding: 82px 16px 0;
           }
-          .tl-progress-wrapper {
-            margin-bottom: 55px;
-            padding-right: 0;
+          .tl-actions {
+            width: 100%;
+            left: 0;
+            transform: none;
+            padding: 14px 16px 20px;
           }
           .tl-screen {
-            min-height: calc(85vh - 120px);
-            display: flex;
-            flex-direction: column;
+            min-height: 0;
           }
           .tl-eyebrow { font-size: 8px; }
-          .tl-title { font-size: 34px; letter-spacing: -1.7px; }
-          .tl-description {
-            font-size: 14px;
-            visibility: hidden;
-            margin-bottom: 32px !important;
-          }
-          .tl-plan-screen .tl-description {
-            height: auto;
-            line-height: 1.4;
-            visibility: visible;
-            margin-bottom: 24px !important;
-          }
-          .tl-plan-screen { margin-top: -32px; }
-          .tl-field:first-of-type { margin-top: 48px; }
+          .tl-title { font-size: clamp(26px, 6vw, 32px); letter-spacing: -1.2px; }
+          .tl-field:first-of-type { margin-top: 10px; }
           .tl-chip { font-size: 11px; padding: 10px 13px; min-height: 38px; }
-          .tl-onboarding-page-root { --chip-blue: #a5d8f4; }
-          .tl-onboarding-page-root.dark-mode { --chip-blue: #031553; }
-          .tl-chip.selected { background: #000f45; }
-          .tl-onboarding-page-root.dark-mode .tl-chip.selected { background: var(--lime); }
-          .tl-helper { display: none; }
-          .tl-selected-count { margin-top: 22px; }
-          .tl-actions { margin-top: auto; padding-top: 32px; }
           .tl-btn { height: 50px; font-size: 8px; }
+          .tl-progress-wrapper {
+            margin-top: 4px;
+            margin-bottom: 16px;
+            display: block;
+            position: relative;
+            z-index: 10;
+          }
           .tl-plans {
             grid-template-columns: 1fr;
             gap: 16px;
@@ -1868,20 +2499,10 @@ export default function ContextualOnboarding() {
           .tl-plan-card.paid { order: 1; }
           .tl-plan-card.free { order: 2; }
           .tl-plan-description { min-height: auto; }
-          .tl-feedback-title { font-size: 32px; }
-          .tl-feedback-description { margin-bottom: 40px; }
+          .tl-feedback-title { font-size: 28px; }
+          .tl-feedback-description { margin-bottom: 24px; }
           .tl-feedback-actions { flex-direction: column; }
           .tl-feedback-actions .tl-btn { width: 100%; }
-        }
-
-        @media (max-width: 430px) {
-          .tl-page-container { padding: 15vh 17px 30px; }
-          .tl-title { font-size: 30px; }
-          .tl-description { font-size: 13px; }
-          .tl-chip { font-size: 11px; padding: 9px 11px; min-height: 36px; }
-          .tl-plan-title { font-size: 21px; }
-          .tl-plan-description { font-size: 12px; }
-          .tl-features li { font-size: 11px; }
         }
       `}</style>
 
@@ -1949,7 +2570,9 @@ export default function ContextualOnboarding() {
             {step === 1 && (
               <section className="tl-screen">
                 <div className="tl-eyebrow">STEP 1 OF {totalSteps}</div>
-                <h1 className="tl-title">What role are you preparing for?</h1>
+                <h1 className="tl-title">
+                  What are <i>you</i> preparing for?
+                </h1>
                 <p className="tl-description">
                   {intent === "skill"
                     ? "Choose your target role and the skill you want to turn into real capability."
@@ -2013,7 +2636,7 @@ export default function ContextualOnboarding() {
                 ) : (
                   <>
                     <div className="tl-field">
-                      <label className="tl-field-label">Target Role <span aria-hidden="true">*</span></label>
+                      <label className="tl-field-label">Pick <i>your</i> Target Role</label>
                       <div className="tl-chips">
                         {placementRoleOptions.map((r) => {
                           return (
@@ -2048,7 +2671,7 @@ export default function ContextualOnboarding() {
                     </div>
 
                     <div className="tl-field">
-                      <label className="tl-field-label">Target Opportunity <span aria-hidden="true">*</span></label>
+                      <label className="tl-field-label">Pick <i>your</i> Target Opportunity</label>
                       <div className="tl-chips">
                         {["Campus", "Off-campus", "Both"].map((opp) => (
                           <button
@@ -2088,7 +2711,11 @@ export default function ContextualOnboarding() {
               <section className="tl-screen">
                 <div className="tl-eyebrow">STEP 2 OF {totalSteps}</div>
                 <h1 className="tl-title">
-                  {intent === "skill" ? "Where are you starting from?" : "Where do you want to get hired?"}
+                  {intent === "skill" ? (
+                    <>Where are you <i>starting from?</i></>
+                  ) : (
+                    <>Where do you want to <i>get hired?</i></>
+                  )}
                 </h1>
                 <p className="tl-description">
                   {intent === "skill"
@@ -2139,7 +2766,7 @@ export default function ContextualOnboarding() {
                 ) : (
                   <div className="tl-field">
                     <label className="tl-field-label">
-                      Target Companies (select up to three).
+                      Pick <i>your</i> Target Companies (select up to 3)
                     </label>
                     <div className="tl-chips">
                       {availableCompanies.map((c) => {
@@ -2199,7 +2826,9 @@ export default function ContextualOnboarding() {
                   ×
                 </button>
 
-                <h1 className="tl-title">Here's your plan.</h1>
+                <h1 className="tl-title">
+                  Here's your <i>plan.</i>
+                </h1>
                 <p className="tl-description tl-plan-description">
                   {intent === "skill"
                     ? "Start with our core learning track or unlock full project mastery."
