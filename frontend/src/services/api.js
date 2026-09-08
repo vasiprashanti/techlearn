@@ -1,4 +1,4 @@
-﻿// API Service Layer for TechLearn Solutions
+// API Service Layer for TechLearn Solutions
 // This handles all communication with the backend
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -468,59 +468,71 @@ export const dataAdapters = {
     // Default gradients, icons, and images for different course types
     const getDefaultVisuals = (title) => {
       const titleLower = title.toLowerCase();
-      if (titleLower.includes('java') && !titleLower.includes('javascript')) {
+      if (titleLower.includes('genai') || titleLower.includes('generative ai') || titleLower.includes('gen ai')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: 'â˜•',
-          image: '/java.png'
+          icon: '🤖',
+          image: '/genai.jpg'
+        };
+      } else if (titleLower.includes('fullstack') || titleLower.includes('full stack') || titleLower.includes('full-stack')) {
+        return {
+          gradient: 'from-blue-500 via-cyan-400 to-teal-400',
+          icon: '☕',
+          image: '/java-fullstack.jpg'
+        };
+      } else if (titleLower.includes('java') && !titleLower.includes('javascript')) {
+        return {
+          gradient: 'from-blue-500 via-cyan-400 to-teal-400',
+          icon: '☕',
+          image: '/java-fullstack.jpg'
         };
       } else if (titleLower.includes('python')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: 'ðŸ',
-          image: '/python.png'
+          icon: '🐍',
+          image: '/python.jpg'
         };
       } else if (titleLower.includes('dsa') || titleLower.includes('data structures') || titleLower.includes('algorithms')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: 'ðŸ§ ',
+          icon: '🧠',
           image: '/dsa.png'
         };
       } else if (titleLower.includes('mysql') || titleLower.includes('database')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: 'ðŸ—„ï¸',
+          icon: '🗄️',
           image: '/mysql.png'
         };
       } else if (titleLower.includes('javascript')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: 'âš¡',
+          icon: '⚡',
           image: '/js.png'
         };
       } else if (titleLower.includes('c++')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: 'âš™ï¸',
+          icon: '⚙️',
           image: '/c.png'
         };
-      } else if (titleLower.includes('c ') || titleLower.includes('c programming')) {
+      } else if (titleLower.includes('c programming') || titleLower === 'c' || titleLower.startsWith('c ')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: 'ðŸ”§',
-          image: '/c.png'
+          icon: '🔧',
+          image: '/c-programming.jpg'
         };
       } else if (titleLower.includes('html') || titleLower.includes('css')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: 'ðŸŒ',
+          icon: '🌐',
           image: '/html.png'
         };
       } else {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: 'ðŸ“š',
-          image: '/python.png' // Default fallback
+          icon: '📚',
+          image: '/python.jpg'
         };
       }
     };

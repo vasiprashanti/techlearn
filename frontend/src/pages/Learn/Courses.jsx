@@ -12,7 +12,7 @@ import {
   CarouselItem,
 } from "../../components/ui/carousel";
 
-const COURSES_CACHE_KEY = 'learn-courses-cache-v1';
+const COURSES_CACHE_KEY = 'learn-courses-cache-v2';
 const COURSES_CACHE_TTL_MS = 5 * 60 * 1000;
 const COURSE_TOPIC_ID_OVERRIDES = {
   'c': '6890c2acbc09eb4b5c346b9b',
