@@ -484,7 +484,13 @@ export const dataAdapters = {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
           icon: '☕',
-          image: '/java-fullstack.jpg'
+          image: '/java.jpg'
+        };
+      } else if (titleLower.includes('aptitude') || titleLower.includes('quantitative') || titleLower.includes('reasoning')) {
+        return {
+          gradient: 'from-blue-500 via-cyan-400 to-teal-400',
+          icon: '🧮',
+          image: '/aptitude.jpg'
         };
       } else if (titleLower.includes('python')) {
         return {

@@ -64,11 +64,12 @@ const getCourseImage = (course) => {
   if (course.bannerImage) return course.bannerImage;
   const t = (course.title || '').toLowerCase();
   if (t.includes('genai') || t.includes('generative ai')) return '/genai.jpg';
+  if (t.includes('aptitude') || t.includes('quantitative') || t.includes('reasoning')) return '/aptitude.jpg';
   if (t.includes('fullstack') || t.includes('full stack') || t.includes('full-stack')) return '/java-fullstack.jpg';
-  if (t.includes('java') && !t.includes('javascript')) return '/java-fullstack.jpg';
+  if (t.includes('java') && !t.includes('javascript')) return '/java.jpg';
   if (t.includes('python')) return '/python.jpg';
   if (t.includes('c programming') || t === 'c' || t.startsWith('c ')) return '/c-programming.jpg';
-  return '/c-programming.jpg';
+  return '/python.jpg';
 };
 
 const readCachedCourses = () => {
@@ -135,7 +136,7 @@ export default function Courses() {
   const mockCoursesData = [
     { id: "6890c2acbc09eb4b5c346b9b", title: "C Programming", description: "Master the fundamentals of C programming and memory concepts", status: "available", image: "/c-programming.jpg" },
     { id: "6890ec81950225df57310f52", title: "Python Programming", description: "Learn Python programming from basics to advanced concepts", status: "available", image: "/python.jpg" },
-    { id: "6890f09830551d88a325f623", title: "Java Programming", description: "Master Java programming and object-oriented concepts", status: "available", image: "/java-fullstack.jpg" },
+    { id: "6890f09830551d88a325f623", title: "Java Programming", description: "Master Java programming and object-oriented concepts", status: "available", image: "/java.jpg" },
     { id: "dsa", title: "Data Structures & Algorithms", description: "Master DSA concepts for coding interviews and problem solving", status: "available", image: "/dsa.png" },
     { id: "mysql", title: "MySQL Database", description: "Learn database design, queries, and management with MySQL", status: "available", image: "/mysql.png" }
   ];
