@@ -1,4 +1,4 @@
-// API Service Layer for TechLearn Solutions
+﻿// API Service Layer for TechLearn Solutions
 // This handles all communication with the backend
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -471,55 +471,55 @@ export const dataAdapters = {
       if (titleLower.includes('java') && !titleLower.includes('javascript')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: '☕',
+          icon: 'â˜•',
           image: '/java.png'
         };
       } else if (titleLower.includes('python')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: '🐍',
+          icon: 'ðŸ',
           image: '/python.png'
         };
       } else if (titleLower.includes('dsa') || titleLower.includes('data structures') || titleLower.includes('algorithms')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: '🧠',
+          icon: 'ðŸ§ ',
           image: '/dsa.png'
         };
       } else if (titleLower.includes('mysql') || titleLower.includes('database')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: '🗄️',
+          icon: 'ðŸ—„ï¸',
           image: '/mysql.png'
         };
       } else if (titleLower.includes('javascript')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: '⚡',
+          icon: 'âš¡',
           image: '/js.png'
         };
       } else if (titleLower.includes('c++')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: '⚙️',
+          icon: 'âš™ï¸',
           image: '/c.png'
         };
       } else if (titleLower.includes('c ') || titleLower.includes('c programming')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: '🔧',
+          icon: 'ðŸ”§',
           image: '/c.png'
         };
       } else if (titleLower.includes('html') || titleLower.includes('css')) {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: '🌐',
+          icon: 'ðŸŒ',
           image: '/html.png'
         };
       } else {
         return {
           gradient: 'from-blue-500 via-cyan-400 to-teal-400',
-          icon: '📚',
+          icon: 'ðŸ“š',
           image: '/python.png' // Default fallback
         };
       }
@@ -533,7 +533,7 @@ export const dataAdapters = {
       if (titleLower.includes('java') || titleLower.includes('python')) {
         return {
           status: 'available',
-          price: '₹1499',
+          price: 'â‚¹1499',
           certificationPrice: 1499,
           certificationDiscountedPrice: 999,
           xpDiscount: 500,

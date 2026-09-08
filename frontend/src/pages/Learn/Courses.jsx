@@ -59,6 +59,18 @@ const getCourseTopicsPath = (course) => {
   return `/learn/courses/${getCourseTopicsId(course)}/topics`;
 };
 
+const getCourseImage = (course) => {
+  if (course.image) return course.image;
+  if (course.bannerImage) return course.bannerImage;
+  const t = (course.title || '').toLowerCase();
+  if (t.includes('genai') || t.includes('generative ai')) return '/genai.jpg';
+  if (t.includes('fullstack') || t.includes('full stack') || t.includes('full-stack')) return '/java-fullstack.jpg';
+  if (t.includes('java') && !t.includes('javascript')) return '/java-fullstack.jpg';
+  if (t.includes('python')) return '/python.jpg';
+  if (t.includes('c programming') || t === 'c' || t.startsWith('c ')) return '/c-programming.jpg';
+  return '/c-programming.jpg';
+};
+
 const readCachedCourses = () => {
   try {
     const raw = sessionStorage.getItem(COURSES_CACHE_KEY);
@@ -121,11 +133,11 @@ export default function Courses() {
   const [loading, setLoading] = useState(!cachedCourses);
 
   const mockCoursesData = [
-    { id: "6890c2acbc09eb4b5c346b9b", title: "C Programming", description: "Master the fundamentals of C programming and memory concepts", status: "available" },
-    { id: "6890ec81950225df57310f52", title: "Python Programming", description: "Learn Python programming from basics to advanced concepts", status: "available" },
-    { id: "6890f09830551d88a325f623", title: "Java Programming", description: "Master Java programming and object-oriented concepts", status: "available" },
-    { id: "dsa", title: "Data Structures & Algorithms", description: "Master DSA concepts for coding interviews and problem solving", status: "available" },
-    { id: "mysql", title: "MySQL Database", description: "Learn database design, queries, and management with MySQL", status: "available" }
+    { id: "6890c2acbc09eb4b5c346b9b", title: "C Programming", description: "Master the fundamentals of C programming and memory concepts", status: "available", image: "/c-programming.jpg" },
+    { id: "6890ec81950225df57310f52", title: "Python Programming", description: "Learn Python programming from basics to advanced concepts", status: "available", image: "/python.jpg" },
+    { id: "6890f09830551d88a325f623", title: "Java Programming", description: "Master Java programming and object-oriented concepts", status: "available", image: "/java-fullstack.jpg" },
+    { id: "dsa", title: "Data Structures & Algorithms", description: "Master DSA concepts for coding interviews and problem solving", status: "available", image: "/dsa.png" },
+    { id: "mysql", title: "MySQL Database", description: "Learn database design, queries, and management with MySQL", status: "available", image: "/mysql.png" }
   ];
 
   const defaultTrainerPrograms = [
@@ -304,6 +316,9 @@ export default function Courses() {
             <style dangerouslySetInnerHTML={{ __html: `
               .tl-learn-card {
                 width: 100%;
+                max-width: 360px;
+                margin-left: auto;
+                margin-right: auto;
                 background: #ffffff;
                 border-radius: 28px;
                 overflow: hidden;
@@ -330,7 +345,7 @@ export default function Courses() {
               }
               .tl-card-banner {
                 position: relative;
-                height: 190px;
+                height: 240px;
                 overflow: hidden;
                 background: #e5e9ed;
               }
@@ -349,9 +364,9 @@ export default function Courses() {
               }
               .tl-category-badge {
                 position: absolute;
-                top: 14px;
-                right: 14px;
-                padding: 6px 11px;
+                top: 16px;
+                right: 16px;
+                padding: 7px 12px;
                 background: rgba(255, 255, 255, 0.94);
                 color: #02107a;
                 border-radius: 20px;
@@ -371,7 +386,7 @@ export default function Courses() {
               }
               .tl-card-content {
                 background: #ffffff;
-                padding: 20px 22px 18px;
+                padding: 25px 24px 23px;
                 border-top-right-radius: 28px;
                 margin-top: -12px;
                 position: relative;
@@ -384,10 +399,10 @@ export default function Courses() {
                 background: #0b1238;
               }
               .tl-card-title {
-                font-size: 20px;
+                font-size: 21px;
                 font-weight: 750;
                 color: #02107a;
-                margin-top: 2px;
+                margin-top: 4px;
                 margin-bottom: 0;
                 line-height: 1.25;
                 letter-spacing: -0.5px;
@@ -402,12 +417,12 @@ export default function Courses() {
               .tl-card-description {
                 font-size: 13px;
                 color: #02107a;
-                line-height: 1.5;
-                margin-top: 10px;
-                margin-bottom: 16px;
-                min-height: 38px;
+                line-height: 1.6;
+                margin-top: 13px;
+                margin-bottom: 21px;
+                min-height: 62px;
                 display: -webkit-box;
-                -webkit-line-clamp: 2;
+                -webkit-line-clamp: 3;
                 -webkit-box-orient: vertical;
                 overflow: hidden;
               }
@@ -418,7 +433,7 @@ export default function Courses() {
                 width: 100%;
                 height: 1px;
                 background: rgba(2, 16, 122, 0.12);
-                margin-bottom: 14px;
+                margin-bottom: 18px;
                 margin-top: auto;
               }
               .dark .tl-content-divider {
@@ -430,7 +445,8 @@ export default function Courses() {
                 align-items: center;
               }
               .tl-price {
-                font-size: 22px;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                font-size: 23px;
                 font-weight: 800;
                 color: #89c638;
                 letter-spacing: -0.7px;
@@ -441,6 +457,7 @@ export default function Courses() {
                 transition: color 0.25s ease;
               }
               .tl-price-type {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                 margin-left: 4px;
                 font-size: 9px;
                 font-weight: 600;
@@ -483,16 +500,16 @@ export default function Courses() {
               }
               @media (max-width: 500px) {
                 .tl-card-banner {
-                  height: 180px;
+                  height: 220px;
                 }
                 .tl-card-content {
-                  padding: 18px 16px 16px;
+                  padding: 22px 20px 21px;
                 }
                 .tl-card-title {
-                  font-size: 18px;
+                  font-size: 19px;
                 }
                 .tl-card-description {
-                  font-size: 12px;
+                  font-size: 12.5px;
                 }
               }
             ` }} />
@@ -528,11 +545,11 @@ export default function Courses() {
                             {/* IMAGE */}
                             <div className="tl-card-banner">
                               <img
-                                src={course.image || course.bannerImage || '/c.png'}
+                                src={getCourseImage(course)}
                                 alt={course.title}
                                 onError={(e) => {
                                   e.currentTarget.onerror = null;
-                                  e.currentTarget.src = '/c.png';
+                                  e.currentTarget.src = '/c-programming.jpg';
                                 }}
                               />
                               <div className="tl-category-badge">
