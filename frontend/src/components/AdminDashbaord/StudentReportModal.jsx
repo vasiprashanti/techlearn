@@ -178,6 +178,10 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
   const profileEducation = canonicalProfile.education || {};
   const profileEnrollment = canonicalProfile.enrollment || {};
   const profileGoals = canonicalProfile.goals || {};
+  const effectiveProgramName = profileEnrollment.program?.name
+    || studentDetails?.programName
+    || studentDetails?.programSelection
+    || 'Placement Sprint';
   const profileSkills = canonicalProfile.skills || {};
 
   // Compute strong & weak topics from dayWiseHistoryTasksDetail
@@ -368,8 +372,8 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                       <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Enrollment Info</h3>
                       <div className="space-y-3">
                         <div className="flex justify-between text-xs py-1 border-b border-black/5 dark:border-white/5">
-                          <span className="text-slate-400">Program Selection:</span>
-                          <span className="font-semibold">{studentDetails?.programSelection || 'Placement Sprint'}</span>
+                          <span className="text-slate-400">Program:</span>
+                          <span className="font-semibold">{effectiveProgramName}</span>
                         </div>
                         <div className="flex justify-between text-xs py-1 border-b border-black/5 dark:border-white/5">
                           <span className="text-slate-400">Joined Date:</span>
