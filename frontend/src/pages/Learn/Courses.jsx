@@ -55,10 +55,6 @@ const getCourseTopicsId = (course) => {
   );
 };
 
-const getCourseTopicsPath = (course) => {
-  return `/learn/courses/${getCourseTopicsId(course)}/topics`;
-};
-
 const getCourseImage = (course) => {
   if (course.image) return course.image;
   if (course.bannerImage) return course.bannerImage;
@@ -550,7 +546,7 @@ export default function Courses() {
                             onFocus={() => prefetchCourseTopics(course)}
                             onClick={() => {
                               prefetchCourseTopics(course);
-                              navigate(getCourseTopicsPath(course));
+                              navigate(`/learn/courses/${getCourseTopicsId(course)}`);
                             }}
                             className="tl-learn-card h-full"
                           >

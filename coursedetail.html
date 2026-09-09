@@ -1,0 +1,2544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>TechLearn — C Programming</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap"
+  rel="stylesheet"
+>
+
+<style>
+
+/* =========================================
+   VARIABLES
+========================================= */
+
+:root {
+  --bg-start: #04103d;
+  --bg-mid: #06134d;
+  --bg-end: #0b1d61;
+
+  --navy: #ffffff;
+  --page-text: #ffffff;
+
+  --text: rgba(255,255,255,.72);
+  --muted: rgba(255,255,255,.48);
+
+  --border: rgba(255,255,255,.10);
+
+  --lime: #b5e959;
+  --lime-hover: #c5f477;
+
+  --dropdown-bg: rgba(4,16,61,.98);
+
+  --card-bg: rgba(255,255,255,.035);
+
+  --font: "Inter", sans-serif;
+  --pixel: "Press Start 2P", cursive;
+}
+
+
+/* =========================================
+   LIGHT MODE
+========================================= */
+
+body.light-mode {
+
+  --bg-start: #e8f8ff;
+  --bg-mid: #d9f2ff;
+  --bg-end: #c0e9ff;
+
+  --navy: #050a5b;
+  --page-text: #07102f;
+
+  --text: rgba(7,16,47,.72);
+  --muted: rgba(7,16,47,.48);
+
+  --border: rgba(7,16,47,.10);
+
+  --lime: #8dd035;
+  --lime-hover: #a2d354;
+
+  --dropdown-bg: rgba(255,255,255,.98);
+
+  --card-bg: rgba(255,255,255,.24);
+}
+
+
+/* =========================================
+   RESET
+========================================= */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+
+  min-height: 100vh;
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--bg-start) 0%,
+      var(--bg-mid) 45%,
+      var(--bg-end) 100%
+    );
+
+  color: var(--page-text);
+
+  font-family: var(--font);
+
+  -webkit-font-smoothing: antialiased;
+
+  transition:
+    background .25s ease,
+    color .25s ease;
+
+}
+
+
+/* =========================================
+   PAGE
+========================================= */
+
+.page {
+
+  width: 100%;
+  max-width: 1180px;
+
+  margin: 0 auto;
+
+  padding:
+    0 10px
+    80px;
+
+}
+
+
+/* =========================================
+   NAVBAR
+========================================= */
+
+.navbar {
+
+  width: 100%;
+  height: 72px;
+
+  padding: 0 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  position: relative;
+  z-index: 100;
+
+}
+
+
+/* =========================================
+   BRAND
+========================================= */
+
+.nav-brand {
+
+  display: flex;
+  align-items: center;
+
+  text-decoration: none;
+
+  flex-shrink: 0;
+
+}
+
+.nav-brand img {
+
+  width: 44px;
+  height: 44px;
+
+  object-fit: contain;
+
+  display: block;
+
+  border-radius: 9px;
+
+}
+
+
+/* =========================================
+   RIGHT SIDE
+========================================= */
+
+.nav-right {
+
+  display: flex;
+  align-items: center;
+
+  gap: 28px;
+
+}
+
+
+/* =========================================
+   NAV LINKS
+========================================= */
+
+.nav-links {
+
+  display: flex;
+  align-items: center;
+
+  gap: 30px;
+
+  list-style: none;
+
+}
+
+.nav-links a {
+
+  color: var(--text);
+
+  text-decoration: none;
+
+  font-size: 15px;
+  font-weight: 500;
+
+  white-space: nowrap;
+
+  transition:
+    color .2s ease;
+
+}
+
+.nav-links a:hover {
+
+  color: var(--navy);
+
+}
+
+
+/* =========================================
+   ACCOUNT
+========================================= */
+
+.account {
+
+  position: relative;
+
+}
+
+.account-button {
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  padding: 8px 10px;
+
+  border: 0;
+  border-radius: 8px;
+
+  background: transparent;
+
+  color: var(--text);
+
+  font-family: inherit;
+
+  font-size: 14px;
+  font-weight: 500;
+
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    color .2s ease,
+    background .2s ease;
+
+}
+
+.account-button:hover {
+
+  color: var(--navy);
+
+  background:
+    rgba(5,10,91,.05);
+
+}
+
+
+/* =========================================
+   CHEVRON
+========================================= */
+
+.chevron {
+
+  width: 7px;
+  height: 7px;
+
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+
+  transform:
+    rotate(45deg)
+    translateY(-2px);
+
+  transition:
+    transform .2s ease;
+
+}
+
+.account.open .chevron {
+
+  transform:
+    rotate(225deg)
+    translateY(-1px);
+
+}
+
+
+/* =========================================
+   ACCOUNT DROPDOWN
+========================================= */
+
+.account-menu {
+
+  position: absolute;
+
+  top: calc(100% + 12px);
+  right: 0;
+
+  width: 320px;
+  max-width: calc(100vw - 32px);
+
+  padding: 16px;
+
+  border:
+    1px solid var(--border);
+
+  border-radius: 18px;
+
+  background:
+    var(--dropdown-bg);
+
+  backdrop-filter: blur(20px);
+
+  box-shadow:
+    0 24px 70px rgba(0,0,0,.25);
+
+  opacity: 0;
+  visibility: hidden;
+
+  transform: translateY(-6px);
+
+  transition:
+    opacity .18s ease,
+    visibility .18s ease,
+    transform .18s ease;
+
+}
+
+.account.open .account-menu {
+
+  opacity: 1;
+  visibility: visible;
+
+  transform: translateY(0);
+
+}
+
+
+/* =========================================
+   PROFILE ROW
+========================================= */
+
+.profile-row {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 13px;
+
+  padding:
+    4px 4px 12px;
+
+}
+
+
+/* =========================================
+   AVATAR
+========================================= */
+
+.avatar-button {
+
+  position: relative;
+
+  width: 52px;
+  height: 52px;
+
+  padding: 0;
+
+  border: 0;
+
+  border-radius: 50%;
+
+  background: transparent;
+
+  cursor: pointer;
+
+  flex-shrink: 0;
+
+}
+
+.avatar-button img {
+
+  width: 52px;
+  height: 52px;
+
+  display: block;
+
+  object-fit: cover;
+
+  border-radius: 50%;
+
+  border:
+    2px solid var(--border);
+
+}
+
+
+/* =========================================
+   AVATAR SWITCH
+========================================= */
+
+.avatar-switch {
+
+  position: absolute;
+
+  right: -2px;
+  bottom: -2px;
+
+  width: 20px;
+  height: 20px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background:
+    var(--navy);
+
+  border:
+    1px solid var(--border);
+
+  color:
+    var(--page-text);
+
+  font-size: 10px;
+
+}
+
+
+/* =========================================
+   USER DETAILS
+========================================= */
+
+.profile-details {
+
+  flex: 1;
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+}
+
+.profile-name {
+
+  color: var(--navy);
+
+  font-size: 15px;
+  font-weight: 600;
+
+  line-height: 1.3;
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+}
+
+.profile-email {
+
+  margin-top: 2px;
+
+  color: var(--muted);
+
+  font-size: 12px;
+  font-weight: 400;
+
+  line-height: 1.4;
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+}
+
+
+/* =========================================
+   THEME TOGGLE & SIGN OUT
+========================================= */
+
+.theme-toggle,
+.sign-out {
+
+  width: 100%;
+  height: 40px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  border:
+    1px solid var(--border);
+
+  border-radius: 9px;
+
+  background:
+    rgba(255,255,255,.035);
+
+  color: var(--text);
+
+  text-decoration: none;
+
+  font-family: inherit;
+
+  font-size: 13px;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  transition:
+    background .18s ease,
+    color .18s ease,
+    border-color .18s ease;
+
+}
+
+.theme-toggle {
+
+  margin-bottom: 8px;
+
+}
+
+.theme-toggle:hover,
+.sign-out:hover {
+
+  background:
+    rgba(255,255,255,.07);
+
+  border-color:
+    var(--border);
+
+  color:
+    var(--navy);
+
+}
+
+
+/* =========================================
+   MANAGE PROFILE
+========================================= */
+
+.manage-profile {
+
+  width: 100%;
+  min-height: 44px;
+
+  margin-top: 8px;
+
+  padding: 0 10px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 11px;
+
+  border:
+    1px solid var(--border);
+
+  border-radius: 9px;
+
+  background:
+    rgba(255,255,255,.025);
+
+  color: var(--text);
+
+  text-decoration: none;
+
+  font-size: 13px;
+  font-weight: 500;
+
+  transition:
+    background .18s ease,
+    color .18s ease,
+    border-color .18s ease;
+
+}
+
+.manage-profile:hover {
+
+  background:
+    rgba(255,255,255,.055);
+
+  border-color:
+    var(--border);
+
+  color:
+    var(--navy);
+
+}
+
+
+/* =========================================
+   TECHLEARN LOGO IN BUTTON
+========================================= */
+
+.manage-logo {
+
+  width: 28px;
+  height: 28px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+}
+
+.manage-logo img {
+
+  width: 24px;
+  height: 24px;
+
+  object-fit: contain;
+
+  border-radius: 6px;
+
+}
+
+
+/* =========================================
+   MOBILE MENU BUTTON
+========================================= */
+
+.menu-button {
+
+  width: 38px;
+  height: 38px;
+
+  display: none;
+
+  align-items: center;
+  justify-content: center;
+
+  border:
+    1px solid var(--border);
+
+  border-radius: 9px;
+
+  background:
+    rgba(255,255,255,.035);
+
+  cursor: pointer;
+
+}
+
+
+/* =========================================
+   HAMBURGER
+========================================= */
+
+.menu-icon {
+
+  width: 16px;
+  height: 12px;
+
+  position: relative;
+
+}
+
+.menu-icon span {
+
+  position: absolute;
+
+  left: 0;
+
+  width: 100%;
+  height: 1.5px;
+
+  background:
+    var(--navy);
+
+}
+
+.menu-icon span:nth-child(1) {
+  top: 0;
+}
+
+.menu-icon span:nth-child(2) {
+  top: 5px;
+}
+
+.menu-icon span:nth-child(3) {
+  top: 10px;
+}
+
+
+/* =========================================
+   MOBILE MENU
+========================================= */
+
+.mobile-menu {
+
+  display: none;
+
+  position: absolute;
+
+  top: 68px;
+  left: 16px;
+  right: 16px;
+
+  padding: 10px;
+
+  border:
+    1px solid var(--border);
+
+  border-radius: 12px;
+
+  background:
+    var(--dropdown-bg);
+
+  backdrop-filter: blur(18px);
+
+  box-shadow:
+    0 20px 60px rgba(0,0,0,.25);
+
+}
+
+.mobile-menu.active {
+
+  display: block;
+
+}
+
+.mobile-menu a {
+
+  display: flex;
+
+  align-items: center;
+
+  min-height: 46px;
+
+  padding: 0 12px;
+
+  border-radius: 8px;
+
+  color: var(--text);
+
+  text-decoration: none;
+
+  font-size: 13px;
+  font-weight: 500;
+
+}
+
+.mobile-menu a:hover {
+
+  background:
+    rgba(255,255,255,.05);
+
+  color:
+    var(--navy);
+
+}
+
+
+/* =========================================
+   COURSE HERO
+========================================= */
+
+.hero {
+
+  min-height: 470px;
+
+  display: flex;
+
+  align-items: center;
+
+  padding:
+    55px 0
+    65px;
+
+}
+
+.hero-left {
+
+  max-width: 780px;
+
+}
+
+
+/* =========================================
+   COURSE TYPE
+========================================= */
+
+.course-type {
+
+  display: inline-block;
+
+  font-family: var(--pixel);
+
+  font-size: 10px;
+
+  line-height: 1.6;
+
+  color: #ebf8ff;
+
+  margin-bottom: 18px;
+
+  opacity: .65;
+
+}
+
+
+/* =========================================
+   COURSE TITLE
+========================================= */
+
+.course-title {
+
+  font-size:
+    clamp(42px, 5.3vw, 58px);
+
+  line-height: 1.02;
+
+  font-weight: 700;
+
+  letter-spacing: -3.4px;
+
+  color: var(--navy);
+
+  max-width: 800px;
+
+  margin-bottom: 22px;
+
+}
+
+
+/* =========================================
+   DESCRIPTION
+========================================= */
+
+.course-description {
+
+  max-width: 680px;
+
+  font-size: 15px;
+
+  line-height: 1.65;
+
+  color: var(--navy);
+
+  opacity: .72;
+
+  margin-bottom: 22px;
+
+}
+
+
+/* =========================================
+   TRAINER
+========================================= */
+
+.trainer {
+
+  font-size: 12px;
+
+  color: var(--navy);
+
+  opacity: .78;
+
+  margin-bottom: 22px;
+
+}
+
+.trainer strong {
+
+  font-weight: 700;
+
+}
+
+
+/* =========================================
+   COURSE META
+========================================= */
+
+.course-meta {
+
+  display: flex;
+
+  align-items: center;
+
+  flex-wrap: wrap;
+
+  gap: 0;
+
+  margin-bottom: 24px;
+
+}
+
+.meta-item {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  color: var(--navy);
+
+  padding-right: 19px;
+
+  margin-right: 19px;
+
+  border-right:
+    1px solid var(--border);
+
+}
+
+.meta-item:last-child {
+
+  border-right: none;
+
+  margin-right: 0;
+
+  padding-right: 0;
+
+}
+
+.meta-label {
+
+  font-size: 9px;
+
+  text-transform: uppercase;
+
+  letter-spacing: .4px;
+
+  opacity: .5;
+
+}
+
+.meta-value {
+
+  font-weight: 700;
+
+  opacity: .9;
+
+}
+
+
+/* =========================================
+   START BUTTON
+========================================= */
+
+.start-button {
+
+  display: flex;
+  width: 210px;
+  height: 48px;
+  margin-top: 30px;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  border: none;
+  border-radius: 20px;
+
+  background:
+    var(--lime);
+
+  color: #07101b;
+
+  font-family:
+    var(--pixel);
+
+  font-size: 9px;
+
+  line-height: 1.5;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 10px 24px rgba(5,10,91,.12);
+
+  transition:
+    transform .2s ease,
+    background .2s ease,
+    box-shadow .2s ease;
+
+}
+
+.start-button:hover {
+
+  background:
+    var(--lime-hover);
+
+  transform:
+    translateY(-2px);
+
+  box-shadow:
+    0 14px 30px rgba(5,10,91,.16);
+
+}
+
+.button-arrow {
+
+  font-family:
+    var(--font);
+
+  font-size: 17px;
+
+  line-height: 1;
+
+}
+
+
+/* =========================================
+   TABS SECTION
+========================================= */
+
+.tabs-section {
+
+  border-top:
+    1px solid var(--border);
+
+  margin-top: 5px;
+
+}
+
+.tabs {
+
+  height: 68px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 32px;
+
+  border-bottom:
+    1px solid var(--border);
+
+}
+
+.tab {
+
+  height: 100%;
+
+  display: flex;
+
+  align-items: center;
+
+  position: relative;
+
+  border: none;
+
+  background: transparent;
+
+  color: var(--navy);
+
+  opacity: .45;
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+}
+
+.tab.active {
+
+  opacity: 1;
+
+}
+
+.tab.active::after {
+
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  right: 0;
+  bottom: -1px;
+
+  height: 3px;
+
+  background:
+    var(--lime);
+
+  border-radius:
+    3px 3px 0 0;
+
+}
+
+
+/* =========================================
+   TAB CONTENT
+========================================= */
+
+.tab-content {
+
+  display: none;
+
+  padding:
+    42px 0
+    20px;
+
+}
+
+.tab-content.active {
+
+  display: block;
+
+}
+
+
+/* =========================================
+   SECTION EYEBROW
+========================================= */
+
+.section-eyebrow {
+
+  font-family:
+    var(--pixel);
+
+  font-size: 10px;
+
+  line-height: 1.6;
+
+  color: var(--navy);
+
+  opacity: .55;
+
+  margin-bottom: 15px;
+
+}
+
+
+/* =========================================
+   SECTION TITLE
+========================================= */
+
+.section-title {
+
+  font-size: 30px;
+
+  line-height: 1.15;
+
+  letter-spacing: -1.2px;
+
+  font-weight: 800;
+
+  color: var(--navy);
+
+  margin-bottom: 30px;
+
+}
+
+
+/* =========================================
+   CURRICULUM
+========================================= */
+
+.curriculum-list {
+
+  width: 100%;
+
+  border-top:
+    1px solid var(--border);
+
+}
+
+.curriculum-row {
+
+  min-height: 72px;
+
+  display: grid;
+
+  grid-template-columns:
+    70px
+    1fr
+    100px;
+
+  align-items: center;
+
+  gap: 20px;
+
+  border-bottom:
+    1px solid var(--border);
+
+}
+
+.chapter-number {
+
+  font-family:
+    var(--pixel);
+
+  font-size: 7px;
+
+  color: var(--navy);
+
+  opacity: .45;
+
+}
+
+.chapter-name {
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  color: var(--navy);
+
+}
+
+.chapter-topics {
+
+  font-size: 10px;
+
+  color: var(--navy);
+
+  opacity: .55;
+
+  text-align: right;
+
+}
+
+
+/* =========================================
+   TRAINER
+========================================= */
+
+.trainer-block {
+
+  max-width: 680px;
+
+}
+
+.trainer-name {
+
+  font-size: 22px;
+
+  font-weight: 800;
+
+  color: var(--navy);
+
+  letter-spacing: -.6px;
+
+  margin-bottom: 12px;
+
+}
+
+.trainer-description {
+
+  font-size: 14px;
+
+  line-height: 1.7;
+
+  color: var(--navy);
+
+  opacity: .68;
+
+}
+
+
+/* =========================================
+   OUTCOMES
+========================================= */
+
+.outcomes-grid {
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 14px;
+
+}
+
+.outcome-card {
+
+  min-height: 150px;
+
+  padding: 22px;
+
+  border:
+    1px solid var(--border);
+
+  border-radius: 14px;
+
+  background:
+    var(--card-bg);
+
+}
+
+.outcome-number {
+
+  font-family:
+    var(--pixel);
+
+  font-size: 7px;
+
+  color: var(--navy);
+
+  opacity: .45;
+
+  margin-bottom: 20px;
+
+}
+
+.outcome-title {
+
+  font-size: 14px;
+
+  line-height: 1.45;
+
+  font-weight: 700;
+
+  color: var(--navy);
+
+}
+
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width: 760px) {
+
+  .navbar {
+
+    height: 68px;
+
+    padding:
+      0 18px;
+
+  }
+
+  .nav-brand img {
+
+    width: 33px;
+    height: 33px;
+
+  }
+
+  .nav-links,
+  .account {
+
+    display: none;
+
+  }
+
+  .nav-right {
+
+    gap: 9px;
+
+  }
+
+  .menu-button {
+
+    display: flex;
+
+  }
+
+  .mobile-menu {
+
+    top: 68px;
+
+  }
+
+  .page {
+
+    padding-left: 18px;
+    padding-right: 18px;
+
+  }
+
+  .hero {
+
+    min-height: auto;
+
+    padding:
+      60px 0
+      65px;
+
+  }
+
+  .course-title {
+
+    font-size:
+      clamp(40px, 12vw, 58px);
+
+    letter-spacing:
+      -2.5px;
+
+  }
+
+  .course-description {
+
+    font-size: 14px;
+
+  }
+
+  .course-meta {
+
+    align-items: flex-start;
+
+    flex-direction: column;
+
+    gap: 12px;
+
+  }
+
+  .meta-item {
+
+    border-right: none;
+
+    margin-right: 0;
+
+    padding-right: 0;
+
+  }
+
+  .start-button {
+
+    width: 205px;
+
+  }
+
+  .tabs {
+
+    gap: 24px;
+
+  }
+
+  .tab {
+
+    font-size: 11px;
+
+  }
+
+  .tab-content {
+
+    padding-top: 34px;
+
+  }
+
+  .section-title {
+
+    font-size: 36px;
+
+  }
+
+  .curriculum-row {
+
+    grid-template-columns:
+      55px
+      1fr;
+
+    gap: 12px;
+
+  }
+
+  .chapter-topics {
+
+    grid-column: 2;
+
+    text-align: left;
+
+    margin-top: -18px;
+
+    padding-bottom: 16px;
+
+  }
+
+  .outcomes-grid {
+
+    grid-template-columns: 1fr;
+
+  }
+
+}
+
+
+/* =========================================
+   SMALL MOBILE
+========================================= */
+
+@media (max-width: 380px) {
+
+  .navbar {
+
+    padding:
+      0 14px;
+
+  }
+
+  .account-menu {
+
+    right: -10px;
+
+    width: 290px;
+
+  }
+
+  .page {
+
+    padding-left: 14px;
+    padding-right: 14px;
+
+  }
+
+  .tabs {
+
+    gap: 18px;
+
+  }
+
+}
+
+</style>
+</head>
+
+
+<body>
+
+
+<!-- =========================================
+     NAVBAR
+========================================= -->
+
+<nav class="navbar">
+
+
+  <!-- BRAND -->
+
+  <a
+    href="dashboard.html"
+    class="nav-brand"
+    aria-label="TechLearn Dashboard"
+  >
+
+    <img
+      src="logoo2.png"
+      alt="TechLearn"
+    >
+
+  </a>
+
+
+  <!-- RIGHT SIDE -->
+
+  <div class="nav-right">
+
+
+    <!-- NAVIGATION -->
+
+    <ul class="nav-links">
+
+      <li>
+        <a href="learn.html">
+          Learn
+        </a>
+      </li>
+
+      <li>
+        <a href="hiring.html">
+          Hiring
+        </a>
+      </li>
+
+      <li>
+        <a href="dashboard.html">
+          Dashboard
+        </a>
+      </li>
+
+    </ul>
+
+
+    <!-- ACCOUNT -->
+
+    <div
+      class="account"
+      id="account"
+    >
+
+      <button
+        class="account-button"
+        id="accountButton"
+        type="button"
+        aria-expanded="false"
+        aria-haspopup="true"
+      >
+
+        Hi, User
+
+        <span class="chevron"></span>
+
+      </button>
+
+
+      <!-- ACCOUNT DROPDOWN -->
+
+      <div
+        class="account-menu"
+        id="accountMenu"
+      >
+
+
+        <!-- PROFILE -->
+
+        <div class="profile-row">
+
+          <button
+            type="button"
+            class="avatar-button"
+            id="avatarButton"
+            aria-label="Switch avatar"
+          >
+
+            <img
+              src="profile.jpg"
+              alt="Tanvika Vasi"
+            >
+
+            <span class="avatar-switch">
+              ↻
+            </span>
+
+          </button>
+
+
+          <div class="profile-details">
+
+            <div class="profile-name">
+              Tanvika Vasi
+            </div>
+
+            <div class="profile-email">
+              vasitanvika424@gmail.com
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- THEME TOGGLE -->
+
+        <button
+          type="button"
+          class="theme-toggle"
+          id="themeToggle"
+        >
+
+          <span id="themeIcon">
+            ☀
+          </span>
+
+          <span id="themeText">
+            Light mode
+          </span>
+
+        </button>
+
+
+        <!-- SIGN OUT -->
+
+        <a
+          href="logout.html"
+          class="sign-out"
+        >
+          Sign out
+        </a>
+
+
+        <!-- MANAGE PROFILE -->
+
+        <a
+          href="profile.html"
+          class="manage-profile"
+        >
+
+          <span class="manage-logo">
+
+            <img
+              src="logoo2.png"
+              alt="TechLearn"
+            >
+
+          </span>
+
+          <span>
+            Manage your profile
+          </span>
+
+        </a>
+
+
+      </div>
+
+    </div>
+
+
+    <!-- MOBILE BUTTON -->
+
+    <button
+      class="menu-button"
+      id="menuButton"
+      type="button"
+      aria-label="Open menu"
+      aria-expanded="false"
+    >
+
+      <span class="menu-icon">
+
+        <span></span>
+        <span></span>
+        <span></span>
+
+      </span>
+
+    </button>
+
+
+  </div>
+
+
+  <!-- MOBILE MENU -->
+
+  <div
+    class="mobile-menu"
+    id="mobileMenu"
+  >
+
+    <a href="learn.html">
+      Learn
+    </a>
+
+    <a href="hiring.html">
+      Hiring
+    </a>
+
+    <a href="dashboard.html">
+      Dashboard
+    </a>
+
+    <a href="profile.html">
+      Manage your profile
+    </a>
+
+    <a href="logout.html">
+      Sign out
+    </a>
+
+  </div>
+
+
+</nav>
+
+
+<!-- =========================================
+     MAIN PAGE
+========================================= -->
+
+<main class="page">
+
+
+  <!-- =======================================
+       HERO
+  ======================================== -->
+
+  <section class="hero">
+
+    <div class="hero-left">
+
+
+      <div class="course-type">
+        COURSE
+      </div>
+
+
+      <h1 class="course-title">
+        C Programming
+      </h1>
+
+
+      <p class="course-description">
+        Build a strong programming foundation by learning
+        C from the basics through practical problem solving.
+        Learn concepts, write programs, and strengthen your
+        coding fundamentals.
+      </p>
+
+
+      <div class="trainer">
+        By <strong>TechLearn Solutions</strong>
+      </div>
+
+
+      <!-- COURSE META -->
+
+      <div class="course-meta">
+
+        <div class="meta-item">
+
+          <span class="meta-label">
+            Duration
+          </span>
+
+          <span class="meta-value">
+            4 Weeks
+          </span>
+
+        </div>
+
+
+        <div class="meta-item">
+
+          <span class="meta-label">
+            Mode
+          </span>
+
+          <span class="meta-value">
+            Self-Paced
+          </span>
+
+        </div>
+
+
+        <div class="meta-item">
+
+          <span class="meta-label">
+            Level
+          </span>
+
+          <span class="meta-value">
+            Beginner
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <!-- START BUTTON -->
+
+      <button
+        class="start-button"
+        id="startButton"
+        type="button"
+      >
+
+        <span>
+          START FOR FREE
+        </span>
+
+        <span class="button-arrow">
+          →
+        </span>
+
+      </button>
+
+
+    </div>
+
+  </section>
+
+
+  <!-- =======================================
+       TABS
+  ======================================== -->
+
+  <section class="tabs-section">
+
+
+    <div class="tabs">
+
+      <button
+        class="tab active"
+        data-tab="curriculum"
+        type="button"
+      >
+        Curriculum
+      </button>
+
+      <button
+        class="tab"
+        data-tab="trainer"
+        type="button"
+      >
+        Trainer
+      </button>
+
+      <button
+        class="tab"
+        data-tab="outcomes"
+        type="button"
+      >
+        Outcomes
+      </button>
+
+    </div>
+
+
+    <!-- =====================================
+         CURRICULUM
+    ====================================== -->
+
+    <div
+      class="tab-content active"
+      id="curriculum"
+    >
+
+      <div class="section-eyebrow">
+        WHAT YOU'LL LEARN
+      </div>
+
+      <h2 class="section-title">
+        Course Curriculum
+      </h2>
+
+
+      <div class="curriculum-list">
+
+
+        <div class="curriculum-row">
+
+          <div class="chapter-number">
+            01
+          </div>
+
+          <div class="chapter-name">
+            C Fundamentals
+          </div>
+
+          <div class="chapter-topics">
+            8 Topics
+          </div>
+
+        </div>
+
+
+        <div class="curriculum-row">
+
+          <div class="chapter-number">
+            02
+          </div>
+
+          <div class="chapter-name">
+            Variables &amp; Data Types
+          </div>
+
+          <div class="chapter-topics">
+            6 Topics
+          </div>
+
+        </div>
+
+
+        <div class="curriculum-row">
+
+          <div class="chapter-number">
+            03
+          </div>
+
+          <div class="chapter-name">
+            Operators &amp; Expressions
+          </div>
+
+          <div class="chapter-topics">
+            7 Topics
+          </div>
+
+        </div>
+
+
+        <div class="curriculum-row">
+
+          <div class="chapter-number">
+            04
+          </div>
+
+          <div class="chapter-name">
+            Conditional Statements
+          </div>
+
+          <div class="chapter-topics">
+            6 Topics
+          </div>
+
+        </div>
+
+
+        <div class="curriculum-row">
+
+          <div class="chapter-number">
+            05
+          </div>
+
+          <div class="chapter-name">
+            Loops &amp; Patterns
+          </div>
+
+          <div class="chapter-topics">
+            8 Topics
+          </div>
+
+        </div>
+
+
+        <div class="curriculum-row">
+
+          <div class="chapter-number">
+            06
+          </div>
+
+          <div class="chapter-name">
+            Functions
+          </div>
+
+          <div class="chapter-topics">
+            7 Topics
+          </div>
+
+        </div>
+
+
+        <div class="curriculum-row">
+
+          <div class="chapter-number">
+            07
+          </div>
+
+          <div class="chapter-name">
+            Arrays &amp; Strings
+          </div>
+
+          <div class="chapter-topics">
+            9 Topics
+          </div>
+
+        </div>
+
+
+        <div class="curriculum-row">
+
+          <div class="chapter-number">
+            08
+          </div>
+
+          <div class="chapter-name">
+            Pointers &amp; Structures
+          </div>
+
+          <div class="chapter-topics">
+            8 Topics
+          </div>
+
+        </div>
+
+
+      </div>
+
+    </div>
+
+
+    <!-- =====================================
+         TRAINER
+    ====================================== -->
+
+    <div
+      class="tab-content"
+      id="trainer"
+    >
+
+      <div class="section-eyebrow">
+        YOUR TRAINER
+      </div>
+
+      <h2 class="section-title">
+        Learn from people who build.
+      </h2>
+
+
+      <div class="trainer-block">
+
+        <div class="trainer-name">
+          TechLearn Solutions
+        </div>
+
+        <p class="trainer-description">
+          Learn through structured lessons, practical
+          examples, coding exercises, and placement-focused
+          practice designed to help you build strong
+          programming fundamentals.
+        </p>
+
+      </div>
+
+    </div>
+
+
+    <!-- =====================================
+         OUTCOMES
+    ====================================== -->
+
+    <div
+      class="tab-content"
+      id="outcomes"
+    >
+
+      <div class="section-eyebrow">
+        AFTER THIS COURSE
+      </div>
+
+      <h2 class="section-title">
+        What you'll be able to do.
+      </h2>
+
+
+      <div class="outcomes-grid">
+
+
+        <div class="outcome-card">
+
+          <div class="outcome-number">
+            01
+          </div>
+
+          <div class="outcome-title">
+            Write and understand basic C programs.
+          </div>
+
+        </div>
+
+
+        <div class="outcome-card">
+
+          <div class="outcome-number">
+            02
+          </div>
+
+          <div class="outcome-title">
+            Solve programming problems using core concepts.
+          </div>
+
+        </div>
+
+
+        <div class="outcome-card">
+
+          <div class="outcome-number">
+            03
+          </div>
+
+          <div class="outcome-title">
+            Build a strong foundation for DSA and placements.
+          </div>
+
+        </div>
+
+
+      </div>
+
+    </div>
+
+
+  </section>
+
+
+</main>
+
+
+<script>
+
+/* =========================================
+   ACCOUNT DROPDOWN
+========================================= */
+
+const account =
+  document.getElementById("account");
+
+const accountButton =
+  document.getElementById("accountButton");
+
+
+accountButton.addEventListener(
+  "click",
+  (event) => {
+
+    event.stopPropagation();
+
+    const isOpen =
+      account.classList.toggle("open");
+
+    accountButton.setAttribute(
+      "aria-expanded",
+      isOpen
+    );
+
+  }
+);
+
+
+/* =========================================
+   SWITCH AVATAR
+========================================= */
+
+const avatarButton =
+  document.getElementById("avatarButton");
+
+avatarButton.addEventListener(
+  "click",
+  (event) => {
+
+    event.stopPropagation();
+
+    console.log("Switch avatar");
+
+  }
+);
+
+
+/* =========================================
+   CLOSE ACCOUNT OUTSIDE
+========================================= */
+
+document.addEventListener(
+  "click",
+  (event) => {
+
+    if (!event.target.closest(".account")) {
+
+      account.classList.remove("open");
+
+      accountButton.setAttribute(
+        "aria-expanded",
+        "false"
+      );
+
+    }
+
+  }
+);
+
+
+/* =========================================
+   MOBILE MENU
+========================================= */
+
+const menuButton =
+  document.getElementById("menuButton");
+
+const mobileMenu =
+  document.getElementById("mobileMenu");
+
+
+menuButton.addEventListener(
+  "click",
+  (event) => {
+
+    event.stopPropagation();
+
+    const isOpen =
+      mobileMenu.classList.toggle("active");
+
+    menuButton.setAttribute(
+      "aria-expanded",
+      isOpen
+    );
+
+  }
+);
+
+
+/* =========================================
+   CLOSE MOBILE MENU AFTER LINK CLICK
+========================================= */
+
+const mobileLinks =
+  mobileMenu.querySelectorAll("a");
+
+
+mobileLinks.forEach(link => {
+
+  link.addEventListener(
+    "click",
+    () => {
+
+      mobileMenu.classList.remove("active");
+
+      menuButton.setAttribute(
+        "aria-expanded",
+        "false"
+      );
+
+    }
+
+  );
+
+});
+
+
+/* =========================================
+   CLOSE MOBILE MENU OUTSIDE
+========================================= */
+
+document.addEventListener(
+  "click",
+  (event) => {
+
+    if (!event.target.closest(".navbar")) {
+
+      mobileMenu.classList.remove("active");
+
+      menuButton.setAttribute(
+        "aria-expanded",
+        "false"
+      );
+
+    }
+
+  }
+);
+
+
+/* =========================================
+   TABS
+========================================= */
+
+const tabs =
+  document.querySelectorAll(".tab");
+
+const tabContents =
+  document.querySelectorAll(".tab-content");
+
+
+tabs.forEach(tab => {
+
+  tab.addEventListener(
+    "click",
+    () => {
+
+      const target =
+        tab.dataset.tab;
+
+
+      tabs.forEach(item => {
+
+        item.classList.remove("active");
+
+      });
+
+
+      tabContents.forEach(content => {
+
+        content.classList.remove("active");
+
+      });
+
+
+      tab.classList.add("active");
+
+      document
+        .getElementById(target)
+        .classList.add("active");
+
+    }
+
+  );
+
+});
+
+
+/* =========================================
+   COURSE START
+========================================= */
+
+const course = {
+
+  type: "free",
+
+  price: "₹799",
+
+  startUrl:
+    "courses/c-programming/notes.html"
+
+};
+
+
+const startButton =
+  document.getElementById("startButton");
+
+
+startButton.addEventListener(
+  "click",
+  () => {
+
+    window.location.href =
+      course.startUrl;
+
+  }
+);
+
+
+/* =========================================
+   LIGHT / DARK MODE
+========================================= */
+
+const themeToggle =
+  document.getElementById("themeToggle");
+
+const themeText =
+  document.getElementById("themeText");
+
+const themeIcon =
+  document.getElementById("themeIcon");
+
+
+function updateThemeButton() {
+
+  const isLight =
+    document.body.classList.contains(
+      "light-mode"
+    );
+
+
+  if (isLight) {
+
+    themeText.textContent =
+      "Dark mode";
+
+    themeIcon.textContent =
+      "◐";
+
+  } else {
+
+    themeText.textContent =
+      "Light mode";
+
+    themeIcon.textContent =
+      "☀";
+
+  }
+
+}
+
+
+themeToggle.addEventListener(
+  "click",
+  (event) => {
+
+    event.stopPropagation();
+
+    document.body.classList.toggle(
+      "light-mode"
+    );
+
+
+    const isLight =
+      document.body.classList.contains(
+        "light-mode"
+      );
+
+
+    localStorage.setItem(
+      "techlearn-theme",
+      isLight
+        ? "light"
+        : "dark"
+    );
+
+
+    updateThemeButton();
+
+  }
+);
+
+
+/* =========================================
+   RESTORE SAVED THEME
+========================================= */
+
+const savedTheme =
+  localStorage.getItem(
+    "techlearn-theme"
+  );
+
+
+if (savedTheme === "light") {
+
+  document.body.classList.add(
+    "light-mode"
+  );
+
+}
+
+
+updateThemeButton();
+
+</script>
+
+</body>
+</html>

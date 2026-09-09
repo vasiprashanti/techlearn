@@ -1,23 +1,19 @@
-import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  Clock, BookOpen, ArrowRight, Play,
-  CheckCircle, Lock, ChevronLeft
-} from "lucide-react";
 import ScrollProgress from "../../components/ScrollProgress";
 import LoadingScreen from "../../components/LoadingScreen";
 import { courseAPI } from "../../services/api";
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from "../../context/ThemeContext";
+import "../../styles/courseDetails.css";
 
 const CourseDetails = () => {
   const { theme } = useTheme();
   const { courseId } = useParams();
   const navigate = useNavigate();
 
-  const isDarkMode = theme === 'dark';
+  const isDarkMode = theme === "dark";
 
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("curriculum");
 
   // State for backend data
   const [course, setCourse] = useState(null);
@@ -36,52 +32,61 @@ const CourseDetails = () => {
 
         // Check if we have valid course data
         if (!backendCourse || !backendCourse._id) {
-          throw new Error('No valid course data received from backend');
+          throw new Error("No valid course data received from backend");
         }
-        
-        // The course title should be available directly
-        const courseTitle = backendCourse.title || 'Untitled Course';
 
-        // Keep the detail page driven by the course record. Do not invent
-        // duration, enrollment counts, ratings, instructors, or locked topics
-        // from the course title or from random values.
+        const courseTitle = backendCourse.title || "Untitled Course";
+
+        // Build enhanced course mapping with clean defaults
         const enhancedCourse = {
           ...backendCourse,
           id: backendCourse._id,
           title: courseTitle,
-          longDescription: backendCourse.description || 'Course details will be available soon.',
-          difficulty: backendCourse.level || 'Beginner',
-          duration: backendCourse.duration || (backendCourse.courseType === 'Trainer-led' ? 'Trainer-led' : 'Self-paced'),
-          lessons: backendCourse.topics?.length || 0,
-          courseType: backendCourse.courseType || 'Self-paced',
+          description:
+            backendCourse.description ||
+            "Build a strong programming foundation by learning through practical problem solving.",
+          difficulty: backendCourse.level || "Beginner",
+          duration:
+            backendCourse.duration ||
+            (backendCourse.courseType === "Trainer-led" ? "4 Weeks" : "Self-Paced"),
+          courseType: backendCourse.courseType || "Self-Paced",
           instructor: {
-            name: backendCourse.instructor || 'TechLearn team',
-            bio: backendCourse.courseType === 'Trainer-led'
-              ? 'Trainer-led learning provided through the published course schedule.'
-              : 'Self-paced learning material published by TechLearn.',
+            name: backendCourse.instructor || "TechLearn Solutions",
+            bio:
+              backendCourse.instructorBio ||
+              "Learn through structured lessons, practical examples, coding exercises, and placement-focused practice designed to help you build strong programming fundamentals.",
           },
-          curriculum: backendCourse.topics?.map((topic, index) => ({
-            id: index + 1,
-            title: topic.title,
-            lessons: topic.lessonCount || topic.lessons || 1,
-            duration: topic.duration || '',
-            topics: [topic.title],
-            completed: false,
-            locked: Boolean(topic.isLocked),
-            quizId: topic.quizId,
-            exerciseId: topic.exerciseId,
-            notesId: topic.notesId
-          })) || [],
-          prerequisites: Array.isArray(backendCourse.prerequisites) ? backendCourse.prerequisites : [],
-          learningOutcomes: Array.isArray(backendCourse.learningOutcomes) ? backendCourse.learningOutcomes : [],
-          tags: Array.isArray(backendCourse.tags) ? backendCourse.tags : []
+          curriculum:
+            backendCourse.topics?.map((topic, index) => {
+              const cleanTitle = (topic.title || "")
+                .replace(/^CORE\s+(\w+)\s+NOTES\s*[-–]\s*\d+$/i, "$1")
+                .replace(/^\d+\.\s*/, "")
+                .replace(/\s*[-–]\s*\d+$/, "") || `Module ${index + 1}`;
+              const topicCount = topic.lessonCount || topic.lessons || 1;
+
+              return {
+                id: topic._id || topic.id || index + 1,
+                number: String(index + 1).padStart(2, "0"),
+                name: cleanTitle,
+                topicsLabel: `${topicCount} Topic${topicCount === 1 ? "" : "s"}`,
+              };
+            }) || [],
+          learningOutcomes:
+            Array.isArray(backendCourse.learningOutcomes) &&
+            backendCourse.learningOutcomes.length > 0
+              ? backendCourse.learningOutcomes
+              : [
+                  `Write and understand core ${courseTitle} programs.`,
+                  "Solve programming problems using core concepts.",
+                  "Build a strong foundation for DSA and placements.",
+                ],
         };
 
         setCourse(enhancedCourse);
         setError(null);
-      } catch (error) {
-        console.error('Error fetching course:', error);
-        setError(error.message);
+      } catch (err) {
+        console.error("Error fetching course:", err);
+        setError(err.message);
         setCourse(null);
       } finally {
         setLoading(false);
@@ -104,237 +109,196 @@ const CourseDetails = () => {
 
   if (error || !course) {
     return (
-      <div className={`flex min-h-full w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
-         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
-        <div className="flex-1 flex flex-col items-center justify-center relative z-10">
-          <div className="dashboard-surface p-12 text-center">
-            <h1 className="dashboard-page-title mb-4">{error ? 'Error Loading Course' : 'Course Not Found'}</h1>
-            {error && <p className="text-sm text-red-500 mb-6">{error}</p>}
-            <button onClick={() => navigate('/learn')} className="text-[10px] uppercase tracking-widest text-[#3C83F6] hover:underline">
-              Back to Learn
-            </button>
-          </div>
+      <div
+        className={`course-details-page ${
+          isDarkMode ? "dark-mode" : "light-mode"
+        } flex min-h-screen items-center justify-center`}
+      >
+        <div className="page text-center py-20">
+          <h1 className="course-title mb-4">
+            {error ? "Error Loading Course" : "Course Not Found"}
+          </h1>
+          {error && <p className="course-description mb-6 mx-auto">{error}</p>}
+          <button
+            onClick={() => navigate("/learn")}
+            className="start-button mx-auto"
+            type="button"
+          >
+            <span>BACK TO LEARN</span>
+            <span className="button-arrow">←</span>
+          </button>
         </div>
       </div>
     );
   }
-
-  const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "curriculum", label: "Curriculum" },
-    { id: "instructor", label: "Instructor" }
-  ];
 
   const handleStartCourse = () => {
     navigate(`/learn/courses/${courseId}/topics`);
   };
 
   return (
-    <div className={`flex min-h-full w-full min-w-0 overflow-x-clip font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+    <div
+      className={`course-details-page ${
+        isDarkMode ? "dark-mode" : "light-mode"
+      }`}
+    >
       <ScrollProgress />
-      
-      {/* Unified Background */}
-      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
 
-      <main className="flex-1 min-w-0 transition-all duration-700 ease-in-out z-10 pt-24 md:pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-x-clip">
-        <div className="max-w-[1600px] mx-auto space-y-8">
-          
-          {/* Top Header */}
-          <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
-            <div className="flex flex-col items-start gap-4">
-              <button 
-                onClick={() => navigate('/learn')} 
-                className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-semibold text-[#4d6f9c] hover:text-[#2d7fe8] dark:text-[#7fb9e6] dark:hover:text-[#96ddff] transition-colors group"
-              >
-                <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                <span>Back to Learn</span>
-              </button>
-              <div>
-                <h1 className="dashboard-page-title">
-                  Course Details
-                </h1>
-                <p className="dashboard-page-subtitle mt-2">
-                  Explore the curriculum
-                </p>
+      <main className="page">
+        {/* =======================================
+             HERO
+        ======================================== */}
+        <section className="hero">
+          <div className="hero-left">
+            <div className="course-type">COURSE</div>
+
+            <h1 className="course-title">{course.title}</h1>
+
+            <p className="course-description">{course.description}</p>
+
+            <div className="trainer">
+              By <strong>{course.instructor.name}</strong>
+            </div>
+
+            {/* COURSE META */}
+            <div className="course-meta">
+              <div className="meta-item">
+                <span className="meta-label">Duration</span>
+                <span className="meta-value">{course.duration}</span>
+              </div>
+
+              <div className="meta-item">
+                <span className="meta-label">Mode</span>
+                <span className="meta-value">{course.courseType}</span>
+              </div>
+
+              <div className="meta-item">
+                <span className="meta-label">Level</span>
+                <span className="meta-value">{course.difficulty}</span>
               </div>
             </div>
-          </header>
 
-          {/* Hero Section */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="dashboard-surface p-8 md:p-12 relative overflow-hidden">
-            <div className="relative z-10 max-w-4xl">
-              <div className="flex items-center gap-4 mb-6">
-                <span className="text-[9px] uppercase tracking-widest px-3 py-1 bg-[#dff1ff] dark:bg-[#0d366f] rounded-full text-[#4f719c] dark:text-[#8ac7f3] border border-[#9fd3ff]/60 dark:border-[#79c5ff]/40 font-medium">
-                  {course.difficulty}
-                </span>
-              </div>
-
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tight text-[#0d2a57] dark:text-[#8fd9ff] mb-6 leading-tight">
-                {course.title}
-              </h1>
-              
-              <p className="text-base md:text-lg text-[#4c6f9a] dark:text-[#7fb8e2] mb-10 leading-relaxed font-light max-w-3xl">
-                {course.longDescription}
-              </p>
-
-              <div className="flex flex-wrap gap-8 text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] mb-10 border-y border-[#9fcfff]/45 dark:border-[#6bb8ec]/35 py-6">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee]" />
-                  <span>{course.duration}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee]" />
-                  <span>{course.lessons} lessons</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee]" />
-                  <span>Public preview</span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleStartCourse}
-                className="dashboard-primary-btn w-full sm:w-auto px-8 py-4 flex items-center justify-center gap-3 group"
-              >
-                <Play className="w-4 h-4" />
-                <span>Start Learning</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
-          </motion.div>
-
-          {/* Tabs Section */}
-          <div className="mt-12">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="flex gap-8 mb-10 border-b border-[#9fcfff]/45 dark:border-[#6bb8ec]/35 overflow-x-auto pb-px [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            {/* START BUTTON */}
+            <button
+              className="start-button"
+              id="startButton"
+              type="button"
+              onClick={handleStartCourse}
             >
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`pb-4 text-[10px] uppercase tracking-widest font-medium transition-all duration-300 border-b-2 whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? "border-[#3C83F6] dark:border-[#8fd9ff] text-[#2d7fe8] dark:text-[#8fd9ff]"
-                      : "border-transparent text-[#4d6f9c] dark:text-[#7fb9e6] hover:text-[#2d7fe8] dark:hover:text-[#96ddff]"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </motion.div>
+              <span>START FOR FREE</span>
+              <span className="button-arrow">→</span>
+            </button>
+          </div>
+        </section>
 
-            {/* Tab Content */}
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="min-h-[400px]"
+        {/* =======================================
+             TABS
+        ======================================== */}
+        <section className="tabs-section">
+          <div className="tabs">
+            <button
+              className={`tab ${activeTab === "curriculum" ? "active" : ""}`}
+              data-tab="curriculum"
+              type="button"
+              onClick={() => setActiveTab("curriculum")}
             >
-              {activeTab === "overview" && (
-                <div className="grid md:grid-cols-2 gap-8 md:gap-16">
-                  <div className="dashboard-surface p-8">
-                    <h3 className="text-xl font-medium text-[#0d2a57] dark:text-[#8fd9ff] mb-8">
-                      What you'll learn
-                    </h3>
-                    <ul className="space-y-4">
-                      {course.learningOutcomes.length ? course.learningOutcomes.map((outcome, index) => (
-                        <li key={index} className="flex items-start gap-4 text-sm text-[#4c6f9a] dark:text-[#7fb8e2] font-light leading-relaxed">
-                          <CheckCircle className="w-5 h-5 text-[#4f7fb7] dark:text-[#7cc3ee] flex-shrink-0" />
-                          <span>{outcome}</span>
-                        </li>
-                      )) : <li className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">No learning outcomes have been published for this course yet.</li>}
-                    </ul>
-                  </div>
-                  
-                  <div className="dashboard-surface p-8 h-fit">
-                    <h3 className="text-xl font-medium text-[#0d2a57] dark:text-[#8fd9ff] mb-8">
-                      Prerequisites
-                    </h3>
-                    <ul className="space-y-4">
-                      {course.prerequisites.length ? course.prerequisites.map((prereq, index) => (
-                        <li key={index} className="flex items-center gap-4 text-sm text-[#4c6f9a] dark:text-[#7fb8e2] font-light">
-                          <div className="w-1.5 h-1.5 bg-[#4f7fb7] dark:bg-[#7cc3ee] rounded-full flex-shrink-0" />
-                          <span>{prereq}</span>
-                        </li>
-                      )) : <li className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">No prerequisites have been published.</li>}
-                    </ul>
-                  </div>
-                </div>
-              )}
+              Curriculum
+            </button>
 
-              {activeTab === "curriculum" && (
-                <div className="space-y-6">
-                  {course.curriculum.map((module, index) => (
-                    <div
-                      key={module.id}
-                      className="dashboard-surface rounded-2xl p-6 md:p-8 transition-all hover:-translate-y-0.5 group"
-                    >
-                      <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 mb-6">
-                        <div className="flex min-w-0 items-center gap-4 sm:gap-5">
-                          <div className="w-10 h-10 bg-[#dbf1ff] dark:bg-[#0d366f] rounded-xl border border-[#9fd3ff]/60 dark:border-[#79c5ff]/40 flex items-center justify-center text-[#3C83F6] dark:text-[#8fd9ff] font-medium text-sm group-hover:scale-105 transition-transform">
-                            {index + 1}
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] mb-1">
-                              {module.title}
-                            </h4>
-                            <p className="text-[10px] uppercase tracking-widest text-[#4d6f9c] dark:text-[#7fb9e6]">
-                               {module.lessons} topic{module.lessons === 1 ? '' : 's'}{module.duration ? ` • ${module.duration}` : ''}
-                            </p>
-                          </div>
-                        </div>
-                        {module.locked ? (
-                          <Lock className="w-5 h-5 text-[#6f8fb8] dark:text-[#6fbfff]" />
-                        ) : (
-                          <CheckCircle className="w-5 h-5 text-[#4f7fb7] dark:text-[#7cc3ee]" />
-                        )}
-                      </div>
-                      
-                      <ul className="space-y-3 ml-8 sm:ml-14 border-l border-[#9fcfff]/45 dark:border-[#6bb8ec]/35 pl-4 sm:pl-5">
-                        {module.topics.map((topic, topicIndex) => (
-                          <li key={topicIndex} className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2] font-light relative before:absolute before:-left-[25px] before:top-1/2 before:-translate-y-1/2 before:w-2 before:h-px before:bg-[#9fcfff]/60 dark:before:bg-[#6bb8ec]/55">
-                            {topic}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <button
+              className={`tab ${activeTab === "trainer" ? "active" : ""}`}
+              data-tab="trainer"
+              type="button"
+              onClick={() => setActiveTab("trainer")}
+            >
+              Trainer
+            </button>
 
-              {activeTab === "instructor" && (
-                <div className="dashboard-surface p-8 md:p-12 max-w-3xl">
-                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8">
-                    <div className="w-24 h-24 bg-[#3c83f6] rounded-full flex items-center justify-center flex-shrink-0 shadow-lg border-4 border-[#d9efff] dark:border-[#0d366f]">
-                      <span className="text-3xl font-medium text-[#082a5d]">
-                        {course.instructor.name.charAt(0)}
-                      </span>
-                    </div>
-                    <div className="flex-1 text-center sm:text-left">
-                      <h3 className="text-2xl font-medium text-[#0d2a57] dark:text-[#8fd9ff] mb-3">
-                        {course.instructor.name}
-                      </h3>
-                      <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2] mb-6 leading-relaxed font-light">
-                        {course.instructor.bio}
-                      </p>
-                        <div className="dashboard-inner-surface flex flex-wrap justify-center sm:justify-start gap-6 text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] p-4 rounded-xl w-fit">
-                          <div className="flex items-center gap-2">
-                            <BookOpen className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee]" />
-                            <span>{course.courseType}</span>
-                          </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </motion.div>
+            <button
+              className={`tab ${activeTab === "outcomes" ? "active" : ""}`}
+              data-tab="outcomes"
+              type="button"
+              onClick={() => setActiveTab("outcomes")}
+            >
+              Outcomes
+            </button>
           </div>
 
-        </div>
+          {/* =====================================
+               CURRICULUM
+          ====================================== */}
+          <div
+            className={`tab-content ${
+              activeTab === "curriculum" ? "active" : ""
+            }`}
+            id="curriculum"
+          >
+            <div className="section-eyebrow">WHAT YOU'LL LEARN</div>
+
+            <h2 className="section-title">Course Curriculum</h2>
+
+            <div className="curriculum-list">
+              {course.curriculum.length > 0 ? (
+                course.curriculum.map((item) => (
+                  <div className="curriculum-row" key={item.id}>
+                    <div className="chapter-number">{item.number}</div>
+                    <div className="chapter-name">{item.name}</div>
+                    <div className="chapter-topics">{item.topicsLabel}</div>
+                  </div>
+                ))
+              ) : (
+                <div className="curriculum-row">
+                  <div className="chapter-number">01</div>
+                  <div className="chapter-name">Foundations & Concepts</div>
+                  <div className="chapter-topics">Available in Course</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* =====================================
+               TRAINER
+          ====================================== */}
+          <div
+            className={`tab-content ${activeTab === "trainer" ? "active" : ""}`}
+            id="trainer"
+          >
+            <div className="section-eyebrow">YOUR TRAINER</div>
+
+            <h2 className="section-title">Learn from people who build.</h2>
+
+            <div className="trainer-block">
+              <div className="trainer-name">{course.instructor.name}</div>
+
+              <p className="trainer-description">{course.instructor.bio}</p>
+            </div>
+          </div>
+
+          {/* =====================================
+               OUTCOMES
+          ====================================== */}
+          <div
+            className={`tab-content ${
+              activeTab === "outcomes" ? "active" : ""
+            }`}
+            id="outcomes"
+          >
+            <div className="section-eyebrow">AFTER THIS COURSE</div>
+
+            <h2 className="section-title">What you'll be able to do.</h2>
+
+            <div className="outcomes-grid">
+              {course.learningOutcomes.map((outcome, index) => (
+                <div className="outcome-card" key={index}>
+                  <div className="outcome-number">
+                    {String(index + 1).padStart(2, "0")}
+                  </div>
+                  <div className="outcome-title">{outcome}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );
