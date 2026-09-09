@@ -20,7 +20,11 @@ export default function Navbar() {
   const accountRef = useRef(null);
   const mobileMenuRef = useRef(null);
 
-  const [isOverDarkSection, setIsOverDarkSection] = useState(false);
+  // The landing page opens on the dark hero section. Initialize this state
+  // from the route so the navbar is visible before the lazy-loaded hero mounts.
+  const [isOverDarkSection, setIsOverDarkSection] = useState(
+    () => location.pathname === '/' || isDarkMode
+  );
 
   useEffect(() => {
     const checkDarkSection = () => {
@@ -44,7 +48,9 @@ export default function Navbar() {
       // If we are not on the landing page (no sections found), fallback to current theme
       const hasSections = document.querySelectorAll('#start, #problem, #journey, #results, #pricing, #faqs, #start-program').length > 0;
       if (!hasSections) {
-        setIsOverDarkSection(isDarkMode);
+        // HomePage is lazy-loaded, so its hero may not exist on the first
+        // navbar check. The landing route always opens over the dark hero.
+        setIsOverDarkSection(location.pathname === '/' || isDarkMode);
       } else {
         setIsOverDarkSection(isOverDark);
       }

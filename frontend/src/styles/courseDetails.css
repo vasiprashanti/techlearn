@@ -1,0 +1,504 @@
+/* =========================================
+   TECHLEARN COURSE DETAILS STYLES
+   Exact implementation from coursedetail.html
+========================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap');
+
+/* Default (Dark Mode) */
+.course-details-page {
+  --bg-start: #04103d;
+  --bg-mid: #06134d;
+  --bg-end: #0b1d61;
+
+  --navy: #ffffff;
+  --page-text: #ffffff;
+
+  --text: rgba(255, 255, 255, 0.72);
+  --muted: rgba(255, 255, 255, 0.48);
+
+  --border: rgba(255, 255, 255, 0.10);
+
+  --lime: #b5e959;
+  --lime-hover: #c5f477;
+
+  --dropdown-bg: rgba(4, 16, 61, 0.98);
+
+  --card-bg: rgba(255, 255, 255, 0.035);
+
+  --font: "Inter", sans-serif;
+  --pixel: "Press Start 2P", cursive;
+
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(
+    135deg,
+    var(--bg-start) 0%,
+    var(--bg-mid) 45%,
+    var(--bg-end) 100%
+  );
+  color: var(--page-text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.25s ease, color 0.25s ease;
+  position: relative;
+  padding-top: 72px; /* space for fixed navbar */
+}
+
+/* Light Mode */
+.course-details-page.light-mode {
+  --bg-start: #e8f8ff;
+  --bg-mid: #d9f2ff;
+  --bg-end: #c0e9ff;
+
+  --navy: #050a5b;
+  --page-text: #07102f;
+
+  --text: rgba(7, 16, 47, 0.72);
+  --muted: rgba(7, 16, 47, 0.48);
+
+  --border: rgba(7, 16, 47, 0.10);
+
+  --lime: #8dd035;
+  --lime-hover: #a2d354;
+
+  --dropdown-bg: rgba(255, 255, 255, 0.98);
+
+  --card-bg: rgba(255, 255, 255, 0.24);
+}
+
+/* =========================================
+   PAGE CONTAINER
+========================================= */
+
+.course-details-page .page {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 10px 80px;
+}
+
+/* =========================================
+   COURSE HERO
+========================================= */
+
+.course-details-page .hero {
+  min-height: 470px;
+  display: flex;
+  align-items: center;
+  padding: 55px 0 65px;
+}
+
+.course-details-page .hero-left {
+  max-width: 780px;
+}
+
+/* =========================================
+   COURSE TYPE
+========================================= */
+
+.course-details-page .course-type {
+  display: inline-block;
+  font-family: var(--pixel);
+  font-size: 10px;
+  line-height: 1.6;
+  color: #ebf8ff;
+  margin-bottom: 18px;
+  opacity: 0.65;
+}
+
+.course-details-page.light-mode .course-type {
+  color: var(--navy);
+}
+
+/* =========================================
+   COURSE TITLE
+========================================= */
+
+.course-details-page .course-title {
+  font-size: clamp(42px, 5.3vw, 58px);
+  line-height: 1.02;
+  font-weight: 700;
+  letter-spacing: -3.4px;
+  color: var(--navy);
+  max-width: 800px;
+  margin-bottom: 22px;
+}
+
+/* =========================================
+   DESCRIPTION
+========================================= */
+
+.course-details-page .course-description {
+  max-width: 680px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--navy);
+  opacity: 0.72;
+  margin-bottom: 22px;
+}
+
+/* =========================================
+   TRAINER
+========================================= */
+
+.course-details-page .trainer {
+  font-size: 12px;
+  color: var(--navy);
+  opacity: 0.78;
+  margin-bottom: 22px;
+}
+
+.course-details-page .trainer strong {
+  font-weight: 700;
+}
+
+/* =========================================
+   COURSE META
+========================================= */
+
+.course-details-page .course-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-bottom: 24px;
+}
+
+.course-details-page .meta-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  padding-right: 19px;
+  margin-right: 19px;
+  border-right: 1px solid var(--border);
+}
+
+.course-details-page .meta-item:last-child {
+  border-right: none;
+  margin-right: 0;
+  padding-right: 0;
+}
+
+.course-details-page .meta-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.5;
+}
+
+.course-details-page .meta-value {
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+/* =========================================
+   START BUTTON
+========================================= */
+
+.course-details-page .start-button {
+  display: flex;
+  min-width: 210px;
+  width: auto;
+  padding: 0 24px;
+  height: 48px;
+  margin-top: 30px;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  border: none;
+  border-radius: 20px;
+  background: var(--lime);
+  color: #07101b;
+  font-family: var(--pixel);
+  font-size: 9px;
+  line-height: 1.5;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(5, 10, 91, 0.12);
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  text-decoration: none;
+}
+
+.course-details-page .start-button:hover {
+  background: var(--lime-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(5, 10, 91, 0.16);
+}
+
+.course-details-page .button-arrow {
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1;
+}
+
+/* =========================================
+   TABS SECTION
+========================================= */
+
+.course-details-page .tabs-section {
+  border-top: 1px solid var(--border);
+  margin-top: 5px;
+}
+
+.course-details-page .tabs {
+  height: 68px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  border-bottom: 1px solid var(--border);
+}
+
+.course-details-page .tab {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  position: relative;
+  border: none;
+  background: transparent;
+  color: var(--navy);
+  opacity: 0.45;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font);
+  transition: opacity 0.2s ease;
+}
+
+.course-details-page .tab.active {
+  opacity: 1;
+}
+
+.course-details-page .tab.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 3px;
+  background: var(--lime);
+  border-radius: 3px 3px 0 0;
+}
+
+/* =========================================
+   TAB CONTENT
+========================================= */
+
+.course-details-page .tab-content {
+  display: none;
+  padding: 42px 0 20px;
+}
+
+.course-details-page .tab-content.active {
+  display: block;
+}
+
+/* =========================================
+   SECTION EYEBROW
+========================================= */
+
+.course-details-page .section-eyebrow {
+  font-family: var(--pixel);
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--navy);
+  opacity: 0.55;
+  margin-bottom: 15px;
+}
+
+/* =========================================
+   SECTION TITLE
+========================================= */
+
+.course-details-page .section-title {
+  font-size: 30px;
+  line-height: 1.15;
+  letter-spacing: -1.2px;
+  font-weight: 800;
+  color: var(--navy);
+  margin-bottom: 30px;
+}
+
+/* =========================================
+   CURRICULUM
+========================================= */
+
+.course-details-page .curriculum-list {
+  width: 100%;
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 40px;
+}
+
+.course-details-page .curriculum-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.course-details-page .curriculum-row {
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 50px 1fr;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 0;
+}
+
+.course-details-page .chapter-number {
+  font-family: var(--pixel);
+  font-size: 7px;
+  color: var(--navy);
+  opacity: 0.45;
+}
+
+.course-details-page .chapter-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.35;
+}
+
+/* =========================================
+   TRAINER
+========================================= */
+
+.course-details-page .trainer-block {
+  max-width: 680px;
+}
+
+.course-details-page .trainer-name {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.6px;
+  margin-bottom: 12px;
+}
+
+.course-details-page .trainer-description {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--navy);
+  opacity: 0.68;
+}
+
+/* =========================================
+   OUTCOMES
+========================================= */
+
+.course-details-page .outcomes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.course-details-page .outcome-card {
+  min-height: 150px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card-bg);
+}
+
+.course-details-page .outcome-number {
+  font-family: var(--pixel);
+  font-size: 7px;
+  color: var(--navy);
+  opacity: 0.45;
+  margin-bottom: 20px;
+}
+
+.course-details-page .outcome-title {
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+/* =========================================
+   RESPONSIVE MEDIA QUERIES
+========================================= */
+
+@media (max-width: 760px) {
+  .course-details-page .page {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .course-details-page .hero {
+    min-height: auto;
+    padding: 60px 0 65px;
+  }
+
+  .course-details-page .course-title {
+    font-size: clamp(40px, 12vw, 58px);
+    letter-spacing: -2.5px;
+  }
+
+  .course-details-page .course-description {
+    font-size: 14px;
+  }
+
+  .course-details-page .course-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .course-details-page .meta-item {
+    border-right: none;
+    margin-right: 0;
+    padding-right: 0;
+  }
+
+  .course-details-page .start-button {
+    width: 205px;
+  }
+
+  .course-details-page .tabs {
+    gap: 24px;
+  }
+
+  .course-details-page .tab {
+    font-size: 11px;
+  }
+
+  .course-details-page .tab-content {
+    padding-top: 34px;
+  }
+
+  .course-details-page .section-title {
+    font-size: 36px;
+  }
+
+  .course-details-page .curriculum-list {
+    grid-template-columns: 1fr;
+    column-gap: 0;
+  }
+
+  .course-details-page .curriculum-row {
+    grid-template-columns: 45px 1fr;
+    gap: 12px;
+    padding: 8px 0;
+    min-height: 44px;
+  }
+
+  .course-details-page .outcomes-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 380px) {
+  .course-details-page .page {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .course-details-page .tabs {
+    gap: 18px;
+  }
+}

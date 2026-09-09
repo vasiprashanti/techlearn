@@ -263,7 +263,7 @@ function LayoutWrapper() {
             top: 0,
             left: 0,
             right: 0,
-            background: isDarkMode ? '#080d25' : '#bceaff',
+            background: 'transparent',
           }}
         >
           <Link to="/" aria-label="TechLearn home" className="absolute left-[23px] top-[14px]">
