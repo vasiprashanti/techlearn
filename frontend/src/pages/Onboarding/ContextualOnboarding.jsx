@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
 import API from "../../api/client";
+import { courseAPI, dataAdapters } from "../../services/api";
 
 const STORAGE_KEY = "techlearn-contextual-onboarding";
 const MAX_COMPANIES = 3;
@@ -102,6 +103,71 @@ const skillLevelCards = [
   ["Advanced", "def circle(size):", "I've built programs and want to go further."],
 ];
 
+const COURSE_TOPIC_ID_OVERRIDES = {
+  'c': '6890c2acbc09eb4b5c346b9b',
+  'c programming': '6890c2acbc09eb4b5c346b9b',
+  'introduction to c': '6890c2acbc09eb4b5c346b9b',
+  'python': '6890ec81950225df57310f52',
+  'python programming': '6890ec81950225df57310f52',
+  'java': '6890f09830551d88a325f623',
+  'java programming': '6890f09830551d88a325f623',
+  'core java': '6890f09830551d88a325f623',
+  'java (core)': '6890f09830551d88a325f623',
+};
+
+const normalizeCourseKey = (value = '') => value.toString().trim().toLowerCase();
+
+const HIDDEN_COURSE_KEYS = new Set([
+  '6995d2d6576b86926b74cc71',
+  '6a0f089f28624d4a125064b0',
+  'test course',
+  'phase 2 course',
+  'phase two course',
+]);
+
+const isUserVisibleCourse = (course) => {
+  const courseKeys = [
+    course?.title,
+    course?.id,
+    course?._id,
+    course?.courseId,
+  ].map(normalizeCourseKey);
+
+  return !courseKeys.some((key) => HIDDEN_COURSE_KEYS.has(key));
+};
+
+const getCourseTopicsId = (course) => {
+  if (!course) return '';
+  return (
+    COURSE_TOPIC_ID_OVERRIDES[normalizeCourseKey(course.title)] ||
+    COURSE_TOPIC_ID_OVERRIDES[normalizeCourseKey(course.id)] ||
+    course.id ||
+    course._id
+  );
+};
+
+const getCourseImage = (course) => {
+  if (!course) return '/python.jpg';
+  if (course.image) return course.image;
+  if (course.bannerImage) return course.bannerImage;
+  const t = (course.title || '').toLowerCase();
+  if (t.includes('genai') || t.includes('generative ai')) return '/genai.jpg';
+  if (t.includes('aptitude') || t.includes('quantitative') || t.includes('reasoning')) return '/aptitude.jpg';
+  if (t.includes('fullstack') || t.includes('full stack') || t.includes('full-stack')) return '/java-fullstack.jpg';
+  if (t.includes('java') && !t.includes('javascript')) return '/java.jpg';
+  if (t.includes('python')) return '/python.jpg';
+  if (t.includes('c programming') || t === 'c' || t.startsWith('c ')) return '/c-programming.jpg';
+  return '/python.jpg';
+};
+
+const mockFallbackCourses = [
+  { id: "6890c2acbc09eb4b5c346b9b", title: "C Programming", description: "Master the fundamentals of C programming and memory concepts", status: "available", image: "/c-programming.jpg", price: "Free" },
+  { id: "6890ec81950225df57310f52", title: "Python Programming", description: "Learn Python programming from basics to advanced concepts", status: "available", image: "/python.jpg", price: "Free" },
+  { id: "6890f09830551d88a325f623", title: "Java Programming", description: "Master Java programming and object-oriented concepts", status: "available", image: "/java.jpg", price: "Free" },
+  { id: "dsa", title: "Data Structures & Algorithms", description: "Master DSA concepts for coding interviews and problem solving", status: "available", image: "/dsa.png", price: "Free" },
+  { id: "mysql", title: "MySQL Database", description: "Learn database design, queries, and management with MySQL", status: "available", image: "/mysql.png", price: "Free" }
+];
+
 function SkillOnboardingFlow() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
@@ -147,11 +213,68 @@ function SkillOnboardingFlow() {
   const finish = async () => {
     setLoading(true); setError("");
     try {
-      const response = await API.get("/api/programs/public");
-      const catalog = response.data?.programs || [];
+      const [programsRes, backendCoursesRes] = await Promise.allSettled([
+        API.get("/api/programs/public"),
+        courseAPI.getAllCourses(),
+      ]);
+
+      const catalog = programsRes.status === "fulfilled" ? (programsRes.value?.data?.programs || []) : [];
       setPrograms(catalog);
-      const match = findMatch(catalog);
-      setResult(match || { matchType: "none" });
+
+      let availableCourses = mockFallbackCourses;
+      if (backendCoursesRes.status === "fulfilled" && Array.isArray(backendCoursesRes.value)) {
+        const adapted = backendCoursesRes.value
+          .map((c) => dataAdapters.adaptCourse(c))
+          .filter(isUserVisibleCourse);
+        if (adapted.length > 0) {
+          availableCourses = adapted;
+        }
+      }
+
+      // Match against course catalog first
+      const normalizedSkill = requestedSkill.toLowerCase();
+      const directCourseMatch = availableCourses.find((c) => {
+        const title = (c.title || "").toLowerCase();
+        return (
+          title === normalizedSkill ||
+          title.includes(normalizedSkill) ||
+          normalizedSkill.includes(title) ||
+          (normalizedSkill === "c" && (title === "c programming" || title.startsWith("c ")))
+        );
+      });
+
+      const programMatch = findMatch(catalog);
+
+      if (directCourseMatch) {
+        setResult({
+          matchedCourse: directCourseMatch,
+          program: programMatch?.program || null,
+          programMode: programMatch?.programMode || "Self-Paced",
+          matchType: "exact",
+        });
+      } else if (programMatch) {
+        // Find attached course if available, or fallback to first matching course
+        const attachedCourse = programMatch.program?.courseIds?.[0] || availableCourses[0];
+        const adaptedAttached = attachedCourse && typeof attachedCourse === "object"
+          ? (attachedCourse.title ? attachedCourse : dataAdapters.adaptCourse(attachedCourse))
+          : availableCourses[0];
+
+        setResult({
+          ...programMatch,
+          matchedCourse: adaptedAttached || availableCourses[0],
+        });
+      } else if (availableCourses.length > 0) {
+        // Fallback closest recommendation
+        setResult({
+          matchedCourse: availableCourses[0],
+          program: null,
+          programMode: "Self-Paced",
+          matchType: "closest",
+        });
+      } else {
+        setResult({ matchType: "none" });
+      }
+
       setStep(5);
     } catch (requestError) {
       setError(requestError.response?.data?.message || "Could not find a matching program.");
@@ -745,159 +868,254 @@ function SkillOnboardingFlow() {
           transform: none !important;
         }
 
-        /* Recommendation Match Card */
+        /* Recommendation Match Card (Exact Learn Page Course Card) */
         .tl-skill-rec-container {
           display: flex;
           justify-content: center;
           width: 100%;
-          margin-top: 10px;
+          margin-top: 4px;
         }
 
-        .tl-skill-card {
+        .tl-learn-card {
           width: 100%;
-          max-width: 380px;
-          background: var(--card-white);
-          border-radius: 20px;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+          max-width: 360px;
+          margin-left: auto;
+          margin-right: auto;
+          background: #ffffff;
+          border-radius: 28px;
           overflow: hidden;
-          border: 1px solid #eaeaea;
+          box-shadow: 0 12px 35px rgba(3, 4, 50, 0.08);
+          position: relative;
           display: flex;
           flex-direction: column;
-          transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.25s ease;
+          transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+          text-align: left;
+          cursor: pointer;
           box-sizing: border-box;
         }
 
-        .tl-skill-page-wrapper.dark-mode .tl-skill-card {
-          border-color: var(--card-border);
-        }
-
-        .tl-skill-card:hover {
+        .tl-learn-card:hover {
           transform: translateY(-4px);
-          box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 20px 45px rgba(3, 4, 50, 0.12);
         }
 
-        .tl-skill-card-banner {
+        .tl-skill-page-wrapper.dark-mode .tl-learn-card {
+          background: #0b1238;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+        }
+
+        .tl-skill-page-wrapper.dark-mode .tl-learn-card:hover {
+          box-shadow: 0 24px 55px rgba(0, 0, 0, 0.38);
+          border-color: rgba(137, 198, 56, 0.18);
+        }
+
+        .tl-card-banner {
+          position: relative;
+          height: 180px;
+          overflow: hidden;
+          background: #0d1117;
+        }
+
+        .tl-card-banner-bg {
+          position: absolute;
+          inset: -10px;
+          background-size: cover;
+          background-position: center;
+          filter: blur(8px) brightness(0.6);
+        }
+
+        .tl-card-banner img {
           position: relative;
           width: 100%;
-          height: 180px;
-          background-color: #2d2d2d;
-          background-image: radial-gradient(circle at 50% 50%, #3a3a3a 0%, #1a1a1a 100%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          height: 100%;
+          display: block;
+          object-fit: contain;
+          z-index: 1;
+          transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        .tl-skill-banner-badge-top {
+        .tl-learn-card:hover .tl-card-banner img {
+          transform: scale(1.04);
+        }
+
+        .tl-category-badge {
           position: absolute;
-          top: 16px;
-          right: 16px;
-          background-color: #fdf0a6;
-          color: #111111;
-          font-size: 13px;
-          font-weight: 600;
-          padding: 6px 14px;
+          top: 14px;
+          right: 14px;
+          padding: 6px 11px;
+          background: rgba(255, 255, 255, 0.94);
+          color: #02107a;
           border-radius: 20px;
+          font-size: 10px;
+          font-weight: 800;
           text-transform: uppercase;
           letter-spacing: 0.5px;
-        }
-
-        .tl-skill-card-logo {
-          position: absolute;
-          bottom: -20px;
-          left: 20px;
-          width: 56px;
-          height: 56px;
-          background-color: #ffffff;
-          border-radius: 14px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-          font-size: 28px;
-          font-weight: 800;
-          color: #00599c;
+          box-shadow: 0 4px 12px rgba(3, 4, 50, 0.08);
+          backdrop-filter: blur(10px);
           z-index: 2;
         }
 
-        .tl-skill-card-body {
-          padding: 30px 20px 18px 20px;
+        .tl-skill-page-wrapper.dark-mode .tl-category-badge {
+          background: rgba(5, 11, 46, 0.88);
+          color: #ffffff;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+        }
+
+        .tl-card-content {
+          background: #ffffff;
+          padding: 16px 20px 16px;
+          border-top-right-radius: 28px;
+          margin-top: -12px;
+          position: relative;
+          flex: 1;
           display: flex;
           flex-direction: column;
-          gap: 10px;
-          text-align: left;
+          z-index: 1;
         }
 
-        .tl-skill-title-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 12px;
+        .tl-skill-page-wrapper.dark-mode .tl-card-content {
+          background: #0b1238;
         }
 
-        .tl-skill-card-title {
-          font-size: 20px;
-          font-weight: 700;
-          color: var(--white);
-          line-height: 1.25;
-          margin: 0;
-        }
-
-        .tl-skill-tag-badge {
-          border: 1px solid #e0e0e0;
-          color: var(--white);
-          font-size: 13px;
-          font-weight: 600;
-          padding: 4px 10px;
-          border-radius: 8px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          white-space: nowrap;
-        }
-
-        .tl-skill-page-wrapper.dark-mode .tl-skill-tag-badge {
-          border-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .tl-skill-card-description {
-          font-size: 13px;
-          color: var(--muted-light);
-          line-height: 1.45;
-          margin: 0;
-        }
-
-        .tl-skill-divider {
-          height: 1px;
-          background-color: #eeeeee;
-          margin: 4px 0;
-        }
-
-        .tl-skill-page-wrapper.dark-mode .tl-skill-divider {
-          background-color: var(--card-border);
-        }
-
-        .tl-skill-pricing-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: baseline;
-        }
-
-        .tl-skill-price-main {
-          font-size: 26px;
-          font-weight: 800;
-          color: var(--white);
-        }
-
-        .tl-skill-price-subtext {
-          font-size: 12px;
-          color: var(--muted);
+        .tl-card-title {
+          font-size: 18px;
+          font-weight: 750;
+          color: #02107a;
           margin-top: 2px;
+          margin-bottom: 0;
+          line-height: 1.25;
+          letter-spacing: -0.5px;
+          display: -webkit-box;
+          -webkit-line-clamp: 1;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
 
-        .tl-skill-trainer-badge {
-          font-family: "Press Start 2P", monospace;
+        .tl-skill-page-wrapper.dark-mode .tl-card-title {
+          color: #ffffff;
+        }
+
+        .tl-card-description {
+          font-size: 12px;
+          color: #02107a;
+          line-height: 1.5;
+          margin-top: 8px;
+          margin-bottom: 12px;
+          min-height: 36px;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .tl-skill-page-wrapper.dark-mode .tl-card-description {
+          color: #ffffff;
+        }
+
+        .tl-content-divider {
+          width: 100%;
+          height: 1px;
+          background: rgba(2, 16, 122, 0.12);
+          margin-bottom: 12px;
+          margin-top: auto;
+        }
+
+        .tl-skill-page-wrapper.dark-mode .tl-content-divider {
+          background: rgba(255, 255, 255, 0.12);
+        }
+
+        .tl-card-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .tl-price {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          font-size: 20px;
+          font-weight: 800;
+          color: #89c638;
+          letter-spacing: -0.7px;
+          display: inline-flex;
+          align-items: baseline;
+          line-height: 1;
+          transform: translateY(-4px);
+          transition: color 0.25s ease;
+        }
+
+        .tl-price-type {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          margin-left: 4px;
           font-size: 9px;
-          color: var(--lime);
-          letter-spacing: 0.5px;
+          font-weight: 600;
+          color: #89c638;
+          transition: color 0.25s ease;
+        }
+
+        .tl-start-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          color: #89c638;
+          text-decoration: none;
+          font-size: 12.5px;
+          font-weight: 700;
+          letter-spacing: -0.1px;
+          transition: color 0.25s ease, gap 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .tl-start-link .tl-arrow {
+          font-size: 16px;
+          font-weight: 400;
+          line-height: 1;
+          color: #89c638;
+          transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), color 0.25s ease;
+        }
+
+        .tl-learn-card:hover .tl-start-link {
+          color: #02107a;
+          gap: 9px;
+        }
+
+        .tl-learn-card:hover .tl-start-link .tl-arrow {
+          color: #02107a;
+          transform: translateX(3px);
+        }
+
+        .tl-skill-page-wrapper.dark-mode .tl-learn-card:hover .tl-start-link {
+          color: #ffffff;
+          gap: 9px;
+        }
+
+        .tl-skill-page-wrapper.dark-mode .tl-learn-card:hover .tl-start-link .tl-arrow {
+          color: #ffffff;
+          transform: translateX(3px);
+        }
+
+        /* Step 5 Viewport Fitting Constraints */
+        .tl-skill-step-5 .tl-skill-screen-body {
+          padding-bottom: 95px;
+        }
+
+        .tl-skill-step-5 .tl-skill-eyebrow {
+          margin-top: 4px;
+          margin-bottom: 12px;
+        }
+
+        .tl-skill-step-5 h1 {
+          font-size: clamp(24px, 2.2vw, 36px);
+          margin-bottom: 12px;
+          line-height: 1.15;
+        }
+
+        .tl-skill-step-5 .tl-skill-mismatch-notice {
+          margin-bottom: 12px;
+        }
+
+        .tl-skill-step-5 .tl-skill-mismatch-notice span {
+          font-size: 13px;
         }
 
         /* Saved Box (No Program Found) */
@@ -1362,7 +1580,7 @@ function SkillOnboardingFlow() {
           </div>
         ) : (
           /* Step 5: Recommendation / Match Screen */
-          <div className="tl-skill-screen">
+          <div className="tl-skill-screen tl-skill-step-5">
             <div className="tl-skill-screen-body">
               <div className="tl-skill-eyebrow">YOUR MATCH</div>
 
@@ -1374,7 +1592,7 @@ function SkillOnboardingFlow() {
                 )}
               </h1>
 
-              {/* Mismatch Warning Notice */}
+              {/* Mismatch Warning Notice - only show if there is no exact match */}
               {result?.matchType === "closest" && (
                 <div className="tl-skill-mismatch-notice">
                   <span>We couldn’t find a Perfect Match but here’s what we found for you</span>
@@ -1395,55 +1613,89 @@ function SkillOnboardingFlow() {
                       : `${requestedSkill} Requested`}
                   </div>
                 </div>
-              ) : (
-                <div className="tl-skill-rec-container">
-                  <div className="tl-skill-card">
-                    {/* Top Image/Banner */}
-                    <div className="tl-skill-card-banner">
-                      <div className="tl-skill-banner-badge-top">
-                        YOUR MATCH
-                      </div>
-                      <div className="tl-skill-card-logo">
-                        {requestedSkill ? requestedSkill.charAt(0).toUpperCase() : "S"}
-                      </div>
-                    </div>
+              ) : (() => {
+                const displayCourse = result?.matchedCourse || {
+                  id: "course",
+                  title: result?.program?.name || `${requestedSkill} Programming`,
+                  description: result?.program?.description || `Learn ${requestedSkill} through structured lessons, practice, challenges, and projects.`,
+                  image: getCourseImage({ title: requestedSkill }),
+                  price: result?.program?.price ? `₹${result.program.price}` : "Free",
+                };
 
-                    {/* Main Content Body */}
-                    <div className="tl-skill-card-body">
-                      <div className="tl-skill-title-row">
-                        <h2 className="tl-skill-card-title">
-                          {result?.program?.name || `${requestedSkill} Programming`}
+                const rupee = '\u20B9';
+                const rawPrice = displayCourse.price;
+                const isFree = !rawPrice || rawPrice === 'Free' || String(rawPrice).toLowerCase() === 'free';
+                const displayPrice = isFree
+                  ? 'Free'
+                  : rawPrice !== 'Coming Soon'
+                  ? (String(rawPrice).includes('1499') || String(rawPrice).includes('399') ? `${rupee}${String(rawPrice).replace(/[^\d]/g, '')}` : rawPrice)
+                  : `${rupee}399`;
+
+                const handleCardClick = () => {
+                  const topicId = getCourseTopicsId(displayCourse);
+                  if (topicId) {
+                    navigate(`/learn/courses/${topicId}`);
+                  } else if (result?.program?._id) {
+                    startProgram();
+                  } else {
+                    navigate("/learn/courses");
+                  }
+                };
+
+                return (
+                  <div className="tl-skill-rec-container">
+                    <div
+                      className="tl-learn-card"
+                      onClick={handleCardClick}
+                    >
+                      {/* IMAGE */}
+                      <div className="tl-card-banner">
+                        <div
+                          className="tl-card-banner-bg"
+                          style={{ backgroundImage: `url(${getCourseImage(displayCourse)})` }}
+                        />
+                        <img
+                          src={getCourseImage(displayCourse)}
+                          alt={displayCourse.title}
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = '/c-programming.jpg';
+                          }}
+                        />
+                        <div className="tl-category-badge">
+                          Skill
+                        </div>
+                      </div>
+
+                      {/* CONTENT */}
+                      <div className="tl-card-content">
+                        <h2 className="tl-card-title">
+                          {displayCourse.title}
                         </h2>
-                        <span className="tl-skill-tag-badge">SKILL</span>
-                      </div>
 
-                      <p className="tl-skill-card-description">
-                        {result?.program?.description ||
-                          `Learn ${requestedSkill} through structured lessons, practice, challenges, and projects.`}
-                      </p>
+                        <p className="tl-card-description">
+                          {displayCourse.description}
+                        </p>
 
-                      <div className="tl-skill-divider" />
+                        <div className="tl-content-divider"></div>
 
-                      {result?.programMode === "Trainer-Led" ? (
-                        <div className="tl-skill-trainer-badge">
-                          TRAINER-LED PROGRAM
-                        </div>
-                      ) : (
-                        <div className="tl-skill-pricing-row">
-                          <div>
-                            <div className="tl-skill-price-main">
-                              {result?.program?.price ? `₹${result.program.price}` : "₹399"}
-                            </div>
-                            <div className="tl-skill-price-subtext">
-                              One-time payment · 1 year access
-                            </div>
+                        {/* FOOTER */}
+                        <div className="tl-card-footer">
+                          <div className="tl-price">
+                            {displayPrice}
+                            {!isFree && <span className="tl-price-type">/ Year</span>}
                           </div>
+
+                          <span className="tl-start-link">
+                            Start Now
+                            <span className="tl-arrow">→</span>
+                          </span>
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
 
             {/* Recommendation Screen Actions */}
@@ -1464,9 +1716,16 @@ function SkillOnboardingFlow() {
                 onClick={
                   result?.matchType === "none"
                     ? () => navigate("/learn/courses")
-                    : result?.programMode === "Trainer-Led" && !result?.program?.isPublished
-                    ? joinWaitlist
-                    : startProgram
+                    : () => {
+                        const courseId = getCourseTopicsId(result?.matchedCourse);
+                        if (courseId) {
+                          navigate(`/learn/courses/${courseId}`);
+                        } else if (result?.programMode === "Trainer-Led" && !result?.program?.isPublished) {
+                          joinWaitlist();
+                        } else {
+                          startProgram();
+                        }
+                      }
                 }
               >
                 {result?.matchType === "none"
