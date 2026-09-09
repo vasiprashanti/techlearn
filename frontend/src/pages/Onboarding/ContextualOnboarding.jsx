@@ -119,7 +119,6 @@ function SkillOnboardingFlow() {
   const [error, setError] = useState("");
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [feedbackReason, setFeedbackReason] = useState("");
-  const [feedbackOther, setFeedbackOther] = useState("");
   const requestedSkill = (skill === "Other" ? customSkill : skill).trim();
 
   const findMatch = (catalog) => {
@@ -170,10 +169,6 @@ function SkillOnboardingFlow() {
     setStep((current) => current + 1);
   };
   const goBack = () => {
-    if (step === 4) {
-      setIsFeedbackOpen(true);
-      return;
-    }
     if (step === 1) {
       navigate("/");
     } else {
@@ -182,9 +177,13 @@ function SkillOnboardingFlow() {
   };
 
   const handleFeedbackExit = () => {
+    if (!feedbackReason) {
+      setError("Please select an option before submitting.");
+      return;
+    }
     try {
       const feedbackData = {
-        reason: feedbackReason === "Other" ? feedbackOther : feedbackReason,
+        reason: feedbackReason,
         skill: requestedSkill,
         goal,
         level,
@@ -659,22 +658,24 @@ function SkillOnboardingFlow() {
 
         /* Mismatch Notice */
         .tl-skill-mismatch-notice {
-          background: rgba(255, 180, 0, 0.12);
-          border: 1px solid rgba(255, 180, 0, 0.35);
-          border-radius: 10px;
-          padding: 10px 14px;
-          margin-bottom: 12px;
-          font-size: 11.5px;
-          line-height: 1.4;
-          color: var(--white);
+          background: none;
+          border: none;
+          border-radius: 0;
+          padding: 0;
+          margin-bottom: 24px;
+          text-align: center;
+          max-width: 560px;
+          margin-left: auto;
+          margin-right: auto;
         }
 
-        .tl-skill-mismatch-notice strong {
+        .tl-skill-mismatch-notice span {
           display: block;
-          font-family: "Press Start 2P", monospace;
-          font-size: 8px;
-          margin-bottom: 4px;
-          color: var(--lime);
+          font-family: inherit;
+          font-size: 14px;
+          font-weight: 500;
+          color: rgba(255, 255, 255, 0.85);
+          line-height: 1.5;
         }
 
         /* Actions */
@@ -979,32 +980,28 @@ function SkillOnboardingFlow() {
 
         /* Before You Go Exit Feedback Screen Sizing (Laptops and Tablets) */
         .tl-skill-feedback-screen .tl-skill-eyebrow {
-          margin-top: 6px;
-          margin-bottom: 12px;
+          margin-top: 14px;
+          margin-bottom: 22px;
         }
 
         .tl-skill-feedback-screen h1 {
-          font-size: clamp(24px, 2.2vw, 36px);
-          margin-bottom: 16px;
+          font-size: clamp(30px, 2.5vw, 46px);
+          line-height: 1.1;
+          letter-spacing: -1.4px;
+          margin-bottom: 36px;
         }
 
         .tl-skill-feedback-screen .tl-skill-chips-50centered {
-          gap: 9px;
+          gap: 16px;
         }
 
         .tl-skill-feedback-screen .tl-skill-chips-50centered .tl-skill-chip {
           width: 78%;
-          max-width: 460px;
-          min-height: 42px;
-          font-size: 13.5px;
-          padding: 8px 14px;
-          border-radius: 9px;
-        }
-
-        .tl-skill-feedback-screen .tl-skill-other-textarea {
-          height: 60px;
-          font-size: 12.5px;
-          padding: 8px 12px;
+          max-width: 480px;
+          min-height: 52px;
+          font-size: 14.5px;
+          padding: 12px 18px;
+          border-radius: 10px;
         }
 
         /* Media Queries */
@@ -1030,25 +1027,20 @@ function SkillOnboardingFlow() {
             font-size: 15.5px;
             padding: 14px 20px;
           }
-          /* Keep Before You Go compact on tablets so it does not get cut off */
+          /* Keep Before You Go heading same as other steps on tablets with ample option spacing */
           .tl-skill-feedback-screen h1 {
-            font-size: clamp(24px, 2.8vw, 34px);
-            margin-bottom: 14px;
+            font-size: clamp(34px, 3.2vw, 48px);
+            margin-bottom: 32px;
           }
           .tl-skill-feedback-screen .tl-skill-chips-50centered {
-            gap: 8px;
+            gap: 15px;
           }
           .tl-skill-feedback-screen .tl-skill-chips-50centered .tl-skill-chip {
             width: 85%;
-            max-width: 480px;
-            min-height: 42px !important;
-            font-size: 13.5px !important;
-            padding: 8px 14px !important;
-          }
-          .tl-skill-feedback-screen .tl-skill-other-textarea {
-            height: 56px;
-            font-size: 12.5px;
-            padding: 8px 12px;
+            max-width: 500px;
+            min-height: 52px !important;
+            font-size: 15px !important;
+            padding: 12px 18px !important;
           }
           .tl-skill-chip {
             font-size: 14px;
@@ -1114,6 +1106,18 @@ function SkillOnboardingFlow() {
             font-size: 0.72rem;
             line-height: 1.25;
           }
+          .tl-skill-feedback-screen h1 {
+            font-size: clamp(30px, 2.5vw, 46px);
+            margin-bottom: 28px;
+          }
+          .tl-skill-feedback-screen .tl-skill-chips-50centered {
+            gap: 14px;
+          }
+          .tl-skill-feedback-screen .tl-skill-chips-50centered .tl-skill-chip {
+            min-height: 48px;
+            font-size: 13px;
+            padding: 11px 12px;
+          }
           .tl-skill-btn {
             height: 46px;
             font-size: 8px;
@@ -1161,7 +1165,6 @@ function SkillOnboardingFlow() {
                     "I couldn't find what I was looking for",
                     "I need more information",
                     "I'm just exploring",
-                    "Other",
                   ].map((item) => (
                     <button
                       key={item}
@@ -1176,22 +1179,9 @@ function SkillOnboardingFlow() {
                     </button>
                   ))}
                 </div>
-
-                {feedbackReason === "Other" && (
-                  <div className="tl-skill-other-wrapper" style={{ width: "85%", maxWidth: "520px", margin: "14px auto 0" }}>
-                    <label
-                      className="tl-skill-field-label"
-                      style={{ fontSize: 14, marginBottom: 8 }}
-                    >
-                      Tell us more
-                    </label>
-                    <textarea
-                      className="tl-skill-other-textarea"
-                      placeholder="Tell us what you're looking for..."
-                      value={feedbackOther}
-                      onChange={(e) => setFeedbackOther(e.target.value)}
-                      autoFocus
-                    />
+                {error && (
+                  <div className="tl-skill-error-text" style={{ textAlign: "center", marginTop: 12, color: "var(--danger)" }}>
+                    {error}
                   </div>
                 )}
               </div>
@@ -1201,17 +1191,20 @@ function SkillOnboardingFlow() {
             <div className="tl-skill-actions">
               <button
                 type="button"
-                className="tl-skill-btn tl-skill-btn-back"
+                className="tl-skill-btn tl-skill-btn-primary"
                 onClick={handleFeedbackExit}
               >
-                EXIT
+                SUBMIT
               </button>
               <button
                 type="button"
-                className="tl-skill-btn tl-skill-btn-primary"
-                onClick={() => setIsFeedbackOpen(false)}
+                className="tl-skill-btn tl-skill-btn-back"
+                onClick={() => {
+                  setError("");
+                  setIsFeedbackOpen(false);
+                }}
               >
-                CONTINUE ONBOARDING
+                CANCEL
               </button>
             </div>
           </div>
@@ -1384,14 +1377,7 @@ function SkillOnboardingFlow() {
               {/* Mismatch Warning Notice */}
               {result?.matchType === "closest" && (
                 <div className="tl-skill-mismatch-notice">
-                  <strong>CLOSEST MATCH AVAILABLE</strong>
-                  <span>
-                    {learningMode !== "ANY" && result?.programMode && result.programMode !== learningMode
-                      ? `You selected ${learningMode.toLowerCase()} learning. This program is currently ${result.programMode.toLowerCase()}.`
-                      : result?.program?.level && result.program.level !== level
-                      ? `The available program is currently designed for ${result.program.level.toLowerCase()}s.`
-                      : "This is the closest program to your preferences."}
-                  </span>
+                  <span>We couldn’t find a Perfect Match but here’s what we found for you</span>
                 </div>
               )}
 
@@ -1465,9 +1451,12 @@ function SkillOnboardingFlow() {
               <button
                 type="button"
                 className="tl-skill-btn tl-skill-btn-back"
-                onClick={() => setStep(1)}
+                onClick={() => {
+                  setError("");
+                  setIsFeedbackOpen(true);
+                }}
               >
-                CHANGE
+                BACK
               </button>
               <button
                 type="button"
