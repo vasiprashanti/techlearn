@@ -61,20 +61,17 @@ const reviewsData = [
   {
     quote: "“The daily plan made my preparation much less overwhelming.”",
     name: "Ananya K.",
-    role: "College Student · Placement Program",
-    avatar: "AK"
+    role: "College Student · Placement Program"
   },
   {
-    quote: "“I finally knew what I was supposed to study every day instead of jumping between random resources.”",
-    name: "Tanvika V.",
-    role: "College Student · Placement Program",
-    avatar: "TV"
+    quote: "“A great learning experience. The daily practice, regular exams, and well-organized notes helped me improve consistently. The dashboard made tracking progress simple and motivating.”",
+    name: "Kaladhar Bandari",
+    role: "College Student · Placement Program"
   },
   {
-    quote: "“The company-focused questions helped me feel much more confident before my interview.”",
-    name: "Rahul S.",
-    role: "College Student · Placement Program",
-    avatar: "RS"
+    quote: "“TechLearn Solutions has been a great help in my placement journey. The well-curated DSA and SQL content is perfect for both beginners and those looking to strengthen their skills.”",
+    name: "Varshitha Reddy",
+    role: "College Student · Placement Program"
   }
 ]
 
@@ -353,9 +350,6 @@ const HomePage = () => {
           <div className="tl-results-header">
             <div className="tl-results-eyebrow">FROM STUDENTS</div>
             <h2>What they think.</h2>
-            <p>
-              Students who trained with our placement roadmaps share their journey and success.
-            </p>
           </div>
 
           <div className="tl-review-carousel">
@@ -376,9 +370,6 @@ const HomePage = () => {
                       {review.quote}
                     </div>
                     <div className="tl-review-student">
-                      <div className="tl-review-avatar">
-                        {review.avatar}
-                      </div>
                       <div>
                         <strong>{review.name}</strong>
                         <span>{review.role}</span>
@@ -389,16 +380,6 @@ const HomePage = () => {
               })}
             </div>
 
-            <div className="tl-review-dots">
-              {reviewsData.map((_, idx) => (
-                <button
-                  key={idx}
-                  className={`tl-review-dot ${idx === currentReview ? 'active' : ''}`}
-                  onClick={() => setCurrentReview(idx)}
-                  aria-label={`Show review ${idx + 1}`}
-                />
-              ))}
-            </div>
           </div>
         </div>
       </section>
