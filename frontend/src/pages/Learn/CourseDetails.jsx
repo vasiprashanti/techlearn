@@ -239,18 +239,38 @@ const CourseDetails = () => {
 
             <div className="curriculum-list">
               {course.curriculum.length > 0 ? (
-                course.curriculum.map((item) => (
-                  <div className="curriculum-row" key={item.id}>
-                    <div className="chapter-number">{item.number}</div>
-                    <div className="chapter-name">{item.name}</div>
-                    <div className="chapter-topics">{item.topicsLabel}</div>
-                  </div>
-                ))
+                (() => {
+                  const mid = Math.ceil(course.curriculum.length / 2);
+                  const col1 = course.curriculum.slice(0, mid);
+                  const col2 = course.curriculum.slice(mid);
+
+                  return (
+                    <>
+                      <div className="curriculum-col">
+                        {col1.map((item) => (
+                          <div className="curriculum-row" key={item.id}>
+                            <div className="chapter-number">{item.number}</div>
+                            <div className="chapter-name">{item.name}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="curriculum-col">
+                        {col2.map((item) => (
+                          <div className="curriculum-row" key={item.id}>
+                            <div className="chapter-number">{item.number}</div>
+                            <div className="chapter-name">{item.name}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()
               ) : (
-                <div className="curriculum-row">
-                  <div className="chapter-number">01</div>
-                  <div className="chapter-name">Foundations & Concepts</div>
-                  <div className="chapter-topics">Available in Course</div>
+                <div className="curriculum-col">
+                  <div className="curriculum-row">
+                    <div className="chapter-number">01</div>
+                    <div className="chapter-name">Foundations & Concepts</div>
+                  </div>
                 </div>
               )}
             </div>

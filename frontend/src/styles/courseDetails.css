@@ -327,16 +327,24 @@
 .course-details-page .curriculum-list {
   width: 100%;
   border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 40px;
+}
+
+.course-details-page .curriculum-col {
+  display: flex;
+  flex-direction: column;
 }
 
 .course-details-page .curriculum-row {
-  min-height: 72px;
+  min-height: 48px;
   display: grid;
-  grid-template-columns: 70px 1fr 100px;
+  grid-template-columns: 50px 1fr;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   border-bottom: 1px solid var(--border);
-  padding: 12px 0;
+  padding: 10px 0;
 }
 
 .course-details-page .chapter-number {
@@ -350,13 +358,7 @@
   font-size: 14px;
   font-weight: 700;
   color: var(--navy);
-}
-
-.course-details-page .chapter-topics {
-  font-size: 10px;
-  color: var(--navy);
-  opacity: 0.55;
-  text-align: right;
+  line-height: 1.35;
 }
 
 /* =========================================
@@ -471,16 +473,16 @@
     font-size: 36px;
   }
 
-  .course-details-page .curriculum-row {
-    grid-template-columns: 55px 1fr;
-    gap: 12px;
+  .course-details-page .curriculum-list {
+    grid-template-columns: 1fr;
+    column-gap: 0;
   }
 
-  .course-details-page .chapter-topics {
-    grid-column: 2;
-    text-align: left;
-    margin-top: -18px;
-    padding-bottom: 16px;
+  .course-details-page .curriculum-row {
+    grid-template-columns: 45px 1fr;
+    gap: 12px;
+    padding: 8px 0;
+    min-height: 44px;
   }
 
   .course-details-page .outcomes-grid {
