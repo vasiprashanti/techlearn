@@ -42,11 +42,31 @@ const CourseDetails = () => {
             ? `${topicsCount} Day${topicsCount === 1 ? "" : "s"}`
             : backendCourse.duration || "Self-Paced";
 
+        const coursePrice = backendCourse.price ?? backendCourse.pricing ?? backendCourse.programFee ?? "";
+        const isFree =
+          !coursePrice ||
+          coursePrice === 0 ||
+          coursePrice === "0" ||
+          coursePrice === "Free" ||
+          String(coursePrice).toLowerCase() === "free" ||
+          backendCourse.pricingType === "Free";
+
+        let startButtonText = "START FOR FREE";
+        if (!isFree) {
+          const formattedPrice = String(coursePrice).startsWith("₹")
+            ? coursePrice
+            : `₹${coursePrice}`;
+          startButtonText = `START FOR ${formattedPrice}`;
+        }
+
         // Build enhanced course mapping with clean defaults
         const enhancedCourse = {
           ...backendCourse,
           id: backendCourse._id,
           title: courseTitle,
+          price: coursePrice,
+          isFree,
+          startButtonText,
           description:
             backendCourse.description ||
             "Build a strong programming foundation by learning through practical problem solving.",
@@ -188,7 +208,7 @@ const CourseDetails = () => {
               type="button"
               onClick={handleStartCourse}
             >
-              <span>START FOR FREE</span>
+              <span>{course.startButtonText || "START FOR FREE"}</span>
               <span className="button-arrow">→</span>
             </button>
           </div>

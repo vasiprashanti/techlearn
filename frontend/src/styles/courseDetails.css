@@ -201,12 +201,14 @@
 
 .course-details-page .start-button {
   display: flex;
-  width: 210px;
+  min-width: 210px;
+  width: auto;
+  padding: 0 24px;
   height: 48px;
   margin-top: 30px;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: 16px;
   border: none;
   border-radius: 20px;
   background: var(--lime);

@@ -531,8 +531,11 @@ export default function Courses() {
                     .filter(course => course.courseType !== 'Trainer-led')
                     .map((course) => {
                       const rupee = '\u20B9';
-                      const rawPrice = course.price || '';
-                      const displayPrice = rawPrice && rawPrice !== 'Free' && rawPrice !== 'Coming Soon'
+                      const rawPrice = course.price;
+                      const isFree = !rawPrice || rawPrice === 'Free' || String(rawPrice).toLowerCase() === 'free';
+                      const displayPrice = isFree
+                        ? 'Free'
+                        : rawPrice !== 'Coming Soon'
                         ? (rawPrice.includes('1499') || rawPrice.includes('399') ? `${rupee}${rawPrice.replace(/[^\d]/g, '')}` : rawPrice)
                         : `${rupee}399`;
 
@@ -585,7 +588,7 @@ export default function Courses() {
                               <div className="tl-card-footer">
                                 <div className="tl-price">
                                   {displayPrice}
-                                  <span className="tl-price-type">/ Year</span>
+                                  {!isFree && <span className="tl-price-type">/ Year</span>}
                                 </div>
 
                                 <span className="tl-start-link">
