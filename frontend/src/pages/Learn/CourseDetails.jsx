@@ -36,6 +36,11 @@ const CourseDetails = () => {
         }
 
         const courseTitle = backendCourse.title || "Untitled Course";
+        const topicsCount = backendCourse.topics?.length || 0;
+        const dynamicDuration =
+          topicsCount > 0
+            ? `${topicsCount} Day${topicsCount === 1 ? "" : "s"}`
+            : backendCourse.duration || "Self-Paced";
 
         // Build enhanced course mapping with clean defaults
         const enhancedCourse = {
@@ -46,9 +51,7 @@ const CourseDetails = () => {
             backendCourse.description ||
             "Build a strong programming foundation by learning through practical problem solving.",
           difficulty: backendCourse.level || "Beginner",
-          duration:
-            backendCourse.duration ||
-            (backendCourse.courseType === "Trainer-led" ? "4 Weeks" : "Self-Paced"),
+          duration: dynamicDuration,
           courseType: backendCourse.courseType || "Self-Paced",
           instructor: {
             name: backendCourse.instructor || "TechLearn Solutions",

@@ -1535,7 +1535,8 @@ export default function ContextualOnboarding() {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [feedbackReason, setFeedbackReason] = useState("");
 
-  const [saving, setSaving] = useState(false);
+  const [savingPlan, setSavingPlan] = useState(null); // 'placement' | 'free_assessment' | null
+  const [savingFeedback, setSavingFeedback] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -1632,7 +1633,7 @@ export default function ContextualOnboarding() {
   const finish = async (selectedPlan = "placement") => {
     const payload = buildPayload(selectedPlan);
     try {
-      setSaving(true);
+      setSavingPlan(selectedPlan);
       setError("");
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ intent, ...payload }));
 
@@ -1704,7 +1705,7 @@ export default function ContextualOnboarding() {
     } catch (saveError) {
       setError(saveError.response?.data?.message || saveError.message || "Could not save your preferences.");
     } finally {
-      setSaving(false);
+      setSavingPlan(null);
     }
   };
 
@@ -1771,7 +1772,7 @@ export default function ContextualOnboarding() {
       return;
     }
 
-    setSaving(true);
+    setSavingFeedback(true);
     setError("");
     try {
       const feedbackData = {
@@ -1801,7 +1802,7 @@ export default function ContextualOnboarding() {
       // is temporarily unavailable; do not block the visitor from leaving.
       console.warn("Could not persist contextual exit feedback:", feedbackError);
     } finally {
-      setSaving(false);
+      setSavingFeedback(false);
     }
     navigate("/");
   };
@@ -2223,8 +2224,8 @@ export default function ContextualOnboarding() {
           padding-right: 4px;
         }
 
-        .tl-plan-screen .tl-plan-description,
-        .tl-plan-screen p.tl-plan-description {
+        .tl-plan-screen .tl-plan-screen-subtitle,
+        .tl-plan-screen p.tl-plan-screen-subtitle {
           display: block !important;
           visibility: visible !important;
           font-size: 14px;
@@ -2232,6 +2233,17 @@ export default function ContextualOnboarding() {
           color: var(--muted-light);
           margin-top: -16px;
           margin-bottom: 20px !important;
+        }
+
+        .tl-plan-card .tl-plan-description,
+        .tl-plan-card p.tl-plan-description {
+          display: block !important;
+          visibility: visible !important;
+          font-size: 11.5px;
+          line-height: 1.4;
+          color: var(--muted-light);
+          margin-top: 0 !important;
+          margin-bottom: 10px !important;
         }
 
         .tl-plans {
@@ -2394,14 +2406,15 @@ export default function ContextualOnboarding() {
           justify-content: center;
         }
 
-        .tl-plan-cta:hover {
+        .tl-plan-cta:hover:not(:disabled) {
           background: var(--lime-hover);
           transform: translateY(-1px);
         }
 
-        .tl-plan-cta:hover {
-          background: var(--lime-hover);
-          transform: translateY(-1px);
+        .tl-plan-cta:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          transform: none;
         }
 
         .tl-feedback-screen {
@@ -2579,9 +2592,9 @@ export default function ContextualOnboarding() {
                 type="button"
                 className="tl-btn tl-btn-primary"
                 onClick={handleFeedbackSubmit}
-                disabled={saving}
+                disabled={savingFeedback}
               >
-                {saving ? "SAVING..." : "SUBMIT"}
+                {savingFeedback ? "SAVING..." : "SUBMIT"}
               </button>
             </div>
           </section>
@@ -2850,7 +2863,7 @@ export default function ContextualOnboarding() {
                 <h1 className="tl-title">
                   Here's your <i>plan.</i>
                 </h1>
-                <p className="tl-description tl-plan-description">
+                <p className="tl-description tl-plan-screen-subtitle">
                   {intent === "skill"
                     ? "Start with our core learning track or unlock full project mastery."
                     : "Start with a focused assessment or go all in with the complete TechLearn placement program."}
@@ -2904,10 +2917,10 @@ export default function ContextualOnboarding() {
                     <button
                       type="button"
                       className="tl-plan-cta"
-                      disabled={saving}
+                      disabled={savingPlan !== null}
                       onClick={() => finish("placement")}
                     >
-                      {saving ? "SAVING..." : "START NOW →"}
+                      START NOW →
                     </button>
                   </article>
 
@@ -2955,10 +2968,10 @@ export default function ContextualOnboarding() {
                     <button
                       type="button"
                       className="tl-plan-cta"
-                      disabled={saving}
+                      disabled={savingPlan !== null}
                       onClick={() => finish("free_assessment")}
                     >
-                      {saving ? "SAVING..." : "START FREE →"}
+                      START FREE →
                     </button>
                   </article>
                 </div>
