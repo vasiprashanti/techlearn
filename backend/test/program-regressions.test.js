@@ -7,6 +7,14 @@ import { resolveProgramPrimaryCourseId, isProgramPrimaryCourseMappingValid } fro
 import { getProgramTypeQueryValues, normalizeProgramType } from "../utils/programTypeNormalization.js";
 import { upsertProgramEnrollment } from "../utils/programEnrollment.js";
 import { isProgramAccessibleToLearner } from "../utils/programVisibility.js";
+import {
+  buildPublicCourseConditions,
+  hasPublicFreeProgramLink,
+} from "../utils/courseVisibility.js";
+import {
+  isCompletedProgramSchedule,
+  isProgramResourceLocked,
+} from "../utils/programSchedule.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const id = () => new mongoose.Types.ObjectId();
@@ -104,5 +112,35 @@ test("an explicit individual enrollment grants access to a private Program", () 
   assert.equal(isProgramAccessibleToLearner({
     program: { status: "Active", visibility: "Private" },
     enrollment: { status: "Active", batchId: null },
+  }), true);
+});
+
+test("courses linked from a public free Program remain discoverable with legacy batch references", () => {
+  const publicCourseId = id();
+  const conditions = buildPublicCourseConditions([publicCourseId]);
+
+  assert.equal(conditions.length, 3);
+  assert.deepEqual(conditions[2], { _id: { $in: [publicCourseId] } });
+  assert.equal(hasPublicFreeProgramLink([
+    { visibility: "Public", pricingType: "Free" },
+  ]), true);
+});
+
+test("completed program resources bypass the active day lock", () => {
+  const completedSchedule = {
+    isCompleted: true,
+    enrollment: { status: "Completed" },
+  };
+
+  assert.equal(isCompletedProgramSchedule(completedSchedule), true);
+  assert.equal(isProgramResourceLocked({
+    resourceDay: 30,
+    currentDay: 1,
+    schedule: completedSchedule,
+  }), false);
+  assert.equal(isProgramResourceLocked({
+    resourceDay: 2,
+    currentDay: 1,
+    schedule: { isCompleted: false },
   }), true);
 });

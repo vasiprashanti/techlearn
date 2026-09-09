@@ -3,15 +3,24 @@ import Course from "../models/Course.js";
 import Student from "../models/Student.js";
 import Topic from "../models/Topic.js";
 import Program from "../models/Program.js";
-import { calculateProgramDayNumber } from "../utils/programSchedule.js";
-import { assertProgramScheduleAccess, resolveProgramSchedule } from "../utils/programSchedule.js";
+import {
+  assertProgramScheduleAccess,
+  calculateProgramDayNumber,
+  isCompletedProgramSchedule,
+  isProgramResourceLocked,
+  resolveProgramSchedule,
+} from "../utils/programSchedule.js";
 import { getTopicDayNumber } from "../utils/courseTopicSchedule.js";
 import { resolveProgramPrimaryCourseId } from "../utils/programPrimaryCourse.js";
 import { getProgramTypeQueryValues } from "../utils/programTypeNormalization.js";
 
-const buildTopicPayload = (topic, index, currentDay, courseId) => {
+const buildTopicPayload = (topic, index, currentDay, courseId, unlockAll = false) => {
   const day = getTopicDayNumber(topic, index);
-  const isLocked = day > currentDay;
+  const isLocked = isProgramResourceLocked({
+    resourceDay: day,
+    currentDay,
+    schedule: unlockAll ? { isCompleted: true } : null,
+  });
   const hasNotes = Boolean(topic.notesId);
   return {
     day,
@@ -21,7 +30,7 @@ const buildTopicPayload = (topic, index, currentDay, courseId) => {
     slug: topic.slug,
     notesId: topic.notesId?._id || topic.notesId || null,
     hasNotes,
-    isCurrent: day === currentDay,
+    isCurrent: !unlockAll && day === currentDay,
     isLocked,
     href: isLocked || !hasNotes ? null : `/learn/courses/${courseId}/topics?day=${day}`,
   };
@@ -51,14 +60,15 @@ export const getPlacementLearningDashboard = async (req, res) => {
       student,
       programId: schedule.programId,
     });
-    if (schedule.batchExpired) {
+    const isCompleted = isCompletedProgramSchedule(schedule);
+    if (schedule.batchExpired && !isCompleted) {
       return res.status(403).json({
         success: false,
         message: "This batch has ended and program access has been revoked.",
       });
     }
     const batch = schedule.batchId ? await Batch.findById(schedule.batchId).lean() : null;
-    if (schedule.batchId && !batch) {
+    if (schedule.batchId && !batch && !isCompleted) {
       return res.status(403).json({
         success: false,
         message: "The assigned batch could not be found.",
@@ -114,7 +124,7 @@ export const getPlacementLearningDashboard = async (req, res) => {
       individualStartDate: schedule.individualStartDate,
     });
     const notes = topics.map((topic, index) =>
-      buildTopicPayload(topic, index, currentDay, course._id)
+      buildTopicPayload(topic, index, currentDay, course._id, isCompleted)
     );
     const totalDays = notes.reduce((maxDay, topic) => Math.max(maxDay, topic.day), 0);
     // A missing exact day is a curriculum/configuration gap, not permission
@@ -122,7 +132,9 @@ export const getPlacementLearningDashboard = async (req, res) => {
     // in `weeks` so learners can still revisit them.
     const currentTopic = notes.find((topic) => topic.day === currentDay) || null;
     const currentDayTopic = currentTopic?.notesId ? currentTopic : null;
-    const todayTopicStatus = !currentTopic
+    const todayTopicStatus = isCompleted
+      ? "completed"
+      : !currentTopic
       ? "unconfigured"
       : currentTopic.notesId
         ? "available"
@@ -150,6 +162,7 @@ export const getPlacementLearningDashboard = async (req, res) => {
     return res.status(200).json({
       success: true,
       hasPlacementLearning: true,
+      isCompleted,
       scheduleType: schedule.scheduleType,
       program: program
         ? { id: program._id, name: program.name, programType: program.programType }
@@ -174,7 +187,9 @@ export const getPlacementLearningDashboard = async (req, res) => {
       })),
       todayTopic: currentDayTopic,
       todayTopicStatus,
-      todayTopicMessage: todayTopicStatus === "unconfigured"
+      todayTopicMessage: todayTopicStatus === "completed"
+        ? null
+        : todayTopicStatus === "unconfigured"
         ? `No Placement Learning topic is configured for Day ${currentDay}.`
         : todayTopicStatus === "notes_unpublished"
           ? `Placement Learning topic for Day ${currentDay} has no published notes yet.`

@@ -7,10 +7,20 @@ import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import Program from "../models/Program.js";
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
-import { calculateProgramDayNumber, resolveProgramSchedule } from "../utils/programSchedule.js";
+import {
+  calculateProgramDayNumber,
+  isCompletedProgramSchedule,
+  isProgramResourceLocked,
+  resolveProgramSchedule,
+} from "../utils/programSchedule.js";
 import { getTopicDayNumber } from "../utils/courseTopicSchedule.js";
 import { expireBatchIfNeeded } from "../utils/batchLifecycle.js";
-import { isUserVisibleCourse } from "../utils/courseVisibility.js";
+import {
+  buildPublicCourseConditions,
+  buildPublicFreeProgramQuery,
+  hasPublicFreeProgramLink,
+  isUserVisibleCourse,
+} from "../utils/courseVisibility.js";
 import { isProgramAccessibleToLearner } from "../utils/programVisibility.js";
 import { resolveProgramPrimaryCourseId } from "../utils/programPrimaryCourse.js";
 import { v2 as cloudinary } from "cloudinary";
@@ -94,7 +104,7 @@ const getActiveProgramLinksForCourses = async (courseIds) => {
   const ids = (courseIds || []).filter(Boolean);
   if (!ids.length) return [];
   return Program.find({ courseIds: { $in: ids }, status: "Active" })
-    .select("_id courseIds pricingType visibility")
+    .select("_id courseIds pricingType visibility +accessTier")
     .lean();
 };
 
@@ -112,9 +122,7 @@ const groupProgramLinksByCourse = (programs) => {
 };
 
 const courseRequiresEnrollment = (linkedPrograms = []) => {
-  const hasPublicFreeProgram = linkedPrograms.some(
-    (program) => program.visibility === "Public" && program.pricingType === "Free"
-  );
+  const hasPublicFreeProgram = hasPublicFreeProgramLink(linkedPrograms);
   const hasRestrictedProgram = linkedPrograms.some(
     (program) => program.visibility !== "Public" || program.pricingType === "Paid"
   );
@@ -497,7 +505,7 @@ export const getAllCourses = async (req, res) => {
         }).lean();
 
         const schedule = await resolveProgramSchedule({ user: req.user, student });
-        if (schedule.batchExpired) {
+        if (schedule.batchExpired && !isCompletedProgramSchedule(schedule)) {
           return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
         }
         const batch = schedule.batchId
@@ -506,10 +514,11 @@ export const getAllCourses = async (req, res) => {
         const program = schedule.programId
           ? await Program.findById(schedule.programId).select("courseIds status pricingType visibility").lean()
           : null;
-        const publicConditions = [
-          { assignedBatchIds: { $size: 0 } },
-          { assignedBatchIds: { $exists: false } },
-        ];
+        const publicFreeProgramCourseIds = await Program.distinct(
+          "courseIds",
+          buildPublicFreeProgramQuery()
+        );
+        const publicConditions = buildPublicCourseConditions(publicFreeProgramCourseIds);
         const programCourseIds = (program?.courseIds || []).map(String);
         const hasVerifiedProgramAccess = Boolean(
           program &&
@@ -528,10 +537,16 @@ export const getAllCourses = async (req, res) => {
           // A concrete Program is the only content source for this learner.
           // Do not surface a legacy/manual batch course that is not mapped to
           // the selected Program.
-          filter = programCourseIds.length
-            ? { _id: { $in: programCourseIds } }
-            : { _id: { $in: [] } };
-        } else if (batch && batch.status === "Active") {
+          filter = {
+            $or: [
+              ...publicConditions,
+              ...(programCourseIds.length ? [{ _id: { $in: programCourseIds } }] : []),
+            ],
+          };
+        } else if (batch && (
+          batch.status === "Active"
+          || isCompletedProgramSchedule(schedule)
+        )) {
           allowedBatchIds.add(String(batch._id));
           const primaryCourseId = batch.attachedCourse;
           if (primaryCourseId) allowedProgramCourseIds.add(String(primaryCourseId));
@@ -559,12 +574,11 @@ export const getAllCourses = async (req, res) => {
       }
     } else {
       // Unauthenticated — show only public courses
-      filter = {
-        $or: [
-          { assignedBatchIds: { $size: 0 } },
-          { assignedBatchIds: { $exists: false } },
-        ],
-      };
+      const publicFreeProgramCourseIds = await Program.distinct(
+        "courseIds",
+        buildPublicFreeProgramQuery()
+      );
+      filter = { $or: buildPublicCourseConditions(publicFreeProgramCourseIds) };
     }
 
     const courses = await Course.find(filter);
@@ -579,7 +593,8 @@ export const getAllCourses = async (req, res) => {
         : [];
       const linkedCoursePrograms = linksByCourse.get(courseId) || [];
       const isBatchScoped = assignedBatchIds.length > 0;
-      const requiresEnrollment = isBatchScoped || courseRequiresEnrollment(linkedCoursePrograms);
+      const requiresEnrollment = !hasPublicFreeProgramLink(linkedCoursePrograms)
+        && (isBatchScoped || courseRequiresEnrollment(linkedCoursePrograms));
 
       if (!requiresEnrollment || isAdmin) return true;
       if (!req.user) return false;
@@ -620,7 +635,8 @@ export const getCourseById = async (req, res) => {
       ? []
       : await getActiveProgramLinksForCourses([course._id]);
     const linkedProgramIds = linkedPrograms.map((linkedProgram) => String(linkedProgram._id));
-    const requiresEnrollment = assignedBatchIds.length > 0 || courseRequiresEnrollment(linkedPrograms);
+    const requiresEnrollment = !hasPublicFreeProgramLink(linkedPrograms)
+      && (assignedBatchIds.length > 0 || courseRequiresEnrollment(linkedPrograms));
     let courseProgramId = null;
 
     // Optional authentication keeps the catalog public, but it must not make
@@ -653,7 +669,7 @@ export const getCourseById = async (req, res) => {
 
       const enrollments = identifiers.length && enrollmentAccessConditions.length
         ? await ProgramEnrollment.find({
-            status: "Active",
+            status: { $in: ["Active", "Completed"] },
             $or: identifiers,
             $and: [{ $or: enrollmentAccessConditions }],
           }).select("programId batchId accessTier").lean()
@@ -670,15 +686,23 @@ export const getCourseById = async (req, res) => {
           .filter((assignedBatch) => assignedBatch?.status === "Active")
           .map((assignedBatch) => String(assignedBatch._id))
       );
-      const activeBatchById = new Map(
+      const completedEnrollmentBatchIds = new Set(
+        enrollments
+          .filter((enrollment) => enrollment.status === "Completed" && enrollment.batchId)
+          .map((enrollment) => String(enrollment.batchId))
+      );
+      const accessibleBatchById = new Map(
         batchResults
           .map((result) => result.batch)
-          .filter((assignedBatch) => assignedBatch?.status === "Active")
+          .filter((assignedBatch) => assignedBatch && (
+            assignedBatch.status === "Active"
+            || completedEnrollmentBatchIds.has(String(assignedBatch._id))
+          ))
           .map((assignedBatch) => [String(assignedBatch._id), assignedBatch])
       );
       const hasBatchAccess = enrollments.some((enrollment) => {
         if (!enrollment.batchId) return false;
-        const assignedBatch = activeBatchById.get(String(enrollment.batchId));
+        const assignedBatch = accessibleBatchById.get(String(enrollment.batchId));
         if (!assignedBatch) return false;
         // A concrete batch Program must match the learner's exact Program;
         // legacy batches without programId retain their old batch access.
@@ -688,7 +712,7 @@ export const getCourseById = async (req, res) => {
         student?.batchId
         && activeBatchIds.has(String(student.batchId))
         && (() => {
-          const assignedBatch = activeBatchById.get(String(student.batchId));
+          const assignedBatch = accessibleBatchById.get(String(student.batchId));
           return !assignedBatch?.programId
             || String(assignedBatch.programId) === String(student.programId || req.user.programId || "");
         })()
@@ -737,7 +761,7 @@ export const getCourseById = async (req, res) => {
         // ProgramEnrollment is the source of truth, so a valid user-only
         // enrollment must receive the same schedule as a legacy Student row.
         schedule = await resolveProgramSchedule({ user: req.user, student, programId: courseProgramId });
-        if (schedule.batchExpired) {
+        if (schedule.batchExpired && !isCompletedProgramSchedule(schedule)) {
           return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
         }
         batch = schedule.batchId ? await Batch.findById(schedule.batchId).lean() : null;
@@ -762,8 +786,9 @@ export const getCourseById = async (req, res) => {
           || (batch && assignedIds.includes(String(batch._id)))
           || programCourseIds.includes(courseIdStr);
 
+      const isProgramCompleted = isCompletedProgramSchedule(schedule);
       const scheduleOwnerIsActive = batch ? batch.status === "Active" : program?.status === "Active";
-      if (scheduleOwnerIsActive && isAttached) {
+      if (isAttached && (isProgramCompleted || scheduleOwnerIsActive)) {
         currentDay = calculateProgramDayNumber({
           batch,
           individualStartDate: schedule.individualStartDate,
@@ -786,7 +811,11 @@ export const getCourseById = async (req, res) => {
 
     const formattedTopics = topics.map((topic, idx) => {
       const day = getTopicDayNumber(topic, idx);
-      const isLocked = isScheduleActive && day > currentDay;
+      const isLocked = isScheduleActive && isProgramResourceLocked({
+        resourceDay: day,
+        currentDay,
+        schedule,
+      });
       return {
         topicId: topic._id,
         title: topic.title,

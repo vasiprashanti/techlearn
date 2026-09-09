@@ -8,7 +8,11 @@ import Program from "../models/Program.js";
 import Student from "../models/Student.js";
 import Track from "../models/Track.js";
 import DailyChallengeAttempt from "../models/DailyChallengeAttempt.js";
-import { assertProgramScheduleAccess, resolveProgramSchedule } from "./programSchedule.js";
+import {
+  assertProgramScheduleAccess,
+  isCompletedProgramSchedule,
+  resolveProgramSchedule,
+} from "./programSchedule.js";
 import { parseDurationDays } from "./programPhases.js";
 import { getProgramTypeQueryValues } from "./programTypeNormalization.js";
 
@@ -221,23 +225,25 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     programId: schedule.programId,
   });
 
+  const isCompleted = isCompletedProgramSchedule(schedule);
+
   const batch = schedule.batchId
     ? await Batch.findById(schedule.batchId)
     : (studentContext.student ? null : await ensureDemoBatch());
 
-  if (schedule.batchExpired) {
+  if (schedule.batchExpired && !isCompleted) {
     const error = new Error("This batch has ended and program access has been revoked.");
     error.statusCode = 403;
     throw error;
   }
 
-  if (schedule.batchId && !batch) {
+  if (schedule.batchId && !batch && !isCompleted) {
     const error = new Error("The assigned batch could not be found.");
     error.statusCode = 403;
     throw error;
   }
 
-  if (batch && batch.status !== BATCH_STATUS.ACTIVE) {
+  if (batch && batch.status !== BATCH_STATUS.ACTIVE && !isCompleted) {
     const error = new Error("This batch is not active for Daily Challenge access.");
     error.statusCode = 403;
     throw error;
@@ -304,7 +310,7 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     throw error;
   }
 
-  if (batch?.expiryDate && now > endOfDay(batch.expiryDate)) {
+  if (batch?.expiryDate && now > endOfDay(batch.expiryDate) && !isCompleted) {
     const error = new Error("This batch has expired for Daily Challenge access.");
     error.statusCode = 403;
     throw error;
@@ -503,7 +509,7 @@ export const resolveDailyChallengeParticipant = async ({ codingRound, user, emai
     programId: codingRound.programId || schedule.programId,
   });
 
-  if (schedule.batchExpired) {
+  if (schedule.batchExpired && !isCompletedProgramSchedule(schedule)) {
     const error = new Error("This batch has ended and program access has been revoked.");
     error.statusCode = 403;
     throw error;

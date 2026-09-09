@@ -12,7 +12,11 @@ import {
   BLUEPRINT_TYPES_BY_PROGRAM_TYPE,
   normalizeBlueprintType,
 } from "../utils/blueprintTypes.js";
-import { calculateProgramDayNumber, resolveProgramSchedule } from "../utils/programSchedule.js";
+import {
+  calculateProgramDayNumber,
+  isCompletedProgramSchedule,
+  resolveProgramSchedule,
+} from "../utils/programSchedule.js";
 import { isProgramAccessibleToLearner } from "../utils/programVisibility.js";
 
 const PHASE_BLUEPRINT_TYPES = Object.freeze({
@@ -174,7 +178,8 @@ export const getProgramLearningContext = async ({
       batch = await Batch.findById(schedule.batchId).lean();
     }
 
-    if (schedule.batchExpired || (batch && batch.status !== "Active")) {
+    const isCompleted = isCompletedProgramSchedule(schedule);
+    if (!isCompleted && (schedule.batchExpired || (batch && batch.status !== "Active"))) {
       const error = new Error("This batch has ended and program access has been revoked.");
       error.statusCode = 403;
       throw error;
@@ -185,7 +190,7 @@ export const getProgramLearningContext = async ({
       individualStartDate: schedule.individualStartDate,
       now,
     });
-    phase = phaseForDay(program, programDay);
+    phase = isCompleted ? "completed" : phaseForDay(program, programDay);
   }
 
   return {

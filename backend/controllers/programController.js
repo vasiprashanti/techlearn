@@ -19,7 +19,10 @@ import { ensureStudentForUser } from "../utils/userProfile.js";
 import { syncPrimaryProgramPointers, upsertProgramEnrollment } from "../utils/programEnrollment.js";
 import { matchProgramsForUser } from "../utils/programMatching.js";
 import { isProgramAccessibleToLearner, isUserVisibleProgram } from "../utils/programVisibility.js";
-import { isUserVisibleCourse } from "../utils/courseVisibility.js";
+import {
+  buildPublicFreeProgramQuery,
+  isUserVisibleCourse,
+} from "../utils/courseVisibility.js";
 import { expireAllActiveBatches } from "../utils/batchLifecycle.js";
 import { getProgramTypeQueryValues } from "../utils/programTypeNormalization.js";
 
@@ -111,9 +114,7 @@ export const getPublicProgramPreview = async (req, res) => {
 
     const program = await Program.findOne({
       _id: programId,
-      status: "Active",
-      visibility: "Public",
-      pricingType: "Free",
+      ...buildPublicFreeProgramQuery(),
     })
       .select("_id name description programType duration durationDays phases pricingType courseIds roadmapIds trackTemplateIds projectIds")
       .populate("courseIds", "_id title description level courseType numTopics assignedBatchIds")
@@ -128,7 +129,7 @@ export const getPublicProgramPreview = async (req, res) => {
 
     const materials = [
       ...(program.courseIds || [])
-        .filter((course) => course && isUserVisibleCourse(course) && !(course.assignedBatchIds || []).length)
+        .filter((course) => course && isUserVisibleCourse(course))
         .map((course) => ({
           id: course._id,
           type: "Course",
@@ -464,8 +465,12 @@ export const getAssignedPrograms = async (req, res) => {
     await expireAllActiveBatches();
     const userId = req.user._id;
 
-    // Find all active enrollment records for this user
-    const enrollments = await ProgramEnrollment.find({ userId, status: "Active" })
+    // Keep completed enrollment history available so learners can revisit all
+    // of the program's resources after the schedule has finished.
+    const enrollments = await ProgramEnrollment.find({
+      userId,
+      status: { $in: ["Active", "Completed"] },
+    })
       .populate({
         path: "programId",
          select: "_id name description programType duration durationDays phases status visibility pricingType programFee pricingPlans courseIds roadmapIds trackTemplateIds projectIds certificateTemplateIds",
@@ -509,9 +514,12 @@ export const getAssignedPrograms = async (req, res) => {
     }
 
     const preferredProgramId = String(req.user.programId || "");
-    const activeProgramId = assignedPrograms.some((program) => String(program._id) === preferredProgramId)
+    const activeEnrollments = assignedPrograms.filter((program) =>
+      enrollmentByProgramId.get(String(program._id))?.status === "Active"
+    );
+    const activeProgramId = activeEnrollments.some((program) => String(program._id) === preferredProgramId)
       ? preferredProgramId
-      : String(assignedPrograms[0]?._id || "");
+      : String(activeEnrollments[0]?._id || "");
 
     const formattedPrograms = assignedPrograms.map((p) => ({
       _id: p._id,
@@ -536,6 +544,7 @@ export const getAssignedPrograms = async (req, res) => {
       trackTemplates: p.trackTemplateIds || [],
       batchId: enrollmentByProgramId.get(String(p._id))?.batchId || null,
       scheduleType: enrollmentByProgramId.get(String(p._id))?.batchId ? "batch" : "individual",
+      enrollmentStatus: enrollmentByProgramId.get(String(p._id))?.status || "Active",
       individualStartDate: enrollmentByProgramId.get(String(p._id))?.individualStartDate
         || enrollmentByProgramId.get(String(p._id))?.assignedAt
         || null,
@@ -669,7 +678,11 @@ export const getProgramDetailForStudent = async (req, res) => {
     // Program-scoped access check for non-admin users
     let enrollment = null;
     if (req.user.role !== "admin") {
-      enrollment = await ProgramEnrollment.findOne({ userId, programId, status: "Active" }).lean();
+      enrollment = await ProgramEnrollment.findOne({
+        userId,
+        programId,
+        status: { $in: ["Active", "Completed"] },
+      }).lean();
       const isEnrolled = Boolean(enrollment);
       const isLegacy = String(req.user.programId) === String(programId);
 

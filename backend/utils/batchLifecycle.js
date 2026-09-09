@@ -3,6 +3,7 @@ import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import StudentTrackAssignment from "../models/StudentTrackAssignment.js";
 import Student from "../models/Student.js";
 import User from "../models/User.js";
+import { syncProgramEnrollmentCompletion } from "../services/programCompletionService.js";
 import { syncPrimaryProgramPointers } from "./programEnrollment.js";
 
 const INDIA_TIME_ZONE = "Asia/Kolkata";
@@ -35,9 +36,10 @@ export const isBatchExpired = (batch, now = new Date()) => {
 };
 
 /**
- * End an expired batch and revoke all access that depended on its cohort
- * schedule. The batch's resources remain attached for audit/history, but the
- * batch no longer grants access to them after its expiry date.
+ * End an expired batch and close the cohort schedule. Enrollments that have
+ * reached the end of their assigned Program are persisted as Completed so
+ * their learners retain read access to the full program history. A batch that
+ * closes before its Program is complete remains paused and access is revoked.
  */
 export const expireBatchIfNeeded = async (batchOrId) => {
   const batch = batchOrId?._id
@@ -53,7 +55,7 @@ export const expireBatchIfNeeded = async (batchOrId) => {
     batchId,
     status: "Active",
   })
-    .select("userId studentId")
+    .select("userId studentId programId")
     .lean();
 
   const now = new Date();
@@ -76,10 +78,19 @@ export const expireBatchIfNeeded = async (batchOrId) => {
     User.updateMany({ batchId }, { $set: { batchId: null, programId: null } }),
   ]);
 
-  await Promise.all(activeEnrollments.map((enrollment) => syncPrimaryProgramPointers({
-    user: enrollment.userId ? { _id: enrollment.userId } : null,
-    student: enrollment.studentId ? { _id: enrollment.studentId } : null,
-  })));
+  await Promise.all(activeEnrollments.map(async (enrollment) => {
+    await syncProgramEnrollmentCompletion({
+      programId: enrollment.programId,
+      userId: enrollment.userId,
+      studentId: enrollment.studentId,
+      now,
+    });
+
+    await syncPrimaryProgramPointers({
+      user: enrollment.userId ? { _id: enrollment.userId } : null,
+      student: enrollment.studentId ? { _id: enrollment.studentId } : null,
+    });
+  }));
 
   return {
     expired: true,

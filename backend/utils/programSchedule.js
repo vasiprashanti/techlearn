@@ -72,32 +72,44 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
           legacyBatchId: legacyBatchPointer,
           programId: getId(enrollment.programId) || programId,
         });
-    const lifecycle = batchId ? await expireBatchIfNeeded(batchId) : { expired: false };
+    let resolvedEnrollment = enrollment;
+    const isAlreadyCompleted = enrollment.status === "Completed";
+    // A completed enrollment keeps read access to its program resources. Do
+    // not let the batch lifecycle helper revoke that completed history while
+    // resolving a course or learning page.
+    const lifecycle = batchId && !isAlreadyCompleted
+      ? await expireBatchIfNeeded(batchId)
+      : { expired: false };
+    if (lifecycle.expired && enrollment._id) {
+      resolvedEnrollment = await ProgramEnrollment.findById(enrollment._id).lean() || enrollment;
+    }
+    const isCompleted = resolvedEnrollment.status === "Completed";
     const [userRecord, studentRecord] = await Promise.all([
       user?._id ? User.findById(user._id).select("_id startDate createdAt").lean() : null,
       student?._id ? Student.findById(student._id).select("_id createdAt").lean() : null,
     ]);
     const reconciled = await resolveSafeLegacyIndividualStartDate({
-      enrollment,
+      enrollment: resolvedEnrollment,
       user: userRecord || user,
       student: studentRecord || student,
     });
     const individualStartDate = getValidDate(
       reconciled.date,
-      enrollment.assignedAt,
+      resolvedEnrollment.assignedAt,
       student?.createdAt,
       user?.createdAt
     );
 
     return {
       programId: getId(enrollment.programId) || programId,
-      enrollment,
+      enrollment: resolvedEnrollment,
       batchId,
       scheduleType: batchId ? "batch" : "individual",
       individualStartDate,
       individualStartDateReconciled: reconciled.reconciled,
       individualStartDateReconciliationReason: reconciled.reason,
-      batchExpired: Boolean(lifecycle.expired),
+      batchExpired: !isCompleted && Boolean(lifecycle.expired),
+      isCompleted,
     };
   }
 
@@ -113,7 +125,24 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
     scheduleType: legacyBatchId ? "batch" : "individual",
     individualStartDate: getValidDate(student?.createdAt, user?.createdAt),
     batchExpired: Boolean(lifecycle.expired),
+    isCompleted: false,
   };
+};
+
+export const isCompletedProgramSchedule = (schedule) => Boolean(
+  schedule?.isCompleted || schedule?.enrollment?.status === "Completed"
+);
+
+/**
+ * Shared day-wise lock rule for program-owned resources. Completed programs
+ * are intentionally read-only history and therefore have no future-day lock.
+ */
+export const isProgramResourceLocked = ({ resourceDay, currentDay, schedule } = {}) => {
+  if (isCompletedProgramSchedule(schedule)) return false;
+  const day = Number(resourceDay);
+  const unlockedThrough = Number(currentDay);
+  if (!Number.isFinite(day) || !Number.isFinite(unlockedThrough)) return false;
+  return day > unlockedThrough;
 };
 
 /**
@@ -136,9 +165,9 @@ export const assertProgramScheduleAccess = async ({ user, student, programId }) 
   const enrollment = identifiers.length
     ? await ProgramEnrollment.findOne({
         programId: resolvedProgramId,
-        status: "Active",
+        status: { $in: ["Active", "Completed"] },
         $or: identifiers,
-      }).select("_id batchId accessTier").lean()
+      }).select("_id batchId accessTier status").lean()
     : null;
 
   if (!isProgramAccessibleToLearner({ program, enrollment })) {

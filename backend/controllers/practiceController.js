@@ -3,7 +3,10 @@ import PracticeSubmission from "../models/PracticeSubmission.js";
 import Student from "../models/Student.js";
 import mongoose from "mongoose";
 import { getTrackAssignmentDate, calculateCurrentDayNumber } from "../utils/trackAssignmentSchedule.js";
-import { resolveProgramSchedule } from "../utils/programSchedule.js";
+import {
+  isCompletedProgramSchedule,
+  resolveProgramSchedule,
+} from "../utils/programSchedule.js";
 import { normalizeCategoryType } from "../utils/questionBank.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
 import { recordProgramPerformanceAttempt } from "../services/programPerformanceService.js";
@@ -147,7 +150,7 @@ export const listPracticeQuestions = async (req, res) => {
     const schedule = student
       ? await resolveProgramSchedule({ user: req.user, student })
       : null;
-    if (schedule?.batchExpired) {
+    if (schedule?.batchExpired && !isCompletedProgramSchedule(schedule)) {
       return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
     }
     const studentBatchId = schedule?.batchId || null;
@@ -217,7 +220,7 @@ export const recordPracticeSubmission = async (req, res) => {
     }).lean();
     if (practiceStudent) {
       const schedule = await resolveProgramSchedule({ user: req.user, student: practiceStudent });
-      if (schedule.batchExpired) {
+      if (schedule.batchExpired && !isCompletedProgramSchedule(schedule)) {
         return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
       }
     }
@@ -466,7 +469,7 @@ export const recordPracticeSubmission = async (req, res) => {
       });
       if (student) {
         const schedule = await resolveProgramSchedule({ user: req.user, student });
-        if (schedule.batchExpired) {
+        if (schedule.batchExpired && !isCompletedProgramSchedule(schedule)) {
           return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
         }
         const batch = schedule.batchId
@@ -817,7 +820,7 @@ export const getPracticeStats = async (req, res) => {
     const schedule = student
       ? await resolveProgramSchedule({ user: req.user, student })
       : null;
-    if (schedule?.batchExpired) {
+    if (schedule?.batchExpired && !isCompletedProgramSchedule(schedule)) {
       return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
     }
     const studentBatchId = schedule?.batchId || null;
@@ -920,7 +923,7 @@ export const listPracticeCategoriesForStudent = async (req, res) => {
     const schedule = student
       ? await resolveProgramSchedule({ user: req.user, student })
       : null;
-    if (schedule?.batchExpired) {
+    if (schedule?.batchExpired && !isCompletedProgramSchedule(schedule)) {
       return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
     }
     const studentBatchId = schedule?.batchId || null;

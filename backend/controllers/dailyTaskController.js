@@ -9,7 +9,11 @@ import { calculateTaskXP, TASK_XP } from "../services/xpService.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
 import { calculateCurrentDayNumber } from "../utils/trackAssignmentSchedule.js";
-import { assertProgramScheduleAccess, resolveProgramSchedule } from "../utils/programSchedule.js";
+import {
+  assertProgramScheduleAccess,
+  isCompletedProgramSchedule,
+  resolveProgramSchedule,
+} from "../utils/programSchedule.js";
 import { parseDurationDays } from "../utils/programPhases.js";
 import { getProgramTypeQueryValues } from "../utils/programTypeNormalization.js";
 
@@ -93,14 +97,15 @@ export const getTodayDailyTasks = async (req, res) => {
 
     const schedule = await resolveProgramSchedule({ user: req.user, student });
     await assertProgramScheduleAccess({ user: req.user, student, programId: schedule.programId });
-    if (schedule.batchExpired) {
+    const isCompleted = isCompletedProgramSchedule(schedule);
+    if (schedule.batchExpired && !isCompleted) {
       return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
     }
     const batch = schedule.batchId ? await Batch.findById(schedule.batchId) : null;
-    if (schedule.batchId && !batch) {
+    if (schedule.batchId && !batch && !isCompleted) {
       return res.status(403).json({ success: false, message: "The assigned batch could not be found." });
     }
-    if (batch && batch.status !== BATCH_STATUS.ACTIVE) {
+    if (batch && batch.status !== BATCH_STATUS.ACTIVE && !isCompleted) {
       return res.status(403).json({ success: false, message: "This batch is currently not active." });
     }
 
@@ -130,7 +135,7 @@ export const getTodayDailyTasks = async (req, res) => {
     );
     const now = new Date();
 
-    if (batch?.expiryDate && now > endOfDay(batch.expiryDate)) {
+    if (batch?.expiryDate && now > endOfDay(batch.expiryDate) && !isCompleted) {
       return res.status(200).json({
         success: true,
         data: {
@@ -338,14 +343,15 @@ export const submitDailyTask = async (req, res) => {
 
     const schedule = await resolveProgramSchedule({ user: req.user, student });
     await assertProgramScheduleAccess({ user: req.user, student, programId: schedule.programId });
-    if (schedule.batchExpired) {
+    const isCompleted = isCompletedProgramSchedule(schedule);
+    if (schedule.batchExpired && !isCompleted) {
       return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
     }
     const batch = schedule.batchId ? await Batch.findById(schedule.batchId) : null;
-    if (schedule.batchId && !batch) {
+    if (schedule.batchId && !batch && !isCompleted) {
       return res.status(403).json({ success: false, message: "The assigned batch could not be found." });
     }
-    if (batch && batch.status !== BATCH_STATUS.ACTIVE) {
+    if (batch && batch.status !== BATCH_STATUS.ACTIVE && !isCompleted) {
       return res.status(403).json({ success: false, message: "This batch is currently not active." });
     }
 
