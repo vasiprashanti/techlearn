@@ -48,6 +48,7 @@ const createQuestionForm = (track = '') => ({
   starterCode: {
     python: { code: '' },
     java: { code: '' },
+    c: { code: '' },
   },
 });
 
@@ -92,6 +93,7 @@ const formFromQuestion = (question) => ({
   starterCode: {
     python: { code: question.content?.starterCode?.python?.code || '' },
     java: { code: question.content?.starterCode?.java?.code || '' },
+    c: { code: question.content?.starterCode?.c?.code || '' },
   },
 });
 
@@ -1170,6 +1172,14 @@ export const QuestionBankCategoryDetailPage = () => {
                             <span className="text-[11px] font-bold text-[#3C83F6] dark:text-[#bceaff] mb-1">Java</span>
                             <pre className="text-xs font-mono overflow-x-auto whitespace-pre-wrap max-h-48 overflow-y-auto bg-black/10 p-2 rounded scrollbar-hide">
                               {viewQuestion.content.starterCode.java.code}
+                            </pre>
+                          </div>
+                        )}
+                        {viewQuestion.content.starterCode.c?.code && (
+                          <div className="rounded-xl border border-black/10 dark:border-white/15 bg-slate-50 dark:bg-black/25 p-3 flex flex-col">
+                            <span className="text-[11px] font-bold text-[#3C83F6] dark:text-[#bceaff] mb-1">C</span>
+                            <pre className="text-xs font-mono overflow-x-auto whitespace-pre-wrap max-h-48 overflow-y-auto bg-black/10 p-2 rounded scrollbar-hide">
+                              {viewQuestion.content.starterCode.c.code}
                             </pre>
                           </div>
                         )}

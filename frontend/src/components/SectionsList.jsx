@@ -45,14 +45,14 @@ const SectionsList = () => {
       id: "compiler",
       title: "Online Compiler",
       subtitle: "Code Anywhere, Anytime",
-      description: "Write, compile, and run Python and Java code directly in your browser. No setup required, just pure coding experience.",
+      description: "Write, compile, and run Python, Java, and C code directly in your browser. No setup required, just pure coding experience.",
       price: "Free",
       cta: "Start Coding",
       icon: Code,
       gradient: "from-orange-500 to-red-500",
       glowColor: "group-hover:shadow-orange-500/25",
       popular: false,
-      features: ["Python & Java Support", "Real-time Execution", "No Installation Required"]
+      features: ["Python, Java & C Support", "Real-time Execution", "No Installation Required"]
     },
     {
       id: "certification",

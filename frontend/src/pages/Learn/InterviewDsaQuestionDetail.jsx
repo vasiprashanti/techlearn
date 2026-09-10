@@ -18,8 +18,18 @@ const dsaDetailsById = {
 
 const LANGUAGES = {
   python: { id: "python", name: "Python", monacoLanguage: "python", starter: "# Write your Python solution here\n" },
-  java: { id: "java", name: "Java", monacoLanguage: "java", starter: "public class Main {\n  public static void main(String[] args) {\n    // Write your solution here\n  }\n}\n" }
+  java: { id: "java", name: "Java", monacoLanguage: "java", starter: "public class Main {\n  public static void main(String[] args) {\n    // Write your solution here\n  }\n}\n" },
+  c: { id: "c", name: "C", monacoLanguage: "c", starter: "#include <stdio.h>\n\nint main(void) {\n  // Write your solution here\n  return 0;\n}\n" }
 };
+
+const getStarterCode = (question, language, fallbackStarter = "") =>
+  question?.starterCode?.[language]?.code ||
+  question?.content?.starterCode?.[language]?.code ||
+  (typeof question?.starterCode === "string" && language === "python" ? question.starterCode : null) ||
+  (language === "python" ? question?.solutionCode : null) ||
+  (language === "python" ? fallbackStarter : null) ||
+  LANGUAGES[language]?.starter ||
+  "";
 
 export default function InterviewDsaQuestionDetail() {
   const { questionId } = useParams();
@@ -179,14 +189,13 @@ export default function InterviewDsaQuestionDetail() {
 
   const details = useMemo(() => {
     if (!question) return null;
-    return (
-      dsaDetailsById[question.id] || {
-        statement: question.description
-          ? `## Problem\n\n${question.description}\n\n${question.inputFormat ? `### Input Format\n${question.inputFormat}\n\n` : ''}${question.outputFormat ? `### Output Format\n${question.outputFormat}` : ''}`
-          : `## Problem\n\n**${question.title}** (Topic: ${question.subtitle})\n\nProblem statement will be added here.`,
-        starterCode: question.starterCode?.[selectedLanguage]?.code || (selectedLanguage === 'python' ? question.solutionCode : null) || LANGUAGES[selectedLanguage]?.starter || `# ${question.title}\n\n# TODO: write your solution here\n\n`,
-      }
-    );
+    const localDetails = dsaDetailsById[question.id];
+    return {
+      statement: localDetails?.statement || (question.description
+        ? `## Problem\n\n${question.description}\n\n${question.inputFormat ? `### Input Format\n${question.inputFormat}\n\n` : ''}${question.outputFormat ? `### Output Format\n${question.outputFormat}` : ''}`
+        : `## Problem\n\n**${question.title}** (Topic: ${question.subtitle})\n\nProblem statement will be added here.`),
+      starterCode: getStarterCode(question, selectedLanguage, localDetails?.starterCode) || `# ${question.title}\n\n# TODO: write your solution here\n\n`,
+    };
   }, [question, selectedLanguage]);
 
   const [code, setCode] = useState(details?.starterCode || '');
@@ -213,8 +222,7 @@ export default function InterviewDsaQuestionDetail() {
     }
 
     const defaultLang = selectedLanguage || 'python';
-    const defaultStarter = question.starterCode?.[defaultLang]?.code || (typeof question.starterCode === 'string' ? question.starterCode : null) || (defaultLang === 'python' ? question.solutionCode : null) || LANGUAGES[defaultLang]?.starter || '';
-    setCode(defaultStarter);
+    setCode(details?.starterCode || getStarterCode(question, defaultLang));
     setIsLastSubmissionCorrect(false);
     setOutput('');
   }, [questionId, isDailyMode, currentTaskIndex, question, selectedLanguage]);
@@ -649,7 +657,7 @@ export default function InterviewDsaQuestionDetail() {
                       onChange={(e) => {
                         const nextLang = e.target.value;
                         setSelectedLanguage(nextLang);
-                        const nextCode = question?.starterCode?.[nextLang]?.code || (nextLang === 'python' ? question?.solutionCode : null) || LANGUAGES[nextLang]?.starter || '';
+                        const nextCode = getStarterCode(question, nextLang, dsaDetailsById[question?.id]?.starterCode);
                         setCode(nextCode);
                       }}
                       className="appearance-none rounded-lg border border-gray-300 pl-2.5 pr-8 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white min-w-[100px] outline-none cursor-pointer"

@@ -25,7 +25,21 @@ const LANGUAGES = {
     starter:
       "public class Main {\n  public static void main(String[] args) {\n    // Write your solution here\n  }\n}\n",
   },
+  c: {
+    id: "c",
+    name: "C",
+    monacoLanguage: "c",
+    starter:
+      "#include <stdio.h>\n\nint main(void) {\n  // Write your solution here\n  return 0;\n}\n",
+  },
 };
+
+const getStarterCode = (problem, language) =>
+  problem?.starterCode?.[language]?.code ||
+  problem?.content?.starterCode?.[language]?.code ||
+  (language === "c"
+    ? LANGUAGES.c.starter
+    : problem?.solutionCode || LANGUAGES[language]?.starter || "");
 
 const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60)
@@ -102,8 +116,7 @@ export default function DailyChallengeTest() {
         if (isChallengeMcq) {
           setCode("");
         } else {
-          const starter = problem?.starterCode?.[selectedLanguage]?.code || problem?.content?.starterCode?.[selectedLanguage]?.code || problem?.solutionCode || LANGUAGES[selectedLanguage]?.starter || "";
-          setCode(starter);
+          setCode(getStarterCode(problem, selectedLanguage));
         }
       }
     }
@@ -124,7 +137,7 @@ export default function DailyChallengeTest() {
 
   const handleLanguageChange = (newLang) => {
     setSelectedLanguage(newLang);
-    const starter = problem?.starterCode?.[newLang]?.code || problem?.content?.starterCode?.[newLang]?.code || problem?.solutionCode || LANGUAGES[newLang]?.starter || "";
+    const starter = getStarterCode(problem, newLang);
     setCode(starter);
     setSolutions((prev) => ({
       ...prev,
@@ -232,10 +245,11 @@ export default function DailyChallengeTest() {
             const isSavedSubmitted = savedAnswers?.problemSubmitted?.[idx.toString()];
             const draft = savedDraft?.[idx];
 
-            const defaultStarter = prob.starterCode?.python?.code || prob.content?.starterCode?.python?.code || prob.solutionCode || LANGUAGES.python.starter;
+            const initialLanguage = draft?.language || savedLang || "python";
+            const defaultStarter = getStarterCode(prob, initialLanguage);
             initialSolutions[idx] = {
               code: draft?.code !== undefined ? draft.code : (savedCode !== undefined ? savedCode : (prob.categoryType === "MCQ" ? "" : defaultStarter)),
-              language: draft?.language || savedLang || "python"
+              language: initialLanguage
             };
 
             if (isSavedSubmitted) {

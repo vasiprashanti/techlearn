@@ -99,6 +99,19 @@ public class Main {
 }`,
     monacoLanguage: 'java'
   },
+  c: {
+    id: 'c',
+    name: 'C',
+    icon: '/c.png',
+    extension: '.c',
+    defaultCode: `#include <stdio.h>
+
+int main(void) {
+    printf("Hello, World!\\n");
+    return 0;
+}`,
+    monacoLanguage: 'c'
+  },
   sql: {
     id: 'sql',
     name: 'SQL',
@@ -245,7 +258,7 @@ const OnlineCompiler = () => {
         return;
       }
 
-      // Handle server-side languages (Python/Java)
+      // Handle server-side languages (Python, Java, C, and SQL)
       setOutput('Running code...\n');
 
       const result = await compilerAPI.compileCode({

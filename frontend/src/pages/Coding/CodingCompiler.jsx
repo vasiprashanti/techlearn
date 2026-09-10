@@ -24,7 +24,28 @@ const LANGUAGES = {
     defaultCode: `// Write your code here\npublic class Main {\n    public static void main(String[] args) {\n        // your code here\n    }\n}\n`,
     monacoLanguage: "java",
   },
+  c: {
+    id: "c",
+    name: "C",
+    icon: "/c.png",
+    extension: ".c",
+    defaultCode: `#include <stdio.h>
+
+int main(void) {
+    // Write your code here
+    return 0;
+}
+`,
+    monacoLanguage: "c",
+  },
 };
+
+const getStarterCode = (problem, language) =>
+  problem?.starterCode?.[language]?.code ||
+  problem?.content?.starterCode?.[language]?.code ||
+  (language === "c"
+    ? LANGUAGES.c.defaultCode
+    : problem?.solutionCode || LANGUAGES[language]?.defaultCode || "");
 
 const CodingCompiler = ({ user, contestData }) => {
   const { theme, toggleTheme } = useTheme();
@@ -182,15 +203,13 @@ const CodingCompiler = ({ user, contestData }) => {
       if (isChallengeMcq) {
         setCode("");
       } else {
-        const starter = PROBLEM.starterCode?.[selectedLang]?.code || PROBLEM.content?.starterCode?.[selectedLang]?.code || PROBLEM.solutionCode || LANGUAGES[selectedLang]?.defaultCode || "";
-        setCode(starter);
+        setCode(getStarterCode(PROBLEM, selectedLang));
       }
     }
   }, [PROBLEM, currentProblemIndex, selectedLang]);
 
   const handleReset = () => {
-    const starter = PROBLEM?.starterCode?.[selectedLang]?.code || PROBLEM?.content?.starterCode?.[selectedLang]?.code || PROBLEM?.solutionCode || LANGUAGES[selectedLang]?.defaultCode || "";
-    setCode(starter);
+    setCode(getStarterCode(PROBLEM, selectedLang));
     setOutput("");
   };
 
@@ -404,7 +423,7 @@ const CodingCompiler = ({ user, contestData }) => {
 
   const handleLanguageChange = (lang) => {
     setSelectedLang(lang);
-    const starter = PROBLEM?.starterCode?.[lang]?.code || PROBLEM?.content?.starterCode?.[lang]?.code || PROBLEM?.solutionCode || LANGUAGES[lang]?.defaultCode || "";
+    const starter = getStarterCode(PROBLEM, lang);
     setCode(starter);
     setShowDropdown(false);
   };

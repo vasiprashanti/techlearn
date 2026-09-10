@@ -217,6 +217,19 @@ export const CodingRoundQuestionFormWrapper = ({
                 className={`${textareaClass} font-mono`}
               />
             </div>
+            <div>
+              <label className="admin-micro-label text-black/45 dark:text-white/45">C Starter Code</label>
+              <textarea
+                value={formData.starterCode?.c?.code || ''}
+                onChange={(e) => onChange('starterCode', {
+                  ...formData.starterCode,
+                  c: { code: e.target.value }
+                })}
+                rows={6}
+                placeholder="#include <stdio.h>\n\nint main(void) {\n  // Write your solution here\n  return 0;\n}"
+                className={`${textareaClass} font-mono`}
+              />
+            </div>
           </div>
         )}
       </section>
