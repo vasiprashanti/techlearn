@@ -68,6 +68,26 @@ const getCourseImage = (course) => {
   return '/python.jpg';
 };
 
+const getProgramImage = (program) => {
+  if (program.image && !program.image.includes('expert-led-banner') && !program.image.includes('auth-hero')) {
+    return program.image;
+  }
+  if (program.bannerImage && !program.bannerImage.includes('expert-led-banner') && !program.bannerImage.includes('auth-hero')) {
+    return program.bannerImage;
+  }
+  const name = (program.name || program.title || '').toLowerCase();
+  if (name.includes('genai') || name.includes('generative ai') || name.includes('ai &') || name.includes('ai/ml')) return '/genai.jpg';
+  if (name.includes('aptitude') || name.includes('reasoning') || name.includes('math')) return '/aptitude.jpg';
+  if (name.includes('full stack') || name.includes('fullstack') || name.includes('web bootcamp') || name.includes('backend')) return '/java-fullstack.jpg';
+  if (name.includes('java') && !name.includes('javascript')) return '/java.jpg';
+  if (name.includes('python')) return '/python.jpg';
+  if (name.includes('c programming') || name === 'c' || name.startsWith('c ')) return '/c-programming.jpg';
+  if (name.includes('dsa') || name.includes('interview') || name.includes('placement') || name.includes('sprint')) return '/c-programming.jpg';
+  if (name.includes('system design') || name.includes('architecture') || name.includes('cloud') || name.includes('devops')) return '/java-fullstack.jpg';
+  if (name.includes('data') || name.includes('analytics') || name.includes('engineering')) return '/python.jpg';
+  return '/c-programming.jpg';
+};
+
 const readCachedCourses = () => {
   try {
     const raw = sessionStorage.getItem(COURSES_CACHE_KEY);
@@ -138,14 +158,14 @@ export default function Courses() {
   ];
 
   const defaultTrainerPrograms = [
-    { _id: "placement-sprint", name: "30-Day Placement Sprint", description: "Structured daily tasks, real company patterns, mock interviews, and assessment readiness.", duration: "4 weeks", instructor: "Prashanti Vasi", level: "Intermediate", programType: "Placement", bannerImage: "/expert-led-banner.jpg" },
-    { _id: "full-stack-live", name: "Full Stack Web Bootcamp", description: "Hands-on projects with React, Node.js, and cloud deployments with live doubt sessions.", duration: "6 weeks", instructor: "Jyotsna", level: "Beginner", programType: "Skill", bannerImage: "/expert-led-banner.jpg" },
-    { _id: "dsa-interview-mastery", name: "DSA & Interview Mastery", description: "In-depth problem solving covering top interview patterns for product companies.", duration: "5 weeks", instructor: "Prashanti Vasi", level: "Advanced", programType: "Placement", bannerImage: "/expert-led-banner.jpg" },
-    { _id: "system-design-cohort", name: "System Design & Architecture", description: "Scalable backend systems, caching, microservices, and distributed architecture.", duration: "4 weeks", instructor: "Prashanti Vasi", level: "Advanced", programType: "Placement", bannerImage: "/expert-led-banner.jpg" },
-    { _id: "data-analytics-track", name: "Data Engineering & Analytics", description: "SQL, Python, ETL pipelines, and business intelligence interview preparation.", duration: "6 weeks", instructor: "Jyotsna", level: "Intermediate", programType: "Skill", bannerImage: "/expert-led-banner.jpg" },
-    { _id: "cloud-devops-mastery", name: "Cloud & DevOps Career Track", description: "Docker, Kubernetes, AWS infrastructure, and CI/CD automated deployment pipelines.", duration: "6 weeks", instructor: "Lead Trainer", level: "Intermediate", programType: "Skill", bannerImage: "/expert-led-banner.jpg" },
-    { _id: "ai-ml-bootcamp", name: "AI & Applied ML Track", description: "Machine learning algorithms, neural networks, PyTorch, and LLM application development.", duration: "8 weeks", instructor: "Prashanti Vasi", level: "Advanced", programType: "Skill", bannerImage: "/expert-led-banner.jpg" },
-    { _id: "aptitude-reasoning-sprint", name: "Aptitude & Fast Problem Solving", description: "Speed math, quantitative reasoning, and logical ability for major campus drives.", duration: "3 weeks", instructor: "Lead Trainer", level: "Beginner", programType: "Placement", bannerImage: "/expert-led-banner.jpg" },
+    { _id: "placement-sprint", name: "30-Day Placement Sprint", description: "Structured daily tasks, real company patterns, mock interviews, and assessment readiness.", duration: "4 weeks", instructor: "Prashanti Vasi", level: "Intermediate", programType: "Placement", bannerImage: "/c-programming.jpg" },
+    { _id: "full-stack-live", name: "Full Stack Web Bootcamp", description: "Hands-on projects with React, Node.js, and cloud deployments with live doubt sessions.", duration: "6 weeks", instructor: "Jyotsna", level: "Beginner", programType: "Skill", bannerImage: "/java-fullstack.jpg" },
+    { _id: "dsa-interview-mastery", name: "DSA & Interview Mastery", description: "In-depth problem solving covering top interview patterns for product companies.", duration: "5 weeks", instructor: "Prashanti Vasi", level: "Advanced", programType: "Placement", bannerImage: "/c-programming.jpg" },
+    { _id: "system-design-cohort", name: "System Design & Architecture", description: "Scalable backend systems, caching, microservices, and distributed architecture.", duration: "4 weeks", instructor: "Prashanti Vasi", level: "Advanced", programType: "Placement", bannerImage: "/java-fullstack.jpg" },
+    { _id: "data-analytics-track", name: "Data Engineering & Analytics", description: "SQL, Python, ETL pipelines, and business intelligence interview preparation.", duration: "6 weeks", instructor: "Jyotsna", level: "Intermediate", programType: "Skill", bannerImage: "/python.jpg" },
+    { _id: "cloud-devops-mastery", name: "Cloud & DevOps Career Track", description: "Docker, Kubernetes, AWS infrastructure, and CI/CD automated deployment pipelines.", duration: "6 weeks", instructor: "Lead Trainer", level: "Intermediate", programType: "Skill", bannerImage: "/java-fullstack.jpg" },
+    { _id: "ai-ml-bootcamp", name: "AI & Applied ML Track", description: "Machine learning algorithms, neural networks, PyTorch, and LLM application development.", duration: "8 weeks", instructor: "Prashanti Vasi", level: "Advanced", programType: "Skill", bannerImage: "/genai.jpg" },
+    { _id: "aptitude-reasoning-sprint", name: "Aptitude & Fast Problem Solving", description: "Speed math, quantitative reasoning, and logical ability for major campus drives.", duration: "3 weeks", instructor: "Lead Trainer", level: "Beginner", programType: "Placement", bannerImage: "/aptitude.jpg" },
   ];
 
   useEffect(() => {
@@ -658,8 +678,12 @@ export default function Courses() {
 
                         <div className="mb-4 h-24 w-full rounded-xl border border-[#90c8ff]/40 dark:border-[#6cb7ec]/35 overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]">
                           <img
-                            src={program.bannerImage || "/expert-led-banner.jpg"}
+                            src={getProgramImage(program)}
                             alt={program.name || program.title}
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = '/c-programming.jpg';
+                            }}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
                         </div>
