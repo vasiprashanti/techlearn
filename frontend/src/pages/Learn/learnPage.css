@@ -407,6 +407,7 @@
   margin-bottom: 0;
   line-height: 1.35;
   letter-spacing: -.5px;
+  min-height: 58px;
   padding-bottom: 3px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -424,7 +425,7 @@
   line-height: 1.6;
   margin-top: 13px;
   margin-bottom: 10px;
-  min-height: 60px;
+  min-height: 62px;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -438,11 +439,14 @@
 .learn-page-container .program-meta {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 7px;
   margin-top: 0;
   margin-bottom: 14px;
   min-height: 24px;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
 }
 
 .learn-page-container .meta-item {
@@ -451,11 +455,21 @@
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: .4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.learn-page-container .meta-item:last-child {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .learn-page-container .meta-dot {
   color: var(--border);
   font-size: 10px;
+  flex-shrink: 0;
 }
 
 /* =========================
@@ -710,7 +724,7 @@
   .learn-page-container .title {
     font-size: 14px;
     line-height: 1.35;
-    min-height: 38px;
+    min-height: 40px;
     padding-bottom: 2px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -719,7 +733,7 @@
   }
 
   .learn-page-container .description {
-    min-height: 38px;
+    min-height: 40px;
     margin-top: 6px;
     margin-bottom: 8px;
     font-size: 9px;
