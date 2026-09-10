@@ -1,0 +1,946 @@
+/* ==================================================
+   TECHLEARN LEARN PAGE STYLES
+   Exact reproduction from learn.html
+================================================== */
+
+.learn-page-container {
+  /* DARK MODE DEFAULTS */
+  --page-bg: #000b36;
+  --page-text: #ffffff;
+
+  --nav-bg: rgba(4, 16, 61, 0.082);
+  --dropdown-bg: rgba(4, 16, 61, 0.98);
+
+  --text: rgba(255, 255, 255, 0.72);
+  --muted: rgba(255, 255, 255, 0.48);
+
+  --border: rgba(15, 23, 56, 0.477);
+
+  --card-bg: #020d4b;
+  --banner-bg: #111a42;
+
+  --accent: #89c638;
+  --accent-hover: #9bd45a;
+
+  --input-bg: #0c1c77;
+  --soft-bg: rgba(255, 255, 255, 0.045);
+  --divider: rgba(255, 255, 255, 0.10);
+
+  --heading: #ffffff;
+  --secondary: rgba(255, 255, 255, 0.68);
+  --filter-bg: rgba(255, 255, 255, 0.055);
+
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--page-bg);
+  color: var(--page-text);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  width: 100%;
+  transition: background-color .25s ease, color .25s ease;
+}
+
+/* LIGHT MODE */
+.learn-page-container.light-mode {
+  --page-bg: #ceeefd;
+  --page-text: #080830;
+
+  --nav-bg: rgba(255, 255, 255, 0.081);
+  --dropdown-bg: rgba(255, 255, 255, 0.98);
+
+  --text: rgba(7, 16, 47, 0.72);
+  --muted: rgba(7, 16, 47, 0.48);
+
+  --border: rgba(0, 3, 12, 0.16);
+
+  --card-bg: #e2f7ff;
+  --banner-bg: #03185a;
+
+  --accent: #02107a;
+  --accent-hover: #63b326;
+
+  --input-bg: #ffffff;
+  --soft-bg: rgba(255, 255, 255, 0.55);
+  --divider: rgba(2, 16, 122, 0.12);
+
+  --heading: #02107a;
+  --secondary: rgba(2, 16, 122, 0.72);
+  --filter-bg: rgba(255, 255, 255, 0.55);
+}
+
+/* =========================
+   PAGE CONTAINER
+   Adjusted to clear fixed 72px navbar and push content comfortably down
+========================= */
+
+.learn-page-container .page {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 130px 48px 100px;
+  box-sizing: border-box;
+}
+
+/* =========================
+   ACADEMY HEADER
+========================= */
+
+.learn-page-container .academy-header {
+  text-align: center;
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+.learn-page-container .eyebrow {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--heading);
+  margin-bottom: 20px;
+}
+
+/* EXACT FIXED GRADIENT IN BOTH MODES FROM learn.html */
+.learn-page-container .academy-title {
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(28px, 5vw, 52px);
+  line-height: 1.1;
+  letter-spacing: -2px;
+  background: linear-gradient(
+    90deg,
+    #02107a,
+    #1c31ed
+  ) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  margin-bottom: 14px;
+}
+
+.learn-page-container .academy-subtitle {
+  max-width: 650px;
+  margin: 0 auto;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--heading);
+}
+
+/* =========================
+   SEARCH
+========================= */
+
+.learn-page-container .search-wrapper {
+  max-width: 650px;
+  margin: 42px auto 0;
+  position: relative;
+}
+
+.learn-page-container .search-icon {
+  position: absolute;
+  left: 19px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 17px;
+  color: var(--muted);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.learn-page-container .search-input {
+  width: 100%;
+  height: 56px;
+  padding: 0 20px 0 50px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--input-bg);
+  outline: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--page-text);
+  box-shadow: 0 8px 25px rgba(0,0,0,.08);
+  transition: border .2s ease, box-shadow .2s ease;
+  box-sizing: border-box;
+}
+
+.learn-page-container .search-input::placeholder {
+  color: var(--muted);
+}
+
+.learn-page-container .search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 10px 30px rgba(0,0,0,.10);
+}
+
+/* =========================
+   COURSE / PROGRAM SWITCH
+========================= */
+
+.learn-page-container .content-switch {
+  display: flex;
+  font-family: "Press Start 2P", monospace;
+  width: fit-content;
+  margin: 60px auto 0;
+  padding: 4px;
+  background: rgba(125, 199, 30, 0.898);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.learn-page-container .switch-button {
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 10px 22px;
+  border-radius: 9px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  cursor: pointer;
+  transition: background .25s ease, color .25s ease, box-shadow .25s ease;
+}
+
+.learn-page-container .switch-button.active {
+  background: var(--input-bg);
+  color: var(--heading);
+  box-shadow: 0 4px 14px rgba(0,0,0,.08);
+}
+
+/* =========================
+   CONTENT HEADER
+========================= */
+
+.learn-page-container .catalog-header {
+  margin-top: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+}
+
+.learn-page-container .catalog-heading-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.learn-page-container .catalog-heading {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -.6px;
+  color: var(--heading);
+  margin: 0;
+}
+
+.learn-page-container .catalog-description {
+  max-width: 560px;
+  margin-top: 9px;
+  margin-bottom: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--secondary);
+}
+
+/* =========================
+   FILTERS
+========================= */
+
+.learn-page-container .filters {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 0;
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.learn-page-container .filters::-webkit-scrollbar {
+  display: none;
+}
+
+.learn-page-container .filter-button {
+  flex-shrink: 0;
+  padding: 7px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--filter-bg);
+  color: var(--heading);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, border .2s ease;
+}
+
+.learn-page-container .filter-button:hover {
+  background: var(--input-bg);
+}
+
+.learn-page-container .filter-button.active {
+  background: var(--heading);
+  color: var(--page-bg);
+  border-color: var(--heading);
+}
+
+/* =========================
+   CARD GRID
+========================= */
+
+.learn-page-container .card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 28px;
+  margin-top: 34px;
+  align-items: stretch;
+}
+
+/* =========================
+   CARD
+   Explicit !important and properties to prevent Tailwind .card clash
+========================= */
+
+.learn-page-container .card {
+  width: 100% !important;
+  background: var(--card-bg) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 28px !important;
+  overflow: hidden !important;
+  box-shadow: 0 12px 35px rgba(0,0,0,.10) !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 380px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  transition: transform .35s ease, box-shadow .35s ease !important;
+  box-sizing: border-box !important;
+  text-align: left !important;
+  cursor: pointer !important;
+}
+
+.learn-page-container .card:hover {
+  transform: translateY(-6px) !important;
+  box-shadow: 0 22px 50px rgba(0,0,0,.16) !important;
+}
+
+/* =========================
+   CARD IMAGE (TOP SECTION)
+   Takes up full space in top section with 100% width and height
+========================= */
+
+.learn-page-container .card-banner {
+  position: relative !important;
+  width: 100% !important;
+  height: 150px !important;
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+  background: var(--banner-bg) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.learn-page-container .card-banner img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  display: block !important;
+  object-fit: cover !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transition: transform .7s cubic-bezier(.22,1,.36,1) !important;
+}
+
+.learn-page-container .card:hover .card-banner img {
+  transform: scale(1.04) !important;
+}
+
+/* =========================
+   BADGE
+========================= */
+
+.learn-page-container .category-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 7px 12px;
+  background: var(--input-bg);
+  color: var(--heading);
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+  backdrop-filter: blur(10px);
+  z-index: 2;
+}
+
+/* =========================
+   CARD CONTENT
+========================= */
+
+.learn-page-container .card-content {
+  background: var(--card-bg) !important;
+  padding: 25px 24px 23px !important;
+  border-top-right-radius: 28px !important;
+  margin-top: -12px !important;
+  position: relative !important;
+  z-index: 2 !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+}
+
+/* =========================
+   CARD TITLE
+========================= */
+
+.learn-page-container .title {
+  font-size: 21px;
+  font-weight: 750;
+  color: var(--heading);
+  margin-top: 4px;
+  margin-bottom: 0;
+  line-height: 1.35;
+  letter-spacing: -.5px;
+  padding-bottom: 3px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* =========================
+   DESCRIPTION
+========================= */
+
+.learn-page-container .description {
+  font-size: 13px;
+  color: var(--secondary);
+  line-height: 1.6;
+  margin-top: 13px;
+  margin-bottom: 10px;
+  min-height: 60px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* =========================
+   PROGRAM META
+========================= */
+
+.learn-page-container .program-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 0;
+  margin-bottom: 14px;
+  min-height: 24px;
+}
+
+.learn-page-container .meta-item {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.learn-page-container .meta-dot {
+  color: var(--border);
+  font-size: 10px;
+}
+
+/* =========================
+   CARD BOTTOM
+========================= */
+
+.learn-page-container .card-bottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.learn-page-container .content-divider {
+  width: 100%;
+  height: 1px;
+  flex-shrink: 0;
+  background: var(--divider);
+  margin-bottom: 18px;
+}
+
+.learn-page-container .card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  min-height: 25px;
+}
+
+/* =========================
+   PRICE / FREE
+========================= */
+
+.learn-page-container .price-wrapper {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+}
+
+.learn-page-container .price {
+  font-size: 23px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -.7px;
+  white-space: nowrap;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.learn-page-container .free-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  white-space: nowrap;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+}
+
+/* =========================
+   START LINK
+========================= */
+
+.learn-page-container .start-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -.1px;
+  white-space: nowrap;
+  transition: color .25s ease, gap .35s cubic-bezier(.22,1,.36,1);
+}
+
+.learn-page-container .start-link .arrow {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--accent);
+  transition: transform .35s cubic-bezier(.22,1,.36,1), color .25s ease;
+}
+
+.learn-page-container .start-link:hover {
+  color: var(--accent-hover);
+  gap: 10px;
+}
+
+.learn-page-container .start-link:hover .arrow {
+  color: var(--accent-hover);
+  transform: translateX(3px);
+}
+
+/* =========================
+   DARK MODE
+   PRICE + LINK WHITE
+========================= */
+
+.learn-page-container:not(.light-mode) .price,
+.learn-page-container:not(.light-mode) .free-label,
+.learn-page-container:not(.light-mode) .start-link,
+.learn-page-container:not(.light-mode) .start-link .arrow {
+  color: #ffffff !important;
+}
+
+.learn-page-container:not(.light-mode) .start-link:hover,
+.learn-page-container:not(.light-mode) .start-link:hover .arrow {
+  color: #ffffff !important;
+}
+
+/* =========================
+   EMPTY STATE
+========================= */
+
+.learn-page-container .empty-state {
+  text-align: center;
+  padding: 70px 20px;
+  color: var(--muted);
+}
+
+.learn-page-container .empty-state h3 {
+  font-size: 18px;
+  color: var(--heading);
+  margin-bottom: 8px;
+}
+
+.learn-page-container .empty-state p {
+  font-size: 13px;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 1050px) {
+  .learn-page-container .card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+}
+
+@media (max-width: 760px) {
+  .learn-page-container .page {
+    padding: 100px 18px 60px;
+  }
+
+  .learn-page-container .academy-title {
+    font-size: 25px;
+    letter-spacing: -1.5px;
+  }
+
+  .learn-page-container .academy-subtitle {
+    font-size: 13px;
+  }
+
+  .learn-page-container .content-switch {
+    margin-top: 32px;
+    padding: 3px;
+    border-radius: 10px;
+  }
+
+  .learn-page-container .switch-button {
+    padding: 8px 15px;
+    font-size: 7px;
+    border-radius: 7px;
+  }
+
+  .learn-page-container .catalog-header {
+    display: block;
+    margin-top: 36px;
+  }
+
+  .learn-page-container .catalog-heading-wrap {
+    width: 100%;
+  }
+
+  .learn-page-container .catalog-heading {
+    font-size: 16px;
+    line-height: 1.25;
+    letter-spacing: -.4px;
+    text-align: left;
+    font-weight: 400;
+  }
+
+  .learn-page-container .catalog-description {
+    margin-top: 7px;
+    font-size: 11px;
+  }
+
+  .learn-page-container .filters {
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: 12px;
+    gap: 5px;
+    overflow-x: auto;
+  }
+
+  .learn-page-container .filter-button {
+    padding: 6px 8px;
+    font-size: 7px;
+    border-radius: 14px;
+  }
+
+  .learn-page-container .catalog-count {
+    display: block;
+    margin-top: 10px;
+    font-size: 10px;
+  }
+
+  /* =========================
+     MOBILE CARDS
+     MATCH EXACT LEARN.HTML
+  ========================= */
+  .learn-page-container .card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .learn-page-container .card {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+  }
+
+  .learn-page-container .card-banner {
+    width: 100% !important;
+    height: 120px !important;
+    border-radius: 0 !important;
+  }
+
+  .learn-page-container .category-badge {
+    top: 10px;
+    right: 10px;
+    padding: 4px 8px;
+    font-size: 8px;
+    border-radius: 14px;
+  }
+
+  .learn-page-container .card-content {
+    padding: 13px 13px 14px !important;
+    border-top-right-radius: 16px !important;
+    margin-top: -10px !important;
+  }
+
+  .learn-page-container .title {
+    font-size: 14px;
+    line-height: 1.35;
+    min-height: 38px;
+    padding-bottom: 2px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .learn-page-container .description {
+    min-height: 38px;
+    margin-top: 6px;
+    margin-bottom: 8px;
+    font-size: 9px;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .learn-page-container .program-meta {
+    margin-top: 0;
+    margin-bottom: 8px;
+    min-height: 18px;
+    gap: 4px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .learn-page-container .meta-item {
+    font-size: 7.5px;
+    letter-spacing: .2px;
+    white-space: nowrap;
+  }
+
+  .learn-page-container .meta-dot {
+    font-size: 8px;
+  }
+
+  .learn-page-container .content-divider {
+    margin-bottom: 10px;
+  }
+
+  .learn-page-container .card-footer {
+    min-height: 20px;
+    gap: 6px;
+  }
+
+  .learn-page-container .price,
+  .learn-page-container .free-label {
+    font-size: 14px;
+    line-height: 1;
+    min-height: 20px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .learn-page-container .start-link {
+    font-size: 9px;
+    gap: 4px;
+  }
+
+  .learn-page-container .start-link .arrow {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 500px) {
+  .learn-page-container .card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .learn-page-container .card {
+    border-radius: 12px !important;
+  }
+
+  .learn-page-container .card-banner {
+    height: 100px !important;
+  }
+
+  .learn-page-container .category-badge {
+    top: 8px;
+    right: 8px;
+    padding: 3px 6px;
+    font-size: 7px;
+    border-radius: 10px;
+  }
+
+  .learn-page-container .card-content {
+    padding: 11px 11px 12px !important;
+    border-top-right-radius: 14px !important;
+    margin-top: -8px !important;
+  }
+
+  .learn-page-container .title {
+    font-size: 13px;
+    line-height: 1.35;
+    min-height: 36px;
+    padding-bottom: 2px;
+  }
+
+  .learn-page-container .description {
+    font-size: 8.5px;
+    line-height: 1.4;
+    margin-top: 5px;
+    margin-bottom: 6px;
+    min-height: 34px;
+  }
+
+  .learn-page-container .program-meta {
+    margin-bottom: 6px;
+    min-height: 16px;
+    gap: 3px;
+  }
+
+  .learn-page-container .meta-item {
+    font-size: 7px;
+  }
+
+  .learn-page-container .meta-dot {
+    font-size: 7px;
+  }
+
+  .learn-page-container .content-divider {
+    margin-bottom: 8px;
+  }
+
+  .learn-page-container .card-footer {
+    min-height: 18px;
+    gap: 4px;
+  }
+
+  .learn-page-container .price,
+  .learn-page-container .free-label {
+    font-size: 13px;
+    line-height: 1;
+    min-height: 18px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .learn-page-container .start-link {
+    font-size: 8.5px;
+  }
+
+  .learn-page-container .start-link .arrow {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .learn-page-container .card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .learn-page-container .card {
+    border-radius: 10px !important;
+  }
+
+  .learn-page-container .card-banner {
+    height: 88px !important;
+  }
+
+  .learn-page-container .category-badge {
+    top: 6px;
+    right: 6px;
+    padding: 2px 5px;
+    font-size: 6.5px;
+  }
+
+  .learn-page-container .card-content {
+    padding: 9px 9px 10px !important;
+    border-top-right-radius: 12px !important;
+    margin-top: -6px !important;
+  }
+
+  .learn-page-container .title {
+    font-size: 12px;
+    line-height: 1.35;
+    min-height: 32px;
+    padding-bottom: 2px;
+  }
+
+  .learn-page-container .description {
+    font-size: 8px;
+    line-height: 1.35;
+    margin-top: 4px;
+    margin-bottom: 5px;
+    min-height: 30px;
+  }
+
+  .learn-page-container .program-meta {
+    margin-bottom: 5px;
+    min-height: 14px;
+    gap: 2px;
+  }
+
+  .learn-page-container .meta-item {
+    font-size: 6.5px;
+  }
+
+  .learn-page-container .meta-dot {
+    font-size: 6px;
+  }
+
+  .learn-page-container .content-divider {
+    margin-bottom: 6px;
+  }
+
+  .learn-page-container .card-footer {
+    min-height: 16px;
+  }
+
+  .learn-page-container .price,
+  .learn-page-container .free-label {
+    font-size: 12px;
+    line-height: 1;
+    min-height: 16px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .learn-page-container .start-link {
+    font-size: 7.5px;
+  }
+
+  .learn-page-container .start-link .arrow {
+    font-size: 9px;
+  }
+}

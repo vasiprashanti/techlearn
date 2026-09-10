@@ -74,10 +74,10 @@ const CourseDetails = () => {
           duration: dynamicDuration,
           courseType: backendCourse.courseType || "Self-Paced",
           instructor: {
-            name: backendCourse.instructor || "TechLearn Solutions",
+            name: backendCourse.instructor || "Prashanti Vasi",
             bio:
               backendCourse.instructorBio ||
-              "Learn through structured lessons, practical examples, coding exercises, and placement-focused practice designed to help you build strong programming fundamentals.",
+              "With 15+ years of experience, Prashanti Vasi believes in practical learning over theory, focusing on real-world problem solving and hands-on practice that helps students build strong fundamentals.",
           },
           curriculum:
             backendCourse.topics?.map((topic, index) => {
@@ -212,6 +212,60 @@ const CourseDetails = () => {
               <span className="button-arrow">→</span>
             </button>
           </div>
+
+          {/* HERO VISUAL */}
+          <div className="hero-visual">
+            <div className="code-card">
+              <div className="code-top">
+                <div className="code-label">
+                  {(course.title || "C").toUpperCase().includes("C") ? "C / BASICS" : `${(course.title || "CODE").toUpperCase()} / BASICS`}
+                </div>
+                <div className="code-progress-label">
+                  01 / {String(course.curriculum?.length || 8).padStart(2, "0")}
+                </div>
+              </div>
+
+              <div className="code-window">
+                <div className="code-line">
+                  <span className="code-number">01</span>
+                  <span>
+                    <span className="code-keyword">#include</span> &lt;stdio.h&gt;
+                  </span>
+                </div>
+
+                <div className="code-line">
+                  <span className="code-number">02</span>
+                  <span></span>
+                </div>
+
+                <div className="code-line">
+                  <span className="code-number">03</span>
+                  <span>
+                    <span className="code-keyword">int</span> main()
+                  </span>
+                </div>
+
+                <div className="code-line">
+                  <span className="code-number">04</span>
+                  <span>
+                    &nbsp;&nbsp;printf(<span className="code-accent">"Hello"</span>);
+                  </span>
+                </div>
+
+                <div className="code-line">
+                  <span className="code-number">05</span>
+                  <span>
+                    &nbsp;&nbsp;<span className="code-keyword">return</span> 0;
+                  </span>
+                </div>
+
+                <div className="code-line">
+                  <span className="code-number">06</span>
+                  <span>{"}"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* =======================================
@@ -256,12 +310,12 @@ const CourseDetails = () => {
             }`}
             id="curriculum"
           >
-            <div className="section-eyebrow">WHAT YOU'LL LEARN</div>
+            <div className="section-eyebrow">CURRICULUM</div>
 
-            <h2 className="section-title">Course Curriculum</h2>
+            <h2 className="section-title">What you'll learn.</h2>
 
             <div className="curriculum-list">
-              {course.curriculum.length > 0 ? (
+              {course.curriculum && course.curriculum.length > 0 ? (
                 (() => {
                   const mid = Math.ceil(course.curriculum.length / 2);
                   const col1 = course.curriculum.slice(0, mid);
@@ -306,14 +360,14 @@ const CourseDetails = () => {
             className={`tab-content ${activeTab === "trainer" ? "active" : ""}`}
             id="trainer"
           >
-            <div className="section-eyebrow">YOUR TRAINER</div>
+            <div className="trainer-section">
+              <div className="trainer-label">TRAINER</div>
 
-            <h2 className="section-title">Learn from people who build.</h2>
+              <div className="trainer-block">
+                <div className="trainer-name">{course.instructor.name}</div>
 
-            <div className="trainer-block">
-              <div className="trainer-name">{course.instructor.name}</div>
-
-              <p className="trainer-description">{course.instructor.bio}</p>
+                <p className="trainer-description">{course.instructor.bio}</p>
+              </div>
             </div>
           </div>
 
