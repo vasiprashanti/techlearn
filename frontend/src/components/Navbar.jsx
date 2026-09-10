@@ -256,7 +256,7 @@ export default function Navbar() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          border-radius: 9px;
+          border-radius: 999px;
           background: var(--green);
           color: var(--green-text);
           text-decoration: none;

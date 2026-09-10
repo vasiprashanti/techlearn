@@ -299,6 +299,14 @@ function SkillOnboardingFlow() {
     }
   };
 
+  const FEEDBACK_OPTIONS = [
+    "I want to change my skill",
+    "I'm not sure what I want to learn",
+    "I couldn't find what I was looking for",
+    "I need more information",
+    "I'm just exploring",
+  ];
+
   const handleFeedbackExit = () => {
     if (!feedbackReason) {
       setError("Please select an option before submitting.");
@@ -316,7 +324,30 @@ function SkillOnboardingFlow() {
     } catch {
       // storage helper
     }
-    navigate("/");
+
+    const optionIndex = FEEDBACK_OPTIONS.indexOf(feedbackReason) + 1;
+
+    if (optionIndex === 1) {
+      // Option 1: Take user back to step 1 so they can pick a new skill and start the whole process
+      setSkill("");
+      setCustomSkill("");
+      setGoal("");
+      setLevel("");
+      setLearningMode("");
+      setResult(null);
+      setError("");
+      setFeedbackReason("");
+      setIsFeedbackOpen(false);
+      setStep(1);
+    } else if (optionIndex === 2 || optionIndex === 4) {
+      // Options 2 & 4: Redirect to contact page
+      navigate("/contact");
+    } else if (optionIndex === 3 || optionIndex === 5) {
+      // Options 3 & 5: Redirect to Learn page to pick from existing options
+      navigate("/learn");
+    } else {
+      navigate("/");
+    }
   };
   const startProgram = () => {
     sessionStorage.setItem("techlearn-skill-onboarding", JSON.stringify({ ...answers, programId: result?.program?._id || null }));
@@ -1377,13 +1408,7 @@ function SkillOnboardingFlow() {
 
               <div className="tl-skill-field">
                 <div className="tl-skill-chips-50centered">
-                  {[
-                    "I want to change my skill",
-                    "I'm not sure what I want to learn",
-                    "I couldn't find what I was looking for",
-                    "I need more information",
-                    "I'm just exploring",
-                  ].map((item) => (
+                  {FEEDBACK_OPTIONS.map((item) => (
                     <button
                       key={item}
                       type="button"
