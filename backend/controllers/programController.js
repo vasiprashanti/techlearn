@@ -50,11 +50,13 @@ export const getPublicPrograms = async (req, res) => {
     }).distinct("programId");
     const readinessSet = new Set(readinessIds.map((id) => String(id)));
 
-    const formatted = visiblePrograms.map((p) => ({
-      ...p,
-      courseIds: (p.courseIds || []).filter(isUserVisibleCourse),
-      hasFreeAssessment: readinessSet.has(String(p._id)),
-    }));
+    const formatted = visiblePrograms
+      .map((p) => ({
+        ...p,
+        courseIds: (p.courseIds || []).filter(isUserVisibleCourse),
+        hasFreeAssessment: readinessSet.has(String(p._id)),
+      }))
+      .filter((p) => p.courseIds.length > 0);
 
     return res.json({ success: true, programs: formatted });
   } catch (error) {
@@ -81,16 +83,18 @@ export const getProgramCatalog = async (req, res) => {
 
     return res.json({
       success: true,
-      programs: visiblePrograms.map((program) => ({
-        ...program,
-        courseIds: (program.courseIds || []).filter(isUserVisibleCourse),
-        accessType: program.pricingType === "Free" ? "free" : "trainer-led",
-        courseCount: (program.courseIds || []).filter(isUserVisibleCourse).length,
-        roadmapCount: program.roadmapIds?.length || 0,
-        trackCount: program.trackTemplateIds?.length || 0,
-        projectCount: program.projectIds?.length || 0,
-        certificateCount: program.certificateTemplateIds?.length || 0,
-      })),
+      programs: visiblePrograms
+        .map((program) => ({
+          ...program,
+          courseIds: (program.courseIds || []).filter(isUserVisibleCourse),
+          accessType: program.pricingType === "Free" ? "free" : "trainer-led",
+          courseCount: (program.courseIds || []).filter(isUserVisibleCourse).length,
+          roadmapCount: program.roadmapIds?.length || 0,
+          trackCount: program.trackTemplateIds?.length || 0,
+          projectCount: program.projectIds?.length || 0,
+          certificateCount: program.certificateTemplateIds?.length || 0,
+        }))
+        .filter((program) => program.courseIds.length > 0),
     });
   } catch (error) {
     console.error("Error fetching public program catalog:", error);

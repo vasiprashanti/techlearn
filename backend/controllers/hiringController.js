@@ -482,6 +482,12 @@ export const listRecommendedJobs = async (req, res) => {
 
     const filter = {
       status: "Published",
+      $and: [{
+        $or: [
+          { applicationDeadline: null },
+          { applicationDeadline: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
+        ],
+      }],
     };
 
     /*

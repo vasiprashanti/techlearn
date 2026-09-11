@@ -55,24 +55,20 @@ const cleanDescription = (description) => {
 };
 
 const getCourseTopicsId = (course) => {
-  return (
-    COURSE_TOPIC_ID_OVERRIDES[normalizeCourseKey(course.title)] ||
-    COURSE_TOPIC_ID_OVERRIDES[normalizeCourseKey(course.id)] ||
-    course.id
-  );
+  return course?.id || course?._id || course?.courseId;
 };
 
 const getCourseImage = (course) => {
-  if (course.image) return course.image;
-  if (course.bannerImage) return course.bannerImage;
-  const t = (course.title || '').toLowerCase();
+  if (course?.bannerImage) return course.bannerImage;
+  if (course?.image && !course.image.includes('/python.jpg')) return course.image;
+  const t = (course?.title || '').toLowerCase();
   if (t.includes('genai') || t.includes('generative ai')) return '/genai.jpg';
   if (t.includes('aptitude') || t.includes('quantitative') || t.includes('reasoning')) return '/aptitude.jpg';
   if (t.includes('fullstack') || t.includes('full stack') || t.includes('full-stack')) return '/java-fullstack.jpg';
   if (t.includes('java') && !t.includes('javascript')) return '/java.jpg';
   if (t.includes('python')) return '/python.jpg';
   if (t.includes('c programming') || t === 'c' || t.startsWith('c ')) return '/c-programming.jpg';
-  return '/python.jpg';
+  return course?.image || '/python.jpg';
 };
 
 const readCachedCourses = () => {
@@ -105,13 +101,13 @@ const writeCachedCourses = (courses) => {
 };
 
 const getProgramImage = (program) => {
-  if (program.image && !program.image.includes('expert-led-banner') && !program.image.includes('auth-hero')) {
-    return program.image;
-  }
-  if (program.bannerImage && !program.bannerImage.includes('expert-led-banner') && !program.bannerImage.includes('auth-hero')) {
+  if (program?.bannerImage && !program.bannerImage.includes('expert-led-banner') && !program.bannerImage.includes('auth-hero')) {
     return program.bannerImage;
   }
-  const name = (program.name || program.title || '').toLowerCase();
+  if (program?.image && !program.image.includes('expert-led-banner') && !program.image.includes('auth-hero')) {
+    return program.image;
+  }
+  const name = (program?.name || program?.title || '').toLowerCase();
   if (name.includes('genai') || name.includes('generative ai') || name.includes('ai &') || name.includes('ai/ml')) return '/genai.jpg';
   if (name.includes('aptitude') || name.includes('reasoning') || name.includes('math')) return '/aptitude.jpg';
   if (name.includes('full stack') || name.includes('fullstack') || name.includes('web bootcamp') || name.includes('backend')) return '/java-fullstack.jpg';
@@ -124,14 +120,36 @@ const getProgramImage = (program) => {
   return '/c-programming.jpg';
 };
 
+const isFreeCourseItem = (course) => {
+  const rawPrice = course?.price;
+  return (
+    !rawPrice ||
+    rawPrice === 'Free' ||
+    String(rawPrice).toLowerCase() === 'free' ||
+    String(rawPrice).toLowerCase() === 'coming soon' ||
+    course?.status === 'coming_soon' ||
+    (!String(rawPrice).includes('₹') && isNaN(Number(rawPrice)))
+  );
+};
+
+const isFreeProgramItem = (program) => {
+  const rawPrice = program?.price;
+  return (
+    !rawPrice ||
+    rawPrice === 'FREE' ||
+    String(rawPrice).toLowerCase() === 'free' ||
+    program?.pricingType === 'Free'
+  );
+};
+
 const LearnMain = () => {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const isDarkMode = theme === 'dark';
 
   const [activeTab, setActiveTab] = useState('courses'); // 'courses' | 'programs'
-  const [courseFilter, setCourseFilter] = useState('all'); // 'all' | 'skill' | 'placement'
-  const [programFilter, setProgramFilter] = useState('all'); // 'all' | 'self-paced' | 'trainer-led'
+  const [courseFilter, setCourseFilter] = useState('all'); // 'all' | 'free' | 'skill' | 'placement'
+  const [programFilter, setProgramFilter] = useState('all'); // 'all' | 'free' | 'self-paced' | 'trainer-led'
   const [searchQuery, setSearchQuery] = useState('');
 
   const [selectedWaitlistProgram, setSelectedWaitlistProgram] = useState(null);
@@ -140,25 +158,6 @@ const LearnMain = () => {
   const [coursesData, setCoursesData] = useState(cachedCourses || []);
   const [publicPrograms, setPublicPrograms] = useState([]);
   const [loading, setLoading] = useState(!cachedCourses);
-
-  const mockCoursesData = [
-    { id: "6890c2acbc09eb4b5c346b9b", title: "C Programming", description: "Master the fundamentals of C programming and memory concepts", status: "available", image: "/c-programming.jpg", category: "skill" },
-    { id: "6890ec81950225df57310f52", title: "Python Programming", description: "Learn Python programming from basics to advanced concepts", status: "available", image: "/python.jpg", category: "skill" },
-    { id: "6890f09830551d88a325f623", title: "Java Programming", description: "Master Java programming and object-oriented concepts", status: "available", image: "/java.jpg", category: "skill" },
-    { id: "dsa", title: "Data Structures & Algorithms", description: "Master DSA concepts for coding interviews and problem solving", status: "available", image: "/dsa.png", category: "skill" },
-    { id: "mysql", title: "MySQL Database", description: "Learn database design, queries, and management with MySQL", status: "available", image: "/mysql.png", category: "skill" }
-  ];
-
-  const defaultTrainerPrograms = [
-    { _id: "placement-sprint", name: "30-Day Placement Sprint", description: "Structured daily tasks, real company patterns, mock interviews, and assessment readiness.", duration: "30 Days", instructor: "Prashanti Vasi", level: "Intermediate", programType: "Placement", bannerImage: "/c-programming.jpg", metaTags: ["30 Days", "Roadmap", "Projects"], price: "Free", pricingType: "Free", deliveryType: "self-paced" },
-    { _id: "full-stack-live", name: "Java Full Stack Bootcamp", description: "Hands-on projects with React, Node.js, and cloud deployments with live doubt sessions.", duration: "12 Days", instructor: "Jyotsna", level: "Beginner", programType: "Skill", bannerImage: "/java-fullstack.jpg", metaTags: ["12 Days", "Projects", "Full Stack"], price: "₹799", pricingType: "Paid", deliveryType: "self-paced" },
-    { _id: "genai-placements", name: "Generative AI for Placements", description: "Learn practical Generative AI concepts, prompting and AI application development for placement preparation.", duration: "21 Days", instructor: "Prashanti Vasi", level: "Advanced", programType: "Placement", bannerImage: "/genai.jpg", metaTags: ["21 Days", "Live", "Practice"], price: "Free", pricingType: "Free", deliveryType: "trainer-led" },
-    { _id: "aptitude-prep", name: "Aptitude Preparation", description: "Prepare for placement aptitude rounds with structured topics, daily practice and company-style questions.", duration: "26 Days", instructor: "Lead Trainer", level: "Beginner", programType: "Placement", bannerImage: "/aptitude.jpg", metaTags: ["26 Days", "Daily Practice", "MCQs"], price: "₹399", pricingType: "Paid", deliveryType: "self-paced" },
-    { _id: "dsa-interview-mastery", name: "DSA & Interview Mastery", description: "In-depth problem solving covering top interview patterns for product companies.", duration: "5 weeks", instructor: "Prashanti Vasi", level: "Advanced", programType: "Placement", bannerImage: "/c-programming.jpg", metaTags: ["5 Weeks", "Live", "Patterns"], price: "Free", pricingType: "Free", deliveryType: "trainer-led" },
-    { _id: "system-design-cohort", name: "System Design & Architecture", description: "Scalable backend systems, caching, microservices, and distributed architecture.", duration: "4 weeks", instructor: "Prashanti Vasi", level: "Advanced", programType: "Placement", bannerImage: "/java-fullstack.jpg", metaTags: ["4 Weeks", "Architecture", "Mentorship"], price: "Free", pricingType: "Free", deliveryType: "trainer-led" },
-    { _id: "data-analytics-track", name: "Data Engineering & Analytics", description: "SQL, Python, ETL pipelines, and business intelligence interview preparation.", duration: "6 weeks", instructor: "Jyotsna", level: "Intermediate", programType: "Skill", bannerImage: "/python.jpg", metaTags: ["6 Weeks", "SQL & ETL", "Projects"], price: "Free", pricingType: "Free", deliveryType: "trainer-led" },
-    { _id: "cloud-devops-mastery", name: "Cloud & DevOps Career Track", description: "Docker, Kubernetes, AWS infrastructure, and CI/CD automated deployment pipelines.", duration: "6 weeks", instructor: "Lead Trainer", level: "Intermediate", programType: "Skill", bannerImage: "/java-fullstack.jpg", metaTags: ["6 Weeks", "AWS & CI/CD", "Live"], price: "Free", pricingType: "Free", deliveryType: "trainer-led" },
-  ];
 
   useEffect(() => {
     const fetchCoursesAndPrograms = async () => {
@@ -174,30 +173,17 @@ const LearnMain = () => {
         if (backendCourses.status === 'fulfilled' && Array.isArray(backendCourses.value)) {
           const adapted = backendCourses.value
             .map(course => dataAdapters.adaptCourse(course))
-            .filter(isUserVisibleCourse);
+            .filter(isUserVisibleCourse)
+            .filter(course => (Number(course.numTopics) > 0) || (Array.isArray(course.topics) && course.topics.length > 0) || (Array.isArray(course.topicIds) && course.topicIds.length > 0));
           setCoursesData(adapted);
           writeCachedCourses(adapted);
-        } else if (!cachedCourses) {
-          setCoursesData(mockCoursesData);
         }
 
-        if (programsRes.status === 'fulfilled' && Array.isArray(programsRes.value?.programs) && programsRes.value.programs.length > 0) {
-          const combined = [...programsRes.value.programs];
-          defaultTrainerPrograms.forEach(dp => {
-            if (!combined.some(p => p._id === dp._id || p.name === dp.name)) {
-              combined.push(dp);
-            }
-          });
-          setPublicPrograms(combined);
-        } else {
-          setPublicPrograms(defaultTrainerPrograms);
+        if (programsRes.status === 'fulfilled' && Array.isArray(programsRes.value?.programs)) {
+          setPublicPrograms(programsRes.value.programs);
         }
       } catch (fetchError) {
         console.error('Error fetching learn catalog:', fetchError);
-        if (!cachedCourses) {
-          setCoursesData(mockCoursesData);
-          setPublicPrograms(defaultTrainerPrograms);
-        }
       } finally {
         setLoading(false);
       }
@@ -240,7 +226,9 @@ const LearnMain = () => {
 
   const filteredCourses = coursesData.filter(course => {
     const category = getCourseCategory(course);
-    if (courseFilter !== 'all' && category !== courseFilter) {
+    if (courseFilter === 'free') {
+      if (!isFreeCourseItem(course)) return false;
+    } else if (courseFilter !== 'all' && category !== courseFilter) {
       return false;
     }
     if (searchQuery.trim()) {
@@ -261,9 +249,11 @@ const LearnMain = () => {
     return 'trainer-led';
   };
 
-  const filteredPrograms = (publicPrograms.length > 0 ? publicPrograms : defaultTrainerPrograms).filter(program => {
+  const filteredPrograms = publicPrograms.filter(program => {
     const delivery = getProgramDeliveryType(program);
-    if (programFilter !== 'all' && delivery !== programFilter) {
+    if (programFilter === 'free') {
+      if (!isFreeProgramItem(program)) return false;
+    } else if (programFilter !== 'all' && delivery !== programFilter) {
       return false;
     }
     if (searchQuery.trim()) {
@@ -359,6 +349,14 @@ const LearnMain = () => {
                   onClick={() => setCourseFilter('all')}
                 >
                   ALL
+                </button>
+
+                <button
+                  type="button"
+                  className={`filter-button ${courseFilter === 'free' ? 'active' : ''}`}
+                  onClick={() => setCourseFilter('free')}
+                >
+                  FREE
                 </button>
 
                 <button
@@ -479,6 +477,14 @@ const LearnMain = () => {
                   onClick={() => setProgramFilter('all')}
                 >
                   ALL
+                </button>
+
+                <button
+                  type="button"
+                  className={`filter-button ${programFilter === 'free' ? 'active' : ''}`}
+                  onClick={() => setProgramFilter('free')}
+                >
+                  FREE
                 </button>
 
                 <button

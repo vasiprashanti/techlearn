@@ -139,6 +139,9 @@ export default function Jobs() {
         if (!isCancelled) {
           let fetchedJobs = response?.data || [];
 
+          // Never show expired opportunities
+          fetchedJobs = fetchedJobs.filter((job) => !isJobExpired(job));
+
           // Sound matching logic across all filter criteria
           if (appliedRoles.length > 0) {
             fetchedJobs = fetchedJobs.filter((job) =>

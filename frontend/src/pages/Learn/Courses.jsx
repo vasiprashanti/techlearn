@@ -56,26 +56,26 @@ const getCourseTopicsId = (course) => {
 };
 
 const getCourseImage = (course) => {
-  if (course.image) return course.image;
-  if (course.bannerImage) return course.bannerImage;
-  const t = (course.title || '').toLowerCase();
+  if (course?.bannerImage) return course.bannerImage;
+  if (course?.image && !course.image.includes('/python.jpg')) return course.image;
+  const t = (course?.title || '').toLowerCase();
   if (t.includes('genai') || t.includes('generative ai')) return '/genai.jpg';
   if (t.includes('aptitude') || t.includes('quantitative') || t.includes('reasoning')) return '/aptitude.jpg';
   if (t.includes('fullstack') || t.includes('full stack') || t.includes('full-stack')) return '/java-fullstack.jpg';
   if (t.includes('java') && !t.includes('javascript')) return '/java.jpg';
   if (t.includes('python')) return '/python.jpg';
   if (t.includes('c programming') || t === 'c' || t.startsWith('c ')) return '/c-programming.jpg';
-  return '/python.jpg';
+  return course?.image || '/python.jpg';
 };
 
 const getProgramImage = (program) => {
-  if (program.image && !program.image.includes('expert-led-banner') && !program.image.includes('auth-hero')) {
-    return program.image;
-  }
-  if (program.bannerImage && !program.bannerImage.includes('expert-led-banner') && !program.bannerImage.includes('auth-hero')) {
+  if (program?.bannerImage && !program.bannerImage.includes('expert-led-banner') && !program.bannerImage.includes('auth-hero')) {
     return program.bannerImage;
   }
-  const name = (program.name || program.title || '').toLowerCase();
+  if (program?.image && !program.image.includes('expert-led-banner') && !program.image.includes('auth-hero')) {
+    return program.image;
+  }
+  const name = (program?.name || program?.title || '').toLowerCase();
   if (name.includes('genai') || name.includes('generative ai') || name.includes('ai &') || name.includes('ai/ml')) return '/genai.jpg';
   if (name.includes('aptitude') || name.includes('reasoning') || name.includes('math')) return '/aptitude.jpg';
   if (name.includes('full stack') || name.includes('fullstack') || name.includes('web bootcamp') || name.includes('backend')) return '/java-fullstack.jpg';

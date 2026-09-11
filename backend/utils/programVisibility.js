@@ -6,7 +6,23 @@ const NON_PUBLIC_PROGRAM_NAME = /^(?:(?:test|demo|sample|placeholder)(?:[\s_-]+|
 
 export const isUserVisibleProgram = (program) => {
   const name = String(program?.name || "").trim();
-  return Boolean(name) && !NON_PUBLIC_PROGRAM_NAME.test(name);
+  if (!name || NON_PUBLIC_PROGRAM_NAME.test(name)) return false;
+
+  // Program must have at least one valid course attached
+  const courseCount = Array.isArray(program?.courseIds) ? program.courseIds.length : 0;
+  if (courseCount === 0) return false;
+
+  // Program must have duration specified
+  if (!program?.duration && !program?.durationDays) return false;
+
+  // If pricingType is Paid, program must have fee or active pricing plan configured
+  if (program?.pricingType === "Paid") {
+    const hasProgramFee = typeof program.programFee === "number" && program.programFee > 0;
+    const hasPricingPlan = Array.isArray(program.pricingPlans) && program.pricingPlans.some((p) => typeof p.price === "number" && p.price > 0);
+    if (!hasProgramFee && !hasPricingPlan) return false;
+  }
+
+  return true;
 };
 
 /**
