@@ -511,7 +511,7 @@ export default function Jobs() {
         {/* =========================
              CONTROLS ROW (All, For You, Filters)
         ========================= */}
-        <div className="controls-row flex items-center justify-end">
+        <div className="controls-row">
           <div className="filters">
             <button
               type="button"
