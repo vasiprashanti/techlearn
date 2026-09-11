@@ -1,0 +1,449 @@
+/* ==================================================
+   TECHLEARN HIRING / JOBS PAGE STYLES
+   Matches learnPage.css structure, variables, and typography
+================================================== */
+
+.hiring-page-container {
+  /* DARK MODE DEFAULTS */
+  --page-bg: #000b36;
+  --page-text: #ffffff;
+
+  --nav-bg: rgba(4, 16, 61, 0.082);
+  --dropdown-bg: rgba(4, 16, 61, 0.98);
+
+  --text: rgba(255, 255, 255, 0.72);
+  --muted: rgba(255, 255, 255, 0.48);
+
+  --border: rgba(15, 23, 56, 0.477);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+
+  --card-bg: #020d4b;
+  --card-hover-bg: #041261;
+  --banner-bg: #111a42;
+
+  --accent: #89c638;
+  --accent-hover: #9bd45a;
+
+  --input-bg: #0c1c77;
+  --soft-bg: rgba(255, 255, 255, 0.045);
+  --divider: rgba(255, 255, 255, 0.10);
+
+  --heading: #ffffff;
+  --secondary: rgba(255, 255, 255, 0.68);
+  --filter-bg: rgba(255, 255, 255, 0.055);
+
+  --switch-bg: #05144b;
+  --switch-border: rgba(255, 255, 255, 0.1);
+  --switch-active-bg: #152d87;
+  --switch-active-text: #ffffff;
+  --switch-inactive-text: rgba(255, 255, 255, 0.6);
+
+  --pill-bg: rgba(255, 255, 255, 0.06);
+  --pill-text: rgba(255, 255, 255, 0.75);
+  --pill-active-bg: #ffffff;
+  --pill-active-text: #000b36;
+
+  --tab-indicator: #ffffff;
+
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--page-bg);
+  color: var(--page-text);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  width: 100%;
+  transition: background-color .25s ease, color .25s ease;
+}
+
+/* LIGHT MODE */
+.hiring-page-container.light-mode {
+  --page-bg: #ceeefd;
+  --page-text: #080830;
+
+  --nav-bg: rgba(255, 255, 255, 0.081);
+  --dropdown-bg: rgba(255, 255, 255, 0.98);
+
+  --text: rgba(7, 16, 47, 0.72);
+  --muted: rgba(7, 16, 47, 0.48);
+
+  --border: rgba(0, 3, 12, 0.16);
+  --border-subtle: rgba(0, 17, 59, 0.08);
+
+  --card-bg: #e2f7ff;
+  --card-hover-bg: #ffffff;
+  --banner-bg: #03185a;
+
+  --accent: #02107a;
+  --accent-hover: #63b326;
+
+  --input-bg: #ffffff;
+  --soft-bg: rgba(255, 255, 255, 0.55);
+  --divider: rgba(2, 16, 122, 0.12);
+
+  --heading: #02107a;
+  --secondary: rgba(2, 16, 122, 0.72);
+  --filter-bg: rgba(255, 255, 255, 0.55);
+
+  --switch-bg: rgba(255, 255, 255, 0.6);
+  --switch-border: rgba(0, 17, 59, 0.12);
+  --switch-active-bg: #ffffff;
+  --switch-active-text: #02107a;
+  --switch-inactive-text: rgba(2, 16, 122, 0.6);
+
+  --pill-bg: rgba(255, 255, 255, 0.6);
+  --pill-text: #02107a;
+  --pill-active-bg: #02107a;
+  --pill-active-text: #ffffff;
+
+  --tab-indicator: #02107a;
+}
+
+/* Page wrapper */
+.hiring-page-container .page {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 130px 48px 100px;
+  box-sizing: border-box;
+}
+
+/* Header */
+.hiring-page-container .hiring-header {
+  text-align: center;
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+.hiring-page-container .eyebrow {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--heading);
+  margin-bottom: 20px;
+}
+
+/* Title matching Learn page gradient and font */
+.hiring-page-container .hiring-title {
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(28px, 5vw, 52px);
+  line-height: 1.1;
+  letter-spacing: -2px;
+  background: linear-gradient(
+    90deg,
+    #02107a,
+    #1c31ed
+  ) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  margin-bottom: 14px;
+}
+
+.hiring-page-container .hiring-subtitle {
+  max-width: 650px;
+  margin: 0 auto;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--heading);
+}
+
+/* Pill Search bar */
+.hiring-page-container .search-wrapper {
+  max-width: 650px;
+  margin: 42px auto 0;
+  position: relative;
+}
+
+.hiring-page-container .search-icon {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.hiring-page-container .search-input {
+  width: 100%;
+  height: 56px;
+  padding: 0 20px 0 52px;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background: var(--input-bg);
+  outline: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--page-text);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  transition: border .2s ease, box-shadow .2s ease;
+  box-sizing: border-box;
+}
+
+.hiring-page-container .search-input::placeholder {
+  color: var(--muted);
+}
+
+.hiring-page-container .search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.10);
+}
+
+/* LIST / CALENDAR SWITCH */
+.hiring-page-container .content-switch {
+  display: inline-flex;
+  font-family: "Press Start 2P", monospace;
+  margin: 40px auto 0;
+  padding: 4px;
+  background: var(--switch-bg);
+  border: 1px solid var(--switch-border);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.hiring-page-container .switch-button {
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 10px 24px;
+  border-radius: 9px;
+  color: var(--switch-inactive-text);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  cursor: pointer;
+  transition: background .25s ease, color .25s ease, box-shadow .25s ease;
+}
+
+.hiring-page-container .switch-button.active {
+  background: var(--switch-active-bg);
+  color: var(--switch-active-text);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+/* SUB-TABS & FILTER PILLS ROW */
+.hiring-page-container .controls-row {
+  margin-top: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* FILTERS MATCHING LEARN PAGE */
+.hiring-page-container .filters {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 0;
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.hiring-page-container .filters::-webkit-scrollbar {
+  display: none;
+}
+
+.hiring-page-container .filter-button {
+  flex-shrink: 0;
+  padding: 7px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--filter-bg);
+  color: var(--heading);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, border .2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hiring-page-container .filter-button:hover {
+  background: var(--input-bg);
+}
+
+.hiring-page-container .filter-button.active {
+  background: var(--heading);
+  color: var(--page-bg);
+  border-color: var(--heading);
+}
+
+.hiring-page-container .sub-tabs {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.hiring-page-container .sub-tab-btn {
+  position: relative;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px 0 10px;
+  transition: color 0.2s ease;
+}
+
+.hiring-page-container .sub-tab-btn:hover {
+  color: var(--heading);
+}
+
+.hiring-page-container .sub-tab-btn.active {
+  color: var(--heading);
+}
+
+.hiring-page-container .sub-tab-btn.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2.5px;
+  border-radius: 2px;
+  background-color: var(--tab-indicator);
+}
+
+/* TYPE PILLS */
+.hiring-page-container .type-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hiring-page-container .type-pill {
+  border: 1px solid var(--border);
+  outline: none;
+  background: var(--pill-bg);
+  color: var(--pill-text);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 7px 15px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.hiring-page-container .type-pill:hover {
+  background: var(--input-bg);
+}
+
+.hiring-page-container .type-pill.active {
+  background: var(--pill-active-bg);
+  color: var(--pill-active-text);
+  font-weight: 600;
+  border-color: var(--pill-active-bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* Additional Tool Controls (Filters trigger + Sort) */
+.hiring-page-container .tool-btn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--filter-bg);
+  color: var(--heading);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.hiring-page-container .tool-btn:hover {
+  background: var(--input-bg);
+}
+
+.hiring-page-container .tool-btn.active {
+  background: var(--heading);
+  color: var(--page-bg);
+  border-color: var(--heading);
+}
+
+.hiring-page-container .tool-select {
+  height: 34px;
+  padding: 0 26px 0 12px;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--filter-bg);
+  color: var(--heading);
+  font-size: 11px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .hiring-page-container .page {
+    padding: 100px 24px 70px;
+  }
+
+  .hiring-page-container .controls-row {
+    margin-top: 36px;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .hiring-page-container .filters {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 760px) {
+  .hiring-page-container .controls-row {
+    justify-content: flex-start;
+    margin-top: 24px;
+  }
+
+  .hiring-page-container .filters {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 5px;
+    overflow-x: auto;
+  }
+
+  .hiring-page-container .filter-button {
+    padding: 6px 8px;
+    font-size: 7px;
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 600px) {
+  .hiring-page-container .page {
+    padding: 95px 16px 60px;
+  }
+
+  .hiring-page-container .hiring-title {
+    font-size: 26px;
+  }
+
+  .hiring-page-container .hiring-subtitle {
+    font-size: 14px;
+  }
+
+  .hiring-page-container .switch-button {
+    padding: 8px 16px;
+    font-size: 8px;
+  }
+}

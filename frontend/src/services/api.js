@@ -578,7 +578,7 @@ export const dataAdapters = {
       level: backendCourse.level,
       gradient: visuals.gradient,
       icon: visuals.icon,
-      image: visuals.image,
+      image: backendCourse.bannerImage || visuals.image,
       status: courseStatus.status,
       price: courseStatus.price,
       certificationPrice: courseStatus.certificationPrice,
@@ -586,6 +586,8 @@ export const dataAdapters = {
       xpDiscount: courseStatus.xpDiscount,
       requiredXP: courseStatus.requiredXP,
       difficulty: backendCourse.level, // Add difficulty alias for filtering
+      numTopics: backendCourse.numTopics || (backendCourse.topics ? backendCourse.topics.length : 0),
+      topicIds: backendCourse.topicIds || [],
       topics: backendCourse.topics?.map(topic => ({
         id: topic.topicId || topic._id,
         title: topic.title,

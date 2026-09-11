@@ -42,7 +42,10 @@ export const hasPublicFreeProgramLink = (linkedPrograms = []) => linkedPrograms.
 
 export const isUserVisibleCourse = (course) => {
   const title = String(course?.title || "").trim();
-  return Boolean(title) && !NON_PUBLIC_COURSE_NAME.test(title);
+  if (!title || NON_PUBLIC_COURSE_NAME.test(title)) return false;
+
+  const hasTopics = (Number(course?.numTopics) > 0) || (Array.isArray(course?.topicIds) && course.topicIds.length > 0);
+  return hasTopics;
 };
 
 export default isUserVisibleCourse;
