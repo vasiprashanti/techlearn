@@ -45,6 +45,15 @@ const isUserVisibleCourse = (course) => {
   return !courseKeys.some((key) => HIDDEN_COURSE_KEYS.has(key));
 };
 
+const cleanDescription = (description) => {
+  if (!description) return '';
+  const trimmed = String(description).trim();
+  if (/^no description( provided\.?)?$/i.test(trimmed)) {
+    return '';
+  }
+  return trimmed;
+};
+
 const getCourseTopicsId = (course) => {
   return (
     COURSE_TOPIC_ID_OVERRIDES[normalizeCourseKey(course.title)] ||
@@ -417,7 +426,7 @@ const LearnMain = () => {
                         </h2>
 
                         <p className="description">
-                          {course.description}
+                          {cleanDescription(course.description)}
                         </p>
 
                         <div className="card-bottom">
@@ -534,7 +543,7 @@ const LearnMain = () => {
                         </h2>
 
                         <p className="description">
-                          {program.description}
+                          {cleanDescription(program.description)}
                         </p>
 
                         <div className="card-bottom">

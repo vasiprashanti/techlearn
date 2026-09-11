@@ -384,7 +384,7 @@
 
 .learn-page-container .card-content {
   background: var(--card-bg) !important;
-  padding: 25px 24px 23px !important;
+  padding: 16px 20px 18px !important;
   border-top-right-radius: 28px !important;
   margin-top: -12px !important;
   position: relative !important;
@@ -403,12 +403,10 @@
   font-size: 21px;
   font-weight: 750;
   color: var(--heading);
-  margin-top: 4px;
+  margin-top: 2px;
   margin-bottom: 0;
   line-height: 1.35;
   letter-spacing: -.5px;
-  min-height: 58px;
-  padding-bottom: 3px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -423,9 +421,9 @@
   font-size: 13px;
   color: var(--secondary);
   line-height: 1.6;
-  margin-top: 13px;
+  margin-top: 6px;
   margin-bottom: 10px;
-  min-height: 62px;
+  min-height: 48px;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
