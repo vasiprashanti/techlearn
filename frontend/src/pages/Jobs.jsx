@@ -1102,27 +1102,59 @@ export default function Jobs() {
             selectedDeadlineJobs.map((job, idx) => (
               <div
                 key={job._id || job.JID || idx}
-                className="bg-white/80 dark:bg-white/5 border border-white/90 dark:border-white/10 rounded-[12px] p-[16px] shadow-sm"
+                className="bg-white/80 dark:bg-white/5 border border-white/90 dark:border-white/10 rounded-[14px] p-[20px] shadow-sm flex flex-col gap-0"
               >
-                <div className="text-[12px] font-bold text-[#00113b] dark:text-white mb-[5px]">
-                  {job.companyName || job.company}
-                </div>
-                <div className="text-[15px] font-bold text-[#00113b] dark:text-white mb-[8px]">
+                {/* TITLE */}
+                <div className="text-[18px] font-extrabold leading-[1.25] text-[#00113b] dark:text-white mb-[5px]">
                   {job.title}
                 </div>
-                <div className="text-[10px] text-slate-600 dark:text-slate-400 mb-[13px]">
-                  {job.location || "India"} · {job.experience || "Fresher"}
-                  <br />
-                  Deadline:{" "}
-                  {new Date(selectedDeadlineDate + "T00:00:00").toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
+
+                {/* COMPANY */}
+                <div className="text-[13px] font-semibold text-[#00113b]/80 dark:text-slate-300 mb-[12px]">
+                  - {job.companyName || job.company}
                 </div>
+
+                {/* LOCATION */}
+                <div className="text-[12px] text-slate-500 dark:text-slate-400 mb-[3px]">
+                  {job.location || "India"}
+                </div>
+
+                {/* TYPE · EXPERIENCE */}
+                <div className="text-[12px] text-slate-500 dark:text-slate-400 mb-[16px]">
+                  {[job.jobType, job.experience || "Fresher"].filter(Boolean).join(" · ")}
+                </div>
+
+                {/* EXPECTED PAY */}
+                {job.salary && (
+                  <div className="mb-[16px]">
+                    <div className="text-[8px] font-bold tracking-[1.5px] uppercase text-slate-500 dark:text-slate-400 mb-[4px]">
+                      Expected Pay
+                    </div>
+                    <div className="text-[18px] font-extrabold leading-[1.2] text-[#00113b] dark:text-white">
+                      {job.salary}
+                      <span className="text-[12px] font-normal ml-[5px] text-slate-500 dark:text-slate-300">
+                        / month
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* DEADLINE */}
+                <div className="text-[12px] text-slate-500 dark:text-slate-400 mb-[18px]">
+                  Deadline ·{" "}
+                  <span className="font-bold text-[#00113b] dark:text-white">
+                    {new Date(selectedDeadlineDate + "T00:00:00").toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+
+                {/* APPLY BUTTON */}
                 <button
                   onClick={(e) => handleApply(job, e)}
-                  className="inline-flex items-center justify-center w-full h-[38px] bg-[#b5e959] text-[#00113b] font-['Press_Start_2P'] text-[7px] rounded-[7px] cursor-pointer hover:opacity-90 shadow-sm"
+                  className="w-full py-[14px] bg-[#b5e959] text-[#00113b] font-['Press_Start_2P'] text-[8px] rounded-[9px] cursor-pointer hover:opacity-90 transition-all"
                 >
                   APPLY
                 </button>
