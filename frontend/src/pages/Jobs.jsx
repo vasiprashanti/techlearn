@@ -89,7 +89,8 @@ export default function Jobs() {
 
   // Fetch Jobs from backend API
   useEffect(() => {
-    if (viewMode !== "list") return;
+    // In calendar mode we still need the recommended jobs for "for-you" filtering
+    if (viewMode !== "list" && !(viewMode === "calendar" && activeTab === "for-you")) return;
 
     let isCancelled = false;
 
@@ -365,6 +366,22 @@ export default function Jobs() {
         );
       }
 
+      // Filter out expired jobs from the calendar
+      const now = new Date();
+      dayJobs = dayJobs.filter((job) => {
+        if (!job?.applicationDeadline) return true;
+        const deadline = new Date(job.applicationDeadline);
+        return deadline.setHours(23, 59, 59, 999) >= now.getTime();
+      });
+
+      // When in "for-you" tab, only show recommended jobs
+      if (activeTab === "for-you") {
+        const recommendedIds = new Set(jobs.map((j) => String(j._id || j.JID)));
+        dayJobs = dayJobs.filter((job) =>
+          recommendedIds.has(String(job._id || job.JID))
+        );
+      }
+
       days.push({
         day: d,
         dateStr,
@@ -373,7 +390,7 @@ export default function Jobs() {
     }
 
     return days;
-  }, [calendarYear, calendarMonth, calendarData, appliedJobTypes, appliedRoles, appliedCompanies, appliedWorkModes, appliedExperience]);
+  }, [calendarYear, calendarMonth, calendarData, appliedJobTypes, appliedRoles, appliedCompanies, appliedWorkModes, appliedExperience, activeTab, jobs]);
 
   // Open Deadline Drawer for a Specific Date
   const openDeadlineDrawer = (dateStr, dayJobs) => {
@@ -863,8 +880,9 @@ export default function Jobs() {
 
       {/* FILTER DRAWER */}
       <aside
+        style={{ backgroundColor: "var(--page-bg)" }}
         className={`fixed right-0 top-0 bottom-0 w-[390px] max-w-[90%] z-[160] transition-transform duration-300 ease-in-out shadow-2xl flex flex-col ${
-          isDarkMode ? "bg-[#0b1934] text-white" : "bg-[#daf0fa] text-[#00113b]"
+          isDarkMode ? "text-white" : "text-[#00113b]"
         } ${filterDrawerOpen ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="p-[22px] flex justify-between items-center border-b border-black/10 dark:border-white/10">
@@ -1052,8 +1070,9 @@ export default function Jobs() {
 
       {/* DEADLINE DRAWER */}
       <aside
+        style={{ backgroundColor: "var(--page-bg)" }}
         className={`fixed right-0 top-0 bottom-0 w-[410px] max-w-[92%] z-[160] transition-transform duration-300 ease-in-out shadow-2xl flex flex-col ${
-          isDarkMode ? "bg-[#0b1934] text-white" : "bg-[#daf0fa] text-[#00113b]"
+          isDarkMode ? "text-white" : "text-[#00113b]"
         } ${deadlineDrawerOpen ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="p-[22px] flex justify-between items-center border-b border-black/10 dark:border-white/10">

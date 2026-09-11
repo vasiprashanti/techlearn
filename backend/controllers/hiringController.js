@@ -1005,11 +1005,22 @@ export const getHiringCalendar = async (req, res) => {
      * --------------------------------------------------------
      * FETCH JOBS
      * --------------------------------------------------------
+     * Clamp startDate to today so already-expired deadlines
+     * are not returned when viewing the current month.
      */
+    const todayUTC = new Date(
+      Date.UTC(
+        new Date().getUTCFullYear(),
+        new Date().getUTCMonth(),
+        new Date().getUTCDate()
+      )
+    );
+    const effectiveStartDate = startDate < todayUTC ? todayUTC : startDate;
+
     const jobs = await Job.find({
       status: "Published",
       applicationDeadline: {
-        $gte: startDate,
+        $gte: effectiveStartDate,
         $lt: endDate,
       },
     })
