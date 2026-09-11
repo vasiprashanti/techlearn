@@ -614,109 +614,96 @@ export default function Jobs() {
                     return (
                       <div
                         key={job._id || job.JID || job.id}
-                        className={`flex flex-col px-[22px] py-[22px] rounded-[16px] border transition-all duration-200 ${
+                        className={`grid grid-cols-1 md:grid-cols-[minmax(190px,1.1fr)_minmax(280px,1.6fr)_minmax(150px,0.75fr)_105px] items-center min-h-[108px] px-[22px] py-[18px] rounded-[14px] border transition-all duration-200 gap-4 md:gap-0 ${
                           expired
                             ? isDarkMode
                               ? "bg-[#060d1f] border-white/5 opacity-60 grayscale-[40%]"
                               : "bg-white/30 border-[#00113b]/10 opacity-60"
                             : isDarkMode
-                            ? "bg-white/5 border-white/10 hover:bg-white/8 hover:border-white/20 hover:-translate-y-[1px]"
+                            ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:-translate-y-[1px]"
                             : "bg-white/60 border-white/80 hover:bg-white hover:border-[#00113b]/20 hover:-translate-y-[1px] shadow-sm hover:shadow-md"
                         }`}
                       >
-                        {/* TITLE */}
-                        <div
-                          className={`text-[20px] font-extrabold leading-[1.25] mb-[4px] ${
-                            isDarkMode ? "text-white" : "text-[#00113b]"
-                          }`}
-                        >
-                          {job.title}
-                        </div>
-
-                        {/* COMPANY */}
-                        <div
-                          className={`text-[13px] font-semibold mb-[10px] ${
-                            isDarkMode ? "text-slate-300" : "text-[#00113b]/80"
-                          }`}
-                        >
-                          - {job.companyName || job.company}
-                        </div>
-
-                        {/* LOCATION */}
-                        <div
-                          className={`text-[12px] mb-[4px] ${
-                            isDarkMode ? "text-slate-400" : "text-slate-500"
-                          }`}
-                        >
-                          {job.location || "India"}
-                        </div>
-
-                        {/* TYPE · EXPERIENCE */}
-                        <div
-                          className={`text-[12px] mb-[18px] ${
-                            isDarkMode ? "text-slate-400" : "text-slate-500"
-                          }`}
-                        >
-                          {[job.jobType, job.experience || "Fresher"].filter(Boolean).join(" · ")}
-                        </div>
-
-                        {/* EXPECTED PAY */}
-                        <div className="mb-[16px]">
+                        {/* COLUMN 1: ROLE */}
+                        <div className="min-w-0 pr-2">
                           <div
-                            className={`text-[9px] font-bold tracking-[1.5px] uppercase mb-[4px] ${
+                            className={`text-[15px] font-bold mb-[6px] leading-[1.35] truncate ${
+                              isDarkMode ? "text-white" : "text-[#00113b]"
+                            }`}
+                          >
+                            {job.title}
+                          </div>
+                          <div
+                            className={`text-[11px] mb-[5px] truncate ${
+                              isDarkMode ? "text-slate-400" : "text-slate-600"
+                            }`}
+                          >
+                            {job.location || "Location not specified"}
+                          </div>
+                          <div
+                            className={`text-[10px] ${
                               isDarkMode ? "text-slate-400" : "text-slate-500"
                             }`}
                           >
-                            Expected Pay
+                            {job.experience || "Fresher"}
                           </div>
+                        </div>
+
+                        {/* COLUMN 2: COMPANY & TAGS */}
+                        <div className="min-w-0 pr-2">
                           <div
-                            className={`text-[20px] font-extrabold leading-[1.2] ${
+                            className={`text-[15px] font-bold mb-[9px] leading-[1.35] truncate ${
+                              isDarkMode ? "text-white" : "text-[#00113b]"
+                            }`}
+                          >
+                            {job.companyName || job.company}
+                          </div>
+                          <div className="flex flex-wrap gap-[5px]">
+                            {tags.map((tag, idx) => (
+                              <span
+                                key={idx}
+                                className={`inline-flex items-center px-[8px] py-[5px] rounded-[6px] text-[9px] font-bold whitespace-nowrap ${getTagClass(
+                                  tag
+                                )}`}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* COLUMN 3: SALARY */}
+                        <div>
+                          <div
+                            className={`text-[16px] font-bold leading-[1.4] ${
                               isDarkMode ? "text-white" : "text-[#00113b]"
                             }`}
                           >
                             {job.salary || "Undisclosed"}
-                            {job.salary && (
-                              <span
-                                className={`text-[13px] font-normal ml-[6px] ${
-                                  isDarkMode ? "text-slate-300" : "text-slate-500"
-                                }`}
-                              >
-                                / month
-                              </span>
-                            )}
                           </div>
-                        </div>
-
-                        {/* DEADLINE */}
-                        {job.applicationDeadline && (
-                          <div
-                            className={`text-[12px] mb-[18px] ${
+                          <span
+                            className={`block text-[9px] font-medium mt-[3px] ${
                               isDarkMode ? "text-slate-400" : "text-slate-500"
                             }`}
                           >
-                            Deadline ·{" "}
-                            <span className={`font-bold ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
-                              {new Date(job.applicationDeadline).toLocaleDateString("en-IN", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              })}
-                            </span>
-                          </div>
-                        )}
+                            Estimated Salary/Stipend
+                          </span>
+                        </div>
 
-                        {/* APPLY BUTTON */}
-                        <button
-                          onClick={(e) => handleApply(job, e)}
-                          disabled={expired}
-                          className={`w-full font-['Press_Start_2P'] text-[9px] leading-[1.5] border-none py-[15px] rounded-[10px] transition-all ${
-                            expired
-                              ? "bg-slate-300 dark:bg-white/10 text-slate-500 cursor-not-allowed"
-                              : "bg-[#b2e96a] text-[#0a1128] hover:-translate-y-[2px] hover:shadow-[0_5px_0_rgba(0,17,59,0.15)] active:translate-y-0 active:shadow-none cursor-pointer"
-                          }`}
-                        >
-                          {expired ? "EXPIRED" : "APPLY"}
-                        </button>
+                        {/* COLUMN 4: APPLY BUTTON */}
+                        <div>
+                          <button
+                            onClick={(e) => handleApply(job, e)}
+                            disabled={expired}
+                            className={`inline-flex items-center justify-center w-full font-['Press_Start_2P'] text-[8px] leading-[1.5] border-none py-[13px] px-[10px] rounded-[8px] transition-all ${
+                              expired
+                                ? "bg-slate-300 dark:bg-white/10 text-slate-500 cursor-not-allowed"
+                                : "bg-[#b2e96a] text-[#0a1128] hover:-translate-y-[2px] hover:shadow-[0_5px_0_rgba(0,17,59,0.15)] active:translate-y-0 active:shadow-none cursor-pointer"
+                            }`}
+                          >
+                            {expired ? "EXPIRED" : "APPLY"}
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -728,7 +715,7 @@ export default function Jobs() {
                       {[1, 2, 3].map((placeholderIdx) => (
                         <div
                           key={`locked-${placeholderIdx}`}
-                          className={`relative select-none pointer-events-none filter blur-[4px] opacity-40 flex flex-col px-[22px] py-[22px] rounded-[16px] border ${
+                          className={`relative select-none pointer-events-none filter blur-[4px] opacity-40 grid grid-cols-1 md:grid-cols-[minmax(190px,1.1fr)_minmax(280px,1.6fr)_minmax(150px,0.75fr)_105px] items-center min-h-[108px] px-[22px] py-[18px] rounded-[14px] border ${
                             isDarkMode
                               ? "bg-white/5 border-white/10"
                               : "bg-white/60 border-white/80"
