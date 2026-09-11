@@ -30,6 +30,12 @@
   --secondary: rgba(255, 255, 255, 0.68);
   --filter-bg: rgba(255, 255, 255, 0.055);
 
+  --switch-bg: #05144b;
+  --switch-border: rgba(255, 255, 255, 0.1);
+  --switch-active-bg: #152d87;
+  --switch-active-text: #ffffff;
+  --switch-inactive-text: rgba(255, 255, 255, 0.6);
+
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--page-bg);
@@ -66,6 +72,12 @@
   --heading: #02107a;
   --secondary: rgba(2, 16, 122, 0.72);
   --filter-bg: rgba(255, 255, 255, 0.55);
+
+  --switch-bg: rgba(255, 255, 255, 0.6);
+  --switch-border: rgba(0, 17, 59, 0.12);
+  --switch-active-bg: #ffffff;
+  --switch-active-text: #02107a;
+  --switch-inactive-text: rgba(2, 16, 122, 0.6);
 }
 
 /* =========================
@@ -182,9 +194,10 @@
   width: fit-content;
   margin: 60px auto 0;
   padding: 4px;
-  background: rgba(125, 199, 30, 0.898);
-  border: 1px solid var(--border);
+  background: var(--switch-bg);
+  border: 1px solid var(--switch-border);
   border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
 }
 
 .learn-page-container .switch-button {
@@ -193,7 +206,7 @@
   background: transparent;
   padding: 10px 22px;
   border-radius: 9px;
-  color: var(--muted);
+  color: var(--switch-inactive-text);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .2px;
@@ -202,8 +215,8 @@
 }
 
 .learn-page-container .switch-button.active {
-  background: var(--input-bg);
-  color: var(--heading);
+  background: var(--switch-active-bg);
+  color: var(--switch-active-text);
   box-shadow: 0 4px 14px rgba(0,0,0,.08);
 }
 

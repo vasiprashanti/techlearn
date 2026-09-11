@@ -232,7 +232,7 @@ function LayoutWrapper() {
     location.pathname.startsWith('/learn/interview-questions') ||
     location.pathname.startsWith('/core-prep/languages') ||
     location.pathname.startsWith('/core-prep/important-concepts') ||
-    (Boolean(isAuthenticated && user) && (location.pathname.startsWith('/resources/roadmaps') || location.pathname.startsWith('/roadmaps') || location.pathname === '/dashboard/roadmap' || location.pathname.startsWith('/jobs'))) ||
+    (Boolean(isAuthenticated && user) && (location.pathname.startsWith('/resources/roadmaps') || location.pathname.startsWith('/roadmaps') || location.pathname === '/dashboard/roadmap')) ||
     location.pathname.startsWith('/resources/resume-templates') ||
     location.pathname.startsWith('/learn/exercises') ||
     location.pathname.startsWith('/learn/program/') ||
