@@ -133,13 +133,15 @@ const isFreeCourseItem = (course) => {
 };
 
 const isFreeProgramItem = (program) => {
+  // Check pricingType field (case-insensitive)
+  if (String(program?.pricingType || '').toLowerCase() === 'free') return true;
+  // Check programFee === 0 (explicitly set to free)
+  if (program?.programFee !== undefined && program?.programFee !== null && Number(program?.programFee) === 0) return true;
+  // Check price string field
   const rawPrice = program?.price;
-  return (
-    !rawPrice ||
-    rawPrice === 'FREE' ||
-    String(rawPrice).toLowerCase() === 'free' ||
-    program?.pricingType === 'Free'
-  );
+  if (!rawPrice) return false;
+  const p = String(rawPrice).toLowerCase().trim();
+  return p === 'free' || p === 'FREE' || p === '₹0' || p === '0';
 };
 
 const LearnMain = () => {
