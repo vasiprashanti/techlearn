@@ -6,6 +6,7 @@ import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import { useTheme } from "../../context/ThemeContext";
 import { FiArrowLeft, FiEdit2, FiSave, FiAward, FiFileText, FiTrash2, FiPlus, FiChevronDown } from "react-icons/fi";
 import { prepareBannerImage } from "../../utils/bannerImage";
+import adminAPI from "../../services/adminApi";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "";
 
@@ -99,8 +100,21 @@ const AdminTopicsList = () => {
   const [duration, setDuration] = useState("");
   const [schedule, setSchedule] = useState("");
   const [startDate, setStartDate] = useState("");
-  const [bannerImage, setBannerImage] = useState("");
   const [bannerFile, setBannerFile] = useState(null);
+  const [bannerImage, setBannerImage] = useState("");
+  const [skills, setSkills] = useState([]);
+  const [allSkills, setAllSkills] = useState([
+    "Java", "Python", "C", "C++", "JavaScript", "TypeScript", "React", "Node.js", "SQL", "DSA", "Web Development", "AI/ML", "GenAI", "Cloud Computing", "Aptitude"
+  ]);
+  const [skillsOpen, setSkillsOpen] = useState(false);
+  const [otherSkillChecked, setOtherSkillChecked] = useState(false);
+  const [customSkillText, setCustomSkillText] = useState("");
+  const [deliveryType, setDeliveryType] = useState("Self-Paced");
+  const [accessType, setAccessType] = useState("Free");
+  const [price, setPrice] = useState(0);
+  const [status, setStatus] = useState("Draft");
+  const [programIds, setProgramIds] = useState([]);
+  const [programsList, setProgramsList] = useState([]);
 
   // Theme & layout states
   const { theme } = useTheme();
@@ -128,32 +142,40 @@ const AdminTopicsList = () => {
     const fetchTopics = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get(
-          `${BASE_URL}/admin/${courseId}`,
-          token ? { headers: { Authorization: `Bearer ${token}` } } : {}
-        );
-        setTopics(res.data.topics || []);
-        setCourseTitle(res.data.courseTitle || "");
-        setNumTopics(res.data.numTopics || 0);
-        setDescription(res.data.description || "");
-        setLevel(res.data.level || "Beginner");
-        setAssignedBatchIds(res.data.assignedBatchIds || []);
-        setCourseType(res.data.courseType || "Self-paced");
-        setInstructor(res.data.instructor || "");
-        setDuration(res.data.duration || "");
-        setSchedule(res.data.schedule || "");
-        setStartDate(res.data.startDate || "");
-        setBannerImage(res.data.bannerImage || "");
+        const cData = await adminAPI.getCourseTopics(courseId);
+        setTopics(cData.topics || []);
+        setCourseTitle(cData.courseTitle || "");
+        setNumTopics(cData.numTopics || 0);
+        setDescription(cData.description || "");
+        setLevel(cData.level || "Beginner");
+        setSkills(Array.isArray(cData.skills) ? cData.skills : []);
+        setDeliveryType(cData.deliveryType || (cData.courseType === "Trainer-led" ? "Trainer-Led" : "Self-Paced"));
+        setCourseType(cData.courseType || "Self-paced");
+        setAccessType(cData.accessType || "Free");
+        setPrice(Number(cData.price) || 0);
+        setStatus(cData.status || "Draft");
+        setProgramIds(Array.isArray(cData.programIds) ? cData.programIds.map(String) : []);
+        setAssignedBatchIds(cData.assignedBatchIds || []);
+        setInstructor(cData.instructor || "");
+        setDuration(cData.duration || "");
+        setSchedule(cData.schedule || "");
+        setStartDate(cData.startDate || "");
+        setBannerImage(cData.bannerImage || "");
         setError(null);
 
-        // Fetch batch options for assignment checklist
+        // Fetch programs list for Program Assignment
         try {
-          const batchesRes = await axios.get(
-            `${BASE_URL}/admin/batches`,
-            token ? { headers: { Authorization: `Bearer ${token}` } } : {}
-          );
-          const formatted = (batchesRes.data.data || batchesRes.data.batches || batchesRes.data || []).map((b) => ({
+          const progsRes = await adminAPI.getPrograms ? await adminAPI.getPrograms() : await adminAPI.request('/admin/programs?limit=100');
+          const pList = progsRes?.programs || progsRes?.data || (Array.isArray(progsRes) ? progsRes : []);
+          setProgramsList(pList.map((p) => ({ id: String(p._id || p.id), name: p.name, type: p.programType })));
+        } catch (pErr) {
+          console.error("Failed to load programs:", pErr);
+        }
+
+        // Fetch batch options for legacy assignment checklist
+        try {
+          const batchesRes = await adminAPI.getBatches ? await adminAPI.getBatches() : await adminAPI.request('/admin/batches');
+          const formatted = (batchesRes?.data || batchesRes?.batches || (Array.isArray(batchesRes) ? batchesRes : [])).map((b) => ({
             id: b.id || b._id,
             name: b.name,
             college: b.college || b.collegeName || "",
@@ -163,7 +185,8 @@ const AdminTopicsList = () => {
           console.error("Failed to load batch list options:", bErr);
         }
       } catch (err) {
-        setError("Failed to fetch topics.");
+        console.error("Failed to fetch topics:", err);
+        setError(err.message || "Failed to fetch topics.");
       }
       setLoading(false);
     };
@@ -378,21 +401,59 @@ const AdminTopicsList = () => {
 
   const handleCourseDetailsUpdate = async (e) => {
     e && e.preventDefault && e.preventDefault();
+
+    if (!courseTitle.trim()) {
+      alert("Course title is required.");
+      return;
+    }
+
+    if (courseTitle.trim().length > 120) {
+      alert("Course title must be at most 120 characters.");
+      return;
+    }
+
+    if (!description.trim()) {
+      alert("Course description is required.");
+      return;
+    }
+
+    if (skills.length === 0) {
+      alert("At least one skill is required.");
+      return;
+    }
+
+    if (accessType === "Paid" && (Number(price) <= 0 || isNaN(price))) {
+      alert("Paid courses require a price greater than ₹0.");
+      return;
+    }
+
+    if (status === "Published" && (topics.length === 0 || numTopics <= 0)) {
+      alert("Cannot publish course: course has 0 actual topics. Add topic notes and content first.");
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
-      formData.append("title", courseTitle);
-      formData.append("description", description);
+      formData.append("title", courseTitle.trim());
+      formData.append("description", description.trim());
       formData.append("level", level);
-      formData.append("numTopics", String(numTopics));
+      formData.append("skills", JSON.stringify(skills));
+      formData.append("deliveryType", deliveryType);
+      formData.append("courseType", deliveryType === "Trainer-Led" ? "Trainer-led" : "Self-paced");
+      formData.append("accessType", accessType);
+      formData.append("price", String(accessType === "Paid" ? price : 0));
+      formData.append("status", status);
+      formData.append("numTopics", String(Math.max(0, Number(numTopics))));
+      formData.append("programIds", JSON.stringify(programIds));
 
-      if (courseType === "Self-paced") {
-        formData.append("assignedBatchIds", JSON.stringify(assignedBatchIds));
+      if (deliveryType === "Trainer-Led") {
+        formData.append("instructor", instructor.trim());
+        formData.append("duration", duration.trim());
+        formData.append("schedule", schedule.trim());
+        formData.append("startDate", startDate.trim());
       } else {
-        formData.append("instructor", instructor);
-        formData.append("duration", duration);
-        formData.append("schedule", schedule);
-        formData.append("startDate", startDate);
+        formData.append("duration", duration.trim());
       }
 
       if (bannerFile) {
@@ -816,14 +877,101 @@ const AdminTopicsList = () => {
                       placeholder="Summarize course goals and curriculum syllabus..."
                     />
                   </div>
+                  {/* Skills Multi-Select */}
+                  <div>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45 font-semibold">Skills*</label>
+                    <div className="flex flex-wrap gap-1 mb-1.5 min-h-[24px]">
+                      {skills.map((sk) => (
+                        <span key={sk} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-[#3C83F6]/15 text-[#3C83F6] dark:bg-blue-500/20 dark:text-blue-300">
+                          {sk}
+                          <button type="button" onClick={() => setSkills(skills.filter((s) => s !== sk))} className="hover:opacity-75">×</button>
+                        </span>
+                      ))}
+                      {skills.length === 0 && <span className="text-xs text-slate-400 italic">No skills selected</span>}
+                    </div>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setSkillsOpen(!skillsOpen)}
+                        className={`${cardFormInputClass} flex items-center justify-between text-left`}
+                      >
+                        <span className="truncate">{skills.length ? `${skills.length} skills selected` : "Select skills..."}</span>
+                        <FiChevronDown className="w-4 h-4 ml-2 shrink-0" />
+                      </button>
+                      {skillsOpen && (
+                        <div
+                          className="absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] p-3 shadow-2xl max-h-48 overflow-y-auto minimal-scrollbar"
+                          style={{ backgroundColor: isDarkMode ? "#0f1f43" : "#ffffff" }}
+                        >
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {allSkills.map((sk) => (
+                              <label key={sk} className="flex items-center gap-2 p-1 rounded text-xs hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer text-slate-800 dark:text-white">
+                                <input
+                                  type="checkbox"
+                                  checked={skills.some((s) => s.toLowerCase() === sk.toLowerCase())}
+                                  onChange={() => {
+                                    setSkills((prev) =>
+                                      prev.some((s) => s.toLowerCase() === sk.toLowerCase())
+                                        ? prev.filter((s) => s.toLowerCase() !== sk.toLowerCase())
+                                        : [...prev, sk]
+                                    );
+                                  }}
+                                  className="rounded border-slate-300 text-[#3C83F6]"
+                                />
+                                <span className="truncate">{sk}</span>
+                              </label>
+                            ))}
+                          </div>
+                          <div className="mt-2 pt-2 border-t border-black/10 dark:border-white/10">
+                            <label className="flex items-center gap-2 text-xs font-semibold text-[#3C83F6] cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={otherSkillChecked}
+                                onChange={(e) => setOtherSkillChecked(e.target.checked)}
+                              />
+                              <span>Other (Add Custom Skill)</span>
+                            </label>
+                            {otherSkillChecked && (
+                              <div className="flex gap-2 mt-1.5">
+                                <input
+                                  type="text"
+                                  value={customSkillText}
+                                  onChange={(e) => setCustomSkillText(e.target.value)}
+                                  placeholder="Skill name"
+                                  className="flex-1 px-2 py-1 text-xs rounded border border-black/10 dark:border-white/15 bg-white dark:bg-[#0a1737] text-slate-800 dark:text-white"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const t = customSkillText.trim();
+                                    if (t && !skills.some((s) => s.toLowerCase() === t.toLowerCase())) {
+                                      setSkills([...skills, t]);
+                                      if (!allSkills.some((s) => s.toLowerCase() === t.toLowerCase())) {
+                                        setAllSkills([...allSkills, t]);
+                                      }
+                                      setCustomSkillText("");
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 bg-[#3C83F6] text-white text-xs rounded font-medium"
+                                >
+                                  Add
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="admin-micro-label text-black/45 dark:text-white/45">Topics Count</label>
                       <input
                         type="number"
-                        min="1"
+                        min="0"
                         value={numTopics}
-                        onChange={(e) => setNumTopics(Number(e.target.value))}
+                        onChange={(e) => setNumTopics(Math.max(0, Number(e.target.value)))}
                         className={cardFormInputClass}
                         required
                       />
@@ -837,6 +985,7 @@ const AdminTopicsList = () => {
                           className={`${cardFormInputClass} pr-10 appearance-none`}
                         >
                           <option className={dropdownOptionClass} value="Beginner">Beginner</option>
+                          <option className={dropdownOptionClass} value="Basic">Basic</option>
                           <option className={dropdownOptionClass} value="Intermediate">Intermediate</option>
                           <option className={dropdownOptionClass} value="Advanced">Advanced</option>
                         </select>
@@ -844,33 +993,108 @@ const AdminTopicsList = () => {
                       </div>
                     </div>
 
-                    {courseType === "Self-paced" ? (
-                      <div className="col-span-2">
-                        <label className="admin-micro-label text-black/45 dark:text-white/45">Assign to Batch(es)</label>
-                        <div className="mt-1 h-[126px] overflow-y-auto rounded-lg border border-black/10 dark:border-white/10 bg-[#f5f8fc] dark:bg-[#122b52] p-2 space-y-1 minimal-scrollbar">
-                          {batchOptions.map((batch) => {
-                            const checked = assignedBatchIds.map(String).includes(String(batch.id));
-                            return (
-                              <label key={batch.id} className="flex items-start gap-2 rounded-lg px-2 py-1 text-xs text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  onChange={() => toggleCourseBatch(batch.id)}
-                                  className="mt-0.5"
-                                />
-                                <span>
-                                  <span className="font-medium">{batch.name}</span>
-                                  {batch.college && <span className="block text-[10px] text-[#5f7592] dark:text-slate-400">{batch.college}</span>}
-                                </span>
-                              </label>
-                            );
-                          })}
-                          {batchOptions.length === 0 && (
-                            <p className="px-2 py-3 text-xs text-[#5f7592] dark:text-slate-350">No batches available.</p>
-                          )}
-                        </div>
+                    <div>
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Delivery Type</label>
+                      <div className="relative">
+                        <select
+                          value={deliveryType}
+                          onChange={(e) => setDeliveryType(e.target.value)}
+                          className={`${cardFormInputClass} pr-10 appearance-none`}
+                        >
+                          <option className={dropdownOptionClass} value="Self-Paced">Self-Paced</option>
+                          <option className={dropdownOptionClass} value="Structured">Structured</option>
+                          <option className={dropdownOptionClass} value="Trainer-Led">Trainer-Led</option>
+                        </select>
+                        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Access Type</label>
+                      <div className="relative">
+                        <select
+                          value={accessType}
+                          onChange={(e) => setAccessType(e.target.value)}
+                          className={`${cardFormInputClass} pr-10 appearance-none`}
+                        >
+                          <option className={dropdownOptionClass} value="Free">Free</option>
+                          <option className={dropdownOptionClass} value="Paid">Paid</option>
+                        </select>
+                        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                      </div>
+                    </div>
+
+                    {accessType === "Paid" ? (
+                      <div>
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Price (₹ INR)*</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                          className={cardFormInputClass}
+                          required
+                        />
                       </div>
                     ) : (
+                      <div>
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Price</label>
+                        <input
+                          type="text"
+                          value="Free (₹0)"
+                          disabled
+                          className={`${cardFormInputClass} opacity-60 cursor-not-allowed`}
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Course Status</label>
+                      <div className="relative">
+                        <select
+                          value={status}
+                          onChange={(e) => setStatus(e.target.value)}
+                          className={`${cardFormInputClass} pr-10 appearance-none`}
+                        >
+                          <option className={dropdownOptionClass} value="Draft">Draft</option>
+                          <option className={dropdownOptionClass} value="Published">Published</option>
+                          <option className={dropdownOptionClass} value="Archived">Archived</option>
+                        </select>
+                        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                      </div>
+                    </div>
+
+                    {/* Program Assignment */}
+                    <div className="col-span-2">
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Program Assignment</label>
+                      <div className="mt-1 h-[110px] overflow-y-auto rounded-lg border border-black/10 dark:border-white/10 bg-[#f5f8fc] dark:bg-[#122b52] p-2 space-y-1 minimal-scrollbar">
+                        {programsList.map((prog) => {
+                          const checked = programIds.includes(String(prog.id));
+                          return (
+                            <label key={prog.id} className="flex items-center gap-2 rounded-lg px-2 py-1 text-xs text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => {
+                                  const idStr = String(prog.id);
+                                  setProgramIds((prev) =>
+                                    prev.includes(idStr) ? prev.filter((p) => p !== idStr) : [...prev, idStr]
+                                  );
+                                }}
+                                className="rounded border-slate-300 text-[#3C83F6]"
+                              />
+                              <span className="font-medium truncate">{prog.name}</span>
+                              {prog.type && <span className="text-[10px] text-slate-400">({prog.type})</span>}
+                            </label>
+                          );
+                        })}
+                        {programsList.length === 0 && (
+                          <p className="px-2 py-3 text-xs text-slate-400">No programs available.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {deliveryType === "Trainer-Led" && (
                       <>
                         <div>
                           <label className="admin-micro-label text-black/45 dark:text-white/45">Instructor Name</label>
@@ -912,8 +1136,8 @@ const AdminTopicsList = () => {
                             placeholder="e.g. Mon-Sat"
                           />
                         </div>
-                        </>
-                      )}
+                      </>
+                    )}
 
                       <div className="col-span-2">
                         <label className="admin-micro-label text-black/45 dark:text-white/45 font-medium">Banner Image</label>

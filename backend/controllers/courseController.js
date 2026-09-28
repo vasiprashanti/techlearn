@@ -132,19 +132,79 @@ const courseRequiresEnrollment = (linkedPrograms = []) => {
 // admin specific functions
 export const createCourseShell = async (req, res) => {
   try {
-    const { title, description, level, numTopics, assignedBatchIds, courseType, bannerImage, instructor, duration, schedule, startDate } = req.body;
+    const {
+      title,
+      description,
+      level,
+      numTopics,
+      assignedBatchIds,
+      programIds,
+      skills,
+      deliveryType,
+      courseType,
+      accessType,
+      price,
+      status,
+      bannerImage,
+      instructor,
+      duration,
+      schedule,
+      startDate,
+    } = req.body;
 
     // Validate required fields
-    if (!title || !numTopics) {
+    if (!title || String(title).trim().length < 1) {
       return res.status(400).json({
-        message: "Title and number of topics are required",
+        message: "Course title is required",
       });
     }
 
-    if (title.trim().length < 1) {
+    if (String(title).trim().length > 120) {
       return res.status(400).json({
-        message: "Course title must be at least 1 character long",
+        message: "Course title must be at most 120 characters",
       });
+    }
+
+    const parsedNumTopics = parseInt(numTopics) || 0;
+    if (parsedNumTopics < 0) {
+      return res.status(400).json({
+        message: "Topics count cannot be negative",
+      });
+    }
+
+    // Skills parsing
+    let parsedSkills = [];
+    if (Array.isArray(skills)) {
+      parsedSkills = skills;
+    } else if (typeof skills === "string") {
+      try {
+        parsedSkills = JSON.parse(skills);
+      } catch (e) {
+        parsedSkills = skills.split(",").map((s) => s.trim()).filter(Boolean);
+      }
+    }
+    // Deduplicate skills case-insensitively
+    const seenSkills = new Set();
+    const cleanSkills = [];
+    for (const skill of parsedSkills) {
+      const trimmed = String(skill || "").trim();
+      const lower = trimmed.toLowerCase();
+      if (trimmed && !seenSkills.has(lower)) {
+        seenSkills.add(lower);
+        cleanSkills.push(trimmed);
+      }
+    }
+
+    // Program IDs parsing
+    let parsedProgramIds = [];
+    if (Array.isArray(programIds)) {
+      parsedProgramIds = programIds;
+    } else if (typeof programIds === "string") {
+      try {
+        parsedProgramIds = JSON.parse(programIds);
+      } catch (e) {
+        parsedProgramIds = programIds.split(",").map((id) => id.trim()).filter(Boolean);
+      }
     }
 
     let parsedBatchIds = assignedBatchIds || [];
@@ -152,9 +212,27 @@ export const createCourseShell = async (req, res) => {
       try {
         parsedBatchIds = JSON.parse(assignedBatchIds);
       } catch (e) {
-        parsedBatchIds = assignedBatchIds.split(",").map(id => id.trim()).filter(Boolean);
+        parsedBatchIds = assignedBatchIds.split(",").map((id) => id.trim()).filter(Boolean);
       }
     }
+
+    const resolvedAccessType = accessType === "Paid" ? "Paid" : "Free";
+    const resolvedPrice = resolvedAccessType === "Paid" ? Number(price) || 0 : 0;
+    if (resolvedAccessType === "Paid" && resolvedPrice <= 0) {
+      return res.status(400).json({
+        message: "Paid courses require a price greater than 0",
+      });
+    }
+
+    const resolvedStatus = ["Draft", "Published", "Archived"].includes(status) ? status : "Draft";
+    // Publishing gate: cannot publish a course shell that has 0 actual topics
+    if (resolvedStatus === "Published") {
+      return res.status(400).json({
+        message: "A course cannot be published with zero actual topics. Please save as Draft and add topic content first.",
+      });
+    }
+
+    const normalizedDeliveryType = deliveryType || (courseType === "Trainer-led" ? "Trainer-Led" : "Self-Paced");
 
     let resolvedBannerImage = bannerImage || "";
     if (req.file) {
@@ -168,12 +246,18 @@ export const createCourseShell = async (req, res) => {
     const courseData = {
       title: title.trim(),
       description: description?.trim() || "No description provided",
-      level: level,
-      numTopics: parseInt(numTopics),
+      level: level || "Beginner",
+      skills: cleanSkills,
+      numTopics: parsedNumTopics,
       topicIds: [], // Empty initially
       exerciseIds: [], // Empty initially
+      programIds: parsedProgramIds,
       assignedBatchIds: parsedBatchIds,
-      courseType: courseType || "Self-paced",
+      deliveryType: normalizedDeliveryType,
+      courseType: normalizedDeliveryType === "Trainer-Led" ? "Trainer-led" : "Self-paced",
+      accessType: resolvedAccessType,
+      price: resolvedPrice,
+      status: resolvedStatus,
       bannerImage: resolvedBannerImage,
       instructor: instructor || "",
       duration: duration || "",
@@ -182,22 +266,21 @@ export const createCourseShell = async (req, res) => {
     };
 
     const newCourse = new Course(courseData);
-
     const savedCourse = await newCourse.save();
+
+    // Link course to programs if specified
+    if (parsedProgramIds.length > 0) {
+      await Program.updateMany(
+        { _id: { $in: parsedProgramIds } },
+        { $addToSet: { courseIds: savedCourse._id } }
+      );
+    }
 
     res.status(201).json({
       success: true,
       message: "Course shell created successfully",
       courseId: savedCourse._id,
-      course: {
-        id: savedCourse._id,
-        title: savedCourse.title,
-        description: savedCourse.description,
-        level: savedCourse.level,
-        numTopics: savedCourse.numTopics,
-        topicIds: savedCourse.topicIds,
-        exerciseIds: savedCourse.exerciseIds,
-      },
+      course: savedCourse,
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({
@@ -263,7 +346,25 @@ export const deleteCourse = async (req, res) => {
 export const updateCourseShell = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { title, description, level, numTopics, assignedBatchIds, courseType, bannerImage, instructor, duration, schedule, startDate } = req.body;
+    const {
+      title,
+      description,
+      level,
+      numTopics,
+      assignedBatchIds,
+      programIds,
+      skills,
+      deliveryType,
+      courseType,
+      accessType,
+      price,
+      status,
+      bannerImage,
+      instructor,
+      duration,
+      schedule,
+      startDate,
+    } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({ message: "Invalid course ID" });
@@ -273,44 +374,158 @@ export const updateCourseShell = async (req, res) => {
       return res.status(400).json({ message: "Course title must be at least 1 character long" });
     }
 
+    if (title !== undefined && String(title).trim().length > 120) {
+      return res.status(400).json({ message: "Course title must be at most 120 characters" });
+    }
+
     const existingCourse = await Course.findById(courseId);
     if (!existingCourse) {
       return res.status(404).json({ message: "Course not found" });
-    }
-
-    let parsedBatchIds = assignedBatchIds;
-    if (typeof assignedBatchIds === "string") {
-      try {
-        parsedBatchIds = JSON.parse(assignedBatchIds);
-      } catch (e) {
-        parsedBatchIds = assignedBatchIds.split(",").map(id => id.trim()).filter(Boolean);
-      }
     }
 
     const update = {};
     if (title !== undefined) update.title = String(title).trim();
     if (description !== undefined) update.description = String(description).trim();
     if (level !== undefined) update.level = level;
-    if (numTopics !== undefined) update.numTopics = Number(numTopics);
-    if (courseType !== undefined) update.courseType = courseType;
+    if (numTopics !== undefined) {
+      const n = Number(numTopics);
+      if (n < 0) {
+        return res.status(400).json({ message: "Topics count cannot be negative" });
+      }
+      update.numTopics = n;
+    }
+
+    if (deliveryType !== undefined) {
+      update.deliveryType = deliveryType;
+      update.courseType = deliveryType === "Trainer-Led" ? "Trainer-led" : "Self-paced";
+    } else if (courseType !== undefined) {
+      update.courseType = courseType;
+      update.deliveryType = courseType === "Trainer-led" ? "Trainer-Led" : "Self-Paced";
+    }
+
     if (instructor !== undefined) update.instructor = instructor;
     if (duration !== undefined) update.duration = duration;
     if (schedule !== undefined) update.schedule = schedule;
     if (startDate !== undefined) update.startDate = startDate;
 
+    // Skills
+    if (skills !== undefined) {
+      let parsedSkills = [];
+      if (Array.isArray(skills)) {
+        parsedSkills = skills;
+      } else if (typeof skills === "string") {
+        try {
+          parsedSkills = JSON.parse(skills);
+        } catch (e) {
+          parsedSkills = skills.split(",").map((s) => s.trim()).filter(Boolean);
+        }
+      }
+      const seenSkills = new Set();
+      const cleanSkills = [];
+      for (const skill of parsedSkills) {
+        const trimmed = String(skill || "").trim();
+        const lower = trimmed.toLowerCase();
+        if (trimmed && !seenSkills.has(lower)) {
+          seenSkills.add(lower);
+          cleanSkills.push(trimmed);
+        }
+      }
+      update.skills = cleanSkills;
+    }
+
+    // Access Type & Price
+    const resolvedAccessType = accessType !== undefined ? accessType : existingCourse.accessType;
+    if (accessType !== undefined) update.accessType = accessType;
+
+    if (resolvedAccessType === "Free") {
+      update.price = 0;
+    } else if (price !== undefined) {
+      const p = Number(price);
+      if (resolvedAccessType === "Paid" && p <= 0) {
+        return res.status(400).json({ message: "Paid courses require a price greater than 0" });
+      }
+      update.price = p;
+    }
+
+    // Status & Publishing Validation
+    if (status !== undefined) {
+      if (!["Draft", "Published", "Archived"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+
+      if (status === "Published") {
+        const actualTopicsCount = await Topic.countDocuments({ courseId });
+        if (actualTopicsCount === 0 && (!existingCourse.topicIds || existingCourse.topicIds.length === 0)) {
+          return res.status(400).json({
+            message: "Cannot publish course: course has 0 actual topics. Add topic content before publishing.",
+          });
+        }
+
+        const effectivePrice = update.price !== undefined ? update.price : existingCourse.price;
+        if (resolvedAccessType === "Paid" && (!effectivePrice || effectivePrice <= 0)) {
+          return res.status(400).json({
+            message: "Cannot publish course: Paid course must have a valid price greater than zero.",
+          });
+        }
+      }
+      update.status = status;
+    }
+
+    // Program Assignment
+    if (programIds !== undefined) {
+      let parsedProgramIds = [];
+      if (Array.isArray(programIds)) {
+        parsedProgramIds = programIds;
+      } else if (typeof programIds === "string") {
+        try {
+          parsedProgramIds = JSON.parse(programIds);
+        } catch (e) {
+          parsedProgramIds = programIds.split(",").map((id) => id.trim()).filter(Boolean);
+        }
+      }
+      const newProgIds = parsedProgramIds.map(String);
+      const oldProgIds = (existingCourse.programIds || []).map(String);
+
+      const addedProgIds = newProgIds.filter((id) => !oldProgIds.includes(id));
+      const removedProgIds = oldProgIds.filter((id) => !newProgIds.includes(id));
+
+      if (addedProgIds.length > 0) {
+        await Program.updateMany(
+          { _id: { $in: addedProgIds } },
+          { $addToSet: { courseIds: courseId } }
+        );
+      }
+      if (removedProgIds.length > 0) {
+        await Program.updateMany(
+          { _id: { $in: removedProgIds } },
+          { $pull: { courseIds: courseId } }
+        );
+      }
+      update.programIds = newProgIds;
+    }
+
+    // Batch Assignment
+    let parsedBatchIds = assignedBatchIds;
+    if (typeof assignedBatchIds === "string") {
+      try {
+        parsedBatchIds = JSON.parse(assignedBatchIds);
+      } catch (e) {
+        parsedBatchIds = assignedBatchIds.split(",").map((id) => id.trim()).filter(Boolean);
+      }
+    }
+
     if (parsedBatchIds !== undefined) {
       const newBatchIds = (Array.isArray(parsedBatchIds) ? parsedBatchIds.filter(Boolean) : []).map(String);
       const oldBatchIds = (existingCourse.assignedBatchIds || []).map(String);
 
-      const addedBatchIds = newBatchIds.filter(id => !oldBatchIds.includes(id));
-      const removedBatchIds = oldBatchIds.filter(id => !newBatchIds.includes(id));
+      const addedBatchIds = newBatchIds.filter((id) => !oldBatchIds.includes(id));
+      const removedBatchIds = oldBatchIds.filter((id) => !newBatchIds.includes(id));
 
-      // Handle added batches: assign course
       for (const batchId of addedBatchIds) {
         const batch = await Batch.findById(batchId);
         if (batch) {
           const isAssigned = String(batch.attachedCourse) === String(courseId) ||
-                             (batch.supportingCourses || []).map(String).includes(String(courseId));
+            (batch.supportingCourses || []).map(String).includes(String(courseId));
           if (!isAssigned) {
             if (!batch.attachedCourse) {
               batch.attachedCourse = courseId;
@@ -325,20 +540,20 @@ export const updateCourseShell = async (req, res) => {
         }
       }
 
-      // Handle removed batches: unassign course
       for (const batchId of removedBatchIds) {
         const batch = await Batch.findById(batchId);
         if (batch) {
           if (String(batch.attachedCourse) === String(courseId)) {
             batch.attachedCourse = null;
           }
-          batch.supportingCourses = (batch.supportingCourses || []).filter(id => String(id) !== String(courseId));
+          batch.supportingCourses = (batch.supportingCourses || []).filter((id) => String(id) !== String(courseId));
           await batch.save();
         }
       }
 
       update.assignedBatchIds = newBatchIds;
     }
+
     if (req.file) {
       const uploadRes = await uploadCourseBanner(req.file);
       if (uploadRes?.secure_url) {
@@ -585,6 +800,9 @@ export const getAllCourses = async (req, res) => {
     const linkedPrograms = await getActiveProgramLinksForCourses(courses.map((course) => course._id));
     const linksByCourse = groupProgramLinksByCourse(linkedPrograms);
     const visibleCourses = courses.filter((course) => {
+      // Admin course management must include Draft and Archived records.
+      // Learner visibility is enforced below for non-admin users only.
+      if (isAdmin) return true;
       if (!isUserVisibleCourse(course)) return false;
 
       const courseId = String(course._id);
@@ -837,7 +1055,13 @@ export const getCourseById = async (req, res) => {
       title: course.title,
       description: course.description,
       level: course.level,
+      skills: course.skills || [],
+      deliveryType: course.deliveryType || (course.courseType === "Trainer-led" ? "Trainer-Led" : "Self-Paced"),
       courseType: course.courseType,
+      accessType: course.accessType || "Free",
+      price: course.price || 0,
+      status: course.status || "Draft",
+      programIds: course.programIds || [],
       duration: course.duration,
       instructor: course.instructor,
       schedule: course.schedule,

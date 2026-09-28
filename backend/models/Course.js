@@ -16,9 +16,15 @@ const courseSchema = new mongoose.Schema(
     },
     level: {
       type: String,
-      enum: ["Beginner", "Intermediate", "Advanced"],
+      enum: ["Beginner", "Basic", "Intermediate", "Advanced"],
       default: "Beginner",
     },
+    skills: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
     topicIds: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -28,11 +34,18 @@ const courseSchema = new mongoose.Schema(
     numTopics: {
       type: Number,
       default: 0,
+      min: [0, "Topics count cannot be negative"],
     },
     exerciseIds: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Exercise",
+      },
+    ],
+    programIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Program",
       },
     ],
     assignedBatchIds: [
@@ -41,10 +54,30 @@ const courseSchema = new mongoose.Schema(
         ref: "Batch",
       },
     ],
+    deliveryType: {
+      type: String,
+      enum: ["Self-Paced", "Structured", "Trainer-Led"],
+      default: "Self-Paced",
+    },
     courseType: {
       type: String,
-      enum: ["Self-paced", "Trainer-led"],
       default: "Self-paced",
+    },
+    accessType: {
+      type: String,
+      enum: ["Free", "Paid"],
+      default: "Free",
+    },
+    price: {
+      type: Number,
+      default: 0,
+      min: [0, "Price cannot be negative"],
+    },
+    status: {
+      type: String,
+      enum: ["Draft", "Published", "Archived"],
+      default: "Draft",
+      index: true,
     },
     bannerImage: {
       type: String,

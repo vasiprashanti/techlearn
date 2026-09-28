@@ -44,6 +44,11 @@ export const isUserVisibleCourse = (course) => {
   const title = String(course?.title || "").trim();
   if (!title || NON_PUBLIC_COURSE_NAME.test(title)) return false;
 
+  // If a status is defined, only 'Published' courses are visible to students
+  if (course?.status && course.status !== "Published") {
+    return false;
+  }
+
   const hasTopics = (Number(course?.numTopics) > 0) || (Array.isArray(course?.topicIds) && course.topicIds.length > 0);
   return hasTopics;
 };

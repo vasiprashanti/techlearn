@@ -42,21 +42,22 @@ const CourseDetails = () => {
             ? `${topicsCount} Day${topicsCount === 1 ? "" : "s"}`
             : backendCourse.duration || "Self-Paced";
 
-        const coursePrice = backendCourse.price ?? backendCourse.pricing ?? backendCourse.programFee ?? "";
-        const isFree =
-          !coursePrice ||
-          coursePrice === 0 ||
-          coursePrice === "0" ||
+        const isExplicitPaid = backendCourse.accessType === "Paid";
+        const coursePrice = backendCourse.price ?? backendCourse.pricing ?? backendCourse.programFee ?? 0;
+        const numPrice = Number(coursePrice) || 0;
+        const isFree = !isExplicitPaid && (
+          numPrice === 0 ||
           coursePrice === "Free" ||
           String(coursePrice).toLowerCase() === "free" ||
-          backendCourse.pricingType === "Free";
+          backendCourse.pricingType === "Free"
+        );
 
         let startButtonText = "START FOR FREE";
         if (!isFree) {
           const formattedPrice = String(coursePrice).startsWith("₹")
             ? coursePrice
             : `₹${coursePrice}`;
-          startButtonText = `START FOR ${formattedPrice}`;
+          startButtonText = `ENROLL FOR ${formattedPrice}`;
         }
 
         // Build enhanced course mapping with clean defaults
@@ -67,12 +68,14 @@ const CourseDetails = () => {
           price: coursePrice,
           isFree,
           startButtonText,
+          skills: Array.isArray(backendCourse.skills) ? backendCourse.skills : [],
           description:
             backendCourse.description ||
             "Build a strong programming foundation by learning through practical problem solving.",
           difficulty: backendCourse.level || "Beginner",
           duration: dynamicDuration,
-          courseType: backendCourse.courseType || "Self-Paced",
+          courseType: backendCourse.deliveryType || backendCourse.courseType || "Self-Paced",
+          bannerImage: backendCourse.bannerImage || "",
           instructor: {
             name: backendCourse.instructor || "Prashanti Vasi",
             bio:
@@ -201,6 +204,20 @@ const CourseDetails = () => {
               </div>
             </div>
 
+            {/* SKILLS */}
+            {course.skills && course.skills.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3 mb-2">
+                {course.skills.map((sk) => (
+                  <span
+                    key={sk}
+                    className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#3C83F6]/15 text-[#3C83F6] dark:bg-blue-500/20 dark:text-blue-300"
+                  >
+                    {sk}
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* START BUTTON */}
             <button
               className="start-button"
@@ -215,6 +232,15 @@ const CourseDetails = () => {
 
           {/* HERO VISUAL */}
           <div className="hero-visual">
+            {course.bannerImage ? (
+              <div className="w-full max-w-[420px] rounded-2xl overflow-hidden shadow-2xl border border-black/10 dark:border-white/10">
+                <img
+                  src={course.bannerImage}
+                  alt={course.title}
+                  className="w-full h-[260px] object-cover"
+                />
+              </div>
+            ) : (
             <div className="code-card">
               <div className="code-top">
                 <div className="code-label">
@@ -265,6 +291,7 @@ const CourseDetails = () => {
                 </div>
               </div>
             </div>
+            )}
           </div>
         </section>
 
