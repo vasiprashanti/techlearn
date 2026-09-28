@@ -1759,6 +1759,49 @@ html {
   color: rgba(255, 255, 255, 0.72) !important;
 }
 
+/* Course form skills menu must remain opaque above the form fields. */
+body .admin-dashboard-typography .course-skills-dropdown.course-skills-dropdown.course-skills-dropdown.course-skills-dropdown {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body .admin-dashboard-typography.dark .course-skills-dropdown.course-skills-dropdown.course-skills-dropdown.course-skills-dropdown {
+  background: #0f1f43 !important;
+  background-color: #0f1f43 !important;
+}
+
+/* The course editor is intentionally solid.  The dashboard glass theme must
+   not bleed through this dense data-entry form. */
+body .admin-dashboard-typography .course-form-modal.course-form-modal.course-form-modal.course-form-modal {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  opacity: 1 !important;
+}
+
+body .admin-dashboard-typography .course-form-modal.course-form-modal.course-form-modal.course-form-modal .course-form-field.course-form-field.course-form-field.course-form-field {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body .admin-dashboard-typography.dark .course-form-modal.course-form-modal.course-form-modal.course-form-modal {
+  background: #0a1737 !important;
+  background-color: #0a1737 !important;
+}
+
+body .admin-dashboard-typography.dark .course-form-modal.course-form-modal.course-form-modal.course-form-modal .course-form-field.course-form-field.course-form-field.course-form-field {
+  background: #0f1f43 !important;
+  background-color: #0f1f43 !important;
+  color: #ffffff !important;
+}
+
 .tl-nav-wrapper.on-dark-section .tl-nav-links a:hover {
   color: #ffffff !important;
 }
