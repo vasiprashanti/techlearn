@@ -2,46 +2,74 @@ import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAuthModalContext } from '../context/AuthModalContext';
+import { useTheme } from '../context/ThemeContext';
 import API from '../api/client';
 
 function AdminAccessFallback({ mode, onLogin, onRetry, onReturnHome }) {
   const isError = mode === 'error';
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
 
   return (
-    <section className="flex min-h-[70vh] items-center justify-center px-6 pb-16 pt-28">
+    <div
+      className={`min-h-screen w-full flex items-center justify-center px-4 py-20 relative overflow-hidden transition-colors duration-500 ${
+        isDarkMode ? 'dark text-white' : 'light text-[#00113b]'
+      }`}
+    >
+      {/* Background matching TechLearn platform */}
       <div
-        className="w-full max-w-lg rounded-2xl border border-slate-200/15 bg-slate-950/45 p-8 text-center shadow-2xl backdrop-blur"
+        className={`fixed inset-0 -z-10 transition-colors duration-1000 ${
+          isDarkMode
+            ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]"
+            : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"
+        }`}
+      />
+
+      <div
+        className="w-full max-w-lg rounded-2xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#071a3e]/80 p-8 sm:p-10 text-center shadow-2xl backdrop-blur-xl transition-all"
         role="alert"
       >
-        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/15 text-blue-200">
-          <span className="text-xl" aria-hidden="true">{isError ? '!' : '→'}</span>
+        {/* Eyebrow */}
+        <div className="text-[10px] font-extrabold uppercase tracking-[2px] text-[#3C83F6] dark:text-[#8fd9ff] mb-4">
+          TECHLEARN ADMIN
         </div>
-        <h1 className="text-2xl font-semibold text-white">
-          {isError ? 'Admin dashboard unavailable' : 'Admin sign-in required'}
+
+        {/* Retro style title matching Academy / TechLearn design */}
+        <h1
+          className="text-xl sm:text-2xl font-bold tracking-tight mb-3"
+          style={{
+            fontFamily: '"Press Start 2P", monospace',
+            lineHeight: 1.4,
+            fontSize: 'clamp(14px, 2.5vw, 18px)'
+          }}
+        >
+          {isError ? 'Dashboard Unavailable' : 'Admin Sign-In Required'}
         </h1>
-        <p className="mt-3 text-sm leading-6 text-slate-300">
+
+        <p className="mt-3 text-xs sm:text-sm leading-6 text-slate-600 dark:text-slate-300 max-w-md mx-auto">
           {isError
-            ? 'We could not verify your admin session. Please try again.'
-            : 'Your admin session has expired or is no longer valid. Sign in again to continue.'}
+            ? 'We could not verify your admin session credentials. Please check your network connection and try again.'
+            : 'You need administrative privileges to view this portal. Sign in with an authorized admin account to continue.'}
         </p>
-        <div className="mt-7 flex flex-wrap justify-center gap-3">
+
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
             onClick={isError ? onRetry : onLogin}
-            className="rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-400"
+            className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-[#3C83F6] text-white shadow-md hover:bg-blue-600 active:scale-[0.98] transition-all cursor-pointer"
           >
-            {isError ? 'Try again' : 'Sign in as admin'}
+            {isError ? 'Try Again' : 'Sign In as Admin'}
           </button>
           <button
             type="button"
             onClick={onReturnHome}
-            className="rounded-lg border border-slate-200/20 px-5 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
+            className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border border-black/15 dark:border-white/20 bg-white/50 dark:bg-white/5 text-slate-700 dark:text-slate-200 hover:bg-black/5 dark:hover:bg-white/10 active:scale-[0.98] transition-all cursor-pointer"
           >
-            Return home
+            Return to Academy
           </button>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -107,7 +135,7 @@ export default function AdminPrivateRoute() {
     return (
       <section className="flex min-h-[70vh] items-center justify-center px-6 pb-16 pt-28">
         <div
-          className="h-10 w-10 animate-spin rounded-full border-2 border-blue-300 border-t-transparent"
+          className="h-10 w-10 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"
           role="status"
           aria-label="Loading admin dashboard"
         />

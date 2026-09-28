@@ -180,8 +180,8 @@
 }
 
 .learn-page-container .search-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 10px 30px rgba(0,0,0,.10);
+  border-color: #3c83f6;
+  box-shadow: 0 0 0 2px rgba(60, 131, 246, 0.25), 0 10px 30px rgba(0,0,0,.10);
 }
 
 /* =========================
@@ -968,4 +968,120 @@
   .learn-page-container .start-link .arrow {
     font-size: 9px;
   }
+}
+
+/* =========================
+   SKELETON SHIMMER ANIMATION
+========================= */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.09) 37%,
+    rgba(255, 255, 255, 0.04) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.light-mode .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.04) 25%,
+    rgba(0, 0, 0, 0.08) 37%,
+    rgba(0, 0, 0, 0.04) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* =========================
+   SEARCH & FILTER BAR ROW
+========================= */
+.learn-page-container .search-row-container {
+  max-width: 720px;
+  margin: 40px auto 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.learn-page-container .search-row-container .search-wrapper {
+  margin: 0 !important;
+  flex: 1;
+}
+
+.learn-page-container .drawer-trigger-btn {
+  height: 54px;
+  padding: 0 20px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--heading);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 25px rgba(0,0,0,.08);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.learn-page-container .drawer-trigger-btn:hover {
+  border-color: #3c83f6;
+  box-shadow: 0 0 0 2px rgba(60, 131, 246, 0.2), 0 10px 30px rgba(0,0,0,.10);
+}
+
+.learn-page-container .drawer-trigger-btn.active {
+  background: var(--heading);
+  color: var(--page-bg);
+  border-color: var(--heading);
+}
+
+.learn-page-container .filter-badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 800;
+  background: #3c83f6;
+  color: #ffffff;
+}
+
+/* =========================
+   SKILL TAGS ON CARDS
+========================= */
+.learn-page-container .card-skills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+  margin-bottom: 8px;
+}
+
+.learn-page-container .card-skill-tag {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: var(--soft-bg);
+  border: 1px solid var(--border);
+  color: var(--secondary);
+  white-space: nowrap;
 }

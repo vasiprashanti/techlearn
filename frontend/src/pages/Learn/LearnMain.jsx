@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 import { courseAPI, dataAdapters } from "../../services/api";
 import { programLearningAPI } from "../../services/programLearningApi";
 import { useTheme } from '../../context/ThemeContext';
@@ -11,18 +11,6 @@ import './learnPage.css';
 
 const COURSES_CACHE_KEY = 'learn-courses-cache-v2';
 const COURSES_CACHE_TTL_MS = 5 * 60 * 1000;
-
-const COURSE_TOPIC_ID_OVERRIDES = {
-  'c': '6890c2acbc09eb4b5c346b9b',
-  'c programming': '6890c2acbc09eb4b5c346b9b',
-  'introduction to c': '6890c2acbc09eb4b5c346b9b',
-  'python': '6890ec81950225df57310f52',
-  'python programming': '6890ec81950225df57310f52',
-  'java': '6890f09830551d88a325f623',
-  'java programming': '6890f09830551d88a325f623',
-  'core java': '6890f09830551d88a325f623',
-  'java (core)': '6890f09830551d88a325f623',
-};
 
 const normalizeCourseKey = (value = '') => value.toString().trim().toLowerCase();
 
@@ -121,6 +109,8 @@ const getProgramImage = (program) => {
 };
 
 const isFreeCourseItem = (course) => {
+  if (course?.accessType === 'Free') return true;
+  if (course?.accessType === 'Paid') return false;
   const rawPrice = course?.price;
   return (
     !rawPrice ||
@@ -128,21 +118,25 @@ const isFreeCourseItem = (course) => {
     String(rawPrice).toLowerCase() === 'free' ||
     String(rawPrice).toLowerCase() === 'coming soon' ||
     course?.status === 'coming_soon' ||
-    (!String(rawPrice).includes('₹') && isNaN(Number(rawPrice)))
+    (!String(rawPrice).includes('₹') && isNaN(Number(rawPrice))) ||
+    Number(rawPrice) === 0
   );
 };
 
 const isFreeProgramItem = (program) => {
-  // Check pricingType field (case-insensitive)
   if (String(program?.pricingType || '').toLowerCase() === 'free') return true;
-  // Check programFee === 0 (explicitly set to free)
   if (program?.programFee !== undefined && program?.programFee !== null && Number(program?.programFee) === 0) return true;
-  // Check price string field
   const rawPrice = program?.price;
   if (!rawPrice) return false;
   const p = String(rawPrice).toLowerCase().trim();
   return p === 'free' || p === 'FREE' || p === '₹0' || p === '0';
 };
+
+const STANDARD_SKILLS = [
+  'Python', 'Java', 'C++', 'Data Structures', 'Algorithms',
+  'Frontend', 'Backend', 'Full Stack', 'Machine Learning', 'GenAI',
+  'SQL', 'DevOps', 'Cloud', 'System Design'
+];
 
 const LearnMain = () => {
   const { theme } = useTheme();
@@ -160,6 +154,69 @@ const LearnMain = () => {
   const [coursesData, setCoursesData] = useState(cachedCourses || []);
   const [publicPrograms, setPublicPrograms] = useState([]);
   const [loading, setLoading] = useState(!cachedCourses);
+
+  // Drawer filters state (applied)
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [selectedSkills, setSelectedSkills] = useState([]);
+  const [selectedDeliveryTypes, setSelectedDeliveryTypes] = useState([]);
+  const [selectedLevels, setSelectedLevels] = useState([]);
+  const [selectedAccessTypes, setSelectedAccessTypes] = useState([]);
+
+  // Staged filter state (in drawer before apply)
+  const [stagedSkills, setStagedSkills] = useState([]);
+  const [stagedDeliveryTypes, setStagedDeliveryTypes] = useState([]);
+  const [stagedLevels, setStagedLevels] = useState([]);
+  const [stagedAccessTypes, setStagedAccessTypes] = useState([]);
+
+  const openFilterDrawer = () => {
+    setStagedSkills(selectedSkills);
+    setStagedDeliveryTypes(selectedDeliveryTypes);
+    setStagedLevels(selectedLevels);
+    setStagedAccessTypes(selectedAccessTypes);
+    setFilterDrawerOpen(true);
+  };
+
+  const handleApplyDrawerFilters = () => {
+    setSelectedSkills(stagedSkills);
+    setSelectedDeliveryTypes(stagedDeliveryTypes);
+    setSelectedLevels(stagedLevels);
+    setSelectedAccessTypes(stagedAccessTypes);
+    setFilterDrawerOpen(false);
+  };
+
+  const handleClearDrawerFilters = () => {
+    setStagedSkills([]);
+    setStagedDeliveryTypes([]);
+    setStagedLevels([]);
+    setStagedAccessTypes([]);
+    setSelectedSkills([]);
+    setSelectedDeliveryTypes([]);
+    setSelectedLevels([]);
+    setSelectedAccessTypes([]);
+    setFilterDrawerOpen(false);
+  };
+
+  const activeDrawerFiltersCount = useMemo(() => {
+    return (
+      selectedSkills.length +
+      selectedDeliveryTypes.length +
+      selectedLevels.length +
+      selectedAccessTypes.length
+    );
+  }, [selectedSkills, selectedDeliveryTypes, selectedLevels, selectedAccessTypes]);
+
+  // Aggregate dynamic skills from loaded courses
+  const availableSkills = useMemo(() => {
+    const set = new Set(STANDARD_SKILLS);
+    coursesData.forEach((c) => {
+      if (Array.isArray(c.skills)) {
+        c.skills.forEach((s) => {
+          if (s && s.trim()) set.add(s.trim());
+        });
+      }
+    });
+    return Array.from(set).sort();
+  }, [coursesData]);
 
   useEffect(() => {
     const fetchCoursesAndPrograms = async () => {
@@ -226,20 +283,56 @@ const LearnMain = () => {
     return 'skill';
   };
 
-  const filteredCourses = coursesData.filter(course => {
-    const category = getCourseCategory(course);
-    if (courseFilter === 'free') {
-      if (!isFreeCourseItem(course)) return false;
-    } else if (courseFilter !== 'all' && category !== courseFilter) {
-      return false;
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      const searchTarget = `${course.title || ''} ${course.description || ''} ${category}`.toLowerCase();
-      if (!searchTarget.includes(q)) return false;
-    }
-    return true;
-  });
+  const filteredCourses = useMemo(() => {
+    return coursesData.filter(course => {
+      const category = getCourseCategory(course);
+      if (courseFilter === 'free') {
+        if (!isFreeCourseItem(course)) return false;
+      } else if (courseFilter !== 'all' && category !== courseFilter) {
+        return false;
+      }
+
+      // Drawer: Skills filter
+      if (selectedSkills.length > 0) {
+        const courseSkills = (course.skills || []).map(s => s.toLowerCase());
+        const hasSkillMatch = selectedSkills.some(s => courseSkills.includes(s.toLowerCase()));
+        if (!hasSkillMatch) return false;
+      }
+
+      // Drawer: Delivery Type filter
+      if (selectedDeliveryTypes.length > 0) {
+        const delivery = (course.deliveryType || 'Self-Paced').toLowerCase();
+        const matchesDelivery = selectedDeliveryTypes.some(d => d.toLowerCase() === delivery);
+        if (!matchesDelivery) return false;
+      }
+
+      // Drawer: Level / Difficulty filter
+      if (selectedLevels.length > 0) {
+        const lvl = (course.level || 'Beginner').toLowerCase();
+        const matchesLevel = selectedLevels.some(l => l.toLowerCase() === lvl);
+        if (!matchesLevel) return false;
+      }
+
+      // Drawer: Access Type filter (Free / Paid)
+      if (selectedAccessTypes.length > 0) {
+        const isFree = isFreeCourseItem(course);
+        const matchesAccess = selectedAccessTypes.some(a => {
+          if (a === 'Free') return isFree;
+          if (a === 'Paid') return !isFree;
+          return true;
+        });
+        if (!matchesAccess) return false;
+      }
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const skillsText = (course.skills || []).join(' ');
+        const searchTarget = `${course.title || ''} ${course.description || ''} ${category} ${skillsText} ${course.level || ''} ${course.deliveryType || ''}`.toLowerCase();
+        if (!searchTarget.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [coursesData, courseFilter, selectedSkills, selectedDeliveryTypes, selectedLevels, selectedAccessTypes, searchQuery]);
 
   // Filter & Search Logic for Programs
   const getProgramDeliveryType = (program) => {
@@ -251,20 +344,22 @@ const LearnMain = () => {
     return 'trainer-led';
   };
 
-  const filteredPrograms = publicPrograms.filter(program => {
-    const delivery = getProgramDeliveryType(program);
-    if (programFilter === 'free') {
-      if (!isFreeProgramItem(program)) return false;
-    } else if (programFilter !== 'all' && delivery !== programFilter) {
-      return false;
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      const searchTarget = `${program.name || program.title || ''} ${program.description || ''} ${program.instructor || ''} ${delivery} ${program.programType || ''}`.toLowerCase();
-      if (!searchTarget.includes(q)) return false;
-    }
-    return true;
-  });
+  const filteredPrograms = useMemo(() => {
+    return publicPrograms.filter(program => {
+      const delivery = getProgramDeliveryType(program);
+      if (programFilter === 'free') {
+        if (!isFreeProgramItem(program)) return false;
+      } else if (programFilter !== 'all' && delivery !== programFilter) {
+        return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const searchTarget = `${program.name || program.title || ''} ${program.description || ''} ${program.instructor || ''} ${delivery} ${program.programType || ''}`.toLowerCase();
+        if (!searchTarget.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [publicPrograms, programFilter, searchQuery]);
 
   return (
     <div className={`learn-page-container ${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
@@ -272,22 +367,9 @@ const LearnMain = () => {
 
       <main className="page">
         {/* =========================
-             HEADER
+             SEARCH & FILTER (Directly below Navbar, above Heading)
         ========================= */}
-        <header className="academy-header">
-          <div className="eyebrow">
-            TECHLEARN
-          </div>
-
-          <h1 className="academy-title">
-            ACADEMY
-          </h1>
-
-          <p className="academy-subtitle">
-            Learn the skills to build things worth noticing.
-          </p>
-
-          {/* SEARCH */}
+        <div className="search-row-container">
           <div className="search-wrapper">
             <span className="search-icon" aria-hidden="true">
               <Search className="w-4 h-4" />
@@ -302,6 +384,37 @@ const LearnMain = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+
+          {activeTab === 'courses' && (
+            <button
+              type="button"
+              className={`drawer-trigger-btn ${activeDrawerFiltersCount > 0 ? 'active' : ''}`}
+              onClick={openFilterDrawer}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Filters</span>
+              {activeDrawerFiltersCount > 0 && (
+                <span className="filter-badge-count">{activeDrawerFiltersCount}</span>
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* =========================
+             HEADER
+        ========================= */}
+        <header className="academy-header" style={{ marginTop: '40px' }}>
+          <div className="eyebrow">
+            TECHLEARN
+          </div>
+
+          <h1 className="academy-title">
+            ACADEMY
+          </h1>
+
+          <p className="academy-subtitle">
+            Learn the skills to build things worth noticing.
+          </p>
         </header>
 
         {/* =========================
@@ -379,18 +492,32 @@ const LearnMain = () => {
               </div>
             </div>
 
-            {/* COURSE CARDS GRID */}
-            {filteredCourses.length > 0 ? (
+            {/* SKELETON LOADING STATE */}
+            {loading ? (
+              <div className="card-grid" id="courseGrid">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <article key={i} className="card skeleton-shimmer" style={{ border: '1px solid var(--border)', minHeight: '380px' }}>
+                    <div className="card-banner skeleton-shimmer" style={{ opacity: 0.6 }} />
+                    <div className="card-content">
+                      <div className="skeleton-shimmer" style={{ height: '22px', width: '70%', borderRadius: '6px', marginBottom: '12px' }} />
+                      <div className="skeleton-shimmer" style={{ height: '14px', width: '90%', borderRadius: '4px', marginBottom: '8px' }} />
+                      <div className="skeleton-shimmer" style={{ height: '14px', width: '60%', borderRadius: '4px', marginBottom: '16px' }} />
+                      <div className="card-bottom">
+                        <div className="content-divider" />
+                        <div className="card-footer">
+                          <div className="skeleton-shimmer" style={{ height: '18px', width: '40px', borderRadius: '4px' }} />
+                          <div className="skeleton-shimmer" style={{ height: '18px', width: '60px', borderRadius: '4px' }} />
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : filteredCourses.length > 0 ? (
               <div className="card-grid" id="courseGrid">
                 {filteredCourses.map((course) => {
                   const rawPrice = course.price;
-                  const isFree =
-                    !rawPrice ||
-                    rawPrice === 'Free' ||
-                    String(rawPrice).toLowerCase() === 'free' ||
-                    String(rawPrice).toLowerCase() === 'coming soon' ||
-                    course.status === 'coming_soon' ||
-                    (!String(rawPrice).includes('₹') && isNaN(Number(rawPrice)));
+                  const isFree = isFreeCourseItem(course);
                   const displayPrice = isFree
                     ? 'FREE'
                     : String(rawPrice).startsWith('₹')
@@ -429,6 +556,18 @@ const LearnMain = () => {
                           {cleanDescription(course.description)}
                         </p>
 
+                        {/* SKILLS TAGS */}
+                        {Array.isArray(course.skills) && course.skills.length > 0 && (
+                          <div className="card-skills-row">
+                            {course.skills.slice(0, 3).map((s, idx) => (
+                              <span key={idx} className="card-skill-tag">{s}</span>
+                            ))}
+                            {course.skills.length > 3 && (
+                              <span className="card-skill-tag">+{course.skills.length - 3}</span>
+                            )}
+                          </div>
+                        )}
+
                         <div className="card-bottom">
                           <div className="content-divider" />
 
@@ -453,7 +592,7 @@ const LearnMain = () => {
             ) : (
               <div className="empty-state" id="courseEmpty" style={{ display: 'block' }}>
                 <h3>No courses found.</h3>
-                <p>Try searching for another skill.</p>
+                <p>Try searching for another skill or clearing filters.</p>
               </div>
             )}
           </section>
@@ -507,12 +646,30 @@ const LearnMain = () => {
               </div>
             </div>
 
-            {/* PROGRAM CARDS GRID */}
-            {filteredPrograms.length > 0 ? (
+            {/* SKELETON OR PROGRAM CARDS */}
+            {loading ? (
+              <div className="card-grid" id="programGrid">
+                {[1, 2, 3, 4].map((i) => (
+                  <article key={i} className="card skeleton-shimmer" style={{ border: '1px solid var(--border)', minHeight: '380px' }}>
+                    <div className="card-banner skeleton-shimmer" style={{ opacity: 0.6 }} />
+                    <div className="card-content">
+                      <div className="skeleton-shimmer" style={{ height: '22px', width: '70%', borderRadius: '6px', marginBottom: '12px' }} />
+                      <div className="skeleton-shimmer" style={{ height: '14px', width: '90%', borderRadius: '4px', marginBottom: '8px' }} />
+                      <div className="card-bottom">
+                        <div className="content-divider" />
+                        <div className="card-footer">
+                          <div className="skeleton-shimmer" style={{ height: '18px', width: '40px', borderRadius: '4px' }} />
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : filteredPrograms.length > 0 ? (
               <div className="card-grid" id="programGrid">
                 {filteredPrograms.map((program) => {
                   const rawPrice = program.price || (program.pricingType === 'Free' ? 'FREE' : '₹399');
-                  const isFree = !rawPrice || rawPrice === 'FREE' || String(rawPrice).toLowerCase() === 'free' || program.pricingType === 'Free';
+                  const isFree = isFreeProgramItem(program);
                   const displayPrice = isFree
                     ? 'FREE'
                     : String(rawPrice).startsWith('₹')
@@ -595,6 +752,161 @@ const LearnMain = () => {
           </section>
         )}
       </main>
+
+      {/* ==================================================
+           FILTER DRAWER (Sliding from Right)
+      ================================================== */}
+      {/* Overlay */}
+      <div
+        onClick={() => setFilterDrawerOpen(false)}
+        className={`fixed inset-0 bg-black/40 backdrop-blur-xs z-[150] transition-opacity duration-250 ${
+          filterDrawerOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
+        }`}
+      />
+
+      {/* Drawer */}
+      <aside
+        style={{ backgroundColor: "var(--page-bg)" }}
+        className={`fixed right-0 top-0 bottom-0 w-[380px] max-w-[90%] z-[160] transition-transform duration-300 ease-in-out shadow-2xl flex flex-col ${
+          isDarkMode ? "text-white" : "text-[#00113b]"
+        } ${filterDrawerOpen ? "translate-x-0" : "translate-x-full"}`}
+      >
+        <div className="p-[20px] flex justify-between items-center border-b border-black/10 dark:border-white/10">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-blue-500" />
+            <h3 className="font-['Press_Start_2P'] text-[11px] leading-[1.6]">Course Filters</h3>
+          </div>
+          <button
+            onClick={() => setFilterDrawerOpen(false)}
+            className="w-[32px] h-[32px] border-none bg-white/60 dark:bg-white/10 text-[#00113b] dark:text-white rounded-[7px] text-[18px] cursor-pointer flex items-center justify-center shadow-xs"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-[20px] space-y-[24px] learn-filter-scroll">
+          {/* ACCESS TYPE */}
+          <div>
+            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[10px] opacity-75">Access Type</h4>
+            <div className="flex flex-wrap gap-2">
+              {['Free', 'Paid'].map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => {
+                    if (stagedAccessTypes.includes(type)) {
+                      setStagedAccessTypes(stagedAccessTypes.filter(t => t !== type));
+                    } else {
+                      setStagedAccessTypes([...stagedAccessTypes, type]);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    stagedAccessTypes.includes(type)
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'border-black/15 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* DELIVERY TYPE */}
+          <div>
+            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[10px] opacity-75">Delivery Type</h4>
+            <div className="flex flex-wrap gap-2">
+              {['Self-Paced', 'Structured', 'Trainer-Led'].map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => {
+                    if (stagedDeliveryTypes.includes(type)) {
+                      setStagedDeliveryTypes(stagedDeliveryTypes.filter(t => t !== type));
+                    } else {
+                      setStagedDeliveryTypes([...stagedDeliveryTypes, type]);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    stagedDeliveryTypes.includes(type)
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'border-black/15 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* LEVEL / DIFFICULTY */}
+          <div>
+            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[10px] opacity-75">Difficulty Level</h4>
+            <div className="flex flex-wrap gap-2">
+              {['Beginner', 'Basic', 'Intermediate', 'Advanced'].map((lvl) => (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => {
+                    if (stagedLevels.includes(lvl)) {
+                      setStagedLevels(stagedLevels.filter(l => l !== lvl));
+                    } else {
+                      setStagedLevels([...stagedLevels, lvl]);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    stagedLevels.includes(lvl)
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'border-black/15 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
+                  }`}
+                >
+                  {lvl}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* SKILLS MULTI-SELECT */}
+          <div>
+            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[10px] opacity-75">Skills</h4>
+            <div className="space-y-1.5 pr-1">
+              {availableSkills.map((skill) => (
+                <label
+                  key={skill}
+                  className="flex items-center gap-2.5 py-1 text-xs cursor-pointer opacity-85 hover:opacity-100"
+                >
+                  <input
+                    type="checkbox"
+                    checked={stagedSkills.includes(skill)}
+                    onChange={(e) => {
+                      if (e.target.checked) setStagedSkills([...stagedSkills, skill]);
+                      else setStagedSkills(stagedSkills.filter(s => s !== skill));
+                    }}
+                    className="accent-blue-600 w-3.5 h-3.5 rounded"
+                  />
+                  <span>{skill}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* DRAWER FOOTER */}
+        <div className="p-[16px_20px] border-t border-black/10 dark:border-white/10 flex gap-[10px]">
+          <button
+            onClick={handleClearDrawerFilters}
+            className="flex-1 h-[40px] rounded-[10px] text-xs font-bold cursor-pointer bg-white/70 dark:bg-white/10 border border-black/15 dark:border-white/10 text-current hover:bg-white dark:hover:bg-white/20 transition-all"
+          >
+            Clear All
+          </button>
+          <button
+            onClick={handleApplyDrawerFilters}
+            className="flex-1 h-[40px] rounded-[10px] text-xs font-bold cursor-pointer bg-blue-600 text-white border border-blue-600 shadow-md hover:bg-blue-500 active:scale-[0.98] transition-all"
+          >
+            Apply Filters
+          </button>
+        </div>
+      </aside>
 
       {/* Join Waitlist Modal */}
       <JoinWaitlistModal

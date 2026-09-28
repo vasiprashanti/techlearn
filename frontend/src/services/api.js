@@ -545,31 +545,17 @@ export const dataAdapters = {
 
     const visuals = getDefaultVisuals(backendCourse.title);
 
-    // Determine course status and pricing based on title
-    const getCourseStatus = (title) => {
-      const titleLower = title.toLowerCase();
-      if (titleLower.includes('java') || titleLower.includes('python')) {
-        return {
-          status: 'available',
-          price: '\u20B91499',
-          certificationPrice: 1499,
-          certificationDiscountedPrice: 999,
-          xpDiscount: 500,
-          requiredXP: 1000
-        };
-      } else {
-        return {
-          status: 'coming_soon',
-          price: 'Coming Soon',
-          certificationPrice: null,
-          certificationDiscountedPrice: null,
-          xpDiscount: null,
-          requiredXP: null
-        };
-      }
+    const isExplicitPaid = backendCourse.accessType === "Paid";
+    const coursePrice = Number(backendCourse.price) || 0;
+    const isFree = !isExplicitPaid && (coursePrice === 0 || backendCourse.accessType === "Free");
+    const courseStatus = {
+      status: backendCourse.status || "Draft",
+      price: isFree ? "Free" : ("₹" + coursePrice),
+      certificationPrice: coursePrice || 1499,
+      certificationDiscountedPrice: Math.round(coursePrice * 0.8) || 999,
+      xpDiscount: 500,
+      requiredXP: 1000
     };
-
-    const courseStatus = getCourseStatus(backendCourse.title);
 
     return {
       id: backendCourse._id,
@@ -598,6 +584,9 @@ export const dataAdapters = {
       createdAt: backendCourse.createdAt,
       updatedAt: backendCourse.updatedAt,
       courseType: backendCourse.courseType || "Self-paced",
+      deliveryType: backendCourse.deliveryType || (backendCourse.courseType === "Trainer-led" ? "Trainer-Led" : "Self-Paced"),
+      skills: Array.isArray(backendCourse.skills) ? backendCourse.skills : [],
+      accessType: isExplicitPaid ? "Paid" : "Free",
       bannerImage: backendCourse.bannerImage || "",
       instructor: backendCourse.instructor || "",
     };
