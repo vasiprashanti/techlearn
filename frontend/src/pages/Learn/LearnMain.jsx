@@ -23,6 +23,8 @@ const HIDDEN_COURSE_KEYS = new Set([
 ]);
 
 const isUserVisibleCourse = (course) => {
+  if (course?.status !== "Published") return false;
+
   const courseKeys = [
     course?.title,
     course?.id,
@@ -30,7 +32,14 @@ const isUserVisibleCourse = (course) => {
     course?.courseId,
   ].map(normalizeCourseKey);
 
-  return !courseKeys.some((key) => HIDDEN_COURSE_KEYS.has(key));
+  if (courseKeys.some((key) => HIDDEN_COURSE_KEYS.has(key))) return false;
+
+  const topics = Array.isArray(course?.topics)
+    ? course.topics
+    : Array.isArray(course?.topicIds)
+      ? course.topicIds
+      : [];
+  return topics.length > 0 || Number(course?.numTopics) > 0;
 };
 
 const cleanDescription = (description) => {

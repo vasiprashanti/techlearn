@@ -86,6 +86,22 @@ const courseSchema = new mongoose.Schema(
     instructor: {
       type: String,
       default: "",
+      maxlength: 100,
+      trim: true,
+    },
+    instructorBio: {
+      type: String,
+      default: "",
+      maxlength: 100,
+      trim: true,
+    },
+    learningOutcomes: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: (values) => values.every((value) => String(value).trim().length <= 300),
+        message: "Each learning outcome must be at most 300 characters",
+      },
     },
     duration: {
       type: String,

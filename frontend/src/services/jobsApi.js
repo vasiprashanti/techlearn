@@ -17,7 +17,7 @@ const request = async (path) => {
 
 export const jobsAPI = {
   list: (search = "") => request(`/jobs${search ? `?search=${encodeURIComponent(search)}` : ""}`),
-  forYou: () => request("/jobs/for-you"),
+  forYou: () => request("/jobs/recommended"),
 };
 
 export default jobsAPI;

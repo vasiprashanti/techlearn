@@ -149,6 +149,8 @@ export const createCourseShell = async (req, res) => {
       status,
       bannerImage,
       instructor,
+      instructorBio,
+      learningOutcomes,
       duration,
       schedule,
       startDate,
@@ -262,6 +264,8 @@ export const createCourseShell = async (req, res) => {
       status: resolvedStatus,
       bannerImage: resolvedBannerImage,
       instructor: instructor || "",
+      instructorBio: instructorBio || "",
+      learningOutcomes: Array.isArray(learningOutcomes) ? learningOutcomes : [],
       duration: duration || "",
       schedule: schedule || "",
       startDate: startDate || "",
@@ -363,6 +367,8 @@ export const updateCourseShell = async (req, res) => {
       status,
       bannerImage,
       instructor,
+      instructorBio,
+      learningOutcomes,
       duration,
       schedule,
       startDate,
@@ -406,6 +412,16 @@ export const updateCourseShell = async (req, res) => {
     }
 
     if (instructor !== undefined) update.instructor = instructor;
+    if (instructorBio !== undefined) update.instructorBio = instructorBio;
+    if (learningOutcomes !== undefined) {
+      let parsedOutcomes = learningOutcomes;
+      if (typeof learningOutcomes === "string") {
+        try { parsedOutcomes = JSON.parse(learningOutcomes); } catch { parsedOutcomes = learningOutcomes.split("\n"); }
+      }
+      update.learningOutcomes = Array.isArray(parsedOutcomes)
+        ? parsedOutcomes.map((outcome) => String(outcome).trim()).filter(Boolean)
+        : [];
+    }
     if (duration !== undefined) update.duration = duration;
     if (schedule !== undefined) update.schedule = schedule;
     if (startDate !== undefined) update.startDate = startDate;
@@ -457,7 +473,7 @@ export const updateCourseShell = async (req, res) => {
 
       if (status === "Published") {
         const actualTopicsCount = await Topic.countDocuments({ courseId });
-        if (actualTopicsCount === 0 && (!existingCourse.topicIds || existingCourse.topicIds.length === 0)) {
+        if (actualTopicsCount === 0) {
           return res.status(400).json({
             message: "Cannot publish course: course has 0 actual topics. Add topic content before publishing.",
           });
@@ -798,13 +814,27 @@ export const getAllCourses = async (req, res) => {
       filter = { $or: buildPublicCourseConditions(publicFreeProgramCourseIds) };
     }
 
+    if (!isAdmin) {
+      filter = {
+        $and: [
+          filter,
+          { status: "Published" },
+          { topicIds: { $exists: true, $ne: [] } },
+        ],
+      };
+    }
+
     const courses = await Course.find(filter);
+    const topicCourseIds = isAdmin || courses.length === 0
+      ? new Set()
+      : new Set((await Topic.distinct("courseId", { courseId: { $in: courses.map((course) => course._id) } })).map(String));
     const linkedPrograms = await getActiveProgramLinksForCourses(courses.map((course) => course._id));
     const linksByCourse = groupProgramLinksByCourse(linkedPrograms);
     const visibleCourses = courses.filter((course) => {
       // Admin course management must include Draft and Archived records.
       // Learner visibility is enforced below for non-admin users only.
       if (isAdmin) return true;
+      if (!topicCourseIds.has(String(course._id))) return false;
       if (!isUserVisibleCourse(course)) return false;
 
       const courseId = String(course._id);
@@ -841,7 +871,10 @@ export const getCourseById = async (req, res) => {
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
     }
-    if (req.user?.role !== "admin" && !isUserVisibleCourse(course)) {
+    const actualTopicCount = req.user?.role === "admin"
+      ? null
+      : await Topic.countDocuments({ courseId: course._id });
+    if (req.user?.role !== "admin" && (!actualTopicCount || !isUserVisibleCourse(course))) {
       return res.status(404).json({ message: "Course not found" });
     }
 
@@ -1104,6 +1137,8 @@ export const getCourseById = async (req, res) => {
       programIds: course.programIds || [],
       duration: course.duration,
       instructor: course.instructor,
+      instructorBio: course.instructorBio || "",
+      learningOutcomes: course.learningOutcomes || [],
       schedule: course.schedule,
       startDate: course.startDate,
       numTopics: course.numTopics,
@@ -1143,10 +1178,19 @@ export const deleteTopic = async (req, res) => {
       await Notes.deleteMany({ topicId });
     }
 
-    // Pull from Course
+    // Pull from Course. A published course must not remain published after
+    // its last actual curriculum topic is removed.
+    const courseUpdate = {
+      $pull: { topicIds: topic._id },
+    };
+    const courseBeforeDelete = await Course.findById(topic.courseId).select("status topicIds");
+    const isLastTopic = courseBeforeDelete && (courseBeforeDelete.topicIds || []).length <= 1;
+    if (isLastTopic && courseBeforeDelete.status === "Published") {
+      courseUpdate.$set = { status: "Draft" };
+    }
     await Course.updateOne(
       { _id: topic.courseId },
-      { $pull: { topicIds: topic._id } }
+      courseUpdate
     );
 
     // Delete Topic
@@ -1154,7 +1198,9 @@ export const deleteTopic = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Topic deleted successfully",
+      message: isLastTopic && courseBeforeDelete.status === "Published"
+        ? "Topic deleted successfully. The course was moved to Draft because it has no curriculum topics."
+        : "Topic deleted successfully",
     });
   } catch (error) {
     console.error("Delete topic error:", error);

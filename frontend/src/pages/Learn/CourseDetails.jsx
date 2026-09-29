@@ -91,10 +91,8 @@ const CourseDetails = () => {
           courseType: backendCourse.deliveryType || backendCourse.courseType || "Self-Paced",
           bannerImage: backendCourse.bannerImage || "",
           instructor: {
-            name: backendCourse.instructor || "Prashanti Vasi",
-            bio:
-              backendCourse.instructorBio ||
-              "With 15+ years of experience, Prashanti Vasi believes in practical learning over theory, focusing on real-world problem solving and hands-on practice that helps students build strong fundamentals.",
+            name: backendCourse.instructor || "",
+            bio: backendCourse.instructorBio || "",
           },
           curriculum:
             backendCourse.topics?.map((topic, index) => {
@@ -115,11 +113,7 @@ const CourseDetails = () => {
             Array.isArray(backendCourse.learningOutcomes) &&
             backendCourse.learningOutcomes.length > 0
               ? backendCourse.learningOutcomes
-              : [
-                  `Write and understand core ${courseTitle} programs.`,
-                  "Solve programming problems using core concepts.",
-                  "Build a strong foundation for DSA and placements.",
-                ],
+              : [],
         };
 
         setCourse(enhancedCourse);
@@ -237,9 +231,11 @@ const CourseDetails = () => {
 
             <p className="course-description">{course.description}</p>
 
-            <div className="trainer">
-              By <strong>{course.instructor.name}</strong>
-            </div>
+            {(course.instructor.name || course.instructor.bio) && (
+              <div className="trainer">
+                By <strong>{course.instructor.name || "Course trainer"}</strong>
+              </div>
+            )}
 
             {/* COURSE META */}
             <div className="course-meta">
@@ -370,14 +366,16 @@ const CourseDetails = () => {
               Curriculum
             </button>
 
-            <button
-              className={`tab ${activeTab === "trainer" ? "active" : ""}`}
-              data-tab="trainer"
-              type="button"
-              onClick={() => setActiveTab("trainer")}
-            >
-              Trainer
-            </button>
+            {(course.instructor.name || course.instructor.bio) && (
+              <button
+                className={`tab ${activeTab === "trainer" ? "active" : ""}`}
+                data-tab="trainer"
+                type="button"
+                onClick={() => setActiveTab("trainer")}
+              >
+                Trainer
+              </button>
+            )}
 
             <button
               className={`tab ${activeTab === "outcomes" ? "active" : ""}`}
@@ -444,7 +442,7 @@ const CourseDetails = () => {
           {/* =====================================
                TRAINER
           ====================================== */}
-          <div
+          {course.instructor.name || course.instructor.bio ? <div
             className={`tab-content ${activeTab === "trainer" ? "active" : ""}`}
             id="trainer"
           >
@@ -457,12 +455,12 @@ const CourseDetails = () => {
                 <p className="trainer-description">{course.instructor.bio}</p>
               </div>
             </div>
-          </div>
+          </div> : null}
 
           {/* =====================================
                OUTCOMES
           ====================================== */}
-          <div
+          {course.learningOutcomes.length > 0 ? <div
             className={`tab-content ${
               activeTab === "outcomes" ? "active" : ""
             }`}
@@ -482,7 +480,7 @@ const CourseDetails = () => {
                 </div>
               ))}
             </div>
-          </div>
+          </div> : null}
         </section>
       </main>
     </div>

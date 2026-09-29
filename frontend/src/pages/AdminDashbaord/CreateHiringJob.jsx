@@ -6,7 +6,6 @@ import {
   FiArrowLeft,
   FiUpload,
   FiX,
-  FiFileText,
   FiEdit3,
   FiCopy,
   FiCheck,
@@ -75,7 +74,7 @@ export default function CreateHiringJob() {
   const [submitting, setSubmitting] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Creation mode tab: "upload" (Upload .md), "paste" (Paste Text/Markdown), "manual" (Field-by-field entry)
+  // Creation mode tab: "upload" (Upload .md) or "manual" (Field-by-field entry)
   const [entryMode, setEntryMode] = useState("upload");
 
   // Raw text state for paste mode
@@ -469,19 +468,6 @@ export default function CreateHiringJob() {
 
             <button
               type="button"
-              onClick={() => setEntryMode("paste")}
-              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${
-                entryMode === "paste"
-                  ? "border-[#3C83F6] text-[#3C83F6] dark:text-[#bceaff]"
-                  : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400"
-              }`}
-            >
-              <FiFileText className="w-3.5 h-3.5" />
-              Paste Text / Markdown
-            </button>
-
-            <button
-              type="button"
               onClick={() => setEntryMode("manual")}
               className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${
                 entryMode === "manual"
@@ -543,44 +529,7 @@ export default function CreateHiringJob() {
               </div>
             )}
 
-            {/* Mode B: Paste Raw Text / Markdown */}
-            {entryMode === "paste" && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-white">
-                    Paste Job Details / Markdown Text
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={handleCopyTemplate}
-                    className="text-xs text-[#3C83F6] hover:underline flex items-center gap-1"
-                  >
-                    <FiCopy /> Copy Template
-                  </button>
-                </div>
-
-                <textarea
-                  value={rawPastedText}
-                  onChange={(e) => setRawPastedText(e.target.value)}
-                  placeholder="Paste your standard Markdown or job posting text here..."
-                  rows={8}
-                  className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#071532] p-3 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30 font-mono resize-y"
-                />
-
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleParsePastedText}
-                    disabled={parsingPastedText || !rawPastedText.trim()}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-50 transition"
-                  >
-                    {parsingPastedText ? "Parsing Text..." : "Parse Job Details"}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Mode C: Manual Notice */}
+            {/* Mode B: Manual Notice */}
             {entryMode === "manual" && (
               <div className="text-xs text-slate-500 dark:text-slate-400">
                 You can enter and edit all job parameters directly in the structured review form below.
@@ -602,7 +551,7 @@ export default function CreateHiringJob() {
 
               {missingPublishFields.length > 0 && (
                 <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
-                  {missingPublishFields.length} required field(s) pending for publication
+                  {missingPublishFields.length} field(s) required to publish
                 </span>
               )}
             </div>

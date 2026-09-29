@@ -12,7 +12,7 @@ const MarkdownContent = lazy(() => import('./MarkdownContent'));
 const CourseTopicsSkeleton = ({ isDarkMode }) => (
     <div className={`flex min-h-screen w-full min-w-0 overflow-x-clip font-sans antialiased text-[#001862] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
     <ScrollProgress />
-    <div className={`fixed inset-0 -z-10 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
+    <div className={`fixed inset-0 -z-10 ${isDarkMode ? "bg-[#080d25]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
     <main className="flex-1 flex min-h-screen min-w-0 flex-col overflow-x-clip pt-20 md:pt-24">
       <header className="px-6 md:px-12 pt-4 pb-4">
         <div className="h-4 w-32 rounded-full bg-[#7ec9ff]/30 dark:bg-white/10 animate-pulse" />
@@ -185,7 +185,7 @@ const CourseTopics = () => {
   if (error || !currentCourse) {
     return (
       <div className={`flex min-h-full w-full font-sans antialiased text-[#001862] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
-         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
+        <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-[#080d25]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
         <div className="flex-1 flex items-center justify-center relative z-10">
           <div className="dashboard-surface text-center p-12 shadow-sm">
             <h1 className="dashboard-page-title mb-4">{error ? 'Error Loading' : 'Course Not Found'}</h1>
@@ -203,7 +203,7 @@ const CourseTopics = () => {
       <ScrollProgress />
       
       {/* Unified Background */}
-      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-[#080d25]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
 
       <main className="relative z-10 flex min-h-screen min-w-0 flex-1 flex-col overflow-x-clip pt-20 transition-all duration-700 ease-in-out md:pt-24">
         
@@ -239,7 +239,7 @@ const CourseTopics = () => {
               onClick={() => setIsSyllabusOpen(false)}
               className="fixed inset-x-0 bottom-0 top-20 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-30 md:hidden"
             />
-            <div data-course-sidebar="true" className="fixed left-0 top-20 bottom-0 w-full sm:w-96 rounded-r-2xl bg-[#bceaff]/80 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-2xl border-r border-black/5 dark:border-white/5 z-40 flex flex-col shadow-[0_20px_60px_rgba(15,23,42,0.08)] md:hidden">
+            <div data-course-sidebar="true" className="fixed left-0 top-20 bottom-0 w-full sm:w-96 rounded-r-2xl bg-[#bceaff]/80 dark:bg-[#080d25] backdrop-blur-2xl border-r border-black/5 dark:border-white/5 z-40 flex flex-col shadow-[0_20px_60px_rgba(15,23,42,0.08)] md:hidden">
                 <div className="p-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/40 dark:bg-black/20">
                   <div>
                     <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-semibold block">Syllabus</span>

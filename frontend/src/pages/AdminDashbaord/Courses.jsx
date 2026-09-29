@@ -32,6 +32,8 @@ const INITIAL_FORM = {
   skills: [],
   programIds: [],
   instructor: "",
+  instructorBio: "",
+  learningOutcomes: [],
   duration: "",
   schedule: "",
   startDate: "",
@@ -144,6 +146,8 @@ export default function Courses() {
           topics: Number(course.numTopics || course.topics || course.topicIds?.length) || 0,
           bannerImage: String(course.bannerImage || ""),
           instructor: String(course.instructor || ""),
+          instructorBio: String(course.instructorBio || ""),
+          learningOutcomes: Array.isArray(course.learningOutcomes) ? course.learningOutcomes : [],
           duration: String(course.duration || ""),
           _id: String(course._id || course.courseId || course.id || ""),
         };
@@ -323,10 +327,13 @@ export default function Courses() {
     formData.append("price", String(courseForm.accessType === "Paid" ? courseForm.price : 0));
     formData.append("status", courseForm.status);
     formData.append("numTopics", String(numTopicsVal));
-    formData.append("programIds", JSON.stringify(courseForm.programIds));
+      formData.append("programIds", JSON.stringify(courseForm.programIds));
+    formData.append("learningOutcomes", JSON.stringify(courseForm.learningOutcomes || []));
+
+    formData.append("instructor", courseForm.instructor.trim());
+    formData.append("instructorBio", courseForm.instructorBio.trim());
 
     if (courseForm.deliveryType === "Trainer-Led") {
-      formData.append("instructor", courseForm.instructor.trim());
       formData.append("duration", courseForm.duration.trim());
       formData.append("schedule", courseForm.schedule.trim());
       formData.append("startDate", courseForm.startDate.trim());
@@ -863,20 +870,33 @@ export default function Courses() {
                     </div>
                   </div>
 
-                  {/* Trainer-Led Specific Fields */}
+                  {/* Trainer Information */}
+                  <div>
+                    <label className="admin-micro-label text-black/50 dark:text-white/50 font-semibold">
+                      Trainer Name <span className="font-normal text-slate-400">(optional)</span>
+                    </label>
+                    <input
+                      value={courseForm.instructor}
+                      maxLength={100}
+                      onChange={(e) => setCourseForm((prev) => ({ ...prev, instructor: e.target.value }))}
+                      placeholder="Enter trainer name"
+                      className={categoryFormInputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="admin-micro-label text-black/50 dark:text-white/50 font-semibold">
+                      Trainer Description <span className="font-normal text-slate-400">(optional)</span>
+                    </label>
+                    <input
+                      value={courseForm.instructorBio}
+                      maxLength={100}
+                      onChange={(e) => setCourseForm((prev) => ({ ...prev, instructorBio: e.target.value }))}
+                      placeholder="Short trainer description"
+                      className={categoryFormInputClass}
+                    />
+                  </div>
                   {courseForm.deliveryType === "Trainer-Led" && (
                     <>
-                      <div>
-                        <label className="admin-micro-label text-black/50 dark:text-white/50 font-semibold">
-                          Instructor Name
-                        </label>
-                        <input
-                          value={courseForm.instructor}
-                          onChange={(e) => setCourseForm((prev) => ({ ...prev, instructor: e.target.value }))}
-                          placeholder="e.g. Prashanti Vasi"
-                          className={categoryFormInputClass}
-                        />
-                      </div>
                       <div>
                         <label className="admin-micro-label text-black/50 dark:text-white/50 font-semibold">
                           Schedule
@@ -890,6 +910,43 @@ export default function Courses() {
                       </div>
                     </>
                   )}
+
+                  <div className="sm:col-span-2">
+                    <div className="mb-1.5 flex items-center justify-between gap-3">
+                      <label className="admin-micro-label text-black/50 dark:text-white/50 font-semibold">Learning Outcomes</label>
+                      <button
+                        type="button"
+                        onClick={() => setCourseForm((prev) => ({ ...prev, learningOutcomes: [...(prev.learningOutcomes || []), ""] }))}
+                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-[#3C83F6] hover:bg-[#3C83F6]/10"
+                      >
+                        <FiPlus className="h-3.5 w-3.5" /> Add Outcome
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {(courseForm.learningOutcomes || []).map((outcome, index) => (
+                        <div key={`outcome-${index}`} className="flex items-center gap-2">
+                          <input
+                            value={outcome}
+                            maxLength={300}
+                            onChange={(e) => setCourseForm((prev) => ({
+                              ...prev,
+                              learningOutcomes: (prev.learningOutcomes || []).map((value, itemIndex) => itemIndex === index ? e.target.value : value),
+                            }))}
+                            placeholder="What learners will be able to do after this course"
+                            className={categoryFormInputClass}
+                          />
+                          <button
+                            type="button"
+                            title="Remove outcome"
+                            onClick={() => setCourseForm((prev) => ({ ...prev, learningOutcomes: (prev.learningOutcomes || []).filter((_, itemIndex) => itemIndex !== index) }))}
+                            className="shrink-0 rounded-lg p-2 text-slate-400 hover:bg-red-500/10 hover:text-red-500"
+                          >
+                            <FiTrash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
                   {/* Banner Image Upload */}
                   <div className="sm:col-span-2">

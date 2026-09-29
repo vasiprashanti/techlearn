@@ -204,7 +204,7 @@ export const hiringAPI = {
     params.set('limit', limit);
 
     const response = await fetch(
-      `${API_BASE}/jobs/for-you?${params.toString()}`,
+      `${API_BASE}/jobs/recommended?${params.toString()}`,
       {
         headers: getAuthHeaders(),
       }

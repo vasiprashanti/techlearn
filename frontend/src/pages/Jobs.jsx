@@ -140,6 +140,17 @@ export default function Jobs() {
         if (!isCancelled) {
           let fetchedJobs = response?.data || [];
 
+          // Recommendation and legacy hiring responses can contain the same
+          // job through more than one matching path. Keep one card per job so
+          // React receives stable, unique keys.
+          const seenJobIds = new Set();
+          fetchedJobs = fetchedJobs.filter((job, index) => {
+            const jobId = String(job?._id || job?.JID || job?.id || `row-${index}`);
+            if (seenJobIds.has(jobId)) return false;
+            seenJobIds.add(jobId);
+            return true;
+          });
+
           // Never show expired opportunities
           fetchedJobs = fetchedJobs.filter((job) => !isJobExpired(job));
 
