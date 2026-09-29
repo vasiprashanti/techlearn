@@ -1,14 +1,25 @@
-import crypto from "crypto";
 import mongoose from "mongoose";
 import Razorpay from "razorpay";
 import Payment from "../models/Payment.js";
 import Program from "../models/Program.js";
+import Course from "../models/Course.js";
+import Topic from "../models/Topic.js";
 import Student from "../models/Student.js";
 import College from "../models/College.js";
-import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import PricingExitFeedback from "../models/PricingExitFeedback.js";
 import { upsertProgramEnrollment, syncPrimaryProgramPointers } from "../utils/programEnrollment.js";
 import { normalizeProgramType } from "../utils/programTypeNormalization.js";
+import {
+  isCapturedPaymentForRecord,
+  isPaymentForRecord,
+  verifyRazorpayCheckoutSignature,
+  verifyRazorpayWebhookSignature,
+} from "../utils/razorpayVerification.js";
+import {
+  buildCapturedCoursePurchaseQuery,
+  isCoursePurchasePayment,
+  isPaidCourseAvailableForPurchase,
+} from "../utils/coursePurchase.js";
 
 // Helper to get or initialize Razorpay instance safely
 const getRazorpayInstance = () => {
@@ -33,14 +44,41 @@ const DEFAULT_PRICING_PLANS = {
 
 const getPricingPlan = (program, planId) => {
   const type = normalizeProgramType(program?.programType) === "Skill" ? "Skill" : "Placement";
-  const configuredPlans = Array.isArray(program?.pricingPlans)
+  const hasConfiguredPlans = Array.isArray(program?.pricingPlans) && program.pricingPlans.length > 0;
+  const configured = hasConfiguredPlans
     ? program.pricingPlans.filter((plan) => plan.active !== false)
-    : [];
-  const configured = configuredPlans.length ? configuredPlans : DEFAULT_PRICING_PLANS[type];
+    : DEFAULT_PRICING_PLANS[type];
   const requested = String(planId || "").toLowerCase();
-  return configured.find((plan) => String(plan.key || "").toLowerCase() === requested)
-    || configured.find((plan) => requested.includes("pro") && String(plan.key || "").toLowerCase().includes("pro"))
-    || configured[0];
+  return requested
+    ? configured.find((plan) => String(plan.key || "").toLowerCase() === requested) || null
+    : configured[0] || null;
+};
+
+const activateProgramEnrollmentForPayment = async ({ payment, user, student }) => {
+  if (!payment.programId) throw new Error("The captured payment has no associated Program.");
+
+  const program = await Program.findById(payment.programId);
+  if (!program) throw new Error("The Program associated with this payment no longer exists.");
+
+  const resolvedStudent = student
+    || (payment.studentId ? await Student.findById(payment.studentId) : null)
+    || await Student.findOne({ userId: payment.userId });
+  if (!resolvedStudent) throw new Error("The learner record for this payment could not be found.");
+
+  const resolvedUser = user || { _id: payment.userId };
+  const enrollment = await upsertProgramEnrollment({
+    user: resolvedUser,
+    student: resolvedStudent,
+    program,
+    accessTier: "Member",
+    source: "payment",
+  });
+  if (!enrollment) throw new Error("Program enrollment could not be activated.");
+
+  await syncPrimaryProgramPointers({ user: resolvedUser, student: resolvedStudent });
+  payment.enrollmentId = enrollment._id;
+  await payment.save();
+  return enrollment;
 };
 
 /**
@@ -104,27 +142,18 @@ export const checkPaymentEligibility = async (req, res) => {
 
     const type = normalizeProgramType(program?.programType || requestedType) || "Placement";
 
-    if (type === "Placement") {
-      const plan = getPricingPlan(program, planId);
-      return res.json({
-        success: true,
-        programType: "Placement",
-        plan: plan.title,
-        price: plan.price,
-        currency: "INR",
-        refundPolicy: "No refunds or cancellations after purchase",
-      });
-    } else {
-      const plan = getPricingPlan(program, planId);
-      return res.json({
-        success: true,
-        programType: "Skill",
-        plan: plan.title,
-        price: plan.price,
-        currency: "INR",
-        refundPolicy: "No refunds or cancellations after purchase",
-      });
+    const plan = getPricingPlan(program, planId);
+    if (!plan || !Number.isFinite(Number(plan.price)) || Number(plan.price) <= 0) {
+      return res.status(400).json({ success: false, message: "The selected pricing plan is unavailable." });
     }
+    return res.json({
+      success: true,
+      programType: type,
+      plan: plan.title,
+      price: Number(plan.price),
+      currency: "INR",
+      refundPolicy: "No refunds or cancellations after purchase",
+    });
   } catch (error) {
     console.error("checkPaymentEligibility error:", error);
     res.status(500).json({ success: false, message: "Error checking eligibility", error: error.message });
@@ -138,13 +167,129 @@ export const checkPaymentEligibility = async (req, res) => {
 export const createPaymentOrder = async (req, res) => {
   try {
     const user = req.user;
-    const { programId, planId, programType: requestedProgramType } = req.body;
+    const { courseId, programId, planId, programType: requestedProgramType } = req.body;
+
+    if (courseId && programId) {
+      return res.status(400).json({ success: false, message: "Choose either a Course or a Program for checkout." });
+    }
+
+    if (courseId) {
+      if (!mongoose.Types.ObjectId.isValid(courseId)) {
+        return res.status(400).json({ success: false, message: "A valid courseId is required." });
+      }
+
+      const course = await Course.findById(courseId);
+      if (!isPaidCourseAvailableForPurchase(course)) {
+        return res.status(400).json({ success: false, message: "This course is not currently available for paid checkout." });
+      }
+      const availableTopicCount = await Topic.countDocuments({
+        _id: { $in: course.topicIds },
+        courseId: course._id,
+      });
+      if (!availableTopicCount) {
+        return res.status(400).json({ success: false, message: "This course has no published learning content yet." });
+      }
+      const linkedPrograms = await Program.find({
+        status: "Active",
+        $or: [
+          { courseIds: course._id },
+          ...(course.programIds?.length ? [{ _id: { $in: course.programIds } }] : []),
+        ],
+      }).select("visibility pricingType").lean();
+      const hasRestrictedProgramLink = linkedPrograms.some(
+        (linkedProgram) => linkedProgram.visibility !== "Public" || linkedProgram.pricingType === "Paid"
+      );
+      if ((course.assignedBatchIds || []).length > 0 || hasRestrictedProgramLink) {
+        return res.status(403).json({
+          success: false,
+          message: "This course is provided through its Program or batch. Enroll in that Program to access it.",
+        });
+      }
+
+      const amount = Number(course.price);
+      const currency = "INR";
+      const purchaseQuery = buildCapturedCoursePurchaseQuery({ userId: user._id, courseId: course._id });
+      const completedPurchase = await Payment.findOne(purchaseQuery).select("_id").lean();
+      if (completedPurchase) {
+        return res.status(409).json({ success: false, alreadyPurchased: true, message: "You already have access to this course." });
+      }
+
+      const razorpay = getRazorpayInstance();
+      if (!razorpay) {
+        return res.status(503).json({ success: false, message: "Razorpay is not configured on the server." });
+      }
+
+      // Reuse an outstanding order for the same course/price when a learner
+      // retries after a closed checkout, avoiding duplicate pending orders.
+      const openPayment = await Payment.findOne({
+        userId: user._id,
+        courseId: course._id,
+        paymentPurpose: "CoursePurchase",
+        status: { $in: ["created", "pending"] },
+        amount,
+        currency,
+        razorpayOrderId: { $exists: true, $ne: "" },
+      }).sort({ createdAt: -1 });
+
+      if (openPayment) {
+        return res.json({
+          success: true,
+          paymentId: openPayment._id,
+          orderId: openPayment.razorpayOrderId,
+          amount,
+          currency,
+          key: process.env.RAZORPAY_KEY_ID,
+          planName: course.title,
+          productType: "course",
+          reused: true,
+        });
+      }
+
+      const student = await getOrCreateStudentForUser(user);
+      const receipt = `rcpt_${Date.now()}_${String(user._id).slice(-8)}`;
+      const razorpayOrder = await razorpay.orders.create({
+        amount: Math.round(amount * 100),
+        currency,
+        receipt,
+        notes: {
+          userId: String(user._id),
+          studentId: String(student._id),
+          courseId: String(course._id),
+          productType: "course",
+          courseTitle: course.title,
+        },
+      });
+
+      const payment = await Payment.create({
+        userId: user._id,
+        studentId: student._id,
+        courseId: course._id,
+        paymentPurpose: "CoursePurchase",
+        plan: course.title,
+        amount,
+        currency,
+        status: "created",
+        paymentDate: null,
+        razorpayOrderId: razorpayOrder.id,
+        transactionId: razorpayOrder.id,
+        paymentType: "Razorpay",
+      });
+
+      return res.status(201).json({
+        success: true,
+        paymentId: payment._id,
+        orderId: razorpayOrder.id,
+        amount,
+        currency,
+        key: process.env.RAZORPAY_KEY_ID,
+        planName: course.title,
+        productType: "course",
+      });
+    }
 
     if (!programId && !planId) {
       return res.status(400).json({ success: false, message: "programId or planId is required" });
     }
-
-    const student = await getOrCreateStudentForUser(user);
 
     let program = null;
     if (programId) {
@@ -178,50 +323,50 @@ export const createPaymentOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: "A paid program is required for checkout." });
     }
 
-    // Determine trusted server-side price
-    let amount = 0;
-    let planName = planId || "Basic";
-
+    // Only use a plan explicitly defined by this Program (or the legacy
+    // program-type defaults when the Program has no custom pricing plans).
     const selectedPlan = getPricingPlan(program, planId);
-    amount = selectedPlan.price;
-    planName = selectedPlan.title;
+    if (!selectedPlan || !Number.isFinite(Number(selectedPlan.price)) || Number(selectedPlan.price) <= 0) {
+      return res.status(400).json({ success: false, message: "The selected pricing plan is unavailable." });
+    }
+    const amount = Number(selectedPlan.price);
+    const planName = selectedPlan.title;
 
     const currency = "INR";
     const receipt = `rcpt_${user._id}_${Date.now()}`;
-
-    let razorpayOrderId = null;
     const razorpay = getRazorpayInstance();
-
-    if (razorpay) {
-      const razorpayOrder = await razorpay.orders.create({
-        amount: amount * 100, // amount in paise
-        currency,
-        receipt,
-        notes: {
-          userId: user._id.toString(),
-          studentId: student._id.toString(),
-          programId: program?._id ? program._id.toString() : "",
-          programType,
-          planName,
-          refundPolicy: "No refunds or cancellations after purchase",
-        },
-      });
-      razorpayOrderId = razorpayOrder.id;
-    } else {
-      // Mock Razorpay Order ID when keys are not provided (Test/Dev Mode)
-      razorpayOrderId = `order_mock_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    if (!razorpay) {
+      return res.status(503).json({ success: false, message: "Razorpay is not configured on the server." });
     }
+
+    const student = await getOrCreateStudentForUser(user);
+    const razorpayOrder = await razorpay.orders.create({
+      amount: Math.round(amount * 100), // Razorpay expects paise
+      currency,
+      receipt,
+      notes: {
+        userId: user._id.toString(),
+        studentId: student._id.toString(),
+        programId: program._id.toString(),
+        programType,
+        planName,
+        refundPolicy: "No refunds or cancellations after purchase",
+      },
+    });
+    const razorpayOrderId = razorpayOrder.id;
 
     // Create Payment Record in DB
     const payment = await Payment.create({
       userId: user._id,
       studentId: student._id,
-      programId: program?._id || null,
+      programId: program._id,
+      paymentPurpose: "ProgramEnrollment",
       plan: planName,
       programType,
       amount,
       currency,
       status: "created",
+      paymentDate: null,
       razorpayOrderId,
       transactionId: razorpayOrderId,
       paymentType: "Razorpay",
@@ -233,14 +378,14 @@ export const createPaymentOrder = async (req, res) => {
       orderId: razorpayOrderId,
       amount,
       currency,
-      key: process.env.RAZORPAY_KEY_ID || "rzp_test_mock_key",
+      key: process.env.RAZORPAY_KEY_ID,
       programType,
       planName,
       refundPolicy: "No refunds or cancellations after purchase",
     });
   } catch (error) {
-    console.error("createPaymentOrder error stack:", error.stack || error);
-    res.status(500).json({ success: false, message: "Order creation failed", error: error.message, stack: error.stack });
+    console.error("createPaymentOrder error:", error.message);
+    res.status(500).json({ success: false, message: "Order creation failed." });
   }
 };
 
@@ -250,11 +395,11 @@ export const createPaymentOrder = async (req, res) => {
  */
 export const verifyPayment = async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, mock_success } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
     const user = req.user;
 
-    if (!razorpay_order_id) {
-      return res.status(400).json({ success: false, message: "Razorpay Order ID is required" });
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ success: false, message: "Razorpay order, payment, and signature values are required." });
     }
 
     const payment = await Payment.findOne({ razorpayOrderId: razorpay_order_id });
@@ -265,91 +410,115 @@ export const verifyPayment = async (req, res) => {
       return res.status(403).json({ success: false, message: "You do not own this payment." });
     }
 
-    // Check idempotency: If payment is already captured
+    const isCoursePurchase = isCoursePurchasePayment(payment);
+    if (!isCoursePurchase && !payment.programId) {
+      return res.status(400).json({ success: false, message: "This payment is not a Course or Program checkout." });
+    }
+    if (["refunded", "partially_refunded", "rejected"].includes(payment.status)) {
+      return res.status(409).json({ success: false, message: "This payment cannot activate access." });
+    }
+
     if (payment.status === "captured") {
-      const enrollment = await ProgramEnrollment.findOne({
-        userId: payment.userId,
-        ...(payment.programId ? { programId: payment.programId } : {}),
-      });
+      const enrollment = isCoursePurchase
+        ? null
+        : await activateProgramEnrollmentForPayment({ payment, user });
       return res.json({
         success: true,
         message: "Payment already verified",
         payment,
         enrollment,
+        courseId: isCoursePurchase ? payment.courseId : undefined,
+        hasAccess: isCoursePurchase,
         refundPolicy: "No refunds or cancellations after purchase",
       });
     }
 
-    const key_secret = process.env.RAZORPAY_KEY_SECRET;
-    const isMock = razorpay_order_id.startsWith("order_mock_") || mock_success || !key_secret;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keySecret) {
+      return res.status(503).json({ success: false, message: "Razorpay verification is not configured on the server." });
+    }
 
-    if (!isMock) {
-      const body = razorpay_order_id + "|" + razorpay_payment_id;
-      const expectedSignature = crypto
-        .createHmac("sha256", key_secret)
-        .update(body.toString())
-        .digest("hex");
+    if (!verifyRazorpayCheckoutSignature({
+      orderId: razorpay_order_id,
+      paymentId: razorpay_payment_id,
+      signature: razorpay_signature,
+      secret: keySecret,
+    })) {
+      return res.status(400).json({ success: false, message: "Payment signature verification failed." });
+    }
 
-      if (expectedSignature !== razorpay_signature) {
-        payment.status = "failed";
-        await payment.save();
-        return res.status(400).json({ success: false, message: "Invalid payment signature verification failed" });
+    const razorpay = getRazorpayInstance();
+    if (!razorpay) {
+      return res.status(503).json({ success: false, message: "Razorpay is not configured on the server." });
+    }
+
+    let razorpayPayment = await razorpay.payments.fetch(razorpay_payment_id);
+    if (!isPaymentForRecord(razorpayPayment, payment)) {
+      return res.status(400).json({ success: false, message: "The payment details do not match this order." });
+    }
+    if (razorpayPayment.status === "failed") {
+      payment.status = "failed";
+      payment.razorpayPaymentId = razorpay_payment_id;
+      await payment.save();
+      return res.status(402).json({ success: false, message: "Razorpay reports that this payment failed." });
+    }
+    if (razorpayPayment.status === "authorized") {
+      try {
+        razorpayPayment = await razorpay.payments.capture(
+          razorpay_payment_id,
+          Math.round(Number(payment.amount) * 100),
+          payment.currency || "INR"
+        );
+      } catch (captureError) {
+        // A concurrent webhook or dashboard capture may have completed it;
+        // re-fetch before treating capture failure as a pending payment.
+        razorpayPayment = await razorpay.payments.fetch(razorpay_payment_id);
+        if (razorpayPayment.status !== "captured") {
+          console.warn("Razorpay capture pending:", captureError.message);
+        }
       }
     }
 
-    // Signature verified or test mode mock
+    if (razorpayPayment.status !== "captured") {
+      payment.status = "pending";
+      payment.razorpayPaymentId = razorpay_payment_id;
+      await payment.save();
+      return res.status(202).json({
+        success: false,
+        pending: true,
+        message: "Payment is not captured yet. Access will activate after confirmation.",
+      });
+    }
+    if (!isCapturedPaymentForRecord(razorpayPayment, payment)) {
+      return res.status(400).json({ success: false, message: "Razorpay has not confirmed the captured amount for this order." });
+    }
+
     payment.status = "captured";
-    payment.razorpayPaymentId = razorpay_payment_id || `pay_mock_${Date.now()}`;
-    payment.razorpaySignature = razorpay_signature || "mock_signature";
+    payment.razorpayPaymentId = razorpay_payment_id;
+    payment.razorpaySignature = razorpay_signature;
     payment.paymentDate = new Date();
     await payment.save();
 
-    // Activate Program Enrollment
-    const student = await getOrCreateStudentForUser(user);
-
-    let program = null;
-    if (payment.programId && mongoose.Types.ObjectId.isValid(payment.programId)) {
-      program = await Program.findById(payment.programId);
-    }
-    if (!program && payment.programType) {
-      program = await Program.findOne({
-        programType: payment.programType,
-        status: "Active",
-        visibility: "Public",
-        pricingType: "Paid",
-      });
-    }
-
     let enrollment = null;
-    if (program) {
-      enrollment = await upsertProgramEnrollment({
-        user,
-        student,
-        program,
-        accessTier: "Member",
-        source: "payment",
-      });
-
-      // Synchronize student primary program pointers
-      await syncPrimaryProgramPointers({ user, student });
-
-      // Update payment record with enrollment ID
-      if (enrollment) {
-        payment.enrollmentId = enrollment._id;
-        await payment.save();
-      }
+    if (!isCoursePurchase) {
+      const student = await getOrCreateStudentForUser(user);
+      enrollment = await activateProgramEnrollmentForPayment({ payment, user, student });
     }
 
     res.json({
       success: true,
-      message: "Payment verified successfully and program enrollment activated!",
+      message: isCoursePurchase
+        ? "Payment verified successfully. Course access is now active."
+        : "Payment verified successfully and program enrollment activated!",
       payment,
       enrollment,
+      courseId: isCoursePurchase ? payment.courseId : undefined,
+      hasAccess: isCoursePurchase,
       refundPolicy: "No refunds or cancellations after purchase",
     });
   } catch (error) {
     console.error("verifyPayment error:", error);
-    res.status(500).json({ success: false, message: "Payment verification failed", error: error.message });
+    res.status(500).json({ success: false, message: "Payment verification failed." });
   }
 };
 
@@ -360,16 +529,15 @@ export const verifyPayment = async (req, res) => {
 export const handleRazorpayWebhook = async (req, res) => {
   try {
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-    if (webhookSecret) {
-      const signature = req.headers["x-razorpay-signature"];
-      const expectedSignature = crypto
-        .createHmac("sha256", webhookSecret)
-        .update(JSON.stringify(req.body))
-        .digest("hex");
-
-      if (signature !== expectedSignature) {
-        return res.status(400).json({ message: "Invalid webhook signature" });
-      }
+    if (!webhookSecret) {
+      return res.status(503).json({ message: "Razorpay webhook verification is not configured." });
+    }
+    if (!verifyRazorpayWebhookSignature({
+      rawBody: req.rawBody,
+      signature: req.headers["x-razorpay-signature"],
+      secret: webhookSecret,
+    })) {
+      return res.status(400).json({ message: "Invalid webhook signature." });
     }
 
     const { event, payload } = req.body;
@@ -377,48 +545,36 @@ export const handleRazorpayWebhook = async (req, res) => {
     if (event === "payment.captured" && payload?.payment?.entity) {
       const entity = payload.payment.entity;
       const orderId = entity.order_id;
-      const paymentId = entity.id;
-
+      if (!entity.id || !orderId) return res.status(400).json({ message: "Captured payment or order ID is missing." });
       const payment = await Payment.findOne({ razorpayOrderId: orderId });
-      if (payment) {
-        if (payment.status !== "captured") {
-          payment.status = "captured";
-          payment.razorpayPaymentId = paymentId;
-          payment.paymentDate = new Date();
-          await payment.save();
+      if (!payment) return res.status(404).json({ message: "Payment order not found." });
+      if (["refunded", "partially_refunded", "rejected"].includes(payment.status)) {
+        return res.status(409).json({ message: "This payment cannot activate access." });
+      }
+      if (!isCapturedPaymentForRecord(entity, payment)) {
+        return res.status(400).json({ message: "Captured payment details do not match the order." });
+      }
+      if (payment.status === "captured" && payment.razorpayPaymentId && payment.razorpayPaymentId !== entity.id) {
+        return res.status(409).json({ message: "A different payment is already recorded for this order." });
+      }
 
-          const student = await Student.findById(payment.studentId);
-      const program = await Program.findOne({
-        _id: payment.programId,
-        status: "Active",
-        visibility: "Public",
-        pricingType: "Paid",
-      });
-          if (student && program) {
-            const enrollment = await upsertProgramEnrollment({
-              user: { _id: payment.userId },
-              student,
-              program,
-              accessTier: "Member",
-              source: "payment",
-            });
-            await syncPrimaryProgramPointers({
-              user: { _id: payment.userId },
-              student,
-            });
-            if (enrollment) {
-              payment.enrollmentId = enrollment._id;
-              await payment.save();
-            }
-          }
-        }
+      const wasAlreadyCaptured = payment.status === "captured";
+      payment.status = "captured";
+      payment.razorpayPaymentId = entity.id;
+      if (!wasAlreadyCaptured) payment.paymentDate = new Date();
+      await payment.save();
+      if (!isCoursePurchasePayment(payment)) {
+        if (!payment.programId) return res.status(400).json({ message: "Captured payment is not linked to a Course or Program." });
+        await activateProgramEnrollmentForPayment({ payment });
       }
     } else if (event === "payment.failed" && payload?.payment?.entity) {
       const entity = payload.payment.entity;
       const orderId = entity.order_id;
+      if (!entity.id || !orderId) return res.status(400).json({ message: "Failed payment or order ID is missing." });
       const payment = await Payment.findOne({ razorpayOrderId: orderId });
-      if (payment && payment.status !== "captured") {
+      if (payment && isPaymentForRecord(entity, payment) && payment.status !== "captured") {
         payment.status = "failed";
+        payment.razorpayPaymentId = entity.id;
         await payment.save();
       }
     }
@@ -426,7 +582,7 @@ export const handleRazorpayWebhook = async (req, res) => {
     res.status(200).json({ status: "ok" });
   } catch (error) {
     console.error("Webhook processing error:", error);
-    res.status(500).json({ message: "Webhook handler error", error: error.message });
+    res.status(500).json({ message: "Webhook handler error" });
   }
 };
 

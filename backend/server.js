@@ -93,7 +93,14 @@ app.use(cors(corsOptions));
 // Extra headers for older setups or vercel
 // ...existing code...
 
-app.use(express.json());
+app.use(express.json({
+  verify(req, _res, buffer) {
+    const requestPath = (req.originalUrl || req.url || "").split("?")[0];
+    if (requestPath === "/api/payments/webhook" || requestPath === "/api/certificate/webhook") {
+      req.rawBody = Buffer.from(buffer);
+    }
+  },
+}));
 // 🖼️ Uploaded images — served from the same directory multer writes to
 const uploadsServePath = process.env.VERCEL ? "/tmp" : path.join(process.cwd(), "uploads/temp");
 app.use("/uploads/temp", express.static(uploadsServePath));
