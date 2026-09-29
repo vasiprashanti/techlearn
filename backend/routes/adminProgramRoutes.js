@@ -6,6 +6,7 @@ import {
   createProgram,
   getProgramById,
   getProgramDiagnostics,
+  getProgramFormOptions,
   updateProgram,
   deleteProgram,
   getAvailableEntities,
@@ -32,6 +33,7 @@ router.use(protect, isAdmin, requireAdminPermission(ADMIN_PERMISSIONS.PROGRAMS_R
 
 // Program CRUD routes
 router.get("/", listPrograms);
+router.get("/options", getProgramFormOptions);
 router.post("/", requireAdminPermission(ADMIN_PERMISSIONS.PROGRAMS_WRITE), createProgram);
 router.get("/:programId/blueprints", listBlueprints);
 router.post("/:programId/blueprints", requireAdminPermission(ADMIN_PERMISSIONS.PROGRAMS_WRITE), createBlueprint);

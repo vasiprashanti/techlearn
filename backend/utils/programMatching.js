@@ -16,7 +16,7 @@ const normalizeArray = (arr = []) =>
  * Evaluates active & public Program records against student's onboarding preferences.
  * 
  * @param {Object} onboardingData 
- * @param {string} onboardingData.learningGoal - "Get Placed" | "Learn New Skills" | "Exploring TechLearn"
+ * @param {string} onboardingData.learningGoal - placement, skill, or exploration preference from onboarding.
  * @param {string} onboardingData.placementCategory - e.g. "On-Campus", "Off-Campus", or "Both".
  * @param {Array<string>} onboardingData.targetCompanies - e.g. ["Google", "Amazon"]
  * @param {Array<string>} onboardingData.skills - e.g. ["Java", "Python"]
@@ -51,7 +51,12 @@ export const matchProgramsForUser = async (onboardingData = {}) => {
   }
 
   const isFreeTier = normalizeString(learningPath) === "free";
-  const userGoal = normalizeString(learningGoal);
+  const rawUserGoal = normalizeString(learningGoal);
+  const userGoal = ["get placed", "get job-ready", "get job ready", "placement"].includes(rawUserGoal)
+    ? "placement"
+    : ["learn new skills", "learn a skill", "skill"].includes(rawUserGoal)
+      ? "skill"
+      : rawUserGoal;
   const userCategory = normalizeString(placementCategory);
   const userCompanies = normalizeArray(targetCompanies);
   const userSkills = normalizeArray(skills);
@@ -71,19 +76,15 @@ export const matchProgramsForUser = async (onboardingData = {}) => {
     const progType = normalizeString(program.programType);
     const progName = normalizeString(program.name);
     const progDesc = normalizeString(program.description);
-    const progGoals = normalizeArray(program.learningGoals);
     const progCategories = normalizeArray(program.placementCategories);
     const progCompanies = normalizeArray(program.targetCompanies);
     const progSkills = normalizeArray(program.skillTags);
     const progRoles = normalizeArray(program.targetRoles);
 
-    if (userGoal === "get placed") {
+    if (userGoal === "placement") {
       // Must be a placement-oriented program
-      const isPlacementType =
-        progGoals.includes("get placed") ||
-        progType.includes("placement") ||
-        progName.includes("placement") ||
-        progDesc.includes("placement");
+      const isPlacementType = progType === "placement";
+      if (!isPlacementType) continue;
 
       if (isPlacementType) {
         score += 10;
@@ -106,14 +107,9 @@ export const matchProgramsForUser = async (onboardingData = {}) => {
       if (userRole && (progRoles.includes(userRole) || progName.includes(userRole))) {
         score += 8;
       }
-    } else if (userGoal === "learn new skills") {
-      const isSkillType =
-        progGoals.includes("learn new skills") ||
-        progType.includes("project") ||
-        progType.includes("skill") ||
-        progName.includes("full stack") ||
-        progName.includes("skill") ||
-        progDesc.includes("skill");
+    } else if (userGoal === "skill") {
+      const isSkillType = progType === "skill";
+      if (!isSkillType) continue;
 
       if (userSkills.length > 0) {
         const matchingSkills = userSkills.filter(
@@ -132,8 +128,6 @@ export const matchProgramsForUser = async (onboardingData = {}) => {
     } else if (userGoal === "exploring techlearn" || userGoal === "exploring") {
       // General or Exploration Program (Only intentionally configured general programs)
       const isGeneralType =
-        progGoals.includes("exploring techlearn") ||
-        progGoals.includes("exploring") ||
         progType.includes("general") ||
         progType.includes("explor") ||
         progName.includes("general") ||

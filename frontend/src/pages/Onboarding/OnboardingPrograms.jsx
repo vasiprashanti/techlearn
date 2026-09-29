@@ -41,8 +41,8 @@ export default function OnboardingPrograms() {
     ...locationState,
   };
 
-  const goal = currentUser?.learningGoal || 'Get Placed';
-  const isPlacement = goal === 'Get Placed' || !goal;
+  const goal = String(currentUser?.learningGoal || 'Get Job-Ready').trim().toLowerCase();
+  const isPlacement = ['get placed', 'get job-ready', 'get job ready', 'placement'].includes(goal) || !goal;
 
   const targetRole = currentUser?.targetRole || 'Software Developer';
   const selectedCatalogProgram = catalogPrograms.find((program) => String(program._id) === String(currentUser?.programId))

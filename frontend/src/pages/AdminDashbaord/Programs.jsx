@@ -4,6 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 import { adminAPI } from '../../services/adminApi';
+import { STANDARD_COURSE_SKILLS } from '../../constants/courseSkills';
 import {
   FiSearch,
   FiPlus,
@@ -20,7 +21,18 @@ import {
   FiMoreHorizontal,
 } from 'react-icons/fi';
 
-const PROGRAM_TYPES = ['Placement', 'Skill'];
+const PROGRAM_TYPES = [
+  { value: 'Placement', label: 'Placement Programs' },
+  { value: 'Skill', label: 'Skill Programs' },
+];
+const PROGRAM_STATUS_TABS = [
+  { value: '', label: 'All' },
+  { value: 'Active', label: 'Published' },
+  { value: 'Draft', label: 'Draft' },
+  { value: 'Archived', label: 'Archived' },
+];
+const PROGRAM_AVAILABILITIES = ['Structured', 'Trainer-Led', 'Both'];
+const DURATION_UNITS = ['Days', 'Weeks', 'Months', 'Years'];
 
 const PHASE_TYPES_BY_PROGRAM_TYPE = {
   Placement: ['learning', 'revision', 'company_preparation', 'mock_interview', 'final_assessment'],
@@ -34,34 +46,6 @@ const PHASE_LABELS = {
   mock_interview: 'Mock Interview',
   final_assessment: 'Final Assessment',
 };
-
-const PLACEMENT_CATEGORIES = ['On-Campus', 'Off-Campus', 'Both'];
-const LEARNING_GOALS = ['Get Placed', 'Learn New Skills', 'Exploring TechLearn'];
-
-const getDefaultPricingPlans = (programType) => programType === 'Skill'
-  ? [
-      { key: 'skill-basic', title: 'Skill Program', price: '399', benefitsText: 'Recorded videos, 1 live doubt session' },
-      { key: 'skill-pro', title: 'Skill Program Pro', price: '699', benefitsText: 'Recorded videos, 1 live doubt session' },
-    ]
-  : [
-      { key: 'placement-basic', title: 'Placement Program', price: '799', benefitsText: 'Recorded videos, Live sessions' },
-      { key: 'placement-pro', title: 'Placement Program Pro', price: '1199', benefitsText: 'Recorded videos, Live sessions' },
-    ];
-
-const SKILL_TAG_OPTIONS = [
-  'Java',
-  'Python',
-  'JavaScript',
-  'TypeScript',
-  'React',
-  'Node.js',
-  'HTML/CSS',
-  'SQL',
-  'DSA',
-  'Aptitude',
-  'System Design',
-  'Cloud',
-];
 
 const parseDurationDays = (value) => {
   const match = String(value || '').match(/(\d+(?:\.\d+)?)\s*-?\s*(day|days|week|weeks|month|months|year|years)/i);
@@ -77,6 +61,31 @@ const parseDurationDays = (value) => {
         : 1;
   return Math.round(amount * multiplier);
 };
+
+const parseDurationParts = (value) => {
+  const match = String(value || '').match(/(\d+(?:\.\d+)?)\s*-?\s*(day|days|week|weeks|month|months|year|years)/i);
+  if (!match) return null;
+  const unitKey = match[2].toLowerCase();
+  const unit = unitKey.startsWith('year') ? 'Years' : unitKey.startsWith('month') ? 'Months' : unitKey.startsWith('week') ? 'Weeks' : 'Days';
+  return { value: match[1], unit };
+};
+
+const durationDaysFromParts = (value, unit) => {
+  const amount = Number(value);
+  const multiplier = unit === 'Years' ? 365 : unit === 'Months' ? 30 : unit === 'Weeks' ? 7 : 1;
+  return Number.isFinite(amount) ? Math.round(amount * multiplier) : NaN;
+};
+
+const uniqueOptions = (values) => {
+  const byKey = new Map();
+  for (const value of values || []) {
+    const label = String(value || '').trim();
+    if (label && !byKey.has(label.toLocaleLowerCase())) byKey.set(label.toLocaleLowerCase(), label);
+  }
+  return [...byKey.values()].sort((a, b) => a.localeCompare(b));
+};
+
+const getProgramStatusLabel = (status) => status === 'Active' || status === 'Published' ? 'Published' : status;
 
 const getMinimumDurationDays = (programType) => (programType === 'Placement' ? 5 : 2);
 
@@ -118,11 +127,36 @@ const getProgramType = (value) => {
 const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
 
 const statusBadgeClass = (status) => {
-  if (status === 'Active') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
+  if (status === 'Active' || status === 'Published') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
   if (status === 'Draft') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300';
   if (status === 'Archived') return 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300';
   return 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300';
 };
+
+function ProgramMultiSelect({ label, placeholder, options, selected, isOpen, onToggleOpen, onToggle }) {
+  const availableOptions = uniqueOptions([...(options || []), ...(selected || [])]);
+  return (
+    <div className="relative">
+      <label className="admin-micro-label text-black/45 dark:text-white/45">{label}</label>
+      <button type="button" onClick={onToggleOpen} className="relative mt-1 flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border border-black/10 bg-white/85 px-3 py-2 text-left text-sm font-medium text-slate-800 shadow-[0_4px_14px_rgba(15,23,42,0.06)] outline-none transition-all hover:bg-white dark:border-white/15 dark:bg-[#0f1f43] dark:text-white dark:hover:bg-[#162a52]">
+        <span className={selected.length ? 'truncate text-slate-800 dark:text-white' : 'text-black/35 dark:text-white/40'}>
+          {selected.length ? selected.join(', ') : placeholder}
+        </span>
+        <FiChevronDown className="h-4 w-4 shrink-0 text-black/45 dark:text-white/60" />
+      </button>
+      {isOpen && (
+        <div className="absolute left-0 right-0 z-20 mt-2 max-h-52 overflow-y-auto rounded-xl border border-black/10 bg-white p-2 shadow-xl dark:border-white/15 dark:bg-[#0f1f43]">
+          {availableOptions.length ? availableOptions.map((option) => (
+            <label key={option} className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-slate-700 hover:bg-black/5 dark:text-slate-200 dark:hover:bg-white/10">
+              <input type="checkbox" checked={selected.some((item) => item.toLocaleLowerCase() === option.toLocaleLowerCase())} onChange={() => onToggle(option)} className="h-3.5 w-3.5 rounded border-black/20 text-[#3C83F6] focus:ring-[#3C83F6]" />
+              {option}
+            </label>
+          )) : <p className="px-2.5 py-2 text-xs text-slate-500 dark:text-slate-400">No options available yet.</p>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Programs() {
   const { theme } = useTheme();
@@ -137,7 +171,8 @@ export default function Programs() {
 
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [selectedType, setSelectedType] = useState(searchParams.get('programType') || '');
-  const [selectedStatus, setSelectedStatus] = useState(searchParams.get('status') || '');
+  const initialStatus = searchParams.get('status') || '';
+  const [selectedStatus, setSelectedStatus] = useState(initialStatus === 'Published' ? 'Active' : initialStatus);
   const [selectedMonth] = useState(searchParams.get('month') || '');
   const [sortBy] = useState('createdAt');
   const [sortOrder] = useState('desc');
@@ -152,24 +187,31 @@ export default function Programs() {
   const [modalError, setModalError] = useState('');
   const [saving, setSaving] = useState(false);
   const [skillTagsOpen, setSkillTagsOpen] = useState(false);
-  const [targetCompanyDraft, setTargetCompanyDraft] = useState('');
+  const [targetCompaniesOpen, setTargetCompaniesOpen] = useState(false);
+  const [targetRolesOpen, setTargetRolesOpen] = useState(false);
+  const [formOptions, setFormOptions] = useState({
+    skillTags: STANDARD_COURSE_SKILLS,
+    targetCompanies: [],
+    targetRoles: [],
+  });
 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     programType: 'Placement',
+    durationValue: '30',
+    durationUnit: 'Days',
     durationDays: '30',
     phases: getDefaultPhases('Placement', 30),
     status: 'Draft',
     visibility: 'Public',
+    availability: 'Structured',
     pricingType: 'Free',
-    programFee: '0',
-    pricingPlans: getDefaultPricingPlans('Placement'),
-    learningGoalsText: '',
-    placementCategory: 'Both',
+    structuredFee: '',
+    trainerLedFee: '',
     targetCompanies: [],
     skillTags: [],
-    targetRolesText: '',
+    targetRoles: [],
   });
 
   const [programToDelete, setProgramToDelete] = useState(null);
@@ -208,6 +250,23 @@ export default function Programs() {
     fetchPrograms();
   }, [fetchPrograms]);
 
+  useEffect(() => {
+    let mounted = true;
+    adminAPI.getProgramFormOptions()
+      .then((options) => {
+        if (!mounted) return;
+        setFormOptions({
+          skillTags: uniqueOptions([...STANDARD_COURSE_SKILLS, ...(options?.skillTags || [])]),
+          targetCompanies: uniqueOptions(options?.targetCompanies || []),
+          targetRoles: uniqueOptions(options?.targetRoles || []),
+        });
+      })
+      .catch((optionsError) => {
+        console.error('Unable to load Program matching options:', optionsError);
+      });
+    return () => { mounted = false; };
+  }, []);
+
   const handleSelectToggle = (id) => {
     setSelectedProgramIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
@@ -240,18 +299,22 @@ export default function Programs() {
         ...prev,
         programType: value,
         phases: getDefaultPhases(value, prev.durationDays),
-        placementCategory: value === 'Placement' ? prev.placementCategory : 'Both',
-        pricingPlans: getDefaultPricingPlans(value),
-        learningGoalsText: prev.learningGoalsText === 'Get Placed' && value === 'Skill'
-          ? 'Learn New Skills'
-          : prev.learningGoalsText === 'Learn New Skills' && value === 'Placement'
-            ? 'Get Placed'
-            : prev.learningGoalsText,
       }));
       return;
     }
-    if (name === 'durationDays') {
-      setFormData((prev) => ({ ...prev, durationDays: value, phases: getDefaultPhases(prev.programType, value) }));
+    if (name === 'durationValue' || name === 'durationUnit') {
+      setFormData((prev) => {
+        const nextValue = name === 'durationValue' ? value : prev.durationValue;
+        const nextUnit = name === 'durationUnit' ? value : prev.durationUnit;
+        const nextDurationDays = durationDaysFromParts(nextValue, nextUnit);
+        return {
+          ...prev,
+          durationValue: nextValue,
+          durationUnit: nextUnit,
+          durationDays: String(nextDurationDays),
+          phases: getDefaultPhases(prev.programType, nextDurationDays),
+        };
+      });
       return;
     }
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -266,47 +329,12 @@ export default function Programs() {
     }));
   };
 
-  const handlePricingPlanChange = (index, field, value) => {
+  const handleToggleSelection = (field, value) => {
     setFormData((prev) => ({
       ...prev,
-      pricingPlans: prev.pricingPlans.map((plan, planIndex) => (
-        planIndex === index ? { ...plan, [field]: value } : plan
-      )),
-    }));
-  };
-
-  const handleToggleSkillTag = (tag) => {
-    setFormData((prev) => ({
-      ...prev,
-      skillTags: prev.skillTags.includes(tag)
-        ? prev.skillTags.filter((item) => item !== tag)
-        : [...prev.skillTags, tag],
-    }));
-  };
-
-  const handleAddTargetCompany = () => {
-    const company = targetCompanyDraft.trim().replace(/,$/, '');
-    if (!company) return;
-    setFormData((prev) => ({
-      ...prev,
-      targetCompanies: prev.targetCompanies.includes(company)
-        ? prev.targetCompanies
-        : [...prev.targetCompanies, company],
-    }));
-    setTargetCompanyDraft('');
-  };
-
-  const handleTargetCompanyKeyDown = (event) => {
-    if (event.key === 'Enter' || event.key === ',') {
-      event.preventDefault();
-      handleAddTargetCompany();
-    }
-  };
-
-  const handleRemoveTargetCompany = (company) => {
-    setFormData((prev) => ({
-      ...prev,
-      targetCompanies: prev.targetCompanies.filter((item) => item !== company),
+      [field]: prev[field].some((item) => item.toLocaleLowerCase() === value.toLocaleLowerCase())
+        ? prev[field].filter((item) => item.toLocaleLowerCase() !== value.toLocaleLowerCase())
+        : [...prev[field], value],
     }));
   };
 
@@ -316,21 +344,23 @@ export default function Programs() {
       name: '',
       description: '',
       programType: 'Placement',
+      durationValue: '30',
+      durationUnit: 'Days',
       durationDays: '30',
       phases: getDefaultPhases('Placement', 30),
       status: 'Draft',
       visibility: 'Public',
+      availability: 'Structured',
       pricingType: 'Free',
-      programFee: '0',
-      pricingPlans: getDefaultPricingPlans('Placement'),
-      learningGoalsText: 'Get Placed',
-      placementCategory: 'Both',
+      structuredFee: '',
+      trainerLedFee: '',
       targetCompanies: [],
       skillTags: [],
-      targetRolesText: '',
+      targetRoles: [],
     });
-    setTargetCompanyDraft('');
     setSkillTagsOpen(false);
+    setTargetCompaniesOpen(false);
+    setTargetRolesOpen(false);
     setModalError('');
     setIsModalOpen(true);
   };
@@ -338,36 +368,35 @@ export default function Programs() {
   const handleOpenEditModal = (program, e) => {
     if (e) e.stopPropagation();
     setEditingProgram(program);
+    const durationParts = parseDurationParts(program.duration) || {
+      value: String(program.durationDays || parseDurationDays(program.duration) || 30),
+      unit: 'Days',
+    };
+    const savedPlans = Array.isArray(program.pricingPlans) ? program.pricingPlans : [];
+    const availability = program.availability || (savedPlans.length > 1 ? 'Both' : 'Structured');
+    const firstPlanFee = savedPlans[0]?.price ?? program.programFee ?? '';
+    const secondPlanFee = savedPlans[1]?.price ?? '';
     setFormData({
       name: program.name || '',
       description: program.description || '',
       programType: getProgramType(program.programType),
+      durationValue: durationParts.value,
+      durationUnit: durationParts.unit,
       durationDays: String(program.durationDays || parseDurationDays(program.duration) || 30),
       phases: normalizePhases(program.phases, getProgramType(program.programType), program.durationDays || parseDurationDays(program.duration) || 30),
-      status: program.status || 'Draft',
+      status: getProgramStatusLabel(program.status) || 'Draft',
       visibility: program.visibility || 'Public',
+      availability,
       pricingType: program.pricingType || 'Free',
-      programFee: String(program.programFee || 0),
-      pricingPlans: Array.isArray(program.pricingPlans) && program.pricingPlans.length
-        ? program.pricingPlans.map((plan) => ({
-            key: plan.key || '',
-            title: plan.title || '',
-            price: String(plan.price ?? ''),
-            benefitsText: Array.isArray(plan.benefits) ? plan.benefits.join(', ') : '',
-          }))
-        : getDefaultPricingPlans(getProgramType(program.programType)),
-      learningGoalsText: Array.isArray(program.learningGoals) && program.learningGoals[0]
-        ? program.learningGoals[0]
-        : getProgramType(program.programType) === 'Skill' ? 'Learn New Skills' : 'Get Placed',
-      placementCategory: Array.isArray(program.placementCategories) && ['On-Campus', 'Off-Campus', 'Both'].includes(program.placementCategories[0])
-        ? program.placementCategories[0]
-        : 'Both',
-      targetCompanies: Array.isArray(program.targetCompanies) ? program.targetCompanies : [],
-      skillTags: Array.isArray(program.skillTags) ? program.skillTags : [],
-      targetRolesText: Array.isArray(program.targetRoles) ? program.targetRoles.join(', ') : '',
+      structuredFee: String(program.structuredFee ?? (availability !== 'Trainer-Led' ? firstPlanFee : '') ?? ''),
+      trainerLedFee: String(program.trainerLedFee ?? (availability !== 'Structured' ? (secondPlanFee || firstPlanFee) : '') ?? ''),
+      targetCompanies: uniqueOptions(program.targetCompanies || []),
+      skillTags: uniqueOptions(program.skillTags || []),
+      targetRoles: uniqueOptions(program.targetRoles || []),
     });
-    setTargetCompanyDraft('');
     setSkillTagsOpen(false);
+    setTargetCompaniesOpen(false);
+    setTargetRolesOpen(false);
     setModalError('');
     setIsModalOpen(true);
   };
@@ -407,16 +436,17 @@ export default function Programs() {
       return;
     }
     if (formData.pricingType === 'Paid') {
-      const feeNum = Number(formData.programFee);
-      if (isNaN(feeNum) || feeNum < 0) { setModalError('Valid non-negative fee is required for Paid programs'); return; }
-      if (!formData.pricingPlans.length || formData.pricingPlans.some((plan) => !plan.title.trim() || !Number.isFinite(Number(plan.price)) || Number(plan.price) < 0)) {
-        setModalError('Configure at least one valid pricing plan for Paid programs.');
+      if ((formData.availability === 'Structured' || formData.availability === 'Both')
+        && (!Number.isFinite(Number(formData.structuredFee)) || Number(formData.structuredFee) <= 0)) {
+        setModalError('Structured Fee must be a number greater than zero.');
+        return;
+      }
+      if ((formData.availability === 'Trainer-Led' || formData.availability === 'Both')
+        && (!Number.isFinite(Number(formData.trainerLedFee)) || Number(formData.trainerLedFee) <= 0)) {
+        setModalError('Trainer-Led Fee must be a number greater than zero.');
         return;
       }
     }
-
-    const parseCommaString = (str) =>
-      (str || '').split(',').map((item) => item.trim()).filter(Boolean);
 
     try {
       setSaving(true);
@@ -424,26 +454,18 @@ export default function Programs() {
         name: formData.name.trim(),
         description: formData.description.trim(),
         programType: finalType,
-        duration: `${durationDays} Days`,
+        duration: `${formData.durationValue} ${formData.durationUnit}`,
         durationDays,
         phases,
-        status: formData.status,
+        status: formData.status === 'Published' ? 'Active' : formData.status,
         visibility: formData.visibility,
+        availability: formData.availability,
         pricingType: formData.pricingType,
-        programFee: formData.pricingType === 'Paid' ? Number(formData.programFee) : 0,
-        pricingPlans: formData.pricingType === 'Paid'
-          ? formData.pricingPlans.map((plan) => ({
-              key: plan.key,
-              title: plan.title,
-              price: Number(plan.price),
-              benefits: (plan.benefitsText || '').split(',').map((item) => item.trim()).filter(Boolean),
-            }))
-          : [],
-        learningGoals: parseCommaString(formData.learningGoalsText),
-        placementCategories: finalType === 'Placement' ? [formData.placementCategory] : [],
+        structuredFee: formData.structuredFee === '' ? null : Number(formData.structuredFee),
+        trainerLedFee: formData.trainerLedFee === '' ? null : Number(formData.trainerLedFee),
         targetCompanies: formData.targetCompanies,
         skillTags: formData.skillTags,
-        targetRoles: parseCommaString(formData.targetRolesText),
+        targetRoles: formData.targetRoles,
       };
 
       if (editingProgram) {
@@ -485,9 +507,14 @@ export default function Programs() {
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
+  const handleStatusTabChange = (status) => {
+    setSelectedStatus(status);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
   const programFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
-  const activeCount = programs.filter(p => p.status === 'Active').length;
+  const activeCount = programs.filter(p => p.status === 'Active' || p.status === 'Published').length;
   const draftCount = programs.filter(p => p.status === 'Draft').length;
   const totalStudents = programs.reduce((sum, p) => sum + (p.studentCount || 0), 0);
 
@@ -617,8 +644,8 @@ export default function Programs() {
                         onChange={handleFormChange}
                         className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                       >
-                        {PROGRAM_TYPES.map((t) => (
-                          <option key={t} className={dropdownOptionClass} value={t}>{t}</option>
+                        {PROGRAM_TYPES.map(({ value, label }) => (
+                          <option key={value} className={dropdownOptionClass} value={value}>{label}</option>
                         ))}
                       </select>
                       <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
@@ -626,18 +653,17 @@ export default function Programs() {
                   </div>
 
                   <div>
-                    <label className="admin-micro-label text-black/45 dark:text-white/45">Duration (days)*</label>
-                    <input
-                      type="number"
-                      name="durationDays"
-                      min={getMinimumDurationDays(formData.programType)}
-                      step="1"
-                      required
-                      placeholder="e.g. 30"
-                      value={formData.durationDays}
-                      onChange={handleFormChange}
-                      className={programFormInputClass}
-                    />
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Duration*</label>
+                    <div className="mt-1 grid grid-cols-[1fr_130px] gap-2">
+                      <input type="number" name="durationValue" min="1" step="any" required placeholder="e.g. 30" value={formData.durationValue} onChange={handleFormChange} className={programFormInputClass} />
+                      <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43]">
+                        <select name="durationUnit" value={formData.durationUnit} onChange={handleFormChange} className="w-full appearance-none rounded-xl border-0 bg-transparent px-3 py-2.5 pr-9 text-sm font-medium text-slate-800 outline-none dark:text-white">
+                          {DURATION_UNITS.map((unit) => <option key={unit} className={dropdownOptionClass} value={unit}>{unit}</option>)}
+                        </select>
+                        <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
+                      </div>
+                    </div>
+                    <p className="mt-1 text-[10px] text-black/40 dark:text-white/40">Learning phases use {formData.durationDays || '—'} total days.</p>
                   </div>
                 </div>
 
@@ -678,7 +704,7 @@ export default function Programs() {
                         onChange={handleFormChange}
                         className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                       >
-                        <option className={dropdownOptionClass} value="Active">Active</option>
+                        <option className={dropdownOptionClass} value="Published">Published</option>
                         <option className={dropdownOptionClass} value="Draft">Draft</option>
                         <option className={dropdownOptionClass} value="Archived">Archived</option>
                       </select>
@@ -719,120 +745,50 @@ export default function Programs() {
                       <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                     </div>
                   </div>
+                  <div>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Availability*</label>
+                    <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43]">
+                      <select name="availability" value={formData.availability} onChange={handleFormChange} className="w-full appearance-none rounded-xl border-0 bg-transparent px-3 py-2.5 pr-10 text-sm font-medium text-slate-800 outline-none dark:text-white">
+                        {PROGRAM_AVAILABILITIES.map((availability) => <option key={availability} className={dropdownOptionClass} value={availability}>{availability}</option>)}
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
+                    </div>
+                  </div>
+                </div>
 
-                  {formData.pricingType === 'Paid' && (
+                {formData.pricingType === 'Paid' && (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {(formData.availability === 'Structured' || formData.availability === 'Both') && (
                     <div>
-                      <label className="admin-micro-label text-black/45 dark:text-white/45">Program Fee (₹)*</label>
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Structured Fee (₹)*</label>
                       <input
                         type="number"
-                        name="programFee"
-                        min="0"
+                        name="structuredFee"
+                        min="0.01"
                         step="any"
                         required
-                        placeholder="e.g. 4999"
-                        value={formData.programFee}
+                        placeholder="e.g. 499"
+                        value={formData.structuredFee}
                         onChange={handleFormChange}
                         className={programFormInputClass}
                       />
                     </div>
-                  )}
-                </div>
-
-                {formData.pricingType === 'Paid' && (
-                  <div className="rounded-xl border border-blue-500/20 bg-blue-500/[0.04] p-3 dark:border-blue-400/20 dark:bg-blue-400/[0.04]">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff]">Annual Pricing Plans</p>
-                    <p className="mt-1 text-[11px] text-black/45 dark:text-white/45">Configure the plans shown to learners. Prices are read from this program at checkout.</p>
-                    <div className="mt-3 space-y-3">
-                      {formData.pricingPlans.map((plan, index) => (
-                        <div key={`${plan.key}-${index}`} className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_120px]">
-                          <input aria-label={`Plan ${index + 1} title`} value={plan.title} onChange={(event) => handlePricingPlanChange(index, 'title', event.target.value)} placeholder="Plan name" className={programFormInputClass} required />
-                          <input aria-label={`Plan ${index + 1} benefits`} value={plan.benefitsText} onChange={(event) => handlePricingPlanChange(index, 'benefitsText', event.target.value)} placeholder="Benefits, comma separated" className={programFormInputClass} />
-                          <input aria-label={`Plan ${index + 1} price`} type="number" min="0" step="1" value={plan.price} onChange={(event) => handlePricingPlanChange(index, 'price', event.target.value)} placeholder="₹ price" className={programFormInputClass} required />
-                        </div>
-                      ))}
-                    </div>
+                    )}
+                    {(formData.availability === 'Trainer-Led' || formData.availability === 'Both') && (
+                      <div>
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Trainer-Led Fee (₹)*</label>
+                        <input type="number" name="trainerLedFee" min="0.01" step="any" required placeholder="e.g. 999" value={formData.trainerLedFee} onChange={handleFormChange} className={programFormInputClass} />
+                      </div>
+                    )}
                   </div>
                 )}
 
                 <div className="pt-1 border-t border-black/5 dark:border-white/5 space-y-3.5">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff] pt-1">Student Matching Metadata</p>
-
                   <div className="grid grid-cols-1 gap-3">
-                    <div>
-                      <label className="admin-micro-label text-black/45 dark:text-white/45">Learning Goal</label>
-                      <div className="relative mt-1 rounded-xl border border-black/10 bg-white/85 shadow-[0_4px_14px_rgba(15,23,42,0.06)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:border-white/15 dark:bg-[#0f1f43] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)]">
-                        <select name="learningGoalsText" value={formData.learningGoalsText} onChange={handleFormChange} className="appearance-none w-full rounded-xl border-0 bg-transparent px-3 py-2.5 pr-10 text-sm font-medium text-slate-800 outline-none dark:text-white">
-                          {LEARNING_GOALS.map((goal) => <option key={goal} className={dropdownOptionClass} value={goal}>{goal}</option>)}
-                        </select>
-                        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
-                      </div>
-                    </div>
-
-                    <div className="relative">
-                      <label className="admin-micro-label text-black/45 dark:text-white/45">Skill Tags</label>
-                      <button
-                        type="button"
-                        onClick={() => setSkillTagsOpen((open) => !open)}
-                        className="relative mt-1 flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border border-black/10 bg-white/85 px-3 py-2 text-left text-sm font-medium text-slate-800 shadow-[0_4px_14px_rgba(15,23,42,0.06)] outline-none transition-all hover:bg-white dark:border-white/15 dark:bg-[#0f1f43] dark:text-white dark:hover:bg-[#162a52]"
-                      >
-                        <span className={formData.skillTags.length ? 'text-slate-800 dark:text-white' : 'text-black/35 dark:text-white/40'}>
-                          {formData.skillTags.length ? formData.skillTags.join(', ') : 'Select skills'}
-                        </span>
-                        <FiChevronDown className="h-4 w-4 shrink-0 text-black/45 dark:text-white/60" />
-                      </button>
-                      {skillTagsOpen && (
-                        <div className="absolute left-0 right-0 z-20 mt-2 max-h-52 overflow-y-auto rounded-xl border border-black/10 bg-white p-2 shadow-xl dark:border-white/15 dark:bg-[#0f1f43]">
-                          {SKILL_TAG_OPTIONS.map((tag) => (
-                            <label key={tag} className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-slate-700 hover:bg-black/5 dark:text-slate-200 dark:hover:bg-white/10">
-                              <input type="checkbox" checked={formData.skillTags.includes(tag)} onChange={() => handleToggleSkillTag(tag)} className="h-3.5 w-3.5 rounded border-black/20 text-[#3C83F6] focus:ring-[#3C83F6]" />
-                              {tag}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="admin-micro-label text-black/45 dark:text-white/45">Target Companies</label>
-                      <div className="mt-1 rounded-xl border border-black/10 bg-white/85 px-3 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.06)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:border-white/15 dark:bg-[#0f1f43] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)]">
-                        <div className="flex flex-wrap gap-1.5">
-                          {formData.targetCompanies.map((company) => (
-                            <span key={company} className="inline-flex items-center gap-1 rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-[11px] font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]">
-                              {company}
-                              <button type="button" onClick={() => handleRemoveTargetCompany(company)} className="rounded-full hover:bg-black/10 dark:hover:bg-white/10" title={`Remove ${company}`}>
-                                <FiX className="h-3 w-3" />
-                              </button>
-                            </span>
-                          ))}
-                          <input
-                            type="text"
-                            value={targetCompanyDraft}
-                            onChange={(event) => setTargetCompanyDraft(event.target.value)}
-                            onKeyDown={handleTargetCompanyKeyDown}
-                            onBlur={handleAddTargetCompany}
-                            placeholder="Type a company and press Enter"
-                            className="min-w-[220px] flex-1 border-0 bg-transparent py-1 text-sm text-slate-800 outline-none placeholder:text-black/35 dark:text-white dark:placeholder:text-white/40"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {formData.programType === 'Placement' && (
-                      <div>
-                        <label className="admin-micro-label text-black/45 dark:text-white/45">Placement Category</label>
-                        <div className="relative mt-1 rounded-xl border border-black/10 bg-white/85 shadow-[0_4px_14px_rgba(15,23,42,0.06)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:border-white/15 dark:bg-[#0f1f43] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)]">
-                          <select name="placementCategory" value={formData.placementCategory} onChange={handleFormChange} className="appearance-none w-full rounded-xl border-0 bg-transparent px-3 py-2.5 pr-10 text-sm font-medium text-slate-800 outline-none dark:text-white">
-                            {PLACEMENT_CATEGORIES.map((category) => <option key={category} className={dropdownOptionClass} value={category}>{category}</option>)}
-                          </select>
-                          <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="admin-micro-label text-black/45 dark:text-white/45">Target Roles</label>
-                      <input type="text" name="targetRolesText" placeholder="Frontend Developer, Java Developer" value={formData.targetRolesText} onChange={handleFormChange} className={programFormInputClass} />
-                    </div>
+                    <ProgramMultiSelect label="Skill Tags" placeholder="Select skills" options={formOptions.skillTags} selected={formData.skillTags} isOpen={skillTagsOpen} onToggleOpen={() => setSkillTagsOpen((open) => !open)} onToggle={(value) => handleToggleSelection('skillTags', value)} />
+                    <ProgramMultiSelect label="Target Companies" placeholder="Select companies from Question Bank tags" options={formOptions.targetCompanies} selected={formData.targetCompanies} isOpen={targetCompaniesOpen} onToggleOpen={() => setTargetCompaniesOpen((open) => !open)} onToggle={(value) => handleToggleSelection('targetCompanies', value)} />
+                    <ProgramMultiSelect label="Target Roles" placeholder="Select roles from Hiring" options={formOptions.targetRoles} selected={formData.targetRoles} isOpen={targetRolesOpen} onToggleOpen={() => setTargetRolesOpen((open) => !open)} onToggle={(value) => handleToggleSelection('targetRoles', value)} />
                   </div>
                 </div>
               </div>
@@ -915,11 +871,18 @@ export default function Programs() {
 
           {/* Program Listing Section */}
           <section className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2 border-b border-black/5 pb-1 dark:border-white/5" role="tablist" aria-label="Program status">
+              {PROGRAM_STATUS_TABS.map((tab) => (
+                <button key={tab.label} type="button" role="tab" aria-selected={selectedStatus === tab.value} onClick={() => handleStatusTabChange(tab.value)} className={`rounded-t-lg border-b-2 px-3 py-2 text-xs font-semibold transition-colors ${selectedStatus === tab.value ? 'border-[#3C83F6] text-[#2563eb] dark:border-[#bceaff] dark:text-[#bceaff]' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'}`}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
             {/* Filter Bar */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 dark:border-white/5 pb-4">
               {/* Left Column: Title, Select All & Search */}
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">All Programs</h2>
+                <h2 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{PROGRAM_STATUS_TABS.find((tab) => tab.value === selectedStatus)?.label || 'All'} Programs</h2>
 
                 <div className="flex items-center gap-2 px-2.5 py-1 bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl h-9 shrink-0">
                   <input
@@ -966,24 +929,9 @@ export default function Programs() {
                     className="appearance-none h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-2.5 pr-7 text-[11px] font-bold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 cursor-pointer max-w-[130px] text-ellipsis overflow-hidden whitespace-nowrap"
                   >
                     <option className={dropdownOptionClass} value="">All Types</option>
-                    {PROGRAM_TYPES.map((t) => (
-                      <option key={t} className={dropdownOptionClass} value={t}>{t}</option>
+                    {PROGRAM_TYPES.map(({ value, label }) => (
+                      <option key={value} className={dropdownOptionClass} value={value}>{label}</option>
                     ))}
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-black/45 dark:text-white/60" />
-                </div>
-
-                {/* Status Filter Dropdown */}
-                <div className="relative">
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="appearance-none h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-2.5 pr-7 text-[11px] font-bold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 cursor-pointer"
-                  >
-                    <option className={dropdownOptionClass} value="">All Statuses</option>
-                    <option className={dropdownOptionClass} value="Active">Active</option>
-                    <option className={dropdownOptionClass} value="Draft">Draft</option>
-                    <option className={dropdownOptionClass} value="Archived">Archived</option>
                   </select>
                   <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-black/45 dark:text-white/60" />
                 </div>
@@ -1127,6 +1075,12 @@ function ProgramCard({ program, selected, onSelectToggle, onEdit, onDelete, onVi
   }, []);
 
   const statusColor = statusBadgeClass(program.status);
+  const statusLabel = getProgramStatusLabel(program.status);
+  const programPrice = program.pricingType !== 'Paid'
+    ? 'Free'
+    : program.availability === 'Both'
+      ? `₹${program.structuredFee ?? program.pricingPlans?.[0]?.price ?? program.programFee} / ₹${program.trainerLedFee ?? program.pricingPlans?.[1]?.price ?? '—'}`
+      : `₹${program.structuredFee ?? program.trainerLedFee ?? program.programFee ?? program.pricingPlans?.[0]?.price ?? '—'}`;
 
   return (
     <article className={`relative rounded-xl overflow-hidden border ${selected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col justify-between hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group`}>
@@ -1181,7 +1135,7 @@ function ProgramCard({ program, selected, onSelectToggle, onEdit, onDelete, onVi
         onClick={onView}
       >
         <span className={`inline-flex self-start px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${statusColor}`}>
-          {program.status}
+          {statusLabel}
         </span>
         <div className="min-h-[30px] flex items-center py-0.5">
           <h3 className="text-xs md:text-sm leading-tight font-bold text-slate-900 dark:text-white line-clamp-2">{program.name}</h3>
@@ -1205,7 +1159,7 @@ function ProgramCard({ program, selected, onSelectToggle, onEdit, onDelete, onVi
           <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-500 dark:text-slate-400">
             <span>Pricing</span>
             <span className="font-semibold text-slate-800 dark:text-slate-200">
-              {program.pricingType === 'Paid' ? `₹${program.programFee}` : 'Free'}
+              {programPrice}
             </span>
           </div>
         </div>

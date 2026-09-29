@@ -9,6 +9,7 @@ import College from "../models/College.js";
 import PricingExitFeedback from "../models/PricingExitFeedback.js";
 import { upsertProgramEnrollment, syncPrimaryProgramPointers } from "../utils/programEnrollment.js";
 import { normalizeProgramType } from "../utils/programTypeNormalization.js";
+import { resolveConfiguredProgramPricingPlan } from "../utils/programPricing.js";
 import {
   isCapturedPaymentForRecord,
   isPaymentForRecord,
@@ -45,13 +46,12 @@ const DEFAULT_PRICING_PLANS = {
 const getPricingPlan = (program, planId) => {
   const type = normalizeProgramType(program?.programType) === "Skill" ? "Skill" : "Placement";
   const hasConfiguredPlans = Array.isArray(program?.pricingPlans) && program.pricingPlans.length > 0;
-  const configured = hasConfiguredPlans
-    ? program.pricingPlans.filter((plan) => plan.active !== false)
-    : DEFAULT_PRICING_PLANS[type];
+  if (hasConfiguredPlans) return resolveConfiguredProgramPricingPlan(program, planId);
+  const defaults = DEFAULT_PRICING_PLANS[type];
   const requested = String(planId || "").toLowerCase();
   return requested
-    ? configured.find((plan) => String(plan.key || "").toLowerCase() === requested) || null
-    : configured[0] || null;
+    ? defaults.find((plan) => String(plan.key || "").toLowerCase() === requested) || null
+    : defaults[0] || null;
 };
 
 const activateProgramEnrollmentForPayment = async ({ payment, user, student }) => {

@@ -107,6 +107,21 @@ const programSchema = new mongoose.Schema(
       enum: ["Free", "Paid"],
       default: "Free",
     },
+    availability: {
+      type: String,
+      enum: ["Structured", "Trainer-Led", "Both"],
+      default: undefined,
+    },
+    structuredFee: {
+      type: Number,
+      min: [0, "Structured fee cannot be negative"],
+      default: null,
+    },
+    trainerLedFee: {
+      type: Number,
+      min: [0, "Trainer-Led fee cannot be negative"],
+      default: null,
+    },
     programFee: {
       type: Number,
       default: 0,

@@ -3,7 +3,8 @@ import { Check, Sparkles, Zap, Crown, RefreshCw } from 'lucide-react';
 import { initiateRazorpayPayment } from '../../utils/razorpayCheckout';
 
 export default function PricingCards({ goal, selectedSkill, onSelectPlan, currentPlan, isBusy, user }) {
-  const isPlacement = goal === 'Get Placed' || !goal;
+  const normalizedGoal = String(goal || 'Get Job-Ready').trim().toLowerCase();
+  const isPlacement = ['get placed', 'get job-ready', 'get job ready', 'placement'].includes(normalizedGoal) || !normalizedGoal;
   const [loadingPlanId, setLoadingPlanId] = useState('');
 
   const handleEnroll = async (planId) => {

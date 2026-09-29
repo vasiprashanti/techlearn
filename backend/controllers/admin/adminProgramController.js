@@ -13,6 +13,8 @@ import DailyTaskAttempt from "../../models/DailyTaskAttempt.js";
 import DailyChallengeAttempt from "../../models/DailyChallengeAttempt.js";
 import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import Blueprint from "../../models/Blueprint.js";
+import Question from "../../models/Question.js";
+import Role from "../../models/Role.js";
 import {
   pauseProgramEnrollment,
   assignProgramToBatch,
@@ -27,6 +29,10 @@ import { deleteProgramPerformance } from "../../services/programPerformanceServi
 import { syncProgramEnrollmentsForProgram } from "../../services/programCompletionService.js";
 import { buildProgramDiagnostics } from "../../services/programDiagnostics.js";
 import { getProgramTypeQueryValues, normalizeProgramType } from "../../utils/programTypeNormalization.js";
+import {
+  buildProgramPricing,
+  normalizeProgramSelections,
+} from "../../utils/programPricing.js";
 
 // Whitelist mapping for attachment entity types
 export const ENTITY_CONFIG = {
@@ -117,6 +123,42 @@ const resolveProgramDurationDays = ({ durationDays, duration }) => {
     ? parseProgramDurationDays(duration)
     : Number(durationDays);
   return Number.isInteger(requestedDurationDays) ? requestedDurationDays : null;
+};
+
+const normalizeAdminProgramStatus = (status) => status === "Published" ? "Active" : status;
+
+const normalizeDynamicOptions = (values) => {
+  const seen = new Set();
+  return values
+    .map((value) => String(value || "").trim())
+    .filter((value) => {
+      const key = value.toLocaleLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((left, right) => left.localeCompare(right));
+};
+
+/** GET /api/admin/programs/options — dynamic learner-matching options. */
+export const getProgramFormOptions = async (_req, res) => {
+  try {
+    const [courseSkills, questionTags, roles] = await Promise.all([
+      Course.distinct("skills"),
+      Question.distinct("tags"),
+      Role.find({}).select("roleName").lean(),
+    ]);
+
+    return res.json({
+      success: true,
+      skillTags: normalizeDynamicOptions(courseSkills || []),
+      targetCompanies: normalizeDynamicOptions(questionTags || []),
+      targetRoles: normalizeDynamicOptions((roles || []).map((role) => role.roleName)),
+    });
+  } catch (error) {
+    console.error("Error loading Program form options:", error);
+    return res.status(500).json({ success: false, message: "Failed to load Program matching options." });
+  }
 };
 
 const normalizePlacementCategories = (value, { allowLegacyFallback = false } = {}) => {
@@ -564,6 +606,9 @@ export const listPrograms = async (req, res) => {
       pricingType: p.pricingType,
       programFee: p.programFee,
       pricingPlans: p.pricingPlans || [],
+      availability: p.availability || null,
+      structuredFee: p.structuredFee ?? null,
+      trainerLedFee: p.trainerLedFee ?? null,
       learningGoals: p.learningGoals || [],
       placementCategories: p.placementCategories || [],
       targetCompanies: p.targetCompanies || [],
@@ -614,6 +659,9 @@ export const createProgram = async (req, res) => {
       pricingType,
       programFee,
       pricingPlans,
+      availability,
+      structuredFee,
+      trainerLedFee,
       learningGoals,
       placementCategories,
       targetCompanies,
@@ -653,13 +701,29 @@ export const createProgram = async (req, res) => {
       return res.status(400).json({ success: false, message: phaseValidation.error });
     }
 
+    if (duration && parseProgramDurationDays(duration) !== resolvedDurationDays) {
+      return res.status(400).json({ success: false, message: "Duration value and duration days do not match." });
+    }
+
     const placementCategoryResult = normalizePlacementCategories(placementCategories);
     if (placementCategoryResult.error) {
       return res.status(400).json({ success: false, message: placementCategoryResult.error });
     }
 
+    let pricing = null;
+    if (availability !== undefined || structuredFee !== undefined || trainerLedFee !== undefined) {
+      pricing = buildProgramPricing({
+        programType: normalizedProgramType,
+        pricingType: pricingType || "Free",
+        availability,
+        structuredFee,
+        trainerLedFee,
+      });
+      if (pricing.error) return res.status(400).json({ success: false, message: pricing.error });
+    }
+
     let parsedFee = 0;
-    if (pricingType === "Paid") {
+    if (!pricing && pricingType === "Paid") {
       parsedFee = Number(programFee);
       if (isNaN(parsedFee) || parsedFee < 0) {
         return res.status(400).json({
@@ -673,19 +737,24 @@ export const createProgram = async (req, res) => {
       name: name.trim(),
       description: (description || "").trim(),
       programType: normalizedProgramType,
-      duration: `${resolvedDurationDays} Days`,
+      duration: duration ? String(duration).trim() : `${resolvedDurationDays} Days`,
       durationDays: resolvedDurationDays,
       phases: phaseValidation.phases,
-      status: status || "Draft",
+      status: normalizeAdminProgramStatus(status || "Draft"),
       visibility: visibility || "Public",
-      pricingType: pricingType || "Free",
-      programFee: pricingType === "Paid" ? parsedFee : 0,
-      pricingPlans: pricingType === "Paid" ? normalizePricingPlans(pricingPlans) : [],
-      learningGoals: Array.isArray(learningGoals) ? learningGoals : [],
+      pricingType: pricing?.pricingType || pricingType || "Free",
+      programFee: pricing ? pricing.programFee : pricingType === "Paid" ? parsedFee : 0,
+      pricingPlans: pricing ? pricing.pricingPlans : pricingType === "Paid" ? normalizePricingPlans(pricingPlans) : [],
+      ...(pricing ? {
+        availability: pricing.availability,
+        structuredFee: pricing.structuredFee,
+        trainerLedFee: pricing.trainerLedFee,
+      } : {}),
+      learningGoals: Array.isArray(learningGoals) ? normalizeProgramSelections(learningGoals) : [],
       placementCategories: placementCategoryResult.categories,
-      targetCompanies: Array.isArray(targetCompanies) ? targetCompanies : [],
-      skillTags: Array.isArray(skillTags) ? skillTags : [],
-      targetRoles: Array.isArray(targetRoles) ? targetRoles : [],
+      targetCompanies: normalizeProgramSelections(targetCompanies),
+      skillTags: normalizeProgramSelections(skillTags),
+      targetRoles: normalizeProgramSelections(targetRoles),
       createdBy: req.user?._id || null,
       updatedBy: req.user?._id || null,
     });
@@ -827,6 +896,9 @@ export const updateProgram = async (req, res) => {
       pricingType,
       programFee,
       pricingPlans,
+      availability,
+      structuredFee,
+      trainerLedFee,
       learningGoals,
       placementCategories,
       targetCompanies,
@@ -871,13 +943,32 @@ export const updateProgram = async (req, res) => {
       return res.status(400).json({ success: false, message: phaseValidation.error });
     }
 
+    if (duration !== undefined && parseProgramDurationDays(duration) !== nextDurationDays) {
+      return res.status(400).json({ success: false, message: "Duration value and duration days do not match." });
+    }
+
+    const pricingConfigSubmitted = availability !== undefined
+      || structuredFee !== undefined
+      || trainerLedFee !== undefined;
+    const pricing = pricingConfigSubmitted
+      ? buildProgramPricing({
+          programType: nextProgramType,
+          pricingType: pricingType === undefined ? program.pricingType : pricingType,
+          availability,
+          structuredFee,
+          trainerLedFee,
+        })
+      : null;
+    if (pricing?.error) return res.status(400).json({ success: false, message: pricing.error });
+
     if (name !== undefined) program.name = String(name).trim();
     if (description !== undefined) program.description = String(description).trim();
     program.programType = nextProgramType;
-    program.duration = `${nextDurationDays} Days`;
+    if (duration !== undefined) program.duration = String(duration).trim();
+    else if (durationDays !== undefined) program.duration = `${nextDurationDays} Days`;
     program.durationDays = nextDurationDays;
     program.phases = phaseValidation.phases;
-    if (status !== undefined) program.status = status;
+    if (status !== undefined) program.status = normalizeAdminProgramStatus(status);
     if (visibility !== undefined) program.visibility = visibility;
     if (learningGoals !== undefined) program.learningGoals = Array.isArray(learningGoals) ? learningGoals : [];
     if (placementCategories !== undefined) {
@@ -888,15 +979,10 @@ export const updateProgram = async (req, res) => {
       program.placementCategories = nextProgramType === "Placement"
         ? placementCategoryResult.categories
         : [];
-    } else {
-      const legacyPlacementCategoryResult = normalizePlacementCategories(program.placementCategories, { allowLegacyFallback: true });
-      program.placementCategories = nextProgramType === "Placement"
-        ? legacyPlacementCategoryResult.categories
-        : [];
     }
-    if (targetCompanies !== undefined) program.targetCompanies = Array.isArray(targetCompanies) ? targetCompanies : [];
-    if (skillTags !== undefined) program.skillTags = Array.isArray(skillTags) ? skillTags : [];
-    if (targetRoles !== undefined) program.targetRoles = Array.isArray(targetRoles) ? targetRoles : [];
+    if (targetCompanies !== undefined) program.targetCompanies = normalizeProgramSelections(targetCompanies);
+    if (skillTags !== undefined) program.skillTags = normalizeProgramSelections(skillTags);
+    if (targetRoles !== undefined) program.targetRoles = normalizeProgramSelections(targetRoles);
     if (primaryCourseId !== undefined) {
       if (primaryCourseId && !mongoose.Types.ObjectId.isValid(primaryCourseId)) {
         return res.status(400).json({ success: false, message: "primaryCourseId must be a valid Course ID." });
@@ -911,14 +997,27 @@ export const updateProgram = async (req, res) => {
       // records remain readable and are not bulk-rewritten.
       program.primaryCourseId = program.courseIds[0];
     }
-    if (pricingPlans !== undefined) {
+    if (pricingConfigSubmitted) {
+      program.availability = pricing.availability;
+      program.pricingType = pricing.pricingType;
+      program.structuredFee = pricing.structuredFee;
+      program.trainerLedFee = pricing.trainerLedFee;
+      program.programFee = pricing.programFee;
+      const existingBenefitsByKey = new Map(
+        (program.pricingPlans || []).map((plan) => [plan.key, plan.benefits || []])
+      );
+      program.pricingPlans = pricing.pricingPlans.map((plan) => ({
+        ...plan,
+        benefits: existingBenefitsByKey.get(plan.key) || [],
+      }));
+    } else if (pricingPlans !== undefined) {
       const normalizedPlans = normalizePricingPlans(pricingPlans);
       if (program.pricingType === "Paid" && normalizedPlans.length === 0) {
         return res.status(400).json({ success: false, message: "At least one valid pricing plan is required for Paid programs." });
       }
       program.pricingPlans = program.pricingType === "Paid" ? normalizedPlans : [];
     }
-    if (pricingType !== undefined) {
+    if (!pricingConfigSubmitted && pricingType !== undefined) {
       program.pricingType = pricingType;
       if (pricingType === "Paid") {
         const parsedFee = Number(programFee);
@@ -933,7 +1032,7 @@ export const updateProgram = async (req, res) => {
         program.programFee = 0;
         program.pricingPlans = [];
       }
-    } else if (program.pricingType === "Paid" && programFee !== undefined) {
+    } else if (!pricingConfigSubmitted && program.pricingType === "Paid" && programFee !== undefined) {
       const parsedFee = Number(programFee);
       if (isNaN(parsedFee) || parsedFee < 0) {
         return res.status(400).json({

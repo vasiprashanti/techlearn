@@ -11,7 +11,7 @@
     "dev": "nodemon server.js",
     "start": "node server.js",
     "build": "echo 'No build step required for Node.js backend'",
-    "test": "node --test test/program-regressions.test.js test/razorpay-verification.test.js",
+    "test": "node --test test/program-regressions.test.js test/program-admin-pricing.test.js test/razorpay-verification.test.js",
     "migrate:practice-questionbank": "node scripts/migrate-practice-questionbank-refs.js",
     "reconcile:submission-indexes": "node scripts/reconcile-submission-indexes.js",
     "validate:phase1": "node scripts/validate-phase1.js",

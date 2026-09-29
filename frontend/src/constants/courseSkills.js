@@ -1,0 +1,17 @@
+export const STANDARD_COURSE_SKILLS = [
+  "Java",
+  "Python",
+  "C",
+  "C++",
+  "JavaScript",
+  "TypeScript",
+  "React",
+  "Node.js",
+  "SQL",
+  "DSA",
+  "Web Development",
+  "AI/ML",
+  "GenAI",
+  "Cloud Computing",
+  "Aptitude",
+];
