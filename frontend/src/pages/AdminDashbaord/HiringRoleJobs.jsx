@@ -19,10 +19,57 @@ import {
   FiDollarSign,
   FiClock,
   FiExternalLink,
+  FiCopy,
 } from "react-icons/fi";
 import { adminAPI } from "../../services/adminApi";
 
+const STANDARD_JOB_TEMPLATE = `# Job Posting
+
+## Basic Information
+Job Title: 
+Role Category: 
+Company Name: 
+Location: 
+Work Mode: (On-site / Hybrid / Remote)
+Employment Type: (Full-time / Part-time / Internship / Contract)
+Experience Level: 
+Number of Openings: 
+
+## Job Description
+Brief Overview: 
+
+## Responsibilities
+- 
+- 
+- 
+
+## Required Skills
+- 
+- 
+- 
+
+## Preferred Skills
+- 
+- 
+- 
+
+## Eligibility
+Education: 
+Graduation Year: 
+Other Requirements: 
+
+## Compensation
+Salary / Stipend: 
+Compensation Details: 
+
+## Application Details
+Application Deadline: 
+Application Link: 
+Contact Email: 
+`;
+
 export default function HiringRoleJobs() {
+  const [copiedTemplate, setCopiedTemplate] = useState(false);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const navigate = useNavigate();
@@ -652,10 +699,7 @@ export default function HiringRoleJobs() {
 
                 {/* Create Job Button */}
                 <button
-                  onClick={() => {
-                    resetJobForm();
-                    setShowCreateModal(true);
-                  }}
+                  onClick={() => navigate(`/admin/hiring/${roleId}/jobs/create`)}
                   className="dashboard-primary-btn h-9 px-3.5 text-xs shrink-0 flex items-center gap-1.5 font-semibold"
                 >
                   <FiPlus className="w-3.5 h-3.5" />
@@ -1107,9 +1151,23 @@ export default function HiringRoleJobs() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {/* 1. Markdown Upload */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5 uppercase tracking-wide">
-                    1. Upload .md File
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide">
+                      1. Upload .md File
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(STANDARD_JOB_TEMPLATE);
+                        setCopiedTemplate(true);
+                        setTimeout(() => setCopiedTemplate(false), 2000);
+                      }}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-md border border-slate-300 dark:border-white/20 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition"
+                    >
+                      {copiedTemplate ? <FiCheck className="w-3 h-3 text-emerald-500" /> : <FiCopy className="w-3 h-3" />}
+                      {copiedTemplate ? "Copied Template!" : "Copy Job Template"}
+                    </button>
+                  </div>
                   <label className="flex flex-col items-center justify-center w-full h-24 rounded-xl border border-dashed border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#071532] cursor-pointer hover:border-[#3C83F6] transition-colors p-3 text-center">
                     <FiUpload className="w-4 h-4 text-[#3C83F6] mb-1" />
                     <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[200px]">

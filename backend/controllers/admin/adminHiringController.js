@@ -1,12 +1,12 @@
 import mongoose from "mongoose";
-import { parseJobMarkdownFile } from "../../config/jobMarkdownParser.js";
+import { parseJobMarkdownFile, parseJobMarkdownContent } from "../../config/jobMarkdownParser.js";
 import Job from "../../models/Job.js";
 import Role from "../../models/Role.js";
 import fs from "fs";
 import sharp from "sharp";
 import path from "path";
 const ALLOWED_STATUS = ["Draft","Published","Closed","Archived",];
-const ALLOWED_ROLE_STATUS = ["Active", "Archived"];
+const ALLOWED_ROLE_STATUS = ["Draft", "Published", "Archived", "Active"];
 /**
  * GET /api/admin/jobs
  * List jobs with search, filters, sorting and pagination
@@ -1297,6 +1297,35 @@ export const parseJobMarkdown = async (req, res) => {
     });
   }
 };
+/**
+ * POST /api/admin/jobs/parse-text
+ * Parse raw text or Markdown string
+ */
+export const parseJobText = async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || typeof text !== "string" || !text.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "No job text provided to parse",
+      });
+    }
+
+    const jobData = parseJobMarkdownContent(text);
+    return res.status(200).json({
+      success: true,
+      message: "Job text parsed successfully",
+      data: jobData,
+    });
+  } catch (error) {
+    console.error("Error parsing Job text:", error);
+    return res.status(400).json({
+      success: false,
+      message: error.message || "Failed to parse job text",
+    });
+  }
+};
+
 export const uploadJobLogoFile = async (req, res) => {
   try {
     if (!req.file) {
