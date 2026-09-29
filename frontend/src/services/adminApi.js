@@ -616,6 +616,12 @@ parseJobMarkdown: (file) => {
   });
 },
 
+  parseJobText: (text) =>
+    request('/admin/jobs/parse-text', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    }),
+
 uploadJobLogo: (file) => {
   const formData = new FormData();
   formData.append("logo", file);

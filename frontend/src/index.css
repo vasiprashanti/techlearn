@@ -632,8 +632,13 @@
     font-size: 1.125rem;
     line-height: 1.75rem;
     font-weight: 500;
-    color: #000000;
-    display: none;
+    color: #0f172a;
+  }
+
+  .dark .admin-page-title,
+  .dark .admin-dashboard-typography .admin-page-title,
+  .dark.admin-dashboard-typography .admin-page-title {
+    color: #ffffff;
   }
 
   .admin-dashboard-typography .admin-section-heading {

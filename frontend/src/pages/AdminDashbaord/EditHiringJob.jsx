@@ -107,6 +107,23 @@ export default function EditHiringJob() {
 
   const handleSave = async () => {
     try {
+      setError("");
+
+      if (form.status === "Published") {
+        const missing = [];
+        if (!form.companyName.trim()) missing.push("Company Name");
+        if (!form.roleTitle.trim()) missing.push("Job Title");
+        if (!form.description.trim()) missing.push("Job Description");
+        if (!form.jobType) missing.push("Job Type");
+        if (!form.location.trim()) missing.push("Location");
+        if (!form.applicationUrl.trim()) missing.push("Application URL");
+
+        if (missing.length > 0) {
+          setError(`Cannot publish job. Please complete the required fields: ${missing.join(", ")}`);
+          return;
+        }
+      }
+
       setSaving(true);
 
       await adminAPI.updateJob(jobId, {
