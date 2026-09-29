@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
-import { Copy, Play } from 'lucide-react';
+import { Check, Copy, ExternalLink, Play } from 'lucide-react';
 import 'highlight.js/styles/github-dark.css';
 import '../../styles/markdown.css';
+import { compilerAPI } from '../../services/api';
 
 const cleanHeadingText = (children) => {
   if (typeof children === 'string') return children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '');
@@ -57,6 +59,10 @@ const compilerLanguageByMarkdownLanguage = {
   python: 'python',
   py: 'python',
   java: 'java',
+  c: 'c',
+  h: 'c',
+  cpp: 'cpp',
+  'c++': 'cpp',
 };
 
 const getYouTubeEmbedUrl = (href = '') => {
@@ -166,6 +172,16 @@ const createMarkdownComponents = (compact = false) => {
       return <code className={className} {...props}>{children}</code>;
     },
     pre: ({children}) => {
+      // ReactMarkdown invokes this renderer as the component for each code block.
+      // These hooks are intentionally scoped to that individual block.
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      const [hasRun, setHasRun] = useState(false);
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      const [copied, setCopied] = useState(false);
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      const [output, setOutput] = useState('');
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      const [isRunning, setIsRunning] = useState(false);
       const language = getCodeLanguage(children);
       const codeText = getCodeText(children);
       const compilerLanguage = compilerLanguageByMarkdownLanguage[language];
@@ -173,43 +189,68 @@ const createMarkdownComponents = (compact = false) => {
       const handleCopy = () => {
         if (typeof navigator !== 'undefined' && navigator.clipboard) {
           navigator.clipboard.writeText(codeText);
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1500);
         }
       };
 
-      const handleRun = () => {
-        if (!compilerLanguage || typeof window === 'undefined') return;
-        window.sessionStorage.setItem(
-          'techlearn:compiler-draft',
-          JSON.stringify({ language: compilerLanguage, code: codeText })
-        );
-        window.location.assign('/compiler');
+      const handleRun = async () => {
+        if (!compilerLanguage) return;
+        setHasRun(true);
+        setIsRunning(true);
+        setOutput('Running code...');
+        try {
+          const result = await compilerAPI.compileCode({ language: compilerLanguage, source_code: codeText, stdin: '' });
+          const actualOutput = [result?.stdout, result?.stderr ? `Error:\n${result.stderr}` : '', result?.compile_output ? `Compilation Output:\n${result.compile_output}` : '']
+            .filter(Boolean)
+            .join('\n');
+          setOutput(actualOutput || 'Code executed successfully (no output).');
+        } catch (error) {
+          setOutput(`Execution failed: ${error?.message || 'Unknown error'}`);
+        } finally {
+          setIsRunning(false);
+        }
       };
 
       return (
-        <div className={`${compact ? 'my-6' : 'my-10'} relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-lg`}>
-          <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
+        <div className={`code-editor-block ${compact ? 'my-6' : 'my-10'} relative overflow-hidden rounded-xl border border-[#d8e0eb] bg-[#f8fafc] shadow-[0_10px_30px_rgba(31,67,115,0.12)] dark:border-[#1e293b] dark:bg-[#0b1220] dark:shadow-[0_10px_30px_rgba(0,0,0,0.35)]`}>
+          <div className="flex min-h-[52px] items-center justify-between border-b border-[#d8e0eb] bg-[#f8fafc] px-3.5 dark:border-[#182235] dark:bg-[#0d1525]">
+            <div className="flex items-center gap-2 text-sm font-medium text-[#07143b] dark:text-[#e5e7eb]"><span className="h-2 w-2 rounded-full bg-[#79c143]" />{language === 'c' ? 'C' : language}</div>
+            <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={handleCopy}
-              className="flex items-center gap-1.5 rounded-md bg-slate-800/90 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+              className="flex items-center gap-1.5 rounded-md border border-[#d8e0eb] bg-white px-3 py-1.5 text-[13px] font-medium text-[#07143b] transition-colors hover:bg-[#eef5fb] dark:border-[#253247] dark:bg-[#111b2d] dark:text-[#cbd5e1] dark:hover:bg-[#172238]"
             >
-              <Copy className="h-3.5 w-3.5" />
-              Copy
+              {copied ? <Check className="h-[15px] w-[15px]" /> : <Copy className="h-[15px] w-[15px]" />}
+              {copied ? 'Copied' : 'Copy'}
             </button>
+            {compilerLanguage ? (
+              <button type="button" onClick={() => { if (typeof window !== 'undefined') { window.sessionStorage.setItem('techlearn:compiler-draft', JSON.stringify({ language: compilerLanguage, code: codeText })); window.location.assign('/compiler'); } }} className="hidden items-center gap-1.5 rounded-md border border-[#b7c9dc] bg-[#edf6fc] px-3 py-1.5 text-[13px] font-medium text-[#07143b] transition-colors hover:bg-[#e1f0f8] dark:border-[#253247] dark:bg-[#111b2d] dark:text-[#cbd5e1] dark:hover:bg-[#172238] sm:flex"><ExternalLink className="h-[15px] w-[15px]" /> Open in Compiler</button>
+            ) : null}
             {compilerLanguage ? (
               <button
                 type="button"
                 onClick={handleRun}
-                className="flex items-center gap-1.5 rounded-md bg-[#0000a8] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#0000d0]"
+                className="flex items-center gap-1.5 rounded-md border border-[#72b536] bg-[#72b536] px-3.5 py-1.5 text-[13px] font-semibold text-[#071207] transition-colors hover:border-[#83c947] hover:bg-[#83c947]"
               >
                 <Play className="h-3.5 w-3.5 fill-current" />
-                Run
+                {isRunning ? 'Running' : 'Run'}
               </button>
             ) : null}
+            </div>
           </div>
-          <pre className={`${compact ? 'p-4 text-[12px]' : 'p-5 text-[13px]'} overflow-x-auto pt-14 pr-28 font-mono leading-[1.7] text-slate-100 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]`}>
-            {children}
+          <pre className={`${compact ? 'text-[12px]' : 'text-[14px]'} m-0 p-0 py-2.5 whitespace-normal break-words font-mono leading-[1.8] !text-black dark:!text-white`}>
+            <code className="block !text-black dark:!text-white">
+              {codeText.split('\n').map((line, index) => <span key={`${index}-${line}`} className="flex min-h-[1.8em] !text-black dark:!text-white"><span className="mr-4 inline-block w-12 shrink-0 select-none border-r border-[#d8e0eb] pr-3 text-right text-[#8793a6] dark:border-[#182235] dark:text-[#334155]">{index + 1}</span><span className="code-source-text whitespace-pre-wrap break-words pl-4 !text-black dark:!text-white">{line || ' '}</span></span>)}
+            </code>
           </pre>
+          {hasRun && <div className="border-t border-[#d8e0eb] bg-[#f8fafc] text-black dark:border-[#1e293b] dark:bg-[#0b1220] dark:text-[#dbe4ef]">
+            <div className="flex h-[29px] items-center border-b border-[#d8e0eb] bg-[#f8fafc] px-3 dark:border-[#1e293b] dark:bg-[#0d1525]">
+              <span className="font-mono text-[12px] font-bold uppercase tracking-[0.7px] text-[#64748b] dark:text-[#94a3b8]">Output</span>
+            </div>
+            <pre className="m-0 whitespace-pre-wrap break-words px-3 py-[11px] pb-[13px] font-mono text-[14px] leading-[1.8] text-black dark:text-[#dbe4ef]">{output}</pre>
+          </div>}
         </div>
       );
     },

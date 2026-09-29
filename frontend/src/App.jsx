@@ -455,7 +455,7 @@ export default function App() {
               <ScrollToTop />
               <ExternalLinkHandler />
               <DelayedAnalytics />
-              <div className="relative min-h-screen overflow-x-clip bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] transition-all duration-300">
+              <div className="relative min-h-screen overflow-x-clip bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:bg-[#080d25] transition-all duration-300">
                 <FloatingCodeBackground />
                 <LayoutWrapper />
               </div>

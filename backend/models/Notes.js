@@ -22,6 +22,11 @@ const notesSchema = new mongoose.Schema(
       enum: ["Coding", "MCQ", "Notes"],
       default: "Notes",
     },
+    status: {
+      type: String,
+      enum: ["Draft", "Pending", "Configured"],
+      default: "Configured",
+    },
     checkpointMcqs: [
       {
         question: { type: String, required: true },

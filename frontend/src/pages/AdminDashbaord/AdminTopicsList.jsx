@@ -97,6 +97,7 @@ const AdminTopicsList = () => {
   const [batchOptions, setBatchOptions] = useState([]);
   const [courseType, setCourseType] = useState("Self-paced");
   const [instructor, setInstructor] = useState("");
+  const [instructorBio, setInstructorBio] = useState("");
   const [duration, setDuration] = useState("");
   const [schedule, setSchedule] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -157,6 +158,7 @@ const AdminTopicsList = () => {
         setProgramIds(Array.isArray(cData.programIds) ? cData.programIds.map(String) : []);
         setAssignedBatchIds(cData.assignedBatchIds || []);
         setInstructor(cData.instructor || "");
+        setInstructorBio(cData.instructorBio || "");
         setDuration(cData.duration || "");
         setSchedule(cData.schedule || "");
         setStartDate(cData.startDate || "");
@@ -447,8 +449,9 @@ const AdminTopicsList = () => {
       formData.append("numTopics", String(Math.max(0, Number(numTopics))));
       formData.append("programIds", JSON.stringify(programIds));
 
+      formData.append("instructor", instructor.trim());
+      formData.append("instructorBio", instructorBio.trim());
       if (deliveryType === "Trainer-Led") {
-        formData.append("instructor", instructor.trim());
         formData.append("duration", duration.trim());
         formData.append("schedule", schedule.trim());
         formData.append("startDate", startDate.trim());
@@ -1094,18 +1097,30 @@ const AdminTopicsList = () => {
                       </div>
                     </div>
 
+                    <div>
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Trainer Name <span className="font-normal text-slate-400">(optional)</span></label>
+                      <input
+                        type="text"
+                        value={instructor}
+                        maxLength={100}
+                        onChange={(e) => setInstructor(e.target.value)}
+                        className={cardFormInputClass}
+                        placeholder="Enter trainer name"
+                      />
+                    </div>
+                    <div>
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Trainer Description <span className="font-normal text-slate-400">(optional)</span></label>
+                      <input
+                        type="text"
+                        value={instructorBio}
+                        maxLength={100}
+                        onChange={(e) => setInstructorBio(e.target.value)}
+                        className={cardFormInputClass}
+                        placeholder="Short trainer description"
+                      />
+                    </div>
                     {deliveryType === "Trainer-Led" && (
                       <>
-                        <div>
-                          <label className="admin-micro-label text-black/45 dark:text-white/45">Instructor Name</label>
-                          <input
-                            type="text"
-                            value={instructor}
-                            onChange={(e) => setInstructor(e.target.value)}
-                            className={cardFormInputClass}
-                            placeholder="e.g. Prashanti Vasi"
-                          />
-                        </div>
                         <div>
                           <label className="admin-micro-label text-black/45 dark:text-white/45">Start Date</label>
                           <input
@@ -1206,7 +1221,7 @@ const AdminTopicsList = () => {
                               <td className="px-4 py-2.5">
                                 <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-400 dark:text-slate-350">
                                   <FiFileText className="w-3.5 h-3.5 text-[#3C83F6]" />
-                                  <span>Notes configured</span>
+                                  <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-semibold ${topic.notesStatus === "Configured" ? "bg-emerald-500/10 text-emerald-600" : topic.notesStatus === "Pending" ? "bg-amber-500/10 text-amber-600" : "bg-slate-500/10 text-slate-500"}`}>{topic.notesStatus || "Draft"}</span>
                                 </div>
                               </td>
                               <td className="px-4 py-2.5">

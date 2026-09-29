@@ -153,6 +153,19 @@
   line-height: 1.5;
 }
 
+/* The code editor owns its theme; override highlight.js defaults. */
+.code-editor-block pre code,
+.code-editor-block .code-source-text {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+.dark .code-editor-block pre code,
+.dark .code-editor-block .code-source-text {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
 .markdown-content code:not(pre code) {
   background: rgba(16, 185, 129, 0.1) !important;
   color: #059669 !important;

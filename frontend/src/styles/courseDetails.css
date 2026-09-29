@@ -7,9 +7,9 @@
 
 /* Default (Dark Mode) */
 .course-details-page {
-  --bg-start: #04103d;
-  --bg-mid: #06134d;
-  --bg-end: #0b1d61;
+  --bg-start: #080d25;
+  --bg-mid: #080d25;
+  --bg-end: #080d25;
 
   --navy: #ffffff;
   --page-text: #ffffff;
@@ -47,9 +47,9 @@
 
 /* Light Mode */
 .course-details-page.light-mode {
-  --bg-start: #e8f8ff;
-  --bg-mid: #d9f2ff;
-  --bg-end: #c0e9ff;
+  --bg-start: #daf0fa;
+  --bg-mid: #bceaff;
+  --bg-end: #bceaff;
 
   --navy: #050a5b;
   --page-text: #07102f;

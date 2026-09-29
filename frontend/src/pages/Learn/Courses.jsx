@@ -37,6 +37,8 @@ const HIDDEN_COURSE_KEYS = new Set([
 ]);
 
 const isUserVisibleCourse = (course) => {
+  if (course?.status !== "Published") return false;
+
   const courseKeys = [
     course?.title,
     course?.id,
@@ -44,7 +46,14 @@ const isUserVisibleCourse = (course) => {
     course?.courseId,
   ].map(normalizeCourseKey);
 
-  return !courseKeys.some((key) => HIDDEN_COURSE_KEYS.has(key));
+  if (courseKeys.some((key) => HIDDEN_COURSE_KEYS.has(key))) return false;
+
+  const topics = Array.isArray(course?.topics)
+    ? course.topics
+    : Array.isArray(course?.topicIds)
+      ? course.topicIds
+      : [];
+  return topics.length > 0 || Number(course?.numTopics) > 0;
 };
 
 const getCourseTopicsId = (course) => {
@@ -281,7 +290,7 @@ export default function Courses() {
       <button
         type="button"
         onClick={onClick}
-        className={`absolute z-30 top-1/2 -translate-y-1/2 p-2 md:p-3.5 rounded-full border border-[#8ec8ff]/40 dark:border-[#6fbfff]/30 bg-white/95 dark:bg-[#0a1128]/95 text-[#3C83F6] dark:text-[#8fd9ff] shadow-[0_8px_30px_rgba(34,119,255,0.18)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:bg-[#dbf1ff] dark:hover:bg-[#122b5e] transition-colors duration-300 flex items-center justify-center cursor-pointer ${
+        className={`absolute z-30 top-1/2 -translate-y-1/2 p-2 md:p-3.5 rounded-full border border-[#8ec8ff]/40 dark:border-[#6fbfff]/30 bg-white/95 dark:bg-[#080d25]/95 text-[#3C83F6] dark:text-[#8fd9ff] shadow-[0_8px_30px_rgba(34,119,255,0.18)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:bg-[#dbf1ff] dark:hover:bg-[#122b5e] transition-colors duration-300 flex items-center justify-center cursor-pointer ${
           isLeft ? 'left-1 md:-left-4' : 'right-1 md:-right-4'
         }`}
       >
@@ -292,12 +301,12 @@ export default function Courses() {
 
   if (loading) {
     return (
-      <div className={`w-full min-h-screen px-4 sm:px-6 md:px-12 lg:px-16 pb-12 pt-24 ${isDarkMode ? "dark bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "light bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`}>
+      <div className={`w-full min-h-screen px-4 sm:px-6 md:px-12 lg:px-16 pb-12 pt-24 ${isDarkMode ? "dark bg-[#080d25]" : "light bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`}>
         <div className="mx-auto max-w-[1600px] space-y-10">
           <div className="h-16 w-72 rounded-2xl bg-white/30 dark:bg-white/10 animate-pulse" />
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="min-h-[260px] rounded-2xl border border-[#8ec8ff]/25 bg-white/25 dark:border-[#15366f]/45 dark:bg-[#020b23] animate-pulse" />
+              <div key={index} className="min-h-[260px] rounded-2xl border border-[#8ec8ff]/25 bg-white/25 dark:border-[#15366f]/45 dark:bg-[#080d25] animate-pulse" />
             ))}
           </div>
         </div>
@@ -310,7 +319,7 @@ export default function Courses() {
     : defaultTrainerPrograms;
 
   return (
-    <div className="w-full min-h-screen min-w-0 overflow-x-clip font-sans antialiased text-[#00113b] dark:text-[#8fd9ff] bg-transparent">
+    <div className={`w-full min-h-screen min-w-0 overflow-x-clip font-sans antialiased text-[#00113b] dark:text-[#8fd9ff] ${isDarkMode ? 'bg-[#080d25]' : 'bg-transparent'}`}>
       <main className="z-10 min-w-0 px-4 sm:px-6 md:px-12 lg:px-16 pb-20 overflow-x-clip">
         <div className="max-w-[1600px] mx-auto space-y-12">
 
@@ -665,7 +674,7 @@ export default function Courses() {
                       className="basis-full sm:basis-1/2 md:basis-1/2 lg:basis-1/3 xl:basis-1/3 px-3"
                     >
                       <div
-                        className="dashboard-surface p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[340px] hover:-translate-y-1 border border-black/5 bg-white/40 shadow-sm dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]"
+                        className="dashboard-surface p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[340px] hover:-translate-y-1 border border-black/5 bg-white/40 shadow-sm dark:border-[#15366f]/45 dark:bg-[#080d25] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]"
                       >
                         <div className="flex justify-between items-center mb-4">
                           <span className={`text-[9px] uppercase tracking-widest px-3 py-1 rounded-full font-semibold ${levelTagStyles[program.level || 'Intermediate'] || 'bg-[#dff6e8] text-[#1f7d53] border border-[#b9e9c8]'}`}>

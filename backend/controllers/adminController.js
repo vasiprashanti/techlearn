@@ -43,11 +43,12 @@ export const getCourseTopicsForDashboard = async (req, res) => {
       index: t.index,
       notesId: t.notesId?._id || null,
       notesContent: t.notesId?.parsedContent || "",
+      notesStatus: t.notesId?.status || (t.notesId ? "Configured" : "Draft"),
     }));
     return res.status(200).json({
       topics: formattedTopics,
       courseTitle: course.title,
-      numTopics: course.numTopics || 0,
+      numTopics: topics.length,
       description: course.description || "",
       level: course.level || "Beginner",
       assignedBatchIds: course.assignedBatchIds || [],
@@ -60,6 +61,8 @@ export const getCourseTopicsForDashboard = async (req, res) => {
       programIds: course.programIds || [],
       bannerImage: course.bannerImage || "",
       instructor: course.instructor || "",
+      instructorBio: course.instructorBio || "",
+      learningOutcomes: course.learningOutcomes || [],
       duration: course.duration || "",
       schedule: course.schedule || "",
       startDate: course.startDate || "",
