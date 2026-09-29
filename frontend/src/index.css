@@ -292,8 +292,8 @@
 
   html:not(.dark) .course-notes-text pre,
   html:not(.dark) .course-notes-text pre :where(code, span) {
-    color: #e2e8f0 !important;
-    -webkit-text-fill-color: #e2e8f0 !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
   }
 
   html:not(.dark) .course-notes-text pre .hljs-comment,
