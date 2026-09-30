@@ -520,7 +520,8 @@ export const adminAPI = {
     if (params.limit) query.set('limit', params.limit);
     return request(`/admin/programs?${query.toString()}`);
   },
-  getProgramOptions: () => request('/admin/programs/options'),
+  getProgramOptions: () => request('/admin/programs/options', { noCache: true }),
+  getProgramFormOptions: () => request('/admin/programs/options', { noCache: true }),
   createProgram: (body) => request('/admin/programs', { method: 'POST', body: JSON.stringify(body) }),
   getProgramById: (id) => request(`/admin/programs/${id}`),
   updateProgram: (id, body) => request(`/admin/programs/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),

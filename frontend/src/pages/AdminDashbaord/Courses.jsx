@@ -18,24 +18,7 @@ import {
   FiClock,
 } from "react-icons/fi";
 import { prepareBannerImage } from "../../utils/bannerImage";
-
-const STANDARD_SKILLS = [
-  "Java",
-  "Python",
-  "C",
-  "C++",
-  "JavaScript",
-  "TypeScript",
-  "React",
-  "Node.js",
-  "SQL",
-  "DSA",
-  "Web Development",
-  "AI/ML",
-  "GenAI",
-  "Cloud Computing",
-  "Aptitude",
-];
+import { STANDARD_COURSE_SKILLS } from "../../constants/courseSkills";
 
 const INITIAL_FORM = {
   title: "",
@@ -74,7 +57,7 @@ export default function Courses() {
   const [bannerPreview, setBannerPreview] = useState("");
 
   // Skills multi-select states
-  const [allAvailableSkills, setAllAvailableSkills] = useState(STANDARD_SKILLS);
+  const [allAvailableSkills, setAllAvailableSkills] = useState(STANDARD_COURSE_SKILLS);
   const [skillsDropdownOpen, setSkillsDropdownOpen] = useState(false);
   const [isOtherSkillSelected, setIsOtherSkillSelected] = useState(false);
   const [customSkillInput, setCustomSkillInput] = useState("");
@@ -148,8 +131,8 @@ export default function Courses() {
       setCourses(validatedCourses);
 
       // Aggregate custom skills from existing courses to enrich skill options
-      const dynamicSkills = new Set(STANDARD_SKILLS.map((s) => s.toLowerCase()));
-      const combinedSkills = [...STANDARD_SKILLS];
+      const dynamicSkills = new Set(STANDARD_COURSE_SKILLS.map((s) => s.toLowerCase()));
+      const combinedSkills = [...STANDARD_COURSE_SKILLS];
       for (const c of validatedCourses) {
         if (Array.isArray(c.skills)) {
           for (const s of c.skills) {

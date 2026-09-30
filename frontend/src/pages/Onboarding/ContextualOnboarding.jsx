@@ -5,6 +5,7 @@ import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
 import API from "../../api/client";
 import { courseAPI, dataAdapters } from "../../services/api";
+import { ONBOARDING_COMPANY_CATALOG } from "../../constants/onboardingCompanies";
 
 const STORAGE_KEY = "techlearn-contextual-onboarding";
 const MAX_COMPANIES = 3;
@@ -26,36 +27,6 @@ const placementRoleOptions = [
   "Other",
 ];
 const OTHER_ROLE = "Other";
-
-const companyCatalog = {
-  campus: [
-    // Companies with Question Bank questions tagged to them first
-    "TCS",
-    "Infosys",
-    "Accenture",
-    "Cognizant",
-    "Deloitte",
-    "Capgemini",
-    "Wipro",
-    "HCL",
-  ],
-  offCampus: [
-    // Companies with Question Bank questions tagged to them first
-    "Accenture",
-    "TCS",
-    "Cognizant",
-    "Infosys",
-    "Deloitte",
-    "Capgemini",
-    "Wipro",
-    "Amazon",
-    "Google",
-    "Microsoft",
-    "Adobe",
-    "Flipkart",
-    "Walmart",
-  ],
-};
 
 const skillList = [
   "Java",
@@ -1827,9 +1798,9 @@ export default function ContextualOnboarding() {
 
   // Derived available companies based on opportunity selection
   const availableCompanies = useMemo(() => {
-    if (opportunity === "Campus") return companyCatalog.campus;
-    if (opportunity === "Off-campus") return companyCatalog.offCampus;
-    return [...new Set([...companyCatalog.campus, ...companyCatalog.offCampus])];
+    if (opportunity === "Campus") return ONBOARDING_COMPANY_CATALOG.campus;
+    if (opportunity === "Off-campus") return ONBOARDING_COMPANY_CATALOG.offCampus;
+    return [...new Set([...ONBOARDING_COMPANY_CATALOG.campus, ...ONBOARDING_COMPANY_CATALOG.offCampus])];
   }, [opportunity]);
 
   const effectiveRole = (role === OTHER_ROLE ? otherRole : role).trim();
@@ -1857,10 +1828,10 @@ export default function ContextualOnboarding() {
     // Keep only companies that belong to the new opportunity category
     const validList =
       opp === "Campus"
-        ? companyCatalog.campus
+        ? ONBOARDING_COMPANY_CATALOG.campus
         : opp === "Off-campus"
-        ? companyCatalog.offCampus
-        : [...new Set([...companyCatalog.campus, ...companyCatalog.offCampus])];
+        ? ONBOARDING_COMPANY_CATALOG.offCampus
+        : [...new Set([...ONBOARDING_COMPANY_CATALOG.campus, ...ONBOARDING_COMPANY_CATALOG.offCampus])];
     setSelectedCompanies((prev) => prev.filter((c) => validList.includes(c)));
   };
 

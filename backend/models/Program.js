@@ -15,6 +15,8 @@ const pricingPlanSchema = new mongoose.Schema(
     key: { type: String, required: true, trim: true },
     title: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
+    billingPeriod: { type: String, enum: ["Monthly", "Annual"], default: null },
+    availability: { type: String, enum: ["Structured", "Trainer-Led"], default: null },
     benefits: { type: [String], default: [] },
     active: { type: Boolean, default: true },
   },
@@ -32,6 +34,12 @@ const programSchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true,
+    },
+    company: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 120,
     },
     programType: {
       type: String,
@@ -125,14 +133,39 @@ const programSchema = new mongoose.Schema(
       default: "Structured",
     },
     billingOptions: {
-      type: [String],
-      enum: ["Monthly", "Annual"],
+      type: [{ type: String, enum: ["Monthly", "Annual"] }],
       default: [],
     },
-    monthlyStructuredFee: { type: Number, min: 0, default: 0 },
-    monthlyTrainerLedFee: { type: Number, min: 0, default: 0 },
-    annualStructuredFee: { type: Number, min: 0, default: 0 },
-    annualTrainerLedFee: { type: Number, min: 0, default: 0 },
+    structuredFee: {
+      type: Number,
+      min: [0, "Structured fee cannot be negative"],
+      default: null,
+    },
+    trainerLedFee: {
+      type: Number,
+      min: [0, "Trainer-Led fee cannot be negative"],
+      default: null,
+    },
+    monthlyStructuredFee: {
+      type: Number,
+      min: [0, "Monthly Structured fee cannot be negative"],
+      default: null,
+    },
+    monthlyTrainerLedFee: {
+      type: Number,
+      min: [0, "Monthly Trainer-Led fee cannot be negative"],
+      default: null,
+    },
+    annualStructuredFee: {
+      type: Number,
+      min: [0, "Annual Structured fee cannot be negative"],
+      default: null,
+    },
+    annualTrainerLedFee: {
+      type: Number,
+      min: [0, "Annual Trainer-Led fee cannot be negative"],
+      default: null,
+    },
     programFee: {
       type: Number,
       default: 0,

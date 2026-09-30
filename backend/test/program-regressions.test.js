@@ -1,20 +1,25 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
+import Student from "../models/Student.js";
+import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import { calculateCurrentDayNumber } from "../utils/trackAssignmentSchedule.js";
 import { getTopicDayNumber } from "../utils/courseTopicSchedule.js";
 import { resolveProgramPrimaryCourseId, isProgramPrimaryCourseMappingValid } from "../utils/programPrimaryCourse.js";
 import { getProgramTypeQueryValues, normalizeProgramType } from "../utils/programTypeNormalization.js";
 import { upsertProgramEnrollment } from "../utils/programEnrollment.js";
-import { isProgramAccessibleToLearner } from "../utils/programVisibility.js";
+import { isProgramAccessibleToLearner, isUserVisibleProgram } from "../utils/programVisibility.js";
 import {
   buildPublicCourseConditions,
   hasPublicFreeProgramLink,
 } from "../utils/courseVisibility.js";
 import {
+  chooseProgramScheduleEnrollment,
   isCompletedProgramSchedule,
   isProgramResourceLocked,
 } from "../utils/programSchedule.js";
+import { isProgramLearningSelection } from "../utils/programTypeNormalization.js";
+import { requireProgramLearning } from "../middleware/authMiddleware.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const id = () => new mongoose.Types.ObjectId();
@@ -60,6 +65,67 @@ test("legacy Program types normalize to canonical values and query aliases", () 
   assert.equal(normalizeProgramType("Placement Sprint"), "Placement");
   assert.equal(normalizeProgramType("Full Stack Project Program"), "Skill");
   assert.deepEqual(getProgramTypeQueryValues("Placement"), ["Placement", "Placement Sprint", "Placement Program", "placement", "placement sprint", "placement program"]);
+});
+
+test("onboarding Program selections authorize the corresponding learning type", () => {
+  assert.equal(isProgramLearningSelection("Get Job-Ready"), true);
+  assert.equal(isProgramLearningSelection("Learn a Skill"), true);
+  assert.equal(isProgramLearningSelection("Both"), true);
+  assert.equal(isProgramLearningSelection("Unassigned"), false);
+});
+
+test("an active Skill Program enrollment passes the shared daily-learning guard", async () => {
+  const originalFindOne = Student.findOne;
+  const originalExists = ProgramEnrollment.exists;
+  Student.findOne = () => ({
+    select() { return this; },
+    lean: async () => ({ _id: id() }),
+  });
+  ProgramEnrollment.exists = async (query) => query.status === "Active" ? { _id: id() } : null;
+  const req = { user: { _id: id(), email: "learner@example.com", role: "student", programSelection: "Learn a Skill" } };
+  const res = {
+    status(code) { this.statusCode = code; return this; },
+    json(payload) { this.payload = payload; return this; },
+  };
+  let proceeded = false;
+
+  try {
+    await requireProgramLearning(req, res, () => { proceeded = true; });
+    assert.equal(proceeded, true);
+    assert.equal(res.statusCode, undefined);
+  } finally {
+    Student.findOne = originalFindOne;
+    ProgramEnrollment.exists = originalExists;
+  }
+});
+
+test("schedule resolution prefers an active enrollment over a stale completed pointer", () => {
+  const activeProgramId = id();
+  const oldCompletedProgramId = id();
+  const selected = chooseProgramScheduleEnrollment({
+    preferredProgramId: oldCompletedProgramId,
+    enrollments: [
+      { programId: oldCompletedProgramId, status: "Completed", assignedAt: new Date("2026-09-20") },
+      { programId: activeProgramId, status: "Active", assignedAt: new Date("2026-08-20") },
+    ],
+  });
+
+  assert.equal(String(selected.programId), String(activeProgramId));
+});
+
+test("specific completed Program resources still resolve when a Program ID is requested", () => {
+  const activeProgramId = id();
+  const completedProgramId = id();
+  const selected = chooseProgramScheduleEnrollment({
+    preferredProgramId: activeProgramId,
+    requestedProgramId: completedProgramId,
+    enrollments: [
+      { programId: activeProgramId, status: "Active" },
+      { programId: completedProgramId, status: "Completed" },
+    ],
+  });
+
+  assert.equal(String(selected.programId), String(completedProgramId));
 });
 
 test("individual enrollment with an explicit start date does not duplicate its source update", async () => {
@@ -113,6 +179,36 @@ test("an explicit individual enrollment grants access to a private Program", () 
     program: { status: "Active", visibility: "Private" },
     enrollment: { status: "Active", batchId: null },
   }), true);
+});
+
+test("public Programs remain discoverable when resources are not Courses", () => {
+  assert.equal(isUserVisibleProgram({
+    name: "Placement Learning Path",
+    durationDays: 30,
+    pricingType: "Free",
+    courseIds: [],
+    roadmapIds: [id()],
+  }), true);
+});
+
+test("paid public Program visibility requires a configured positive price", () => {
+  const baseProgram = {
+    name: "Placement Learning Path",
+    durationDays: 30,
+    pricingType: "Paid",
+    programFee: 0,
+    courseIds: [],
+  };
+
+  assert.equal(isUserVisibleProgram(baseProgram), false);
+  assert.equal(isUserVisibleProgram({
+    ...baseProgram,
+    pricingPlans: [{ price: 999, active: true }],
+  }), true);
+  assert.equal(isUserVisibleProgram({
+    ...baseProgram,
+    pricingPlans: [{ price: 999, active: false }],
+  }), false);
 });
 
 test("courses linked from a public free Program remain discoverable with legacy batch references", () => {

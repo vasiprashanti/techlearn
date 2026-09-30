@@ -4,10 +4,15 @@ import ScrollProgress from "../../components/ScrollProgress";
 import LoadingScreen from "../../components/LoadingScreen";
 import { courseAPI } from "../../services/api";
 import { useTheme } from "../../context/ThemeContext";
+import { useAuth } from "../../context/AuthContext";
+import { useAuthModalContext } from "../../context/AuthModalContext";
+import { initiateRazorpayPayment } from "../../utils/razorpayCheckout";
 import "../../styles/courseDetails.css";
 
 const CourseDetails = () => {
   const { theme } = useTheme();
+  const { user, isAuthenticated } = useAuth();
+  const { openLogin } = useAuthModalContext();
   const { courseId } = useParams();
   const navigate = useNavigate();
 
@@ -19,6 +24,9 @@ const CourseDetails = () => {
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [courseRefreshKey, setCourseRefreshKey] = useState(0);
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState("");
 
   // Fetch course data from backend
   useEffect(() => {
@@ -51,9 +59,12 @@ const CourseDetails = () => {
           String(coursePrice).toLowerCase() === "free" ||
           backendCourse.pricingType === "Free"
         );
+        const hasAccess = isExplicitPaid
+          ? backendCourse.hasAccess === true
+          : backendCourse.hasAccess !== false;
 
-        let startButtonText = "START FOR FREE";
-        if (!isFree) {
+        let startButtonText = hasAccess ? (isFree ? "START FOR FREE" : "START LEARNING") : "START FOR FREE";
+        if (!isFree && !hasAccess) {
           const formattedPrice = String(coursePrice).startsWith("₹")
             ? coursePrice
             : `₹${coursePrice}`;
@@ -67,6 +78,9 @@ const CourseDetails = () => {
           title: courseTitle,
           price: coursePrice,
           isFree,
+          isPaid: isExplicitPaid,
+          hasAccess,
+          purchaseAvailable: backendCourse.purchaseAvailable === true,
           startButtonText,
           skills: Array.isArray(backendCourse.skills) ? backendCourse.skills : [],
           description:
@@ -116,7 +130,7 @@ const CourseDetails = () => {
     if (courseId) {
       fetchCourse();
     }
-  }, [courseId]);
+  }, [courseId, courseRefreshKey]);
 
   if (loading) {
     return (
@@ -153,6 +167,47 @@ const CourseDetails = () => {
   }
 
   const handleStartCourse = () => {
+    if (course.isPaid && !course.hasAccess) {
+      if (!course.purchaseAvailable) {
+        setPaymentMessage("Checkout is unavailable for this course right now. Please contact support.");
+        return;
+      }
+      if (!isAuthenticated) {
+        openLogin();
+        return;
+      }
+      if (isPaying) return;
+
+      setIsPaying(true);
+      setPaymentMessage("");
+      initiateRazorpayPayment({
+        courseId,
+        user,
+        onSuccess: () => {
+          setIsPaying(false);
+          setPaymentMessage("Payment confirmed. Opening your course…");
+          setCourseRefreshKey((current) => current + 1);
+          navigate(`/learn/courses/${courseId}/topics`);
+        },
+        onFailure: (paymentError) => {
+          setIsPaying(false);
+          setPaymentMessage(
+            paymentError?.response?.data?.message
+              || paymentError?.message
+              || "We couldn't confirm the payment. Course access has not been changed; please retry or contact support."
+          );
+          if (paymentError?.response?.status === 409) {
+            setCourseRefreshKey((current) => current + 1);
+          }
+        },
+        onCancel: () => {
+          setIsPaying(false);
+          setPaymentMessage("Checkout closed. No course access was granted.");
+        },
+      });
+      return;
+    }
+
     navigate(`/learn/courses/${courseId}/topics`);
   };
 
@@ -219,11 +274,17 @@ const CourseDetails = () => {
               className="start-button"
               id="startButton"
               type="button"
+              disabled={isPaying}
               onClick={handleStartCourse}
             >
-              <span>{course.startButtonText || "START FOR FREE"}</span>
+              <span>{isPaying ? "PROCESSING PAYMENT…" : course.startButtonText || "START FOR FREE"}</span>
               <span className="button-arrow">→</span>
             </button>
+            {paymentMessage && (
+              <p className="mt-3 text-sm text-[#001862]/75 dark:text-white/75" role="status" aria-live="polite">
+                {paymentMessage}
+              </p>
+            )}
           </div>
 
           {/* HERO VISUAL */}

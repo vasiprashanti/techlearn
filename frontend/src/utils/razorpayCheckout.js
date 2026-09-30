@@ -25,6 +25,7 @@ export const loadRazorpayScript = () => {
  * 4. Return result
  */
 export const initiateRazorpayPayment = async ({
+  courseId,
   programId,
   planId,
   programType,
@@ -43,31 +44,15 @@ export const initiateRazorpayPayment = async ({
 
     // Step 1: Request backend order creation
     const orderRes = await API.post('/api/payments/create-order', {
+      courseId,
       programId,
       planId,
       programType,
     });
 
     const { orderId, amount, currency, key, planName } = orderRes.data;
-
-    // Helper for test/mock execution if Razorpay SDK isn't available or running mock order
-    const isMockOrder = orderId?.startsWith('order_mock_') || key === 'rzp_test_mock_key';
-
-    if (isMockOrder) {
-      // In mock mode (e.g. key/SDK sandbox fallback), directly trigger server-side verification with mock ID
-      const verifyRes = await API.post('/api/payments/verify', {
-        razorpay_order_id: orderId,
-        razorpay_payment_id: `pay_mock_${Date.now()}`,
-        razorpay_signature: 'mock_signature',
-        mock_success: true,
-      });
-
-      if (verifyRes.data?.success) {
-        onSuccess?.(verifyRes.data);
-      } else {
-        onFailure?.(new Error(verifyRes.data?.message || 'Payment verification failed'));
-      }
-      return;
+    if (!orderId || !key || !Number.isFinite(Number(amount)) || Number(amount) <= 0) {
+      throw new Error('The server did not return a valid Razorpay order. Please try again later.');
     }
 
     // Step 2: Configure Razorpay Checkout options
@@ -76,7 +61,7 @@ export const initiateRazorpayPayment = async ({
       amount: amount * 100, // paise
       currency,
       name: 'TechLearn',
-      description: `${planName || 'Program Access'} — No refunds or cancellations after purchase`,
+      description: `${planName || (courseId ? 'Course Access' : 'Program Access')} — No refunds or cancellations after purchase`,
       order_id: orderId,
       prefill: {
         name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || '',

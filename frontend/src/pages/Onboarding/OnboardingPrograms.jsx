@@ -41,8 +41,8 @@ export default function OnboardingPrograms() {
     ...locationState,
   };
 
-  const goal = currentUser?.learningGoal || 'Get Placed';
-  const isPlacement = goal === 'Get Placed' || !goal;
+  const goal = String(currentUser?.learningGoal || 'Get Job-Ready').trim().toLowerCase();
+  const isPlacement = ['get placed', 'get job-ready', 'get job ready', 'placement'].includes(goal) || !goal;
 
   const targetRole = currentUser?.targetRole || 'Software Developer';
   const selectedCatalogProgram = catalogPrograms.find((program) => String(program._id) === String(currentUser?.programId))
@@ -249,6 +249,9 @@ export default function OnboardingPrograms() {
         id: plan.key || fallback.id,
         title: plan.title || fallback.title,
         price: `₹${Number(plan.price || 0).toLocaleString('en-IN')}`,
+        subtitle: plan.billingPeriod
+          ? [plan.billingPeriod, plan.availability].filter(Boolean).join(' · ')
+          : fallback.subtitle,
         features: Array.isArray(plan.benefits) && plan.benefits.length ? plan.benefits : fallback.features,
       };
     });

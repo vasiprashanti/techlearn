@@ -98,6 +98,19 @@ export const getTodayDailyTasks = async (req, res) => {
     const schedule = await resolveProgramSchedule({ user: req.user, student });
     await assertProgramScheduleAccess({ user: req.user, student, programId: schedule.programId });
     const isCompleted = isCompletedProgramSchedule(schedule);
+    if (isCompleted) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          dayNumber: 0,
+          tasks: [],
+          isFullyCompleted: false,
+          progressPercent: 0,
+          programId: schedule.programId || null,
+          scheduleType: schedule.scheduleType,
+        },
+      });
+    }
     if (schedule.batchExpired && !isCompleted) {
       return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
     }
@@ -344,6 +357,9 @@ export const submitDailyTask = async (req, res) => {
     const schedule = await resolveProgramSchedule({ user: req.user, student });
     await assertProgramScheduleAccess({ user: req.user, student, programId: schedule.programId });
     const isCompleted = isCompletedProgramSchedule(schedule);
+    if (isCompleted) {
+      return res.status(403).json({ success: false, message: "Daily tasks are available only while the Program is active." });
+    }
     if (schedule.batchExpired && !isCompleted) {
       return res.status(403).json({ success: false, message: "This batch has ended and program access has been revoked." });
     }

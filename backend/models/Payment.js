@@ -26,6 +26,11 @@ const paymentSchema = new mongoose.Schema(
     courseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
+      index: true,
+    },
+    paymentPurpose: {
+      type: String,
+      enum: ["ProgramEnrollment", "CoursePurchase"],
     },
     plan: {
       type: String,

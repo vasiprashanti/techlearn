@@ -14,6 +14,7 @@ import DailyChallengeAttempt from "../../models/DailyChallengeAttempt.js";
 import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import Blueprint from "../../models/Blueprint.js";
 import Questions from "../../models/Questions.js";
+const Question = Questions;
 import Role from "../../models/Role.js";
 import {
   pauseProgramEnrollment,
@@ -29,6 +30,38 @@ import { deleteProgramPerformance } from "../../services/programPerformanceServi
 import { syncProgramEnrollmentsForProgram } from "../../services/programCompletionService.js";
 import { buildProgramDiagnostics } from "../../services/programDiagnostics.js";
 import { getProgramTypeQueryValues, normalizeProgramType } from "../../utils/programTypeNormalization.js";
+import {
+  buildProgramPricing,
+  normalizeProgramSelections,
+} from "../../utils/programPricing.js";
+
+const normalizeCourseIdList = (value) => {
+  if (!Array.isArray(value)) return { error: "courseIds must be an array." };
+  const ids = value.map((item) => String(item?._id || item || "").trim());
+  const invalidIds = ids.filter((id) => !mongoose.Types.ObjectId.isValid(id));
+  if (invalidIds.length) return { error: "Every selected Course must have a valid ID." };
+  return { ids: [...new Set(ids)] };
+};
+
+const validateCourseIds = async (ids) => {
+  if (!ids.length) return { ids: [] };
+  const found = await Course.find({ _id: { $in: ids } }).select("_id").lean();
+  if (found.length !== ids.length) return { error: "One or more selected Courses could not be found." };
+  return { ids: found.map((course) => course._id) };
+};
+
+const syncCourseProgramLinks = async ({ programId, previousCourseIds = [], nextCourseIds = [] }) => {
+  const previous = new Set(previousCourseIds.map((id) => String(id?._id || id)));
+  const next = new Set(nextCourseIds.map((id) => String(id?._id || id)));
+  const added = [...next].filter((id) => !previous.has(id));
+  const removed = [...previous].filter((id) => !next.has(id));
+  if (added.length) {
+    await Course.updateMany({ _id: { $in: added } }, { $addToSet: { programIds: programId } });
+  }
+  if (removed.length) {
+    await Course.updateMany({ _id: { $in: removed } }, { $pull: { programIds: programId } });
+  }
+};
 
 // Whitelist mapping for attachment entity types
 export const ENTITY_CONFIG = {
@@ -126,6 +159,46 @@ const resolveProgramDurationDays = ({ durationDays, duration }) => {
     : Number(durationDays);
   return Number.isInteger(requestedDurationDays) ? requestedDurationDays : null;
 };
+
+const normalizeAdminProgramStatus = (status) => status === "Published" ? "Active" : status;
+
+const normalizeDynamicOptions = (values) => {
+  const seen = new Set();
+  return values
+    .map((value) => String(value || "").trim())
+    .filter((value) => {
+      const key = value.toLocaleLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((left, right) => left.localeCompare(right));
+};
+
+/** GET /api/admin/programs/options — dynamic learner-matching options. */
+export const getProgramFormOptions = async (_req, res) => {
+  try {
+    const [courseSkills, questionTags, roles, courses] = await Promise.all([
+      Course.distinct("skills"),
+      Question.distinct("tags"),
+      Role.find({}).select("roleName").lean(),
+      Course.find({}).select("_id title level courseType numTopics status").sort({ title: 1 }).lean(),
+    ]);
+
+    return res.json({
+      success: true,
+      skillTags: normalizeDynamicOptions(courseSkills || []),
+      targetCompanies: normalizeDynamicOptions(questionTags || []),
+      targetRoles: normalizeDynamicOptions((roles || []).map((role) => role.roleName)),
+      courses: courses || [],
+    });
+  } catch (error) {
+    console.error("Error loading Program form options:", error);
+    return res.status(500).json({ success: false, message: "Failed to load Program matching options." });
+  }
+};
+
+export const getProgramOptionLists = getProgramFormOptions;
 
 const normalizePlacementCategories = (value, { allowLegacyFallback = false } = {}) => {
   const categories = Array.isArray(value)
@@ -557,6 +630,7 @@ export const listPrograms = async (req, res) => {
       .sort(sortOptions)
       .skip(skip)
       .limit(limitNum)
+      .populate("courseIds", ENTITY_CONFIG.courses.selectFields)
       .lean();
 
     const programIds = rawPrograms.map((p) => p._id);
@@ -578,6 +652,7 @@ export const listPrograms = async (req, res) => {
       _id: p._id,
       name: p.name,
       description: p.description,
+      company: p.company || "",
       programType: p.programType,
       duration: p.duration,
       durationDays: p.durationDays || parseProgramDurationDays(p.duration),
@@ -587,11 +662,21 @@ export const listPrograms = async (req, res) => {
       pricingType: p.pricingType,
       programFee: p.programFee,
       pricingPlans: p.pricingPlans || [],
+      availability: p.availability || null,
+      billingOptions: p.billingOptions || [],
+      structuredFee: p.structuredFee ?? null,
+      trainerLedFee: p.trainerLedFee ?? null,
+      monthlyStructuredFee: p.monthlyStructuredFee ?? null,
+      monthlyTrainerLedFee: p.monthlyTrainerLedFee ?? null,
+      annualStructuredFee: p.annualStructuredFee ?? null,
+      annualTrainerLedFee: p.annualTrainerLedFee ?? null,
       learningGoals: p.learningGoals || [],
       placementCategories: p.placementCategories || [],
       targetCompanies: p.targetCompanies || [],
       skillTags: p.skillTags || [],
       targetRoles: p.targetRoles || [],
+      courseIds: p.courseIds || [],
+      primaryCourseId: p.primaryCourseId || null,
       studentCount: enrolledSet.size,
       batchCount: Array.isArray(p.batchIds) ? p.batchIds.length : 0,
       courseCount: Array.isArray(p.courseIds) ? p.courseIds.length : 0,
@@ -619,23 +704,6 @@ export const listPrograms = async (req, res) => {
   }
 };
 
-export const getProgramOptionLists = async (req, res) => {
-  try {
-    const [courses, questions, roles] = await Promise.all([
-      Course.find({}).select("skills").lean(),
-      Questions.find({}).select("companies").lean(),
-      Role.find({ status: { $ne: "Archived" } }).select("roleName").sort({ roleName: 1 }).lean(),
-    ]);
-    return res.json({
-      success: true,
-      skills: normalizeList(courses.flatMap((item) => item.skills || [])),
-      companies: normalizeList(questions.flatMap((item) => item.companies || [])),
-      roles: normalizeList(roles.map((item) => item.roleName)),
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: "Failed to fetch program options" });
-  }
-};
 
 /**
  * POST /api/admin/programs
@@ -646,6 +714,7 @@ export const createProgram = async (req, res) => {
     const {
       name,
       description,
+      company,
       programType,
       duration,
       durationDays,
@@ -655,6 +724,8 @@ export const createProgram = async (req, res) => {
       pricingType,
       availability,
       billingOptions,
+      structuredFee,
+      trainerLedFee,
       monthlyStructuredFee,
       monthlyTrainerLedFee,
       annualStructuredFee,
@@ -666,6 +737,8 @@ export const createProgram = async (req, res) => {
       targetCompanies,
       skillTags,
       targetRoles,
+      courseIds = [],
+      primaryCourseId,
     } = req.body;
 
     if (!name || !programType || (!duration && durationDays === undefined)) {
@@ -699,6 +772,19 @@ export const createProgram = async (req, res) => {
       return res.status(400).json({ success: false, message: "Placement programs require at least one target company and target role." });
     }
 
+    const normalizedCourseIds = normalizeCourseIdList(courseIds);
+    if (normalizedCourseIds.error) {
+      return res.status(400).json({ success: false, message: normalizedCourseIds.error });
+    }
+    const verifiedCourseIds = await validateCourseIds(normalizedCourseIds.ids);
+    if (verifiedCourseIds.error) {
+      return res.status(400).json({ success: false, message: verifiedCourseIds.error });
+    }
+    const resolvedPrimaryCourseId = primaryCourseId || verifiedCourseIds.ids[0] || null;
+    if (resolvedPrimaryCourseId && !verifiedCourseIds.ids.some((id) => String(id) === String(resolvedPrimaryCourseId))) {
+      return res.status(400).json({ success: false, message: "primaryCourseId must reference an attached Program course." });
+    }
+
     const phaseValidation = validateAndNormalizeProgramPhases({
       programType: normalizedProgramType,
       durationDays: resolvedDurationDays,
@@ -708,13 +794,41 @@ export const createProgram = async (req, res) => {
       return res.status(400).json({ success: false, message: phaseValidation.error });
     }
 
+    if (duration && parseProgramDurationDays(duration) !== resolvedDurationDays) {
+      return res.status(400).json({ success: false, message: "Duration value and duration days do not match." });
+    }
+
     const placementCategoryResult = normalizePlacementCategories(placementCategories);
     if (placementCategoryResult.error) {
       return res.status(400).json({ success: false, message: placementCategoryResult.error });
     }
 
+    let pricing = null;
+    if (availability !== undefined
+      || billingOptions !== undefined
+      || structuredFee !== undefined
+      || trainerLedFee !== undefined
+      || monthlyStructuredFee !== undefined
+      || monthlyTrainerLedFee !== undefined
+      || annualStructuredFee !== undefined
+      || annualTrainerLedFee !== undefined) {
+      pricing = buildProgramPricing({
+        programType: normalizedProgramType,
+        pricingType: pricingType || "Free",
+        availability,
+        billingOptions,
+        structuredFee,
+        trainerLedFee,
+        monthlyStructuredFee,
+        monthlyTrainerLedFee,
+        annualStructuredFee,
+        annualTrainerLedFee,
+      });
+      if (pricing.error) return res.status(400).json({ success: false, message: pricing.error });
+    }
+
     let parsedFee = 0;
-    if (pricingType === "Paid") {
+    if (!pricing && pricingType === "Paid") {
       parsedFee = Number(programFee);
       if (isNaN(parsedFee) || parsedFee < 0) {
         return res.status(400).json({
@@ -727,31 +841,46 @@ export const createProgram = async (req, res) => {
     const program = new Program({
       name: normalizedName,
       description: (description || "").trim(),
+      company: String(company || "").trim(),
       programType: normalizedProgramType,
-      duration: `${resolvedDurationDays} Days`,
+      duration: duration ? String(duration).trim() : `${resolvedDurationDays} Days`,
       durationDays: resolvedDurationDays,
       phases: phaseValidation.phases,
-      status: "Draft",
+      status: normalizeAdminProgramStatus(status || "Draft"),
       visibility: visibility || "Public",
-      pricingType: pricingType || "Free",
-      availability: availability || "Structured",
-      billingOptions: pricingType === "Paid" && Array.isArray(billingOptions) ? billingOptions : [],
-      monthlyStructuredFee: Number(monthlyStructuredFee) || 0,
-      monthlyTrainerLedFee: Number(monthlyTrainerLedFee) || 0,
-      annualStructuredFee: Number(annualStructuredFee) || 0,
-      annualTrainerLedFee: Number(annualTrainerLedFee) || 0,
-      programFee: pricingType === "Paid" ? parsedFee : 0,
-      pricingPlans: pricingType === "Paid" ? normalizePricingPlans(pricingPlans) : [],
-      learningGoals: Array.isArray(learningGoals) ? learningGoals : [],
+      pricingType: pricing?.pricingType || pricingType || "Free",
+      billingOptions: pricing?.billingOptions || (pricingType === "Paid" && Array.isArray(billingOptions) ? billingOptions : []),
+      programFee: pricing ? pricing.programFee : pricingType === "Paid" ? parsedFee : 0,
+      pricingPlans: pricing ? pricing.pricingPlans : pricingType === "Paid" ? normalizePricingPlans(pricingPlans) : [],
+      ...(pricing ? {
+        availability: pricing.availability,
+        billingOptions: pricing.billingOptions,
+        structuredFee: pricing.structuredFee,
+        trainerLedFee: pricing.trainerLedFee,
+        monthlyStructuredFee: pricing.monthlyStructuredFee,
+        monthlyTrainerLedFee: pricing.monthlyTrainerLedFee,
+        annualStructuredFee: pricing.annualStructuredFee,
+        annualTrainerLedFee: pricing.annualTrainerLedFee,
+      } : {
+        availability: availability || "Structured",
+        monthlyStructuredFee: Number(monthlyStructuredFee) || 0,
+        monthlyTrainerLedFee: Number(monthlyTrainerLedFee) || 0,
+        annualStructuredFee: Number(annualStructuredFee) || 0,
+        annualTrainerLedFee: Number(annualTrainerLedFee) || 0,
+      }),
+      learningGoals: Array.isArray(learningGoals) ? normalizeProgramSelections(learningGoals) : [],
       placementCategories: placementCategoryResult.categories,
-      targetCompanies: Array.isArray(targetCompanies) ? targetCompanies : [],
-      skillTags: Array.isArray(skillTags) ? skillTags : [],
-      targetRoles: Array.isArray(targetRoles) ? targetRoles : [],
+      targetCompanies: normalizeProgramSelections(targetCompanies),
+      skillTags: normalizeProgramSelections(skillTags),
+      targetRoles: normalizeProgramSelections(targetRoles),
+      courseIds: verifiedCourseIds.ids,
+      primaryCourseId: resolvedPrimaryCourseId,
       createdBy: req.user?._id || null,
       updatedBy: req.user?._id || null,
     });
 
     await program.save();
+    await syncCourseProgramLinks({ programId: program._id, nextCourseIds: verifiedCourseIds.ids });
 
     res.status(201).json({
       success: true,
@@ -900,6 +1029,7 @@ export const updateProgram = async (req, res) => {
     const {
       name,
       description,
+      company,
       programType,
       duration,
       durationDays,
@@ -909,6 +1039,8 @@ export const updateProgram = async (req, res) => {
       pricingType,
       availability,
       billingOptions,
+      structuredFee,
+      trainerLedFee,
       monthlyStructuredFee,
       monthlyTrainerLedFee,
       annualStructuredFee,
@@ -920,6 +1052,7 @@ export const updateProgram = async (req, res) => {
       targetCompanies,
       skillTags,
       targetRoles,
+      courseIds,
       primaryCourseId,
     } = req.body;
 
@@ -959,13 +1092,81 @@ export const updateProgram = async (req, res) => {
       return res.status(400).json({ success: false, message: phaseValidation.error });
     }
 
+    if (duration !== undefined && parseProgramDurationDays(duration) !== nextDurationDays) {
+      return res.status(400).json({ success: false, message: "Duration value and duration days do not match." });
+    }
+
+    const previousCourseIds = (program.courseIds || []).map((id) => id?._id || id);
+    const normalizedCourseIds = courseIds === undefined
+      ? { ids: previousCourseIds }
+      : normalizeCourseIdList(courseIds);
+    if (normalizedCourseIds.error) {
+      return res.status(400).json({ success: false, message: normalizedCourseIds.error });
+    }
+    const verifiedCourseIds = courseIds === undefined
+      ? { ids: previousCourseIds }
+      : await validateCourseIds(normalizedCourseIds.ids);
+    if (verifiedCourseIds.error) {
+      return res.status(400).json({ success: false, message: verifiedCourseIds.error });
+    }
+    let resolvedPrimaryCourseId = primaryCourseId === undefined
+      ? (program.primaryCourseId && verifiedCourseIds.ids.some((id) => String(id) === String(program.primaryCourseId))
+        ? program.primaryCourseId
+        : verifiedCourseIds.ids[0] || null)
+      : primaryCourseId || null;
+    if (resolvedPrimaryCourseId && !verifiedCourseIds.ids.some((id) => String(id) === String(resolvedPrimaryCourseId))) {
+      return res.status(400).json({ success: false, message: "primaryCourseId must reference an attached Program course." });
+    }
+    if (resolvedPrimaryCourseId && !mongoose.Types.ObjectId.isValid(String(resolvedPrimaryCourseId))) {
+      return res.status(400).json({ success: false, message: "primaryCourseId must be a valid Course ID." });
+    }
+
+    const pricingConfigSubmitted = availability !== undefined
+      || billingOptions !== undefined
+      || structuredFee !== undefined
+      || trainerLedFee !== undefined
+      || monthlyStructuredFee !== undefined
+      || monthlyTrainerLedFee !== undefined
+      || annualStructuredFee !== undefined
+      || annualTrainerLedFee !== undefined;
+    const hasSavedBillingOptions = Array.isArray(program.billingOptions) && program.billingOptions.length > 0;
+    const pricing = pricingConfigSubmitted
+      ? buildProgramPricing({
+          programType: nextProgramType,
+          pricingType: pricingType === undefined ? program.pricingType : pricingType,
+          availability: availability === undefined ? program.availability : availability,
+          billingOptions: billingOptions === undefined
+            ? (program.billingOptions?.length ? program.billingOptions : undefined)
+            : billingOptions,
+          structuredFee: structuredFee === undefined ? program.structuredFee : structuredFee,
+          trainerLedFee: trainerLedFee === undefined ? program.trainerLedFee : trainerLedFee,
+          monthlyStructuredFee: monthlyStructuredFee === undefined
+            ? (hasSavedBillingOptions ? program.monthlyStructuredFee : undefined)
+            : monthlyStructuredFee,
+          monthlyTrainerLedFee: monthlyTrainerLedFee === undefined
+            ? (hasSavedBillingOptions ? program.monthlyTrainerLedFee : undefined)
+            : monthlyTrainerLedFee,
+          annualStructuredFee: annualStructuredFee === undefined
+            ? (hasSavedBillingOptions ? program.annualStructuredFee : undefined)
+            : annualStructuredFee,
+          annualTrainerLedFee: annualTrainerLedFee === undefined
+            ? (hasSavedBillingOptions ? program.annualTrainerLedFee : undefined)
+            : annualTrainerLedFee,
+        })
+      : null;
+    if (pricing?.error) return res.status(400).json({ success: false, message: pricing.error });
+
     if (name !== undefined) program.name = String(name).trim();
     if (description !== undefined) program.description = String(description).trim();
+    if (company !== undefined) program.company = String(company).trim();
     program.programType = nextProgramType;
-    program.duration = `${nextDurationDays} Days`;
+    if (duration !== undefined) program.duration = String(duration).trim();
+    else if (durationDays !== undefined) program.duration = `${nextDurationDays} Days`;
     program.durationDays = nextDurationDays;
     program.phases = phaseValidation.phases;
-    if (status !== undefined) program.status = status;
+    program.courseIds = verifiedCourseIds.ids;
+    program.primaryCourseId = resolvedPrimaryCourseId;
+    if (status !== undefined) program.status = normalizeAdminProgramStatus(status);
     if (visibility !== undefined) program.visibility = visibility;
     if (availability !== undefined) program.availability = availability;
     if (billingOptions !== undefined) program.billingOptions = program.pricingType === "Paid" && Array.isArray(billingOptions) ? billingOptions : [];
@@ -985,37 +1186,36 @@ export const updateProgram = async (req, res) => {
       program.placementCategories = nextProgramType === "Placement"
         ? placementCategoryResult.categories
         : [];
-    } else {
-      const legacyPlacementCategoryResult = normalizePlacementCategories(program.placementCategories, { allowLegacyFallback: true });
-      program.placementCategories = nextProgramType === "Placement"
-        ? legacyPlacementCategoryResult.categories
-        : [];
     }
-    if (targetCompanies !== undefined) program.targetCompanies = Array.isArray(targetCompanies) ? targetCompanies : [];
-    if (skillTags !== undefined) program.skillTags = Array.isArray(skillTags) ? skillTags : [];
-    if (targetRoles !== undefined) program.targetRoles = Array.isArray(targetRoles) ? targetRoles : [];
-    if (primaryCourseId !== undefined) {
-      if (primaryCourseId && !mongoose.Types.ObjectId.isValid(primaryCourseId)) {
-        return res.status(400).json({ success: false, message: "primaryCourseId must be a valid Course ID." });
-      }
-      const attachedCourseIds = (program.courseIds || []).map((id) => String(id));
-      if (primaryCourseId && !attachedCourseIds.includes(String(primaryCourseId))) {
-        return res.status(400).json({ success: false, message: "primaryCourseId must reference an attached Program course." });
-      }
-      program.primaryCourseId = primaryCourseId || null;
-    } else if (!program.primaryCourseId && program.courseIds?.length) {
-      // Backfill only when an admin already touches this Program. Legacy
-      // records remain readable and are not bulk-rewritten.
-      program.primaryCourseId = program.courseIds[0];
-    }
-    if (pricingPlans !== undefined) {
+    if (targetCompanies !== undefined) program.targetCompanies = normalizeProgramSelections(targetCompanies);
+    if (skillTags !== undefined) program.skillTags = normalizeProgramSelections(skillTags);
+    if (targetRoles !== undefined) program.targetRoles = normalizeProgramSelections(targetRoles);
+    if (pricingConfigSubmitted) {
+      program.availability = pricing.availability;
+      program.pricingType = pricing.pricingType;
+      program.billingOptions = pricing.billingOptions;
+      program.structuredFee = pricing.structuredFee;
+      program.trainerLedFee = pricing.trainerLedFee;
+      program.monthlyStructuredFee = pricing.monthlyStructuredFee;
+      program.monthlyTrainerLedFee = pricing.monthlyTrainerLedFee;
+      program.annualStructuredFee = pricing.annualStructuredFee;
+      program.annualTrainerLedFee = pricing.annualTrainerLedFee;
+      program.programFee = pricing.programFee;
+      const existingBenefitsByKey = new Map(
+        (program.pricingPlans || []).map((plan) => [plan.key, plan.benefits || []])
+      );
+      program.pricingPlans = pricing.pricingPlans.map((plan) => ({
+        ...plan,
+        benefits: existingBenefitsByKey.get(plan.key) || [],
+      }));
+    } else if (pricingPlans !== undefined) {
       const normalizedPlans = normalizePricingPlans(pricingPlans);
       if (program.pricingType === "Paid" && normalizedPlans.length === 0) {
         return res.status(400).json({ success: false, message: "At least one valid pricing plan is required for Paid programs." });
       }
       program.pricingPlans = program.pricingType === "Paid" ? normalizedPlans : [];
     }
-    if (pricingType !== undefined) {
+    if (!pricingConfigSubmitted && pricingType !== undefined) {
       program.pricingType = pricingType;
       if (pricingType === "Paid") {
         const parsedFee = Number(programFee);
@@ -1030,7 +1230,7 @@ export const updateProgram = async (req, res) => {
         program.programFee = 0;
         program.pricingPlans = [];
       }
-    } else if (program.pricingType === "Paid" && programFee !== undefined) {
+    } else if (!pricingConfigSubmitted && program.pricingType === "Paid" && programFee !== undefined) {
       const parsedFee = Number(programFee);
       if (isNaN(parsedFee) || parsedFee < 0) {
         return res.status(400).json({
@@ -1043,6 +1243,11 @@ export const updateProgram = async (req, res) => {
 
     program.updatedBy = req.user?._id || program.updatedBy;
     await program.save();
+    await syncCourseProgramLinks({
+      programId,
+      previousCourseIds,
+      nextCourseIds: verifiedCourseIds.ids,
+    });
     await syncProgramCompatibilityProjections({ programId });
 
     res.json({
@@ -1408,6 +1613,14 @@ export const attachEntities = async (req, res) => {
       return res.status(404).json({ success: false, message: "Program not found" });
     }
 
+    if (entityType === "courses") {
+      await syncCourseProgramLinks({
+        programId,
+        previousCourseIds: program.courseIds || [],
+        nextCourseIds: updatedProgram.courseIds || [],
+      });
+    }
+
     if (["courses", "track-templates"].includes(entityType)) {
       await syncProgramCompatibilityProjections({ programId });
     }
@@ -1509,6 +1722,14 @@ export const detachEntity = async (req, res) => {
 
     if (!updatedProgram) {
       return res.status(404).json({ success: false, message: "Program not found" });
+    }
+
+    if (entityType === "courses") {
+      await syncCourseProgramLinks({
+        programId,
+        previousCourseIds: program.courseIds || [],
+        nextCourseIds: updatedProgram.courseIds || [],
+      });
     }
 
     if (["courses", "track-templates"].includes(entityType)) {

@@ -295,19 +295,10 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    const storedProgram = (() => {
-      try {
-        return JSON.parse(localStorage.getItem("userData") || "{}").programSelection;
-      } catch {
-        return "";
-      }
-    })();
-
-    if (storedProgram !== "Full Stack Project Program") {
-      loadTodayTasks();
-    } else {
-      setTasksLoaded(true);
-    }
+    // Always ask the server for today's Program tasks. A cached legacy
+    // programSelection can be stale after an admin changes the learner's
+    // Program, and must not suppress tasks for the newly assigned Program.
+    loadTodayTasks();
     loadProjectData();
     loadPlacementLearning();
   }, []);
