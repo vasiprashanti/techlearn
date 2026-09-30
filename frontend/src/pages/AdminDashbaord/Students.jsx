@@ -106,7 +106,20 @@ export default function Students() {
   const [mounted, setMounted] = useState(false);
 
   // Active View & Filter states
-  const [activeTab, setActiveTab] = useState('enrolled'); // enrolled | leads | skill | exploring
+  const [activeTab, setActiveTab] = useState('all');
+
+  const handlePaymentStatusChange = async (studentId, newPayment) => {
+    setStudentsData((prev) => ({
+      ...prev,
+      items: prev.items.map((s) => (s.id === studentId ? { ...s, payment: newPayment, access: newPayment } : s)),
+    }));
+    try {
+      await adminAPI.updateStudentPayment(studentId, newPayment);
+    } catch (err) {
+      console.error('Failed to update student payment:', err);
+      loadGlobalStudents();
+    }
+  }; // enrolled | leads | skill | exploring
   const [monthFilter, setMonthFilter] = useState(() => getCurrentMonthValue()); // YYYY-MM or 'all'
   const [accessFilter, setAccessFilter] = useState('all'); // all | paid | college | free
   const [statusFilter, setStatusFilter] = useState('all'); // all | active | completed | expired
@@ -684,8 +697,20 @@ export default function Students() {
               ))}
             </div>
 
-            {/* Navigation Tabs (Enrolled, Leads, Skill, Exploring) */}
+            {/* Navigation Tabs (All Students, Enrolled, Leads, Skill, Exploring) */}
             <div className="flex border-b border-black/10 dark:border-white/10 gap-1 overflow-x-auto">
+              <button
+                onClick={() => setActiveTab('all')}
+                className={`px-3 py-2 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${
+                  activeTab === 'all'
+                    ? 'border-[#3C83F6] text-[#3C83F6] dark:text-[#7fb1ff]'
+                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                <FiUsers className="w-3.5 h-3.5" />
+                All Students
+              </button>
+
               <button
                 onClick={() => setActiveTab('enrolled')}
                 className={`px-3 py-2 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${
@@ -818,7 +843,7 @@ export default function Students() {
                   </div>
                 </div>
 
-                {/* Access Filter */}
+                {/* Payment Filter Dropdown */}
                 <div className="relative min-w-0">
                   <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43]">
                     <select
@@ -826,10 +851,10 @@ export default function Students() {
                       onChange={(e) => setAccessFilter(e.target.value)}
                       className="appearance-none w-full h-8 rounded-xl bg-transparent px-2.5 pr-7 text-xs font-semibold text-slate-800 dark:text-white outline-none cursor-pointer"
                     >
-                      <option className={dropdownOptionClass} value="all">Access: All</option>
+                      <option className={dropdownOptionClass} value="all">Payment: All</option>
                       <option className={dropdownOptionClass} value="paid">Paid</option>
-                      <option className={dropdownOptionClass} value="college">College</option>
-                      <option className={dropdownOptionClass} value="free">Free</option>
+                      <option className={dropdownOptionClass} value="pending">Pending</option>
+                      <option className={dropdownOptionClass} value="failed">Failed</option>
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
                   </div>
@@ -901,14 +926,14 @@ export default function Students() {
                   <table className="w-full text-left text-xs border-collapse">
                     
                     {/* TAB Headers */}
-                    {activeTab === 'enrolled' && (
+                    {(activeTab === 'all' || activeTab === 'enrolled') && (
                       <thead className="sticky top-0 z-10 bg-slate-100/90 dark:bg-[#0b1736]/90 backdrop-blur-md">
                         <tr className="border-b border-black/10 dark:border-white/10 text-[10px] font-bold text-black/40 dark:text-white/40 uppercase tracking-wider whitespace-nowrap">
                           <th className="py-2.5 px-3 w-8"></th>
                           <th className="py-2.5 px-2 w-8">#</th>
                           <th className="py-2.5 px-3 max-w-[220px]">Student</th>
                           <th className="py-2.5 px-3">College</th>
-                          <th className="py-2.5 px-3">Access</th>
+                          <th className="py-2.5 px-3">Payment</th>
                           <th className="py-2.5 px-3">Program</th>
                           <th className="py-2.5 px-3 whitespace-nowrap">Enrolled On</th>
                           <th className="py-2.5 px-3">Status</th>
@@ -941,7 +966,7 @@ export default function Students() {
                           <th className="py-2.5 px-2 w-8">#</th>
                           <th className="py-2.5 px-3 max-w-[220px]">Student</th>
                           <th className="py-2.5 px-3">College</th>
-                          <th className="py-2.5 px-3">Access</th>
+                          <th className="py-2.5 px-3">Payment</th>
                           <th className="py-2.5 px-3">Skill Program</th>
                           <th className="py-2.5 px-3 whitespace-nowrap">Enrolled On</th>
                           <th className="py-2.5 px-3">Status</th>
@@ -1006,20 +1031,31 @@ export default function Students() {
                               </div>
                             </td>
 
-                            {/* ENROLLED TAB COLUMNS */}
-                            {activeTab === 'enrolled' && (
+                            {/* ENROLLED / ALL TAB COLUMNS */}
+                            {(activeTab === 'all' || activeTab === 'enrolled') && (
                               <>
                                 <td className="py-2.5 px-3 font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                   {student.college}
                                 </td>
-                                <td className="py-2.5 px-3">
-                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                    student.access === 'Paid' ? 'bg-[#efe6d2] text-[#d17d00] dark:bg-[#4f4228] dark:text-[#fcd34d]' :
-                                    student.access === 'College' ? 'bg-[#dbe7ff] text-[#3c83f6]' :
-                                    'bg-slate-100 text-slate-700 dark:bg-slate-500/10 dark:text-slate-400'
-                                  }`}>
-                                    {student.access}
-                                  </span>
+                                <td className="py-2.5 px-3" onClick={(e) => e.stopPropagation()}>
+                                  <div className="relative inline-block">
+                                    <select
+                                      value={student.payment || (student.access === 'Paid' ? 'Paid' : 'Pending')}
+                                      onChange={(e) => handlePaymentStatusChange(student.id, e.target.value)}
+                                      className={`appearance-none pr-6 pl-2.5 py-0.5 rounded-full text-[10px] font-bold border outline-none cursor-pointer transition ${
+                                        (student.payment === 'Paid' || student.access === 'Paid')
+                                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                                          : (student.payment === 'Pending')
+                                            ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                            : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                                      }`}
+                                    >
+                                      <option value="Paid">Paid</option>
+                                      <option value="Pending">Pending</option>
+                                      <option value="Failed">Failed</option>
+                                    </select>
+                                    <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 opacity-60" />
+                                  </div>
                                 </td>
                                 <td className="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                   {student.programs.length > 0 ? (
@@ -1082,12 +1118,25 @@ export default function Students() {
                                 <td className="py-2.5 px-4 font-medium text-slate-700 dark:text-slate-300">
                                   {student.college}
                                 </td>
-                                <td className="py-2.5 px-4">
-                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                    student.skillAccess === 'Paid' ? 'bg-[#efe6d2] text-[#d17d00] dark:bg-[#4f4228] dark:text-[#fcd34d]' : 'bg-slate-100 text-slate-700 dark:bg-slate-500/10 dark:text-slate-400'
-                                  }`}>
-                                    {student.skillAccess}
-                                  </span>
+                                <td className="py-2.5 px-4" onClick={(e) => e.stopPropagation()}>
+                                  <div className="relative inline-block">
+                                    <select
+                                      value={student.payment || (student.skillAccess === 'Paid' ? 'Paid' : 'Pending')}
+                                      onChange={(e) => handlePaymentStatusChange(student.id, e.target.value)}
+                                      className={`appearance-none pr-6 pl-2.5 py-0.5 rounded-full text-[10px] font-bold border outline-none cursor-pointer transition ${
+                                        (student.payment === 'Paid' || student.skillAccess === 'Paid')
+                                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                                          : (student.payment === 'Pending')
+                                            ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                            : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                                      }`}
+                                    >
+                                      <option value="Paid">Paid</option>
+                                      <option value="Pending">Pending</option>
+                                      <option value="Failed">Failed</option>
+                                    </select>
+                                    <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 opacity-60" />
+                                  </div>
                                 </td>
                                 <td className="py-2.5 px-4 font-semibold text-slate-700 dark:text-slate-300">
                                   {student.programs.find(p => p.toLowerCase().includes('skill')) || 'Java Full Stack Skill'}

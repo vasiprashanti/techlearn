@@ -37,6 +37,7 @@ import {
   updateBatchAdmin,
   updateCollege,
   updateStudentAdmin,
+  updateStudentPaymentAdmin,
   updateStudentProgramStartDateAdmin,
   resetStudentXpAdmin,
   bulkDeleteBatchesAdmin,
@@ -135,6 +136,7 @@ router.post("/students/bulk-upload", bulkUploadStudentsAdmin);
 router.get("/students/search", searchExistingStudentsAdmin);
 router.get("/students/:studentId", getStudentDetailAdmin);
 router.put("/students/:studentId", updateStudentAdmin);
+router.patch("/students/:studentId/payment", updateStudentPaymentAdmin);
 router.patch("/students/:studentId/programs/:programId/start-date", updateStudentProgramStartDateAdmin);
 router.post("/students/:studentId/reset-xp", resetStudentXpAdmin);
 router.patch("/students/:studentId/remove-batch", removeStudentFromBatchAdmin);

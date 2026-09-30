@@ -466,17 +466,17 @@ export default function Hiring() {
       <main
         className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${
           sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
-        } pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${
+        } pt-20 sm:pt-24 md:pt-28 pb-12 px-3 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${
           mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
         }`}
       >
         <div className="max-w-[1600px] mx-auto space-y-6">
           {/* Header & Stats Cards - Matching Courses Page */}
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h1 className="admin-page-title text-2xl font-bold text-slate-900 dark:text-white">Hiring Management</h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <h1 className="admin-page-title text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">Hiring Management</h1>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1">
                   Manage hiring role categories, job postings, status lifecycles, and user visibility.
                 </p>
               </div>
@@ -491,7 +491,7 @@ export default function Hiring() {
                   });
                   setShowRoleForm(true);
                 }}
-                className="dashboard-primary-btn h-10 px-5 text-xs font-semibold shrink-0 self-start sm:self-auto flex items-center gap-2"
+                className="dashboard-primary-btn h-9 sm:h-10 px-4 sm:px-5 text-xs sm:text-sm font-semibold shrink-0 w-full sm:w-auto flex items-center justify-center gap-2"
               >
                 <FiPlus className="w-4 h-4" />
                 Create Role
@@ -499,59 +499,59 @@ export default function Hiring() {
             </div>
 
             {/* Quick Summary Stat Cards (5 metrics matching Courses Page design) */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
               {/* Total Roles */}
-              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3.5 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
-                  <FiLayers className="w-5 h-5" />
+              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                  <FiLayers className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Total Roles</span>
-                  <span className="text-lg font-bold text-slate-800 dark:text-white">{stats.totalRoles}</span>
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">Total Roles</span>
+                  <span className="text-base sm:text-lg font-bold text-slate-800 dark:text-white">{stats.totalRoles}</span>
                 </div>
               </div>
 
               {/* Active Roles */}
-              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3.5 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                  <FiCheckCircle className="w-5 h-5" />
+              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                  <FiCheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Active Roles</span>
-                  <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{stats.activeRoles}</span>
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">Active Roles</span>
+                  <span className="text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-400">{stats.activeRoles}</span>
                 </div>
               </div>
 
               {/* Draft Roles */}
-              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3.5 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
-                  <FiClock className="w-5 h-5" />
+              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+                  <FiClock className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Draft Roles</span>
-                  <span className="text-lg font-bold text-amber-600 dark:text-amber-400">{stats.draftRoles}</span>
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">Draft Roles</span>
+                  <span className="text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400">{stats.draftRoles}</span>
                 </div>
               </div>
 
               {/* Total Jobs */}
-              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3.5 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
-                  <FiBriefcase className="w-5 h-5" />
+              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
+                  <FiBriefcase className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Total Jobs</span>
-                  <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{stats.totalJobs}</span>
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">Total Jobs</span>
+                  <span className="text-base sm:text-lg font-bold text-indigo-600 dark:text-indigo-400">{stats.totalJobs}</span>
                 </div>
               </div>
 
               {/* Published Jobs */}
-              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3.5 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-teal-500/10 text-teal-500 flex items-center justify-center shrink-0">
-                  <FiCheckCircle className="w-5 h-5" />
+              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3 col-span-2 sm:col-span-1">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-teal-500/10 text-teal-500 flex items-center justify-center shrink-0">
+                  <FiCheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Published Jobs</span>
-                  <span className="text-lg font-bold text-teal-600 dark:text-teal-400">{stats.publishedJobs}</span>
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">Published Jobs</span>
+                  <span className="text-base sm:text-lg font-bold text-teal-600 dark:text-teal-400">{stats.publishedJobs}</span>
                 </div>
               </div>
             </div>
@@ -560,7 +560,7 @@ export default function Hiring() {
           {/* Hiring Categories Section */}
           <section className="space-y-4">
             {/* Toolbar: Status Filter Pills + Search Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center shrink-0">
                   <FiBriefcase className="w-4 h-4 text-[#3C83F6] dark:text-blue-300" />
@@ -569,18 +569,17 @@ export default function Hiring() {
                   <h2 className="text-sm md:text-[15px] font-semibold text-[#0b1b38] dark:text-white">
                     Role Categories & Job Management
                   </h2>
-                  
                 </div>
               </div>
 
-              <div className="flex items-center gap-2.5 self-end sm:self-auto shrink-0 flex-wrap">
+              <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 flex-wrap justify-between sm:justify-end">
                 {/* Status Pills Filter */}
-                <div className="flex items-center rounded-lg border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 p-0.5 text-xs">
+                <div className="flex items-center rounded-lg border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 p-0.5 text-xs overflow-x-auto">
                   {["All", "Published", "Draft", "Archived"].map((st) => (
                     <button
                       key={st}
                       onClick={() => setStatusFilter(st)}
-                      className={`px-2.5 py-1 rounded-md transition font-medium ${
+                      className={`px-2.5 py-1.5 rounded-md transition font-semibold whitespace-nowrap ${
                         statusFilter === st
                           ? "bg-[#3C83F6] text-white shadow-xs"
                           : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
@@ -592,15 +591,24 @@ export default function Hiring() {
                 </div>
 
                 {/* Search Bar */}
-                <div className="relative w-44 sm:w-56">
+                <div className="relative w-full sm:w-56 shrink-0">
                   <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search roles..."
-                    className="w-full h-9 pl-9 pr-3 text-xs rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    className="w-full h-9 pl-9 pr-7 text-xs rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
                   />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      <FiX className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -616,65 +624,65 @@ export default function Hiring() {
                 No role categories match your filter. Click &quot;Create Role&quot; above to add a new category.
               </div>
             ) : (
-              <div className="overflow-auto max-h-[78vh] bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl shadow-xs">
-                <table className="w-full min-w-full table-fixed">
+              <div className="overflow-x-auto overflow-y-auto max-h-[78vh] w-full bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl shadow-xs minimal-scrollbar">
+                <table className="w-full min-w-[860px] border-collapse">
                   <thead>
-                    <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30 select-none">
-                      <th className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[6%] whitespace-nowrap">
+                    <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/70 dark:bg-slate-900/40 select-none">
+                      <th className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-14 whitespace-nowrap">
                         #
                       </th>
                       <th
-                        className="px-3 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[24%] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap"
+                        className="px-4 py-3 text-left text-xs font-semibold text-black/45 dark:text-white/50 min-w-[200px] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap"
                         onClick={() => toggleSort("name")}
                       >
                         Role Category
                         {sortField === "name" && (sortDirection === "asc" ? " ▲" : " ▼")}
                       </th>
-                      <th className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[12%] whitespace-nowrap">
+                      <th className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-28 whitespace-nowrap">
                         Actions
                       </th>
                       <th
-                        className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[10%] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap"
+                        className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-24 cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap"
                         onClick={() => toggleSort("jobs")}
                       >
                         Jobs
                         {sortField === "jobs" && (sortDirection === "asc" ? " ▲" : " ▼")}
                       </th>
                       <th
-                        className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[14%] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap"
+                        className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-32 cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap"
                         onClick={() => toggleSort("status")}
                       >
                         Status
                         {sortField === "status" && (sortDirection === "asc" ? " ▲" : " ▼")}
                       </th>
                       <th
-                        className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[14%] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap"
+                        className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-32 cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap"
                         onClick={() => toggleSort("createdAt")}
                       >
                         Created
                         {sortField === "createdAt" && (sortDirection === "asc" ? " ▲" : " ▼")}
                       </th>
-                      <th className="px-3 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[20%] whitespace-nowrap">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-black/45 dark:text-white/50 min-w-[200px] whitespace-nowrap">
                         Description
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="border-t border-black/5 dark:border-white/10">
+                  <tbody className="divide-y divide-black/5 dark:divide-white/10 text-xs">
                     {filteredRoles.map((role, idx) => (
                       <tr
                         key={role.id}
                         onClick={() => navigate(`/admin/hiring/${role.id}`)}
-                        className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
+                        className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
                       >
                         {/* Index */}
-                        <td className="px-3 py-3 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
+                        <td className="px-3.5 py-3.5 text-center text-slate-400 dark:text-slate-500 tabular-nums whitespace-nowrap">
                           {idx + 1}
                         </td>
 
                         {/* Role Category */}
-                        <td className="px-3 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[12px] sm:text-sm font-semibold text-slate-800 dark:text-white hover:text-blue-600 transition-colors truncate">
+                        <td className="px-4 py-3.5">
+                          <div className="max-w-[240px] truncate">
+                            <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-white hover:text-blue-600 transition-colors">
                               {role.name}
                             </span>
                           </div>
@@ -682,7 +690,7 @@ export default function Hiring() {
 
                         {/* Actions */}
                         <td
-                          className="px-3 py-3 text-center"
+                          className="px-3.5 py-3.5 text-center whitespace-nowrap"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="flex items-center justify-center gap-1.5">
@@ -722,15 +730,15 @@ export default function Hiring() {
                         </td>
 
                         {/* Jobs Count */}
-                        <td className="px-3 py-3 text-center">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
+                        <td className="px-3.5 py-3.5 text-center whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
                             {role.jobs}
                           </span>
                         </td>
 
                         {/* Status (with Dropdown selection) */}
                         <td
-                          className="px-3 py-3 text-center"
+                          className="px-3.5 py-3.5 text-center whitespace-nowrap"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="inline-block relative">
@@ -756,13 +764,15 @@ export default function Hiring() {
                         </td>
 
                         {/* Created Date */}
-                        <td className="px-3 py-3 text-center text-xs text-slate-500 dark:text-slate-400">
+                        <td className="px-3.5 py-3.5 text-center text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
                           {role.createdAt}
                         </td>
 
                         {/* Description */}
-                        <td className="px-3 py-3 text-xs text-slate-500 dark:text-slate-400 truncate">
-                          {role.description || "--"}
+                        <td className="px-4 py-3.5 text-xs text-slate-500 dark:text-slate-400">
+                          <div className="max-w-[260px] truncate" title={role.description || "--"}>
+                            {role.description || "--"}
+                          </div>
                         </td>
                       </tr>
                     ))}

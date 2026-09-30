@@ -13,7 +13,8 @@ import DailyTaskAttempt from "../../models/DailyTaskAttempt.js";
 import DailyChallengeAttempt from "../../models/DailyChallengeAttempt.js";
 import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import Blueprint from "../../models/Blueprint.js";
-import Question from "../../models/Question.js";
+import Questions from "../../models/Questions.js";
+const Question = Questions;
 import Role from "../../models/Role.js";
 import {
   pauseProgramEnrollment,
@@ -112,6 +113,12 @@ const PROGRAM_REPORT_DAYS = 30;
 const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
 const IST_OFFSET_MILLISECONDS = (5 * 60 + 30) * 60 * 1000;
 
+const normalizeList = (values) => [...new Map((Array.isArray(values) ? values : [])
+  .map((value) => String(value || "").trim())
+  .filter(Boolean)
+  .map((value) => [value.toLocaleLowerCase(), value])).values()];
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const getIdString = (value) => {
   const id = value && typeof value === "object" && value._id ? value._id : value;
   return id ? id.toString() : "";
@@ -190,6 +197,8 @@ export const getProgramFormOptions = async (_req, res) => {
     return res.status(500).json({ success: false, message: "Failed to load Program matching options." });
   }
 };
+
+export const getProgramOptionLists = getProgramFormOptions;
 
 const normalizePlacementCategories = (value, { allowLegacyFallback = false } = {}) => {
   const categories = Array.isArray(value)
@@ -568,7 +577,7 @@ export const listPrograms = async (req, res) => {
       limit = 10,
     } = req.query;
 
-    const query = {};
+    const query = { deletedAt: null };
 
     // Search filter
     if (search.trim()) {
@@ -624,7 +633,22 @@ export const listPrograms = async (req, res) => {
       .populate("courseIds", ENTITY_CONFIG.courses.selectFields)
       .lean();
 
-    const programs = rawPrograms.map((p) => ({
+    const programIds = rawPrograms.map((p) => p._id);
+    const enrollments = await ProgramEnrollment.find({ programId: { $in: programIds } })
+      .select('programId studentId')
+      .lean();
+    const enrolledStudentsByProgram = new Map();
+    enrollments.forEach((e) => {
+      const pid = e.programId?.toString();
+      if (!pid) return;
+      if (!enrolledStudentsByProgram.has(pid)) enrolledStudentsByProgram.set(pid, new Set());
+      if (e.studentId) enrolledStudentsByProgram.get(pid).add(e.studentId.toString());
+    });
+
+    const programs = rawPrograms.map((p) => {
+      const enrolledSet = enrolledStudentsByProgram.get(p._id.toString()) || new Set();
+      (p.studentIds || []).forEach((sId) => enrolledSet.add(sId.toString()));
+      return {
       _id: p._id,
       name: p.name,
       description: p.description,
@@ -653,7 +677,7 @@ export const listPrograms = async (req, res) => {
       targetRoles: p.targetRoles || [],
       courseIds: p.courseIds || [],
       primaryCourseId: p.primaryCourseId || null,
-      studentCount: Array.isArray(p.studentIds) ? p.studentIds.length : 0,
+      studentCount: enrolledSet.size,
       batchCount: Array.isArray(p.batchIds) ? p.batchIds.length : 0,
       courseCount: Array.isArray(p.courseIds) ? p.courseIds.length : 0,
       roadmapCount: Array.isArray(p.roadmapIds) ? p.roadmapIds.length : 0,
@@ -662,7 +686,7 @@ export const listPrograms = async (req, res) => {
       projectCount: Array.isArray(p.projectIds) ? p.projectIds.length : 0,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
-    }));
+    };});
 
     res.json({
       success: true,
@@ -679,6 +703,7 @@ export const listPrograms = async (req, res) => {
     res.status(500).json({ success: false, message: error.message || "Failed to fetch programs" });
   }
 };
+
 
 /**
  * POST /api/admin/programs
@@ -697,8 +722,6 @@ export const createProgram = async (req, res) => {
       status,
       visibility,
       pricingType,
-      programFee,
-      pricingPlans,
       availability,
       billingOptions,
       structuredFee,
@@ -707,6 +730,8 @@ export const createProgram = async (req, res) => {
       monthlyTrainerLedFee,
       annualStructuredFee,
       annualTrainerLedFee,
+      programFee,
+      pricingPlans,
       learningGoals,
       placementCategories,
       targetCompanies,
@@ -737,6 +762,14 @@ export const createProgram = async (req, res) => {
         success: false,
         message: "Duration must be a whole number of days or a value such as 30 Days.",
       });
+    }
+
+    const normalizedName = String(name).trim();
+    const duplicate = await Program.findOne({ name: { $regex: `^${escapeRegex(normalizedName)}$`, $options: "i" }, deletedAt: null }).select("_id").lean();
+    if (duplicate) return res.status(409).json({ success: false, message: "A program with this name already exists." });
+    if (!String(description || "").trim()) return res.status(400).json({ success: false, message: "Description is required." });
+    if (normalizedProgramType === "Placement" && (!Array.isArray(targetCompanies) || !targetCompanies.length || !Array.isArray(targetRoles) || !targetRoles.length)) {
+      return res.status(400).json({ success: false, message: "Placement programs require at least one target company and target role." });
     }
 
     const normalizedCourseIds = normalizeCourseIdList(courseIds);
@@ -806,7 +839,7 @@ export const createProgram = async (req, res) => {
     }
 
     const program = new Program({
-      name: name.trim(),
+      name: normalizedName,
       description: (description || "").trim(),
       company: String(company || "").trim(),
       programType: normalizedProgramType,
@@ -816,7 +849,7 @@ export const createProgram = async (req, res) => {
       status: normalizeAdminProgramStatus(status || "Draft"),
       visibility: visibility || "Public",
       pricingType: pricing?.pricingType || pricingType || "Free",
-      billingOptions: pricing?.billingOptions || [],
+      billingOptions: pricing?.billingOptions || (pricingType === "Paid" && Array.isArray(billingOptions) ? billingOptions : []),
       programFee: pricing ? pricing.programFee : pricingType === "Paid" ? parsedFee : 0,
       pricingPlans: pricing ? pricing.pricingPlans : pricingType === "Paid" ? normalizePricingPlans(pricingPlans) : [],
       ...(pricing ? {
@@ -828,7 +861,13 @@ export const createProgram = async (req, res) => {
         monthlyTrainerLedFee: pricing.monthlyTrainerLedFee,
         annualStructuredFee: pricing.annualStructuredFee,
         annualTrainerLedFee: pricing.annualTrainerLedFee,
-      } : {}),
+      } : {
+        availability: availability || "Structured",
+        monthlyStructuredFee: Number(monthlyStructuredFee) || 0,
+        monthlyTrainerLedFee: Number(monthlyTrainerLedFee) || 0,
+        annualStructuredFee: Number(annualStructuredFee) || 0,
+        annualTrainerLedFee: Number(annualTrainerLedFee) || 0,
+      }),
       learningGoals: Array.isArray(learningGoals) ? normalizeProgramSelections(learningGoals) : [],
       placementCategories: placementCategoryResult.categories,
       targetCompanies: normalizeProgramSelections(targetCompanies),
@@ -909,7 +948,28 @@ export const getProgramById = async (req, res) => {
       }
     });
 
-    const baseStudents = (program.studentIds || []).map((student) => ({
+    const existingStudentIds = new Set((program.studentIds || []).map((s) => s._id?.toString()).filter(Boolean));
+    const missingStudentIds = enrollments
+      .map((e) => e.studentId?.toString())
+      .filter((id) => id && !existingStudentIds.has(id));
+
+    let allStudents = [...(program.studentIds || [])];
+    if (missingStudentIds.length > 0) {
+      const extraStudents = await Student.find({ _id: { $in: missingStudentIds } })
+        .select(ENTITY_CONFIG.students.selectFields)
+        .populate({
+          path: 'batchId',
+          select: '_id name startDate expiryDate releaseTime',
+        })
+        .lean();
+      allStudents.push(...extraStudents);
+
+      await Program.findByIdAndUpdate(programId, {
+        $addToSet: { studentIds: { $each: missingStudentIds } },
+      });
+    }
+
+    const baseStudents = allStudents.map((student) => ({
       ...student,
       enrollment: enrollmentByStudentId.get(student._id?.toString()) || null,
     }));
@@ -977,8 +1037,6 @@ export const updateProgram = async (req, res) => {
       status,
       visibility,
       pricingType,
-      programFee,
-      pricingPlans,
       availability,
       billingOptions,
       structuredFee,
@@ -987,6 +1045,8 @@ export const updateProgram = async (req, res) => {
       monthlyTrainerLedFee,
       annualStructuredFee,
       annualTrainerLedFee,
+      programFee,
+      pricingPlans,
       learningGoals,
       placementCategories,
       targetCompanies,
@@ -1108,6 +1168,15 @@ export const updateProgram = async (req, res) => {
     program.primaryCourseId = resolvedPrimaryCourseId;
     if (status !== undefined) program.status = normalizeAdminProgramStatus(status);
     if (visibility !== undefined) program.visibility = visibility;
+    if (availability !== undefined) program.availability = availability;
+    if (billingOptions !== undefined) program.billingOptions = program.pricingType === "Paid" && Array.isArray(billingOptions) ? billingOptions : [];
+    for (const [field, value] of Object.entries({ monthlyStructuredFee, monthlyTrainerLedFee, annualStructuredFee, annualTrainerLedFee })) {
+      if (value !== undefined) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed) || parsed < 0) return res.status(400).json({ success: false, message: `${field} must be a non-negative number.` });
+        program[field] = parsed;
+      }
+    }
     if (learningGoals !== undefined) program.learningGoals = Array.isArray(learningGoals) ? learningGoals : [];
     if (placementCategories !== undefined) {
       const placementCategoryResult = normalizePlacementCategories(placementCategories);
@@ -1204,17 +1273,18 @@ export const deleteProgram = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid program ID format" });
     }
 
-    const program = await Program.findByIdAndDelete(programId);
+    const program = await Program.findOneAndUpdate(
+      { _id: programId, deletedAt: null },
+      { $set: { status: "Archived", deletedAt: new Date(), deletedBy: req.user?._id || null } },
+      { new: true, runValidators: true }
+    );
     if (!program) {
       return res.status(404).json({ success: false, message: "Program not found" });
     }
 
-    await Blueprint.deleteMany({ programId });
-    await deleteProgramPerformance(programId);
-
     res.json({
       success: true,
-      message: "Program deleted successfully (attached resources were preserved)",
+      message: "Program archived successfully. Student history and related records were preserved.",
     });
   } catch (error) {
     console.error("Error deleting program:", error);

@@ -3,6 +3,7 @@ import { protect, isAdmin } from "../middleware/authMiddleware.js";
 import { ADMIN_PERMISSIONS, requireAdminPermission } from "../utils/rbac.js";
 import {
   listPrograms,
+  getProgramOptionLists,
   createProgram,
   getProgramById,
   getProgramDiagnostics,

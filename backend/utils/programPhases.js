@@ -85,8 +85,8 @@ export const buildDefaultProgramPhases = (programType, durationDays) => {
     return [];
   }
 
-  // Keep the established 30-day shape (22/2/4/1/1) for both program types,
-  // while still producing five non-empty contiguous phases for shorter runs.
+  // Keep the requested 30-day shape (22/2/4/1/1) while still producing a
+  // valid contiguous configuration for shorter placement and skill programs.
   const lengths = totalDays >= 9
     ? [totalDays - 8, 2, 4, 1, 1]
     : [1 + (totalDays - 5), 1, 1, 1, 1];

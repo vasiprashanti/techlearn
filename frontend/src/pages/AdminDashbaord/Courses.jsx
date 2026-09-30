@@ -44,11 +44,9 @@ export default function Courses() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [editingCourse, setEditingCourse] = useState(null);
   const navigate = useNavigate();
 
-  // Programs selector state
-  const [programsList, setProgramsList] = useState([]);
-  const [programsLoading, setProgramsLoading] = useState(false);
 
   // Filter tabs and status filters
   const [activeTab, setActiveTab] = useState("All"); // All, Self-Paced, Structured, Trainer-Led
@@ -85,29 +83,6 @@ export default function Courses() {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
-
-  // Fetch available programs for Program Assignment
-  useEffect(() => {
-    async function loadPrograms() {
-      try {
-        setProgramsLoading(true);
-        const res = await adminAPI.getPrograms({ limit: 100 });
-        const list = res?.programs || res?.data || (Array.isArray(res) ? res : []);
-        setProgramsList(
-          list.map((p) => ({
-            id: String(p._id || p.id),
-            name: p.name || "Untitled Program",
-            programType: p.programType || "",
-          }))
-        );
-      } catch (err) {
-        console.error("Failed to load programs:", err);
-      } finally {
-        setProgramsLoading(false);
-      }
-    }
-    loadPrograms();
   }, []);
 
   const toggleCourseSort = (field) => {
@@ -219,18 +194,6 @@ export default function Courses() {
     setFormError("");
   };
 
-  // Program selection handler
-  const handleToggleProgram = (programId) => {
-    setCourseForm((prev) => {
-      const pIdStr = String(programId);
-      const exists = prev.programIds.includes(pIdStr);
-      const nextProgIds = exists
-        ? prev.programIds.filter((id) => id !== pIdStr)
-        : [...prev.programIds, pIdStr];
-      return { ...prev, programIds: nextProgIds };
-    });
-  };
-
   // Banner file handler
   const handleBannerChange = (e) => {
     const file = e.target.files?.[0] || null;
@@ -251,6 +214,7 @@ export default function Courses() {
     setIsOtherSkillSelected(false);
     setCustomSkillInput("");
     setShowForm(false);
+    setEditingCourse(null);
   };
 
   const handleAddCourseSubmit = async (e) => {
@@ -327,7 +291,6 @@ export default function Courses() {
     formData.append("price", String(courseForm.accessType === "Paid" ? courseForm.price : 0));
     formData.append("status", courseForm.status);
     formData.append("numTopics", String(numTopicsVal));
-      formData.append("programIds", JSON.stringify(courseForm.programIds));
     formData.append("learningOutcomes", JSON.stringify(courseForm.learningOutcomes || []));
 
     formData.append("instructor", courseForm.instructor.trim());
@@ -353,7 +316,9 @@ export default function Courses() {
     }
 
     try {
-      const res = await adminAPI.createCourse(formData);
+      const res = editingCourse
+        ? await adminAPI.updateCourse(editingCourse._id, formData)
+        : await adminAPI.createCourse(formData);
       const newCourseId = res?.data?._id || res?._id || res?.courseId || res?.id;
       const searchParams = new URLSearchParams(window.location.search);
       const returnTo = searchParams.get("returnTo");
@@ -380,7 +345,28 @@ export default function Courses() {
       alert("Invalid course ID");
       return;
     }
-    navigate(`/admin/topics/${courseId}`);
+    setEditingCourse(course);
+    setCourseForm({ ...INITIAL_FORM, ...course, title: course.title || "", programIds: [] });
+    setBannerPreview(course.bannerImage || "");
+    setShowForm(true);
+  };
+
+  const handleOpenCourse = (course) => {
+    const courseId = String(course?._id || course?.courseId || course?.id || "");
+    if (courseId) navigate(`/admin/topics/${courseId}`);
+  };
+
+  const handleInlineStatusChange = async (course, status) => {
+    const previous = courses;
+    setCourses((items) => items.map((item) => item._id === course._id ? { ...item, status } : item));
+    try {
+      const body = new FormData();
+      body.append("status", status);
+      await adminAPI.updateCourse(course._id, body);
+    } catch (err) {
+      setCourses(previous);
+      alert(`Could not update status: ${err.message}`);
+    }
   };
 
   const handleDeleteClick = (course) => {
@@ -515,7 +501,7 @@ export default function Courses() {
           <div className="course-form-modal relative w-full max-w-2xl bg-white border border-black/10 dark:bg-[#0a1737] dark:border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-visible">
             <div className="px-5 py-3.5 border-b border-black/10 dark:border-white/10 flex items-center justify-between shrink-0">
               <div>
-                <h2 className="text-lg font-bold text-[#3C83F6] dark:text-[#bceaff]">Add New Course</h2>
+                <h2 className="text-lg font-bold text-[#3C83F6] dark:text-[#bceaff]">{editingCourse ? "Edit Course" : "Add New Course"}</h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Configure course curriculum metadata, pricing, skills and program assignment.
                 </p>
@@ -830,46 +816,6 @@ export default function Courses() {
                     />
                   </div>
 
-                  {/* Program Assignment (Replaces Direct Batch Assignment) */}
-                  <div className="sm:col-span-2">
-                    <label className="admin-micro-label text-black/50 dark:text-white/50 font-semibold">
-                      Program Assignment
-                    </label>
-                    <p className="text-[11px] text-slate-400 mb-1.5">
-                      Assign this course to one or more Programs. Batches and learners inherit access through their Program.
-                    </p>
-                    <div className="h-32 overflow-y-auto rounded-xl border border-black/10 dark:border-white/15 bg-[#f5f8fc] dark:bg-[#0f1f43] p-2 space-y-1 minimal-scrollbar">
-                      {programsLoading ? (
-                        <p className="px-2 py-3 text-xs text-slate-400">Loading programs...</p>
-                      ) : programsList.length === 0 ? (
-                        <p className="px-2 py-3 text-xs text-slate-400">No programs found.</p>
-                      ) : (
-                        programsList.map((prog) => {
-                          const checked = courseForm.programIds.includes(prog.id);
-                          return (
-                            <label
-                              key={prog.id}
-                              className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => handleToggleProgram(prog.id)}
-                                className="rounded border-slate-300 text-[#3C83F6]"
-                              />
-                              <div className="flex-1 truncate">
-                                <span className="font-semibold">{prog.name}</span>
-                                {prog.programType && (
-                                  <span className="ml-2 text-[10px] text-slate-400">({prog.programType})</span>
-                                )}
-                              </div>
-                            </label>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-
                   {/* Trainer Information */}
                   <div>
                     <label className="admin-micro-label text-black/50 dark:text-white/50 font-semibold">
@@ -986,7 +932,7 @@ export default function Courses() {
                   disabled={saving}
                   className="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70 transition-colors"
                 >
-                  {saving ? "Creating Course..." : "Create Course"}
+                  {saving ? "Saving..." : editingCourse ? "Save Changes" : "Create Course"}
                 </button>
               </div>
             </form>
@@ -1042,17 +988,17 @@ export default function Courses() {
       <main
         className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${
           sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
-        } pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${
+        } pt-20 sm:pt-24 md:pt-28 pb-12 px-3 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${
           mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
         }`}
       >
         <div className="max-w-[1600px] mx-auto space-y-6">
           {/* Header & Stats Cards */}
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h1 className="admin-page-title text-2xl font-bold">Course Management</h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <h1 className="admin-page-title text-xl sm:text-2xl md:text-3xl font-bold">Course Management</h1>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1">
                   Manage curriculum tracks, delivery modes, pricing tiers, and program assignments.
                 </p>
               </div>
@@ -1060,9 +1006,11 @@ export default function Courses() {
               <button
                 onClick={() => {
                   setCourseForm(INITIAL_FORM);
+                  setEditingCourse(null);
+                  setBannerPreview("");
                   setShowForm(true);
                 }}
-                className="dashboard-primary-btn h-10 px-5 text-xs font-semibold shrink-0 self-start sm:self-auto flex items-center gap-2"
+                className="dashboard-primary-btn h-9 sm:h-10 px-4 sm:px-5 text-xs sm:text-sm font-semibold shrink-0 w-full sm:w-auto flex items-center justify-center gap-2"
               >
                 <FiPlus className="w-4 h-4" />
                 Add New Course
@@ -1070,44 +1018,44 @@ export default function Courses() {
             </div>
 
             {/* Quick Summary Stat Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3.5 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
-                  <FiLayers className="w-5 h-5" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                  <FiLayers className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Total Tracks</span>
-                  <span className="text-lg font-bold text-slate-800 dark:text-white">{stats.total}</span>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3.5 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                  <FiCheckCircle className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Published</span>
-                  <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{stats.published}</span>
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">Total Tracks</span>
+                  <span className="text-base sm:text-lg font-bold text-slate-800 dark:text-white">{stats.total}</span>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3.5 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
-                  <FiClock className="w-5 h-5" />
+              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                  <FiCheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Drafts</span>
-                  <span className="text-lg font-bold text-amber-600 dark:text-amber-400">{stats.drafts}</span>
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">Published</span>
+                  <span className="text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-400">{stats.published}</span>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3.5 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
-                  <FiDollarSign className="w-5 h-5" />
+              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+                  <FiClock className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Paid Tracks</span>
-                  <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{stats.paid}</span>
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">Drafts</span>
+                  <span className="text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400">{stats.drafts}</span>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
+                  <FiDollarSign className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">Paid Tracks</span>
+                  <span className="text-base sm:text-lg font-bold text-indigo-600 dark:text-indigo-400">{stats.paid}</span>
                 </div>
               </div>
             </div>
@@ -1115,14 +1063,14 @@ export default function Courses() {
 
           {/* Filter Bar & Tabs */}
           <section className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
               {/* Delivery Type Tabs */}
-              <div className="flex border-b border-black/10 dark:border-white/10 gap-2 overflow-x-auto minimal-scrollbar">
+              <div className="flex border-b border-black/10 dark:border-white/10 gap-2 overflow-x-auto minimal-scrollbar max-w-full pb-0.5">
                 {["All", "Self-Paced", "Structured", "Trainer-Led"].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                    className={`px-3 sm:px-4 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
                       activeTab === tab
                         ? "border-[#3C83F6] text-[#3C83F6] dark:text-blue-400"
                         : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
@@ -1134,14 +1082,14 @@ export default function Courses() {
               </div>
 
               {/* Status Filter Pills & Search */}
-              <div className="flex items-center gap-2.5 self-end sm:self-auto shrink-0 flex-wrap">
+              <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 flex-wrap justify-between sm:justify-end">
                 {/* Status Pills */}
-                <div className="flex items-center rounded-lg border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 p-0.5 text-xs">
+                <div className="flex items-center rounded-lg border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 p-0.5 text-xs overflow-x-auto">
                   {["All", "Draft", "Published", "Archived"].map((st) => (
                     <button
                       key={st}
                       onClick={() => setStatusFilter(st)}
-                      className={`px-2.5 py-1 rounded-md transition font-medium ${
+                      className={`px-2.5 py-1.5 rounded-md transition font-semibold whitespace-nowrap ${
                         statusFilter === st
                           ? "bg-[#3C83F6] text-white shadow-xs"
                           : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
@@ -1153,14 +1101,14 @@ export default function Courses() {
                 </div>
 
                 {/* Search Bar */}
-                <div className="relative w-44 sm:w-56">
+                <div className="relative w-full sm:w-56 shrink-0">
                   <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search title, skills..."
-                    className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    className="w-full h-9 pl-9 pr-3 text-xs rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
                   />
                 </div>
               </div>
@@ -1177,35 +1125,34 @@ export default function Courses() {
                 No courses match the selected filters. Click &ldquo;Add New Course&rdquo; above to create one.
               </div>
             ) : (
-              <div className="overflow-auto max-h-[75vh] bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl shadow-xs">
-                {/* Desktop View Table */}
-                <table className="hidden md:table w-full table-fixed">
+              <div className="max-h-[78vh] overflow-x-auto overflow-y-auto w-full bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl shadow-xs minimal-scrollbar">
+                <table className="w-full min-w-[980px] border-collapse">
                   <thead>
-                    <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/70 dark:bg-slate-900/40 select-none text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                      <th className="px-3 py-3 text-center w-[5%]">#</th>
+                    <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/70 dark:bg-slate-900/40 select-none">
+                      <th className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-14 whitespace-nowrap">#</th>
                       <th
-                        className="px-3 py-3 text-left w-[22%] cursor-pointer hover:text-blue-500"
+                        className="px-4 py-3 text-left text-xs font-semibold text-black/45 dark:text-white/50 min-w-[220px] cursor-pointer hover:text-blue-500 whitespace-nowrap"
                         onClick={() => toggleCourseSort("title")}
                       >
                         Course Title {courseSortField === "title" && (courseSortDirection === "asc" ? "▲" : "▼")}
                       </th>
-                      <th className="px-3 py-3 text-center w-[12%]">Actions</th>
-                      <th className="px-3 py-3 text-left w-[18%]">Skills</th>
+                      <th className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-28 whitespace-nowrap">Actions</th>
                       <th
-                        className="px-3 py-3 text-center w-[10%] cursor-pointer hover:text-blue-500"
-                        onClick={() => toggleCourseSort("level")}
-                      >
-                        Level {courseSortField === "level" && (courseSortDirection === "asc" ? "▲" : "▼")}
-                      </th>
-                      <th className="px-3 py-3 text-center w-[10%]">Delivery</th>
-                      <th className="px-3 py-3 text-center w-[9%]">Price</th>
-                      <th className="px-3 py-3 text-center w-[8%]">Status</th>
-                      <th
-                        className="px-3 py-3 text-center w-[6%] cursor-pointer hover:text-blue-500"
+                        className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-24 cursor-pointer hover:text-blue-500 whitespace-nowrap"
                         onClick={() => toggleCourseSort("topics")}
                       >
                         Topics {courseSortField === "topics" && (courseSortDirection === "asc" ? "▲" : "▼")}
                       </th>
+                      <th className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-32 whitespace-nowrap">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-black/45 dark:text-white/50 min-w-[180px] whitespace-nowrap">Skills</th>
+                      <th
+                        className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-28 cursor-pointer hover:text-blue-500 whitespace-nowrap"
+                        onClick={() => toggleCourseSort("level")}
+                      >
+                        Level {courseSortField === "level" && (courseSortDirection === "asc" ? "▲" : "▼")}
+                      </th>
+                      <th className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-32 whitespace-nowrap">Mode</th>
+                      <th className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-28 whitespace-nowrap">Price</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/5 dark:divide-white/10 text-xs">
@@ -1214,11 +1161,15 @@ export default function Courses() {
                       return (
                         <tr
                           key={course._id}
-                          className="hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors"
+                          onClick={() => handleOpenCourse(course)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(event) => { if (event.key === "Enter") handleOpenCourse(course); }}
+                          className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
                         >
-                          <td className="px-3 py-3 text-center text-slate-400 font-semibold">{index + 1}</td>
-                          <td className="px-3 py-3 font-semibold text-slate-800 dark:text-white truncate" title={course.title}>
-                            <div className="flex items-center gap-2">
+                          <td className="px-3.5 py-3.5 text-center text-slate-400 dark:text-slate-500 tabular-nums whitespace-nowrap">{index + 1}</td>
+                          <td className="px-4 py-3.5 font-semibold text-slate-800 dark:text-white">
+                            <div className="flex items-center gap-2 max-w-[260px]">
                               {course.bannerImage ? (
                                 <img
                                   src={course.bannerImage}
@@ -1230,29 +1181,53 @@ export default function Courses() {
                                   <FiBookOpen className="w-4 h-4" />
                                 </div>
                               )}
-                              <span className="truncate">{course.title}</span>
+                              <span className="truncate" title={course.title}>{course.title}</span>
                             </div>
                           </td>
-                          <td className="px-3 py-3 text-center">
+                          <td className="px-3.5 py-3.5 text-center whitespace-nowrap" onClick={(event) => event.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1.5">
                               <button
                                 onClick={() => handleEdit(course)}
-                                className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 text-slate-500 dark:text-slate-400"
-                                title="Edit Course Details & Topics"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/10 transition"
+                                title="Edit Course"
                               >
                                 <FiEdit2 className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => handleDeleteClick(course)}
-                                className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10 text-slate-500 dark:text-slate-400"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition"
                                 title="Delete Course"
                               >
                                 <FiTrash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </td>
-                          <td className="px-3 py-3">
-                            <div className="flex flex-wrap gap-1 max-h-12 overflow-hidden">
+                          <td className="px-3.5 py-3.5 text-center whitespace-nowrap font-semibold text-slate-700 dark:text-slate-300">
+                            {course.topics}
+                          </td>
+                          <td className="px-3.5 py-3.5 text-center whitespace-nowrap" onClick={(event) => event.stopPropagation()}>
+                            <div className="inline-block relative">
+                              <select
+                                aria-label={`Status for ${course.title}`}
+                                value={course.status || "Draft"}
+                                onChange={(event) => handleInlineStatusChange(course, event.target.value)}
+                                className={`appearance-none pr-6 px-2.5 py-1 rounded-lg text-[11px] font-semibold border outline-none cursor-pointer transition ${
+                                  course.status === "Published"
+                                    ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
+                                    : course.status === "Draft"
+                                    ? "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800"
+                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700"
+                                }`}
+                              >
+                                <option value="Draft">Draft</option>
+                                <option value="Published">Published</option>
+                                <option value="Archived">Archived</option>
+                              </select>
+                              <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 opacity-60" />
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <div className="flex flex-wrap gap-1 max-w-[200px]">
                               {course.skills && course.skills.length > 0 ? (
                                 course.skills.slice(0, 3).map((sk) => (
                                   <span
@@ -1272,117 +1247,26 @@ export default function Courses() {
                               )}
                             </div>
                           </td>
-                          <td className="px-3 py-3 text-center">
+                          <td className="px-3.5 py-3.5 text-center whitespace-nowrap">
                             <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#d6e6f4] dark:bg-[#21446f] text-[#0f2b54] dark:text-blue-200">
                               {course.level || "Beginner"}
                             </span>
                           </td>
-                          <td className="px-3 py-3 text-center font-medium text-slate-600 dark:text-slate-300">
+                          <td className="px-3.5 py-3.5 text-center whitespace-nowrap font-medium text-slate-600 dark:text-slate-300">
                             {course.deliveryType || "Self-Paced"}
                           </td>
-                          <td className="px-3 py-3 text-center font-semibold">
+                          <td className="px-3.5 py-3.5 text-center whitespace-nowrap font-semibold">
                             {isFree ? (
                               <span className="text-emerald-600 dark:text-emerald-400">Free</span>
                             ) : (
                               <span className="text-slate-800 dark:text-white">₹{course.price}</span>
                             )}
                           </td>
-                          <td className="px-3 py-3 text-center">
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                course.status === "Published"
-                                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                                  : course.status === "Archived"
-                                  ? "bg-slate-500/15 text-slate-600 dark:text-slate-400"
-                                  : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                              }`}
-                            >
-                              {course.status || "Draft"}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 text-center font-semibold text-slate-700 dark:text-slate-300">
-                            {course.topics}
-                          </td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
-
-                {/* Mobile View: Two-Row Layout */}
-                <div className="md:hidden divide-y divide-black/5 dark:divide-white/10">
-                  {filteredCourses.map((course, idx) => {
-                    const isFree = course.accessType === "Free" || Number(course.price) === 0;
-                    return (
-                      <div key={course._id} className="p-4 space-y-2.5">
-                        {/* Row 1: Number, Title, Actions */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 truncate">
-                            <span className="text-xs font-bold text-slate-400">#{idx + 1}</span>
-                            <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                              {course.title}
-                            </h3>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              onClick={() => handleEdit(course)}
-                              className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                              title="Edit"
-                            >
-                              <FiEdit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteClick(course)}
-                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30"
-                              title="Delete"
-                            >
-                              <FiTrash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Row 2: Level, Skills, Topics, Delivery Type, Price, Status */}
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-                          <span className="px-2 py-0.5 rounded-full font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
-                            {course.level}
-                          </span>
-                          <span className="font-medium text-slate-600 dark:text-slate-300">
-                            {course.deliveryType}
-                          </span>
-                          <span>•</span>
-                          <span>{course.topics} Topics</span>
-                          <span>•</span>
-                          <span className="font-semibold text-slate-800 dark:text-white">
-                            {isFree ? "Free" : `₹${course.price}`}
-                          </span>
-                          <span
-                            className={`px-2 py-0.5 rounded-full font-bold ml-auto text-[10px] ${
-                              course.status === "Published"
-                                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                                : course.status === "Archived"
-                                ? "bg-slate-500/15 text-slate-600 dark:text-slate-400"
-                                : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                            }`}
-                          >
-                            {course.status || "Draft"}
-                          </span>
-                        </div>
-                        {course.skills && course.skills.length > 0 && (
-                          <div className="flex flex-wrap gap-1 pt-1">
-                            {course.skills.map((sk) => (
-                              <span
-                                key={sk}
-                                className="px-2 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-                              >
-                                {sk}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
               </div>
             )}
           </section>

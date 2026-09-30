@@ -4,8 +4,6 @@ import { useTheme } from '../../context/ThemeContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 import { adminAPI } from '../../services/adminApi';
-import { STANDARD_COURSE_SKILLS } from '../../constants/courseSkills';
-import { ONBOARDING_COMPANY_OPTIONS } from '../../constants/onboardingCompanies';
 import {
   FiSearch,
   FiPlus,
@@ -20,26 +18,16 @@ import {
   FiGrid,
   FiCheckSquare,
   FiMoreHorizontal,
+  FiCheckCircle,
+  FiAlertCircle,
+  FiClock,
+  FiLayers,
 } from 'react-icons/fi';
 
-const PROGRAM_TYPES = [
-  { value: 'Placement', label: 'Placement Programs' },
-  { value: 'Skill', label: 'Skill Programs' },
-];
-const PROGRAM_STATUS_TABS = [
-  { value: '', label: 'All' },
-  { value: 'Active', label: 'Published' },
-  { value: 'Draft', label: 'Draft' },
-  { value: 'Archived', label: 'Archived' },
-];
-const PROGRAM_AVAILABILITIES = ['Structured', 'Trainer-Led', 'Both'];
-const PROGRAM_BILLING_OPTIONS = ['Monthly', 'Annual'];
-const DURATION_UNITS = ['Days', 'Weeks', 'Months', 'Years'];
+const PROGRAM_TYPES = ['Placement', 'Skill'];
 
-const PHASE_TYPES_BY_PROGRAM_TYPE = {
-  Placement: ['learning', 'revision', 'company_preparation', 'mock_interview', 'final_assessment'],
-  Skill: ['learning', 'revision', 'company_preparation', 'mock_interview', 'final_assessment'],
-};
+const PHASE_TYPES = ['learning', 'revision', 'company_preparation', 'mock_interview', 'final_assessment'];
+const PHASE_TYPES_BY_PROGRAM_TYPE = { Placement: PHASE_TYPES, Skill: PHASE_TYPES };
 
 const PHASE_LABELS = {
   learning: 'Learning',
@@ -48,6 +36,34 @@ const PHASE_LABELS = {
   mock_interview: 'Mock Interview',
   final_assessment: 'Final Assessment',
 };
+
+const PLACEMENT_CATEGORIES = ['On-Campus', 'Off-Campus', 'Both'];
+const LEARNING_GOALS = ['Get Placed', 'Learn New Skills', 'Exploring TechLearn'];
+
+const getDefaultPricingPlans = (programType) => programType === 'Skill'
+  ? [
+      { key: 'skill-basic', title: 'Skill Program', price: '399', benefitsText: 'Recorded videos, 1 live doubt session' },
+      { key: 'skill-pro', title: 'Skill Program Pro', price: '699', benefitsText: 'Recorded videos, 1 live doubt session' },
+    ]
+  : [
+      { key: 'placement-basic', title: 'Placement Program', price: '799', benefitsText: 'Recorded videos, Live sessions' },
+      { key: 'placement-pro', title: 'Placement Program Pro', price: '1199', benefitsText: 'Recorded videos, Live sessions' },
+    ];
+
+const SKILL_TAG_OPTIONS = [
+  'Java',
+  'Python',
+  'JavaScript',
+  'TypeScript',
+  'React',
+  'Node.js',
+  'HTML/CSS',
+  'SQL',
+  'DSA',
+  'Aptitude',
+  'System Design',
+  'Cloud',
+];
 
 const parseDurationDays = (value) => {
   const match = String(value || '').match(/(\d+(?:\.\d+)?)\s*-?\s*(day|days|week|weeks|month|months|year|years)/i);
@@ -64,40 +80,47 @@ const parseDurationDays = (value) => {
   return Math.round(amount * multiplier);
 };
 
-const parseDurationParts = (value) => {
-  const match = String(value || '').match(/(\d+(?:\.\d+)?)\s*-?\s*(day|days|week|weeks|month|months|year|years)/i);
-  if (!match) return null;
-  const unitKey = match[2].toLowerCase();
-  const unit = unitKey.startsWith('year') ? 'Years' : unitKey.startsWith('month') ? 'Months' : unitKey.startsWith('week') ? 'Weeks' : 'Days';
-  return { value: match[1], unit };
-};
-
-const durationDaysFromParts = (value, unit) => {
-  const amount = Number(value);
-  const multiplier = unit === 'Years' ? 365 : unit === 'Months' ? 30 : unit === 'Weeks' ? 7 : 1;
-  return Number.isFinite(amount) ? Math.round(amount * multiplier) : NaN;
-};
-
-const uniqueOptions = (values) => {
-  const byKey = new Map();
-  for (const value of values || []) {
-    const label = String(value || '').trim();
-    if (label && !byKey.has(label.toLocaleLowerCase())) byKey.set(label.toLocaleLowerCase(), label);
-  }
-  return [...byKey.values()].sort((a, b) => a.localeCompare(b));
-};
-
-const getProgramStatusLabel = (status) => status === 'Active' || status === 'Published' ? 'Published' : status;
-
 const getMinimumDurationDays = () => 5;
+
+const normalizeSearchString = (str) => String(str || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+const validatePhaseCoverage = (phases, totalDays) => {
+  if (!totalDays || totalDays <= 0) return { valid: false, message: 'Duration must be greater than 0.' };
+  if (!phases || !phases.length) return { valid: false, message: 'Phases must be configured.' };
+  let expectedStart = 1;
+  for (let i = 0; i < phases.length; i++) {
+    const p = phases[i];
+    const s = Number(p.startDay);
+    const e = Number(p.endDay);
+    const name = PHASE_LABELS[p.phase] || p.phase;
+    if (!Number.isInteger(s) || !Number.isInteger(e) || s < 1 || e < 1) {
+      return { valid: false, message: `${name}: Start and End must be positive whole numbers.` };
+    }
+    if (s > e) {
+      return { valid: false, message: `${name}: Start Day (${s}) cannot exceed End Day (${e}).` };
+    }
+    if (s < expectedStart) {
+      return { valid: false, message: `Overlap: ${name} starts on Day ${s}, but previous phase ends on Day ${expectedStart - 1}.` };
+    }
+    if (s > expectedStart) {
+      return { valid: false, message: `Gap: Days ${expectedStart} to ${s - 1} are not covered before ${name}.` };
+    }
+    expectedStart = e + 1;
+  }
+  if (expectedStart - 1 !== totalDays) {
+    return { valid: false, message: `Phases end at Day ${expectedStart - 1}, but total duration is ${totalDays} Days.` };
+  }
+  return { valid: true, message: `Phases cover all ${totalDays} days exactly once (no gaps or overlaps).` };
+};
 
 const getDefaultPhases = (programType, value) => {
   const durationDays = Number(value);
   if (!Number.isInteger(durationDays) || durationDays < getMinimumDurationDays(programType)) return [];
 
-  const lengths = durationDays >= 9
-    ? [durationDays - 8, 2, 4, 1, 1]
-    : [1 + (durationDays - 5), 1, 1, 1, 1];
+  const baseLengths = programType === 'Placement' ? [Math.max(1, durationDays - 8), 2, 4, 1, 1] : [Math.max(1, durationDays - 4), 1, 1, 1, 1];
+  const lengths = [...baseLengths];
+  const total = lengths.reduce((sum, item) => sum + item, 0);
+  lengths[0] += durationDays - total;
   let nextStartDay = 1;
 
   return PHASE_TYPES_BY_PROGRAM_TYPE[programType].map((phase, index) => {
@@ -125,121 +148,27 @@ const getProgramType = (value) => {
 };
 
 const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
+const parseCommaString = (str) => (str || '').split(',').map((item) => item.trim()).filter(Boolean);
 
 const statusBadgeClass = (status) => {
-  if (status === 'Active' || status === 'Published') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
+  if (status === 'Published') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
   if (status === 'Draft') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300';
   if (status === 'Archived') return 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300';
   return 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300';
 };
-
-const roadmapChipColors = [
-  'bg-[#e6f2ff] text-[#3d638c]',
-  'bg-[#eee7ff] text-[#6c5b93]',
-  'bg-[#e4f5e9] text-[#347555]',
-  'bg-[#fff0d7] text-[#95672a]',
-  'bg-[#def2f3] text-[#347678]',
-  'bg-[#f2e3f5] text-[#855387]',
-  'bg-[#e4efff] text-[#3f6390]',
-  'bg-[#ffe4e5] text-[#a25e62]',
-];
-
-function ProgramChipSelect({ label, placeholder, options, selected, isDarkMode, onToggle }) {
-  const [search, setSearch] = useState('');
-  const availableOptions = uniqueOptions([...(selected || []), ...(options || [])]);
-  const visibleOptions = availableOptions.filter((option) => option.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
-  return (
-    <fieldset>
-      <legend className="admin-micro-label text-black/45 dark:text-white/45">{label}</legend>
-      <input
-        type="search"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder={placeholder}
-        className={`${programFormInputClass} mt-1`}
-      />
-      <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={label}>
-        {visibleOptions.length ? visibleOptions.map((option, index) => {
-          const isSelected = selected.some((item) => item.toLocaleLowerCase() === option.toLocaleLowerCase());
-          return (
-            <button
-              key={option}
-              type="button"
-              aria-pressed={isSelected}
-              onClick={() => onToggle(option)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3C83F6] ${isSelected
-                ? 'border-[#3C83F6] bg-[#3C83F6] text-white shadow-sm'
-                : `${roadmapChipColors[index % roadmapChipColors.length]} ${isDarkMode ? 'border-white/25' : 'border-black/10'} hover:border-[#3C83F6]/50`}`}
-            >
-              {option}
-            </button>
-          );
-        }) : <p className="py-1 text-xs text-slate-500 dark:text-slate-400">No matching options.</p>}
-      </div>
-      {selected.length > 0 && <p className="mt-1.5 text-[10px] text-black/40 dark:text-white/40">{selected.length} selected</p>}
-    </fieldset>
-  );
-}
-
-function ProgramCourseSelect({ courses, selectedIds, onToggle }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const selectedCourses = courses.filter((course) => selectedIds.includes(String(course._id)));
-  const visibleCourses = courses.filter((course) => (
-    `${course.title || ''} ${course.level || ''}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())
-  ));
-
-  return (
-    <div className="relative">
-      <label className="admin-micro-label text-black/45 dark:text-white/45">Attach Course</label>
-      <button type="button" onClick={() => setIsOpen((open) => !open)} aria-expanded={isOpen} className="relative mt-1 flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border border-black/10 bg-white/85 px-3 py-2 text-left text-sm font-medium text-slate-800 shadow-[0_4px_14px_rgba(15,23,42,0.06)] outline-none transition-all hover:bg-white dark:border-white/15 dark:bg-[#0f1f43] dark:text-white dark:hover:bg-[#162a52]">
-        <span className={selectedCourses.length ? 'truncate text-slate-800 dark:text-white' : 'text-black/35 dark:text-white/40'}>
-          {selectedCourses.length ? `${selectedCourses.length} course${selectedCourses.length === 1 ? '' : 's'} selected` : 'Select courses to attach'}
-        </span>
-        <FiChevronDown className="h-4 w-4 shrink-0 text-black/45 dark:text-white/60" />
-      </button>
-      {selectedCourses.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {selectedCourses.map((course) => (
-            <span key={course._id} className="inline-flex items-center gap-1 rounded-full border border-[#3C83F6]/25 bg-[#3C83F6]/10 px-2.5 py-1 text-[11px] font-medium text-[#245ca8] dark:text-[#bceaff]">
-              {course.title}
-              <button type="button" aria-label={`Remove ${course.title}`} onClick={() => onToggle(String(course._id))} className="ml-0.5 text-current opacity-70 hover:opacity-100">×</button>
-            </span>
-          ))}
-        </div>
-      )}
-      {isOpen && (
-        <div className="absolute left-0 right-0 z-30 mt-2 rounded-xl border border-black/10 bg-white p-2 shadow-xl dark:border-white/15 dark:bg-[#0f1f43]">
-          <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search courses..." className={`${programFormInputClass} mb-2`} />
-          <div className="max-h-56 overflow-y-auto">
-            {visibleCourses.length ? visibleCourses.map((course) => {
-              const id = String(course._id);
-              const checked = selectedIds.includes(id);
-              return (
-                <button key={id} type="button" aria-pressed={checked} onClick={() => onToggle(id)} className={`flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left transition ${checked ? 'bg-[#3C83F6]/10' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>
-                  <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] ${checked ? 'border-[#3C83F6] bg-[#3C83F6] text-white' : 'border-slate-400 dark:border-white/40'}`}>{checked ? '✓' : ''}</span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium text-slate-800 dark:text-white">{course.title}</span>
-                    <span className="block text-[10px] text-slate-500 dark:text-slate-400">{[course.level, course.numTopics ? `${course.numTopics} topics` : ''].filter(Boolean).join(' · ')}</span>
-                  </span>
-                </button>
-              );
-            }) : <p className="px-2.5 py-3 text-xs text-slate-500 dark:text-slate-400">No courses match your search.</p>}
-          </div>
-          {courses.length === 0 && <p className="px-2.5 py-2 text-xs text-slate-500 dark:text-slate-400">Create courses in Admin → Courses first.</p>}
-        </div>
-      )}
-    </div>
-  );
-}
-
-const programFormInputClass = 'mt-1 w-full rounded-xl border border-black/10 bg-white/85 px-3 py-2.5 text-sm font-medium text-slate-800 shadow-[0_4px_14px_rgba(15,23,42,0.06)] outline-none transition-all placeholder:text-black/35 focus:border-[#3C83F6]/50 focus:ring-2 focus:ring-[#3C83F6]/20 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white dark:placeholder:text-white/35';
 
 export default function Programs() {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -248,14 +177,14 @@ export default function Programs() {
 
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [selectedType, setSelectedType] = useState(searchParams.get('programType') || '');
-  const initialStatus = searchParams.get('status') || '';
-  const [selectedStatus, setSelectedStatus] = useState(initialStatus === 'Published' ? 'Active' : initialStatus);
+  const [selectedStatus, setSelectedStatus] = useState(searchParams.get('status') || '');
   const [selectedMonth] = useState(searchParams.get('month') || '');
   const [sortBy] = useState('createdAt');
   const [sortOrder] = useState('desc');
 
   // Bulk Selection State
   const [selectedProgramIds, setSelectedProgramIds] = useState([]);
+  const [selectionMode, setSelectionMode] = useState(false);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
@@ -263,40 +192,52 @@ export default function Programs() {
   const [editingProgram, setEditingProgram] = useState(null);
   const [modalError, setModalError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [formOptions, setFormOptions] = useState({
-    skillTags: STANDARD_COURSE_SKILLS,
-    targetCompanies: ONBOARDING_COMPANY_OPTIONS,
-    targetRoles: [],
-    courses: [],
-  });
+  const [skillSearch, setSkillSearch] = useState('');
+  const [skillDropdownOpen, setSkillDropdownOpen] = useState(false);
+  const [otherSkillDraft, setOtherSkillDraft] = useState('');
+
+  const [companySearch, setCompanySearch] = useState('');
+  const [companyDropdownOpen, setCompanyDropdownOpen] = useState(false);
+  const [otherCompanyDraft, setOtherCompanyDraft] = useState('');
+
+  const [roleSearch, setRoleSearch] = useState('');
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const [otherRoleDraft, setOtherRoleDraft] = useState('');
+  const [programOptions, setProgramOptions] = useState({ skills: [], companies: [], roles: [] });
 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     programType: 'Placement',
-    durationValue: '30',
-    durationUnit: 'Days',
     durationDays: '30',
+    durationUnit: 'Days',
     phases: getDefaultPhases('Placement', 30),
     status: 'Draft',
     visibility: 'Public',
-    availability: 'Structured',
     pricingType: 'Free',
+    availability: 'Structured',
     billingOptions: [],
-    monthlyStructuredFee: '',
-    monthlyTrainerLedFee: '',
-    annualStructuredFee: '',
-    annualTrainerLedFee: '',
+    monthlyStructuredFee: '0',
+    monthlyTrainerLedFee: '0',
+    annualStructuredFee: '0',
+    annualTrainerLedFee: '0',
+    programFee: '0',
+    pricingPlans: getDefaultPricingPlans('Placement'),
+    learningGoalsText: '',
+    placementCategory: 'Both',
     targetCompanies: [],
-    company: '',
     skillTags: [],
     targetRoles: [],
-    courseIds: [],
-    primaryCourseId: '',
   });
 
   const [programToDelete, setProgramToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    adminAPI.getProgramOptions().then((response) => {
+      if (response?.success) setProgramOptions({ skills: response.skills || [], companies: response.companies || [], roles: response.roles || [] });
+    }).catch(() => {});
+  }, []);
 
   const fetchPrograms = useCallback(async () => {
     try {
@@ -331,24 +272,6 @@ export default function Programs() {
     fetchPrograms();
   }, [fetchPrograms]);
 
-  useEffect(() => {
-    let mounted = true;
-    adminAPI.getProgramFormOptions()
-      .then((options) => {
-        if (!mounted) return;
-        setFormOptions({
-          skillTags: uniqueOptions([...STANDARD_COURSE_SKILLS, ...(options?.skillTags || [])]),
-          targetCompanies: ONBOARDING_COMPANY_OPTIONS,
-          targetRoles: uniqueOptions(options?.targetRoles || []),
-          courses: Array.isArray(options?.courses) ? options.courses : [],
-        });
-      })
-      .catch((optionsError) => {
-        console.error('Unable to load Program matching options:', optionsError);
-      });
-    return () => { mounted = false; };
-  }, []);
-
   const handleSelectToggle = (id) => {
     setSelectedProgramIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
@@ -357,6 +280,7 @@ export default function Programs() {
 
   const handleClearSelection = () => {
     setSelectedProgramIds([]);
+    setSelectionMode(false);
   };
 
   const handleBulkDelete = async () => {
@@ -381,21 +305,24 @@ export default function Programs() {
         ...prev,
         programType: value,
         phases: getDefaultPhases(value, prev.durationDays),
+        placementCategory: value === 'Placement' ? prev.placementCategory : 'Both',
+        pricingPlans: getDefaultPricingPlans(value),
+        learningGoalsText: prev.learningGoalsText === 'Get Placed' && value === 'Skill'
+          ? 'Learn New Skills'
+          : prev.learningGoalsText === 'Learn New Skills' && value === 'Placement'
+            ? 'Get Placed'
+            : prev.learningGoalsText,
       }));
       return;
     }
-    if (name === 'durationValue' || name === 'durationUnit') {
+    if (name === 'durationDays' || name === 'durationUnit') {
       setFormData((prev) => {
-        const nextValue = name === 'durationValue' ? value : prev.durationValue;
-        const nextUnit = name === 'durationUnit' ? value : prev.durationUnit;
-        const nextDurationDays = durationDaysFromParts(nextValue, nextUnit);
-        return {
-          ...prev,
-          durationValue: nextValue,
-          durationUnit: nextUnit,
-          durationDays: String(nextDurationDays),
-          phases: getDefaultPhases(prev.programType, nextDurationDays),
-        };
+        const next = { ...prev, [name]: value };
+        const num = Number(name === 'durationDays' ? value : prev.durationDays) || 0;
+        const multiplier = (name === 'durationUnit' ? value : prev.durationUnit) === 'Weeks' ? 7 : 1;
+        const totalDurationDays = num * multiplier;
+        next.phases = getDefaultPhases(prev.programType, totalDurationDays);
+        return next;
       });
       return;
     }
@@ -411,36 +338,88 @@ export default function Programs() {
     }));
   };
 
-  const handleToggleSelection = (field, value) => {
+  const handlePricingPlanChange = (index, field, value) => {
     setFormData((prev) => ({
       ...prev,
-      [field]: prev[field].some((item) => item.toLocaleLowerCase() === value.toLocaleLowerCase())
-        ? prev[field].filter((item) => item.toLocaleLowerCase() !== value.toLocaleLowerCase())
-        : [...prev[field], value],
+      pricingPlans: prev.pricingPlans.map((plan, planIndex) => (
+        planIndex === index ? { ...plan, [field]: value } : plan
+      )),
     }));
   };
 
-  const handleToggleCourse = (courseId) => {
+  const handleAddSkill = (skillName) => {
+    const raw = String(skillName || '').trim();
+    if (!raw) return;
+    const normalized = normalizeSearchString(raw);
+    const existing = (programOptions.skills.length ? programOptions.skills : SKILL_TAG_OPTIONS).find(
+      (s) => normalizeSearchString(s) === normalized
+    );
+    const finalSkill = existing || raw;
     setFormData((prev) => {
-      const isSelected = prev.courseIds.includes(courseId);
-      const courseIds = isSelected
-        ? prev.courseIds.filter((id) => id !== courseId)
-        : [...prev.courseIds, courseId];
-      const primaryCourseId = courseIds.includes(prev.primaryCourseId)
-        ? prev.primaryCourseId
-        : courseIds[0] || '';
-      return { ...prev, courseIds, primaryCourseId };
+      const already = prev.skillTags.some((s) => normalizeSearchString(s) === normalized);
+      if (already) return prev;
+      return { ...prev, skillTags: [...prev.skillTags, finalSkill] };
     });
+    setSkillSearch('');
+    setOtherSkillDraft('');
+    setSkillDropdownOpen(false);
   };
 
-  const handleBillingOptionToggle = (option) => {
+  const handleRemoveSkill = (skillToRemove) => {
     setFormData((prev) => ({
       ...prev,
-      billingOptions: prev.billingOptions.includes(option)
-        ? prev.billingOptions.filter((selected) => selected !== option)
-        : PROGRAM_BILLING_OPTIONS.filter((candidate) => (
-            candidate === option || prev.billingOptions.includes(candidate)
-          )),
+      skillTags: prev.skillTags.filter((s) => s !== skillToRemove),
+    }));
+  };
+
+  const handleAddCompany = (companyName) => {
+    const raw = String(companyName || '').trim();
+    if (!raw) return;
+    const normalized = normalizeSearchString(raw);
+    const existing = programOptions.companies.find(
+      (c) => normalizeSearchString(c) === normalized
+    );
+    const finalCompany = existing || raw;
+    setFormData((prev) => {
+      const already = prev.targetCompanies.some((c) => normalizeSearchString(c) === normalized);
+      if (already) return prev;
+      return { ...prev, targetCompanies: [...prev.targetCompanies, finalCompany] };
+    });
+    setCompanySearch('');
+    setOtherCompanyDraft('');
+    setCompanyDropdownOpen(false);
+  };
+
+  const handleRemoveCompany = (companyToRemove) => {
+    setFormData((prev) => ({
+      ...prev,
+      targetCompanies: prev.targetCompanies.filter((c) => c !== companyToRemove),
+    }));
+  };
+
+  const handleAddRole = (roleName) => {
+    const raw = String(roleName || '').trim();
+    if (!raw) return;
+    const normalized = normalizeSearchString(raw);
+    const existing = programOptions.roles.find(
+      (r) => normalizeSearchString(r) === normalized
+    );
+    const finalRole = existing || raw;
+    setFormData((prev) => {
+      const rolesList = Array.isArray(prev.targetRoles) ? prev.targetRoles : [];
+      const already = rolesList.some((r) => normalizeSearchString(r) === normalized);
+      if (already) return prev;
+      return { ...prev, targetRoles: [...rolesList, finalRole] };
+    });
+    setRoleSearch('');
+    setOtherRoleDraft('');
+    setRoleDropdownOpen(false);
+  };
+
+  const handleRemoveRole = (roleToRemove) => {
+    setFormData((prev) => ({
+      ...prev,
+      targetRoles: (Array.isArray(prev.targetRoles) ? prev.targetRoles : []).filter((r) => r !== roleToRemove),
     }));
   };
 
@@ -450,26 +429,35 @@ export default function Programs() {
       name: '',
       description: '',
       programType: 'Placement',
-      durationValue: '30',
-      durationUnit: 'Days',
       durationDays: '30',
+      durationUnit: 'Days',
       phases: getDefaultPhases('Placement', 30),
       status: 'Draft',
       visibility: 'Public',
-      availability: 'Structured',
       pricingType: 'Free',
+      availability: 'Structured',
       billingOptions: [],
-      monthlyStructuredFee: '',
-      monthlyTrainerLedFee: '',
-      annualStructuredFee: '',
-      annualTrainerLedFee: '',
+      monthlyStructuredFee: '0',
+      monthlyTrainerLedFee: '0',
+      annualStructuredFee: '0',
+      annualTrainerLedFee: '0',
+      programFee: '0',
+      pricingPlans: [],
+      learningGoalsText: '',
+      placementCategory: 'Both',
       targetCompanies: [],
-      company: '',
       skillTags: [],
       targetRoles: [],
-      courseIds: [],
-      primaryCourseId: '',
     });
+    setSkillSearch('');
+    setOtherSkillDraft('');
+    setSkillDropdownOpen(false);
+    setCompanySearch('');
+    setOtherCompanyDraft('');
+    setCompanyDropdownOpen(false);
+    setRoleSearch('');
+    setOtherRoleDraft('');
+    setRoleDropdownOpen(false);
     setModalError('');
     setIsModalOpen(true);
   };
@@ -477,42 +465,42 @@ export default function Programs() {
   const handleOpenEditModal = (program, e) => {
     if (e) e.stopPropagation();
     setEditingProgram(program);
-    const durationParts = parseDurationParts(program.duration) || {
-      value: String(program.durationDays || parseDurationDays(program.duration) || 30),
-      unit: 'Days',
-    };
-    const savedPlans = Array.isArray(program.pricingPlans) ? program.pricingPlans : [];
-    const availability = program.availability || (savedPlans.length > 1 ? 'Both' : 'Structured');
-    const firstPlanFee = savedPlans[0]?.price ?? program.programFee ?? '';
-    const secondPlanFee = savedPlans[1]?.price ?? '';
-    const hasSavedBillingOptions = Array.isArray(program.billingOptions) && program.billingOptions.length > 0;
-    const billingOptions = hasSavedBillingOptions
-      ? PROGRAM_BILLING_OPTIONS.filter((option) => program.billingOptions.includes(option))
-      : program.pricingType === 'Paid' ? ['Annual'] : [];
+    const existingRoles = Array.isArray(program.targetRoles)
+      ? program.targetRoles
+      : parseCommaString(program.targetRolesText || '');
     setFormData({
       name: program.name || '',
       description: program.description || '',
       programType: getProgramType(program.programType),
-      durationValue: durationParts.value,
-      durationUnit: durationParts.unit,
       durationDays: String(program.durationDays || parseDurationDays(program.duration) || 30),
+      durationUnit: String(program.duration || '').toLowerCase().includes('week') ? 'Weeks' : 'Days',
       phases: normalizePhases(program.phases, getProgramType(program.programType), program.durationDays || parseDurationDays(program.duration) || 30),
-      status: getProgramStatusLabel(program.status) || 'Draft',
+      status: program.status || 'Draft',
       visibility: program.visibility || 'Public',
-      availability,
       pricingType: program.pricingType || 'Free',
-      billingOptions,
-      monthlyStructuredFee: String(program.monthlyStructuredFee ?? ''),
-      monthlyTrainerLedFee: String(program.monthlyTrainerLedFee ?? ''),
-      annualStructuredFee: String(program.annualStructuredFee ?? (!hasSavedBillingOptions && availability !== 'Trainer-Led' ? program.structuredFee ?? firstPlanFee : '') ?? ''),
-      annualTrainerLedFee: String(program.annualTrainerLedFee ?? (!hasSavedBillingOptions && availability !== 'Structured' ? program.trainerLedFee ?? (secondPlanFee || firstPlanFee) : '') ?? ''),
-      targetCompanies: uniqueOptions(program.targetCompanies || []),
-      company: program.company || '',
-      skillTags: uniqueOptions(program.skillTags || []),
-      targetRoles: uniqueOptions(program.targetRoles || []),
-      courseIds: (program.courseIds || []).map((course) => String(course?._id || course)),
-      primaryCourseId: String(program.primaryCourseId?._id || program.primaryCourseId || ''),
+      availability: program.availability || 'Structured',
+      billingOptions: Array.isArray(program.billingOptions) ? program.billingOptions : [],
+      monthlyStructuredFee: String(program.monthlyStructuredFee || 0),
+      monthlyTrainerLedFee: String(program.monthlyTrainerLedFee || 0),
+      annualStructuredFee: String(program.annualStructuredFee || 0),
+      annualTrainerLedFee: String(program.annualTrainerLedFee || 0),
+      programFee: String(program.programFee || 0),
+      pricingPlans: [],
+      learningGoalsText: '',
+      placementCategory: 'Both',
+      targetCompanies: Array.isArray(program.targetCompanies) ? program.targetCompanies : [],
+      skillTags: Array.isArray(program.skillTags) ? program.skillTags : [],
+      targetRoles: existingRoles,
     });
+    setSkillSearch('');
+    setOtherSkillDraft('');
+    setSkillDropdownOpen(false);
+    setCompanySearch('');
+    setOtherCompanyDraft('');
+    setCompanyDropdownOpen(false);
+    setRoleSearch('');
+    setOtherRoleDraft('');
+    setRoleDropdownOpen(false);
     setModalError('');
     setIsModalOpen(true);
   };
@@ -522,7 +510,7 @@ export default function Programs() {
     setModalError('');
 
     const finalType = formData.programType.trim();
-    const durationDays = Number(formData.durationDays);
+    const durationDays = Number(formData.durationDays) * (formData.durationUnit === 'Weeks' ? 7 : 1);
 
     if (!formData.name.trim()) { setModalError('Program name is required'); return; }
     if (!finalType) { setModalError('Program type is required'); return; }
@@ -552,25 +540,16 @@ export default function Programs() {
       return;
     }
     if (formData.pricingType === 'Paid') {
-      if (formData.billingOptions.length === 0) {
-        setModalError('Select at least one billing option: Monthly or Annual.');
+      if (!formData.billingOptions.length) { setModalError('Select at least one billing option for Paid programs.'); return; }
+      const availabilityFields = {
+        Structured: ['monthlyStructuredFee', 'annualStructuredFee'],
+        'Trainer-Led': ['monthlyTrainerLedFee', 'annualTrainerLedFee'],
+        Both: ['monthlyStructuredFee', 'monthlyTrainerLedFee', 'annualStructuredFee', 'annualTrainerLedFee'],
+      }[formData.availability] || [];
+      const requiredFields = availabilityFields.filter((field) => field.startsWith('monthly') ? formData.billingOptions.includes('Monthly') : formData.billingOptions.includes('Annual'));
+      if (requiredFields.some((field) => !Number.isFinite(Number(formData[field])) || Number(formData[field]) < 0)) {
+        setModalError('Enter a valid fee for every selected billing and delivery option.');
         return;
-      }
-
-      const feeFields = [
-        ['Monthly', 'Structured', 'monthlyStructuredFee'],
-        ['Monthly', 'Trainer-Led', 'monthlyTrainerLedFee'],
-        ['Annual', 'Structured', 'annualStructuredFee'],
-        ['Annual', 'Trainer-Led', 'annualTrainerLedFee'],
-      ];
-      for (const [billingPeriod, availabilityType, fieldName] of feeFields) {
-        const periodSelected = formData.billingOptions.includes(billingPeriod);
-        const availabilitySelected = formData.availability === 'Both' || formData.availability === availabilityType;
-        if (periodSelected && availabilitySelected
-          && (!Number.isFinite(Number(formData[fieldName])) || Number(formData[fieldName]) <= 0)) {
-          setModalError(`${billingPeriod} ${availabilityType} Fee must be a number greater than zero.`);
-          return;
-        }
       }
     }
 
@@ -580,24 +559,24 @@ export default function Programs() {
         name: formData.name.trim(),
         description: formData.description.trim(),
         programType: finalType,
-        duration: `${formData.durationValue} ${formData.durationUnit}`,
+        duration: `${formData.durationDays} ${formData.durationUnit}`,
         durationDays,
         phases,
-        status: formData.status === 'Published' ? 'Active' : formData.status,
         visibility: formData.visibility,
-        availability: formData.availability,
         pricingType: formData.pricingType,
+        availability: formData.availability,
         billingOptions: formData.pricingType === 'Paid' ? formData.billingOptions : [],
-        monthlyStructuredFee: formData.monthlyStructuredFee === '' ? null : Number(formData.monthlyStructuredFee),
-        monthlyTrainerLedFee: formData.monthlyTrainerLedFee === '' ? null : Number(formData.monthlyTrainerLedFee),
-        annualStructuredFee: formData.annualStructuredFee === '' ? null : Number(formData.annualStructuredFee),
-        annualTrainerLedFee: formData.annualTrainerLedFee === '' ? null : Number(formData.annualTrainerLedFee),
+        monthlyStructuredFee: Number(formData.monthlyStructuredFee) || 0,
+        monthlyTrainerLedFee: Number(formData.monthlyTrainerLedFee) || 0,
+        annualStructuredFee: Number(formData.annualStructuredFee) || 0,
+        annualTrainerLedFee: Number(formData.annualTrainerLedFee) || 0,
+        programFee: formData.pricingType === 'Paid' ? Number(formData.monthlyStructuredFee || formData.monthlyTrainerLedFee || formData.annualStructuredFee || formData.annualTrainerLedFee) : 0,
+        pricingPlans: [],
+        learningGoals: [],
+        placementCategories: [],
         targetCompanies: formData.targetCompanies,
-        company: formData.company.trim(),
         skillTags: formData.skillTags,
-        targetRoles: formData.targetRoles,
-        courseIds: formData.courseIds,
-        primaryCourseId: formData.primaryCourseId || formData.courseIds[0] || null,
+        targetRoles: Array.isArray(formData.targetRoles) ? formData.targetRoles : parseCommaString(formData.targetRolesText || ''),
       };
 
       if (editingProgram) {
@@ -631,6 +610,24 @@ export default function Programs() {
     }
   };
 
+  const handleAddTargetRole = () => {
+    const role = targetRoleDraft.trim().replace(/,$/, '');
+    if (!role) return;
+    setFormData((prev) => ({ ...prev, targetRolesText: [...new Set([...parseCommaString(prev.targetRolesText), role])].join(', ') }));
+    setTargetRoleDraft('');
+  };
+
+  const handleStatusChange = async (program, status) => {
+    if (!status || status === program.status) return;
+    try {
+      await adminAPI.updateProgram(program._id, { status });
+      await fetchPrograms();
+    } catch (err) {
+      console.error('Error updating program status:', err);
+      alert(err.message || 'Failed to update program status');
+    }
+  };
+
   const handleClearFilters = () => {
     setSearchTerm('');
     setSelectedType('');
@@ -639,14 +636,9 @@ export default function Programs() {
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
-  const handleStatusTabChange = (status) => {
-    setSelectedStatus(status);
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  };
-
   const programFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
-  const activeCount = programs.filter(p => p.status === 'Active' || p.status === 'Published').length;
+  const activeCount = programs.filter(p => p.status === 'Published').length;
   const draftCount = programs.filter(p => p.status === 'Draft').length;
   const totalStudents = programs.reduce((sum, p) => sum + (p.studentCount || 0), 0);
 
@@ -655,7 +647,7 @@ export default function Programs() {
       {/* Background Gradient — matches Question Bank exactly */}
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
 
-      <Sidebar />
+      <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
       {/* Single Delete Confirmation Modal */}
       {programToDelete && (
@@ -664,8 +656,8 @@ export default function Programs() {
           <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 p-6 shadow-2xl">
             <h3 className="text-lg font-semibold text-[#3C83F6] dark:text-[#bceaff]">Delete Program?</h3>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              Are you sure you want to delete{' '}
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{programToDelete.name}</span>? This action cannot be undone.
+              This program will be removed from active use. Student XP, accuracy, progress, submissions, assessment results, and historical records will be preserved. Continue deleting{' '}
+              <span className="font-semibold text-slate-800 dark:text-slate-200">{programToDelete.name}</span>?
             </p>
             <div className="mt-5 flex items-center justify-end gap-3">
               <button
@@ -694,7 +686,7 @@ export default function Programs() {
           <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 p-6 shadow-2xl">
             <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Bulk Delete Programs?</h3>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              Are you sure you want to delete the {selectedProgramIds.length} selected programs? This action cannot be undone.
+              These programs will be removed from active use. Student history will be preserved. Continue?
             </p>
             <div className="mt-5 flex items-center justify-end gap-3">
               <button
@@ -720,7 +712,7 @@ export default function Programs() {
       {isModalOpen && (
         <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-          <div className="relative w-full max-w-2xl rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="course-form-modal relative w-full max-w-2xl bg-white border border-black/10 dark:bg-[#0a1737] dark:border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-visible">
             {/* Fixed Header */}
             <div className="px-5 py-3.5 border-b border-black/10 dark:border-white/10 flex items-center justify-between shrink-0">
               <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-[#bceaff]">
@@ -734,39 +726,44 @@ export default function Programs() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitProgram} className="flex-1 flex flex-col min-h-0">
+<form onSubmit={handleSubmitProgram} className="flex min-h-0 flex-1 flex-col overflow-visible">
               {/* Scrollable Body */}
-              <div className="flex-1 overflow-y-auto p-5 space-y-3.5 min-h-0">
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-visible p-5 space-y-4 minimal-scrollbar">
                 {modalError && (
-                  <p className="text-sm text-red-500 dark:text-red-400">{modalError}</p>
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-600 dark:text-red-400">
+                    <FiAlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{modalError}</span>
+                  </div>
                 )}
 
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Program Name*</label>
-                  <input
-                    type="text"
-                    name="name"
-                    required
-                    placeholder="e.g. 30-Day Placement Sprint – August 2026"
-                    value={formData.name}
-                    onChange={handleFormChange}
-                    className={programFormInputClass}
-                  />
-                </div>
+                {/* ── PROGRAM INFORMATION ── */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Program Name*</label>
+                    <input
+                      type="text"
+                      name="name"
+                      required
+                      placeholder="e.g. Full Stack Development Placement Sprint"
+                      value={formData.name}
+                      onChange={handleFormChange}
+                      className={programFormInputClass}
+                    />
+                  </div>
 
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Description</label>
-                  <textarea
-                    name="description"
-                    rows={2}
-                    placeholder="Provide an overview of this learning program..."
-                    value={formData.description}
-                    onChange={handleFormChange}
-                    className={programFormInputClass}
-                  />
-                </div>
+                  <div>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Description*</label>
+                    <textarea
+                      name="description"
+                      rows={2}
+                      required
+                      placeholder="Description of the program, curriculum coverage, and learner outcomes..."
+                      value={formData.description}
+                      onChange={handleFormChange}
+                      className={programFormInputClass}
+                    />
+                  </div>
 
-                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="admin-micro-label text-black/45 dark:text-white/45">Program Type*</label>
                     <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
@@ -776,181 +773,540 @@ export default function Programs() {
                         onChange={handleFormChange}
                         className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                       >
-                        {PROGRAM_TYPES.map(({ value, label }) => (
-                          <option key={value} className={dropdownOptionClass} value={value}>{label}</option>
+                        {PROGRAM_TYPES.map((t) => (
+                          <option key={t} className={dropdownOptionClass} value={t}>{t}</option>
                         ))}
                       </select>
                       <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                     </div>
                   </div>
+                </div>
 
+                {/* ── DURATION ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   <div>
                     <label className="admin-micro-label text-black/45 dark:text-white/45">Duration*</label>
-                    <div className="mt-1 grid grid-cols-[1fr_130px] gap-2">
-                      <input type="number" name="durationValue" min="5" step="any" required placeholder="e.g. 30" value={formData.durationValue} onChange={handleFormChange} className={programFormInputClass} />
-                      <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43]">
-                        <select name="durationUnit" value={formData.durationUnit} onChange={handleFormChange} className="w-full appearance-none rounded-xl border-0 bg-transparent px-3 py-2.5 pr-9 text-sm font-medium text-slate-800 outline-none dark:text-white">
-                          {DURATION_UNITS.map((unit) => <option key={unit} className={dropdownOptionClass} value={unit}>{unit}</option>)}
+                    <input
+                      type="number"
+                      name="durationDays"
+                      min="1"
+                      step="1"
+                      required
+                      placeholder="e.g. 30"
+                      value={formData.durationDays}
+                      onChange={handleFormChange}
+                      className={programFormInputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Duration Unit*</label>
+                    <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                      <select
+                        name="durationUnit"
+                        value={formData.durationUnit}
+                        onChange={handleFormChange}
+                        className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                      >
+                        <option className={dropdownOptionClass} value="Days">Days</option>
+                        <option className={dropdownOptionClass} value="Weeks">Weeks</option>
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── DELIVERY & PRICING ── */}
+                <div className="space-y-3 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Availability*</label>
+                      <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                        <select
+                          name="availability"
+                          value={formData.availability}
+                          onChange={handleFormChange}
+                          className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                        >
+                          <option className={dropdownOptionClass} value="Structured">Structured</option>
+                          <option className={dropdownOptionClass} value="Trainer-Led">Trainer-Led</option>
+                          <option className={dropdownOptionClass} value="Both">Both</option>
                         </select>
-                        <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
+                        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                       </div>
                     </div>
-                    <p className="mt-1 text-[10px] text-black/40 dark:text-white/40">Learning phases use {formData.durationDays || '—'} total days.</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="admin-micro-label text-black/45 dark:text-white/45">Status</label>
-                    <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                      <select
-                        name="status"
-                        value={formData.status}
-                        onChange={handleFormChange}
-                        className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-                      >
-                        <option className={dropdownOptionClass} value="Published">Published</option>
-                        <option className={dropdownOptionClass} value="Draft">Draft</option>
-                        <option className={dropdownOptionClass} value="Archived">Archived</option>
-                      </select>
-                      <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="admin-micro-label text-black/45 dark:text-white/45">Visibility</label>
-                    <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                      <select
-                        name="visibility"
-                        value={formData.visibility}
-                        onChange={handleFormChange}
-                        className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-                      >
-                        <option className={dropdownOptionClass} value="Public">Public</option>
-                        <option className={dropdownOptionClass} value="Private">Private</option>
-                      </select>
-                      <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="admin-micro-label text-black/45 dark:text-white/45">Pricing</label>
-                    <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                      <select
-                        name="pricingType"
-                        value={formData.pricingType}
-                        onChange={handleFormChange}
-                        className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-                      >
-                        <option className={dropdownOptionClass} value="Free">Free</option>
-                        <option className={dropdownOptionClass} value="Paid">Paid</option>
-                      </select>
-                      <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="admin-micro-label text-black/45 dark:text-white/45">Availability*</label>
-                    <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43]">
-                      <select name="availability" value={formData.availability} onChange={handleFormChange} className="w-full appearance-none rounded-xl border-0 bg-transparent px-3 py-2.5 pr-10 text-sm font-medium text-slate-800 outline-none dark:text-white">
-                        {PROGRAM_AVAILABILITIES.map((availability) => <option key={availability} className={dropdownOptionClass} value={availability}>{availability}</option>)}
-                      </select>
-                      <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
-                    </div>
-                  </div>
-                </div>
-
-                {formData.pricingType === 'Paid' && (
-                  <div className="space-y-3">
-                    <fieldset>
-                      <legend className="admin-micro-label text-black/45 dark:text-white/45">Billing Options*</legend>
-                      <div className="mt-1 flex flex-wrap gap-2">
-                        {PROGRAM_BILLING_OPTIONS.map((option) => (
-                          <label key={option} className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-white/70 px-3 py-2 text-sm text-slate-700 dark:border-white/15 dark:bg-white/[0.04] dark:text-white/80">
-                            <input
-                              type="checkbox"
-                              checked={formData.billingOptions.includes(option)}
-                              onChange={() => handleBillingOptionToggle(option)}
-                              className="h-4 w-4 rounded border-black/20 text-[#3C83F6] focus:ring-[#3C83F6]"
-                            />
-                            {option}
-                          </label>
-                        ))}
+                    <div>
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Pricing*</label>
+                      <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                        <select
+                          name="pricingType"
+                          value={formData.pricingType}
+                          onChange={handleFormChange}
+                          className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                        >
+                          <option className={dropdownOptionClass} value="Free">Free</option>
+                          <option className={dropdownOptionClass} value="Paid">Paid</option>
+                        </select>
+                        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                       </div>
-                      <p className="mt-1 text-[10px] text-black/40 dark:text-white/40">Choose Monthly, Annual, or both.</p>
-                    </fieldset>
+                    </div>
+                  </div>
 
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      {formData.billingOptions.flatMap((billingPeriod) => {
-                        const modalities = formData.availability === 'Both'
-                          ? ['Structured', 'Trainer-Led']
-                          : [formData.availability];
-                        return modalities.map((modality) => {
-                          const fieldName = `${billingPeriod.toLowerCase()}${modality === 'Trainer-Led' ? 'TrainerLed' : 'Structured'}Fee`;
-                          const label = `${billingPeriod} ${modality} Fee (₹)*`;
-                          return (
-                            <label key={fieldName} className="block">
-                              <span className="admin-micro-label text-black/45 dark:text-white/45">{label}</span>
+                  {formData.pricingType === 'Paid' && (
+                    <div className="rounded-xl border border-black/10 dark:border-white/15 bg-black/[0.02] dark:bg-white/[0.03] p-4 space-y-3">
+                      <div>
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Billing Options* (Select at least one)</label>
+                        <div className="flex gap-4 text-sm font-medium text-slate-700 dark:text-slate-200 mt-1">
+                          {['Monthly', 'Annual'].map((option) => (
+                            <label key={option} className="flex items-center gap-2 cursor-pointer">
                               <input
-                                type="number"
-                                name={fieldName}
-                                min="0.01"
-                                step="any"
-                                required
-                                placeholder="e.g. 499"
-                                value={formData[fieldName]}
-                                onChange={handleFormChange}
-                                className={programFormInputClass}
+                                type="checkbox"
+                                checked={formData.billingOptions.includes(option)}
+                                onChange={() =>
+                                  setFormData((current) => ({
+                                    ...current,
+                                    billingOptions: current.billingOptions.includes(option)
+                                      ? current.billingOptions.filter((item) => item !== option)
+                                      : [...current.billingOptions, option],
+                                  }))
+                                }
+                                className="h-4 w-4 rounded border-black/20 text-[#3C83F6] focus:ring-[#3C83F6]"
                               />
+                              {option}
                             </label>
-                          );
-                        });
-                      })}
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Conditional Fee Fields */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-black/5 dark:border-white/5">
+                        {formData.billingOptions.includes('Monthly') && (formData.availability === 'Structured' || formData.availability === 'Both') && (
+                          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            Monthly Structured Fee (₹)*
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              required
+                              name="monthlyStructuredFee"
+                              value={formData.monthlyStructuredFee}
+                              onChange={handleFormChange}
+                              placeholder="e.g. 499"
+                              className={programFormInputClass}
+                            />
+                          </label>
+                        )}
+                        {formData.billingOptions.includes('Monthly') && (formData.availability === 'Trainer-Led' || formData.availability === 'Both') && (
+                          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            Monthly Trainer-Led Fee (₹)*
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              required
+                              name="monthlyTrainerLedFee"
+                              value={formData.monthlyTrainerLedFee}
+                              onChange={handleFormChange}
+                              placeholder="e.g. 999"
+                              className={programFormInputClass}
+                            />
+                          </label>
+                        )}
+                        {formData.billingOptions.includes('Annual') && (formData.availability === 'Structured' || formData.availability === 'Both') && (
+                          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            Annual Structured Fee (₹)*
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              required
+                              name="annualStructuredFee"
+                              value={formData.annualStructuredFee}
+                              onChange={handleFormChange}
+                              placeholder="e.g. 4999"
+                              className={programFormInputClass}
+                            />
+                          </label>
+                        )}
+                        {formData.billingOptions.includes('Annual') && (formData.availability === 'Trainer-Led' || formData.availability === 'Both') && (
+                          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            Annual Trainer-Led Fee (₹)*
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              required
+                              name="annualTrainerLedFee"
+                              value={formData.annualTrainerLedFee}
+                              onChange={handleFormChange}
+                              placeholder="e.g. 9999"
+                              className={programFormInputClass}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── VISIBILITY ── */}
+                <div className="pt-1">
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Visibility*</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      name="visibility"
+                      value={formData.visibility}
+                      onChange={handleFormChange}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className={dropdownOptionClass} value="Public">Public</option>
+                      <option className={dropdownOptionClass} value="Private">Private</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+
+                {/* ── SKILLS ── */}
+                <div className="space-y-2 pt-1">
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Skill Tags*</label>
+                  {/* Selected Skill Chips */}
+                  {formData.skillTags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-1.5">
+                      {formData.skillTags.map((skill) => (
+                        <span
+                          key={skill}
+                          className="inline-flex items-center gap-1 rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-xs font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]"
+                        >
+                          {skill}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSkill(skill)}
+                            className="hover:opacity-75 focus:outline-none ml-0.5"
+                            aria-label={`Remove ${skill}`}
+                          >
+                            <FiX className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Searchable dropdown & Other Skill Input */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={skillSearch}
+                        onChange={(e) => {
+                          setSkillSearch(e.target.value);
+                          setSkillDropdownOpen(true);
+                        }}
+                        onFocus={() => setSkillDropdownOpen(true)}
+                        placeholder="Search existing skills..."
+                        className={programFormInputClass}
+                      />
+                      {skillDropdownOpen && (
+                        <div
+                          className="absolute left-0 right-0 top-full mt-1 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-2 shadow-xl max-h-44 overflow-y-auto"
+                          style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
+                        >
+                          {((programOptions.skills.length ? programOptions.skills : SKILL_TAG_OPTIONS).filter((s) =>
+                            !formData.skillTags.includes(s) && (!skillSearch.trim() || normalizeSearchString(s).includes(normalizeSearchString(skillSearch)))
+                          )).length === 0 ? (
+                            <p className="px-2 py-1.5 text-xs text-black/45 dark:text-white/45">No matching skills found.</p>
+                          ) : (
+                            (programOptions.skills.length ? programOptions.skills : SKILL_TAG_OPTIONS)
+                              .filter((s) => !formData.skillTags.includes(s) && (!skillSearch.trim() || normalizeSearchString(s).includes(normalizeSearchString(skillSearch))))
+                              .map((tag) => (
+                                <button
+                                  key={tag}
+                                  type="button"
+                                  onClick={() => handleAddSkill(tag)}
+                                  className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200"
+                                >
+                                  + {tag}
+                                </button>
+                              ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={otherSkillDraft}
+                        onChange={(e) => setOtherSkillDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddSkill(otherSkillDraft);
+                          }
+                        }}
+                        placeholder="Other Skill (new)"
+                        className={programFormInputClass}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddSkill(otherSkillDraft)}
+                        className="shrink-0 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-xs font-bold text-white transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── PLACEMENT TARGETING (Placement only) ── */}
+                {formData.programType === 'Placement' && (
+                  <div className="rounded-xl border border-blue-500/20 bg-blue-500/[0.03] dark:border-blue-400/20 dark:bg-blue-400/[0.03] p-4 space-y-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff]">Placement Targeting</p>
+
+                    {/* Target Companies */}
+                    <div className="space-y-2">
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Target Companies*</label>
+                      {formData.targetCompanies.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-1.5">
+                          {formData.targetCompanies.map((comp) => (
+                            <span
+                              key={comp}
+                              className="inline-flex items-center gap-1 rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-xs font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]"
+                            >
+                              {comp}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCompany(comp)}
+                                className="hover:opacity-75 focus:outline-none ml-0.5"
+                                aria-label={`Remove ${comp}`}
+                              >
+                                <FiX className="h-3 w-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={companySearch}
+                            onChange={(e) => {
+                              setCompanySearch(e.target.value);
+                              setCompanyDropdownOpen(true);
+                            }}
+                            onFocus={() => setCompanyDropdownOpen(true)}
+                            placeholder="Search Question Bank companies..."
+                            className={programFormInputClass}
+                          />
+                          {companyDropdownOpen && (
+                            <div
+                              className="absolute left-0 right-0 top-full mt-1 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-2 shadow-xl max-h-44 overflow-y-auto"
+                              style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
+                            >
+                              {(programOptions.companies.filter((c) =>
+                                !formData.targetCompanies.includes(c) && (!companySearch.trim() || normalizeSearchString(c).includes(normalizeSearchString(companySearch)))
+                              )).length === 0 ? (
+                                <p className="px-2 py-1.5 text-xs text-black/45 dark:text-white/45">No matching companies found.</p>
+                              ) : (
+                                programOptions.companies
+                                  .filter((c) => !formData.targetCompanies.includes(c) && (!companySearch.trim() || normalizeSearchString(c).includes(normalizeSearchString(companySearch))))
+                                  .map((comp) => (
+                                    <button
+                                      key={comp}
+                                      type="button"
+                                      onClick={() => handleAddCompany(comp)}
+                                      className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200"
+                                    >
+                                      + {comp}
+                                    </button>
+                                  ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={otherCompanyDraft}
+                            onChange={(e) => setOtherCompanyDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddCompany(otherCompanyDraft);
+                              }
+                            }}
+                            placeholder="Other Company (new)"
+                            className={programFormInputClass}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAddCompany(otherCompanyDraft)}
+                            className="shrink-0 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-xs font-bold text-white transition-colors"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Target Roles */}
+                    <div className="space-y-2">
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Target Roles*</label>
+                      {((Array.isArray(formData.targetRoles) ? formData.targetRoles : [])).length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-1.5">
+                          {(Array.isArray(formData.targetRoles) ? formData.targetRoles : []).map((role) => (
+                            <span
+                              key={role}
+                              className="inline-flex items-center gap-1 rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-xs font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]"
+                            >
+                              {role}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveRole(role)}
+                                className="hover:opacity-75 focus:outline-none ml-0.5"
+                                aria-label={`Remove ${role}`}
+                              >
+                                <FiX className="h-3 w-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={roleSearch}
+                            onChange={(e) => {
+                              setRoleSearch(e.target.value);
+                              setRoleDropdownOpen(true);
+                            }}
+                            onFocus={() => setRoleDropdownOpen(true)}
+                            placeholder="Search Hiring section roles..."
+                            className={programFormInputClass}
+                          />
+                          {roleDropdownOpen && (
+                            <div
+                              className="absolute left-0 right-0 top-full mt-1 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-2 shadow-xl max-h-44 overflow-y-auto"
+                              style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
+                            >
+                              {(programOptions.roles.filter((r) =>
+                                !(Array.isArray(formData.targetRoles) ? formData.targetRoles : []).includes(r) && (!roleSearch.trim() || normalizeSearchString(r).includes(normalizeSearchString(roleSearch)))
+                              )).length === 0 ? (
+                                <p className="px-2 py-1.5 text-xs text-black/45 dark:text-white/45">No matching roles found.</p>
+                              ) : (
+                                programOptions.roles
+                                  .filter((r) => !(Array.isArray(formData.targetRoles) ? formData.targetRoles : []).includes(r) && (!roleSearch.trim() || normalizeSearchString(r).includes(normalizeSearchString(roleSearch))))
+                                  .map((role) => (
+                                    <button
+                                      key={role}
+                                      type="button"
+                                      onClick={() => handleAddRole(role)}
+                                      className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200"
+                                    >
+                                      + {role}
+                                    </button>
+                                  ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={otherRoleDraft}
+                            onChange={(e) => setOtherRoleDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddRole(otherRoleDraft);
+                              }
+                            }}
+                            placeholder="Other Role (new)"
+                            className={programFormInputClass}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAddRole(otherRoleDraft)}
+                            className="shrink-0 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-xs font-bold text-white transition-colors"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
 
-                <div className="pt-1 border-t border-black/5 dark:border-white/5 space-y-3.5">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff] pt-1">Student Matching Metadata</p>
-                  <div className="grid grid-cols-1 gap-3">
-                    <ProgramChipSelect label="Skills" placeholder="Search skills..." options={formOptions.skillTags} selected={formData.skillTags} isDarkMode={isDarkMode} onToggle={(value) => handleToggleSelection('skillTags', value)} />
-                    <ProgramChipSelect label="Target Companies" placeholder="Search onboarding companies..." options={formOptions.targetCompanies} selected={formData.targetCompanies} isDarkMode={isDarkMode} onToggle={(value) => handleToggleSelection('targetCompanies', value)} />
-                    <label className="block">
-                      <span className="admin-micro-label text-black/45 dark:text-white/45">Company (manual)</span>
-                      <input type="text" name="company" maxLength={120} value={formData.company} onChange={handleFormChange} placeholder="Enter a company not in the standard list" className={programFormInputClass} />
-                    </label>
-                    <ProgramChipSelect label="Target Roles" placeholder="Search roles..." options={formOptions.targetRoles} selected={formData.targetRoles} isDarkMode={isDarkMode} onToggle={(value) => handleToggleSelection('targetRoles', value)} />
-                    <ProgramCourseSelect courses={formOptions.courses} selectedIds={formData.courseIds} onToggle={handleToggleCourse} />
-                  </div>
-                </div>
+                {/* ── PROGRAM STRUCTURE: LEARNING PHASES (End of Form) ── */}
+                {(() => {
+                  const formDurationDays = (Number(formData.durationDays) || 0) * (formData.durationUnit === 'Weeks' ? 7 : 1);
+                  const phaseValidation = validatePhaseCoverage(formData.phases, formDurationDays);
 
-                <div className="rounded-xl border border-black/10 bg-black/[0.02] p-3 dark:border-white/10 dark:bg-white/[0.03]">
-                  <div className="mb-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff]">Learning Phases</p>
-                    <p className="mt-1 text-[11px] text-black/45 dark:text-white/45">Phases must cover every day exactly once. Changing the duration regenerates the default ranges, which you can then adjust.</p>
-                  </div>
-                  <div className="space-y-2">
-                    {formData.phases.map((phase, index) => (
-                      <div key={phase.phase} className="grid grid-cols-[minmax(0,1fr)_90px_90px] items-end gap-2">
-                        <div className="min-w-0">
-                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Phase</span>
-                          <div className="flex h-10 items-center rounded-lg border border-black/10 bg-white/70 px-3 text-sm font-semibold text-slate-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-white">
-                            {PHASE_LABELS[phase.phase]}
-                          </div>
+                  return (
+                    <div className="rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03] p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff]">Program Structure — Learning Phases</p>
+                          <p className="mt-0.5 text-xs text-black/55 dark:text-white/55">Phases must cover every day exactly once.</p>
                         </div>
-                        <label className="block">
-                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Start</span>
-                          <input type="number" min="1" step="1" value={phase.startDay} onChange={(event) => handlePhaseChange(index, 'startDay', event.target.value)} className={programFormInputClass} />
-                        </label>
-                        <label className="block">
-                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">End</span>
-                          <input type="number" min="1" step="1" value={phase.endDay} onChange={(event) => handlePhaseChange(index, 'endDay', event.target.value)} className={programFormInputClass} />
-                        </label>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          phaseValidation.valid
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                            : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
+                        }`}>
+                          {phaseValidation.valid ? <FiCheckCircle className="w-3.5 h-3.5" /> : <FiAlertCircle className="w-3.5 h-3.5" />}
+                          {phaseValidation.valid ? 'Coverage Valid' : 'Coverage Issue'}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                </div>
+
+                      <div className="space-y-2">
+                        {formData.phases.map((phase, index) => (
+                          <div key={phase.phase} className="grid grid-cols-[minmax(0,1fr)_90px_90px] items-end gap-2">
+                            <div className="min-w-0">
+                              <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Phase</span>
+                              <div className="flex h-10 items-center rounded-lg border border-black/10 bg-white/70 px-3 text-xs font-semibold text-slate-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-white">
+                                {PHASE_LABELS[phase.phase] || phase.phase}
+                              </div>
+                            </div>
+                            <label className="block">
+                              <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Start Day</span>
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={phase.startDay}
+                                onChange={(event) => handlePhaseChange(index, 'startDay', event.target.value)}
+                                className={programFormInputClass}
+                              />
+                            </label>
+                            <label className="block">
+                              <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">End Day</span>
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={phase.endDay}
+                                onChange={(event) => handlePhaseChange(index, 'endDay', event.target.value)}
+                                className={programFormInputClass}
+                              />
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className={`text-xs flex items-center gap-1.5 font-medium ${
+                        phaseValidation.valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+                      }`}>
+                        {phaseValidation.valid ? <FiCheckCircle className="w-3.5 h-3.5 shrink-0" /> : <FiAlertCircle className="w-3.5 h-3.5 shrink-0" />}
+                        <span>{phaseValidation.message}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Fixed Footer */}
@@ -976,7 +1332,13 @@ export default function Programs() {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 h-screen transition-all duration-700 ease-in-out z-10 lg:ml-64 pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden">
+      <main
+        className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${
+          sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
+        } pt-20 sm:pt-24 md:pt-28 pb-12 px-3 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${
+          mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+        }`}
+      >
         <div className="max-w-[1600px] mx-auto space-y-6">
 
           {/* Error Banner */}
@@ -989,129 +1351,148 @@ export default function Programs() {
             </div>
           )}
 
-          {/* Page Title */}
-          <div>
-            <h1 className="admin-page-title">Programs</h1>
+          {/* Header & Stats Cards - Matching Hiring / Courses */}
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="admin-page-title text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">
+                  Program Management
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1">
+                  Manage learning programs, curriculum pathways, enrolment status, and student access.
+                </p>
+              </div>
+
+              <button
+                onClick={handleOpenCreateModal}
+                className="dashboard-primary-btn h-9 sm:h-10 px-4 sm:px-5 text-xs sm:text-sm font-semibold shrink-0 w-full sm:w-auto flex items-center justify-center gap-2"
+              >
+                <FiPlus className="w-4 h-4" />
+                Add Program
+              </button>
+            </div>
+
+            {/* Quick Summary Stat Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+              {/* Total Programs */}
+              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                  <FiFolder className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">Total Programs</span>
+                  <span className="text-base sm:text-lg font-bold text-slate-800 dark:text-white">{pagination.total || programs.length}</span>
+                </div>
+              </div>
+
+              {/* Published */}
+              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                  <FiCheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">Published</span>
+                  <span className="text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-400">{activeCount}</span>
+                </div>
+              </div>
+
+              {/* Drafts */}
+              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+                  <FiClock className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">Drafts</span>
+                  <span className="text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400">{draftCount}</span>
+                </div>
+              </div>
+
+              {/* Total Students */}
+              <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
+                  <FiUsers className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">Total Students</span>
+                  <span className="text-base sm:text-lg font-bold text-indigo-600 dark:text-indigo-400">{totalStudents}</span>
+                </div>
+              </div>
+            </div>
           </div>
-
-          {/* Stat Cards — match the Program Details layout */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 w-full">
-            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-4 py-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
-              <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{pagination.total || programs.length}</p>
-              <div className="mt-1 flex items-center justify-between gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">Total Programs</span>
-                <FiFolder className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
-              </div>
-            </article>
-
-            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-4 py-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
-              <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{activeCount}</p>
-              <div className="mt-1 flex items-center justify-between gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">Active Programs</span>
-                <FiCheckSquare className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
-              </div>
-            </article>
-
-            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-4 py-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
-              <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{draftCount}</p>
-              <div className="mt-1 flex items-center justify-between gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">Draft Programs</span>
-                <FiGrid className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
-              </div>
-            </article>
-
-            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-4 py-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
-              <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{totalStudents}</p>
-              <div className="mt-1 flex items-center justify-between gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">Total Students</span>
-                <FiUsers className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
-              </div>
-            </article>
-          </section>
 
           {/* Program Listing Section */}
           <section className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2 border-b border-black/5 pb-1 dark:border-white/5" role="tablist" aria-label="Program status">
-              {PROGRAM_STATUS_TABS.map((tab) => (
-                <button key={tab.label} type="button" role="tab" aria-selected={selectedStatus === tab.value} onClick={() => handleStatusTabChange(tab.value)} className={`rounded-t-lg border-b-2 px-3 py-2 text-xs font-semibold transition-colors ${selectedStatus === tab.value ? 'border-[#3C83F6] text-[#2563eb] dark:border-[#bceaff] dark:text-[#bceaff]' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'}`}>
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-            {/* Filter Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 dark:border-white/5 pb-4">
-              {/* Left Column: Title, Select All & Search */}
-              <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{PROGRAM_STATUS_TABS.find((tab) => tab.value === selectedStatus)?.label || 'All'} Programs</h2>
-
-                <div className="flex items-center gap-2 px-2.5 py-1 bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl h-9 shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={programs.length > 0 && programs.every(p => selectedProgramIds.includes(p._id))}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        const newSelections = new Set([...selectedProgramIds, ...programs.map(p => p._id)]);
-                        setSelectedProgramIds(Array.from(newSelections));
-                      } else {
-                        setSelectedProgramIds(selectedProgramIds.filter(id => !programs.some(p => p._id === id)));
-                      }
-                    }}
-                    className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
-                  />
-                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">Select All</span>
+            {/* Toolbar: Program Type Filter + Status Filter Pills + Search Bar */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full scrollbar-none">
+                {/* Program Type Pills */}
+                <div className="flex items-center rounded-lg border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 p-0.5 text-xs shrink-0">
+                  {["All", ...PROGRAM_TYPES].map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        setSelectedType(type === "All" ? "" : type);
+                        setPagination((prev) => ({ ...prev, page: 1 }));
+                      }}
+                      className={`px-2.5 py-1.5 rounded-md transition font-semibold whitespace-nowrap ${
+                        (selectedType === "" && type === "All") || selectedType === type
+                          ? "bg-[#3C83F6] text-white shadow-xs"
+                          : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
                 </div>
 
-                {/* Search Bar cleanly placed on left */}
-                <div className="relative w-44 sm:w-60">
-                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/40 dark:text-white/40 pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Search programs..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-9 pl-9 pr-3 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-[11px] font-bold text-slate-800 dark:text-white placeholder:font-normal placeholder:text-black/40 dark:placeholder:text-white/40 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 w-full"
-                  />
-                  {searchTerm && (
-                    <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-1/2 -translate-y-1/2">
-                      <FiX className="w-3 h-3 text-black/40 dark:text-white/40" />
+                {/* Status Pills */}
+                <div className="flex items-center rounded-lg border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 p-0.5 text-xs shrink-0">
+                  {["All", "Published", "Draft", "Archived"].map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => {
+                        setSelectedStatus(st === "All" ? "" : st);
+                        setPagination((prev) => ({ ...prev, page: 1 }));
+                      }}
+                      className={`px-2.5 py-1.5 rounded-md transition font-semibold whitespace-nowrap ${
+                        (selectedStatus === "" && st === "All") || selectedStatus === st
+                          ? "bg-[#3C83F6] text-white shadow-xs"
+                          : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+                      }`}
+                    >
+                      {st}
                     </button>
-                  )}
+                  ))}
                 </div>
               </div>
 
-              {/* Right Column: Dropdowns + Clear + Add Button */}
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Type Filter Dropdown */}
-                <div className="relative">
-                  <select
-                    value={selectedType}
-                    onChange={(e) => setSelectedType(e.target.value)}
-                    className="appearance-none h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-2.5 pr-7 text-[11px] font-bold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 cursor-pointer max-w-[130px] text-ellipsis overflow-hidden whitespace-nowrap"
-                  >
-                    <option className={dropdownOptionClass} value="">All Types</option>
-                    {PROGRAM_TYPES.map(({ value, label }) => (
-                      <option key={value} className={dropdownOptionClass} value={value}>{label}</option>
-                    ))}
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-black/45 dark:text-white/60" />
-                </div>
-
-                {(searchTerm || selectedType || selectedStatus || selectedMonth) && (
+              {/* Search Bar */}
+              <div className="relative w-full md:w-64 shrink-0">
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setPagination((prev) => ({ ...prev, page: 1 }));
+                  }}
+                  placeholder="Search programs..."
+                  className="w-full h-9 pl-9 pr-7 text-xs rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                />
+                {searchTerm && (
                   <button
-                    onClick={handleClearFilters}
-                    className="h-9 px-3 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setPagination((prev) => ({ ...prev, page: 1 }));
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                   >
-                    <FiX className="w-3 h-3" /> Clear
+                    <FiX className="w-3.5 h-3.5" />
                   </button>
                 )}
-
-                <button
-                  onClick={handleOpenCreateModal}
-                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white px-4 text-xs font-bold transition-colors shadow-sm shrink-0"
-                >
-                  <FiPlus className="w-3.5 h-3.5" />
-                  Add Program
-                </button>
               </div>
             </div>
 
@@ -1121,7 +1502,7 @@ export default function Programs() {
                 <LoadingScreen />
               </div>
             ) : programs.length === 0 ? (
-              <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl p-16 text-center shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
+              <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl p-8 sm:p-16 text-center shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
                 <div className="w-14 h-14 rounded-2xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center mx-auto mb-4">
                   <FiFolder className="w-7 h-7" />
                 </div>
@@ -1152,19 +1533,39 @@ export default function Programs() {
               </div>
             ) : (
               <>
-                {/* Program Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {programs.map((program) => (
-                    <ProgramCard
-                      key={program._id}
-                      program={program}
-                      selected={selectedProgramIds.includes(program._id)}
-                      onSelectToggle={handleSelectToggle}
-                      onEdit={handleOpenEditModal}
-                      onDelete={setProgramToDelete}
-                      onView={() => navigate(`/programs/${program._id}`)}
-                    />
-                  ))}
+                <div className="overflow-x-auto overflow-y-auto max-h-[78vh] w-full bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl shadow-xs minimal-scrollbar">
+                  <table className={`w-full min-w-[850px] border-collapse ${selectionMode ? '' : 'program-selection-hidden'}`}>
+                    <thead>
+                      <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/70 dark:bg-slate-900/40 select-none">
+                        <th className="px-3.5 py-3 text-center w-12 shrink-0">
+                          <input type="checkbox" aria-label="Select all programs" checked={programs.length > 0 && programs.every((program) => selectedProgramIds.includes(program._id))} onChange={(event) => { if (event.target.checked) setSelectedProgramIds((current) => [...new Set([...current, ...programs.map((program) => program._id)])]); else setSelectedProgramIds((current) => current.filter((id) => !programs.some((program) => program._id === id))); }} className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6]" />
+                        </th>
+                        <th className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-14 whitespace-nowrap">#</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-black/45 dark:text-white/50 min-w-[240px] whitespace-nowrap">Program Name</th>
+                        <th className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-36 whitespace-nowrap">Program Type</th>
+                        <th className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-36 whitespace-nowrap">Status</th>
+                        <th className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-28 whitespace-nowrap">Students</th>
+                        <th className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-28 whitespace-nowrap">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/5 dark:divide-white/10 text-xs">
+                      {programs.map((program, index) => (
+                        <tr key={program._id} onClick={() => navigate(`/programs/${program._id}`)} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors cursor-pointer">
+                          <td className="px-3.5 py-3.5 text-center"><input type="checkbox" aria-label={`Select ${program.name}`} checked={selectedProgramIds.includes(program._id)} onChange={() => handleSelectToggle(program._id)} onClick={(event) => event.stopPropagation()} className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6]" /></td>
+                          <td className="px-3.5 py-3.5 text-center text-xs text-slate-400 dark:text-slate-500 tabular-nums">{index + 1 + ((pagination.page || 1) - 1) * (pagination.limit || programs.length)}</td>
+                          <td className="px-4 py-3.5 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white">
+                            <div className="max-w-[280px] truncate" title={program.name}>
+                              {program.name}
+                            </div>
+                          </td>
+                          <td className="px-3.5 py-3.5 text-center whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">{getProgramType(program.programType)}</td>
+                          <td className="px-3.5 py-3.5 text-center whitespace-nowrap" onClick={(event) => event.stopPropagation()}><div className="inline-block relative"><select value={program.status === 'Active' ? 'Published' : program.status} onChange={(event) => handleStatusChange(program, event.target.value)} className={`appearance-none pr-6 px-2.5 py-1 rounded-lg text-[11px] font-semibold border outline-none cursor-pointer transition ${program.status === 'Published' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800' : program.status === 'Draft' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700'}`}><option value="Published">Published</option><option value="Draft">Draft</option><option value="Archived">Archived</option></select><FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 opacity-60" /></div></td>
+                          <td className="px-3.5 py-3.5 text-center whitespace-nowrap"><span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">{program.studentCount || 0}</span></td>
+                          <td className="px-3.5 py-3.5 text-center whitespace-nowrap" onClick={(event) => event.stopPropagation()}><div className="flex items-center justify-center gap-1.5"><button aria-label={`View ${program.name}`} onClick={() => navigate(`/programs/${program._id}`)} className="p-1.5 rounded-lg text-slate-400 hover:text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/10 transition"><FiEye className="w-3.5 h-3.5" /></button><button aria-label={`Delete ${program.name}`} onClick={() => setProgramToDelete(program)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition"><FiTrash2 className="w-3.5 h-3.5" /></button></div></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
 
                 {pagination.totalPages > 1 && (
@@ -1223,7 +1624,7 @@ export default function Programs() {
 }
 
 /* ─── ProgramCard ─── styled after CategoryCard with Checkbox selection */
-function ProgramCard({ program, selected, onSelectToggle, onEdit, onDelete, onView }) {
+function ProgramCard({ program, selected, onSelectToggle, onEdit, onDelete, onView, onStatusChange }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -1235,29 +1636,6 @@ function ProgramCard({ program, selected, onSelectToggle, onEdit, onDelete, onVi
   }, []);
 
   const statusColor = statusBadgeClass(program.status);
-  const statusLabel = getProgramStatusLabel(program.status);
-  const configuredPrices = (program.pricingPlans || [])
-    .filter((plan) => plan.active !== false)
-    .map((plan) => Number(plan.price))
-    .filter((price) => Number.isFinite(price) && price > 0);
-  const pricesByBillingPeriod = new Map();
-  (program.pricingPlans || []).forEach((plan) => {
-    if (plan.active === false || !['Monthly', 'Annual'].includes(plan.billingPeriod)) return;
-    const price = Number(plan.price);
-    if (Number.isFinite(price) && price > 0) {
-      pricesByBillingPeriod.set(plan.billingPeriod, Math.min(pricesByBillingPeriod.get(plan.billingPeriod) ?? Infinity, price));
-    }
-  });
-  const billingPeriodPrice = [...pricesByBillingPeriod.entries()]
-    .map(([billingPeriod, price]) => `${billingPeriod} ₹${price.toLocaleString('en-IN')}`)
-    .join(' · ');
-  const programPrice = program.pricingType !== 'Paid'
-    ? 'Free'
-    : billingPeriodPrice
-      ? billingPeriodPrice
-      : configuredPrices.length
-        ? `From ₹${Math.min(...configuredPrices).toLocaleString('en-IN')}`
-      : `₹${Number(program.programFee || 0).toLocaleString('en-IN')}`;
 
   return (
     <article className={`relative rounded-xl overflow-hidden border ${selected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col justify-between hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group`}>
@@ -1311,9 +1689,17 @@ function ProgramCard({ program, selected, onSelectToggle, onEdit, onDelete, onVi
         className="px-4 pt-2.5 pb-2 min-h-[92px] border-b border-black/10 dark:border-white/15 bg-[#dbe7f3]/90 dark:bg-[#1a2d48] pl-10 pr-9 flex flex-col justify-between cursor-pointer"
         onClick={onView}
       >
-        <span className={`inline-flex self-start px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${statusColor}`}>
-          {statusLabel}
-        </span>
+        <select
+          value={program.status === 'Active' ? 'Published' : program.status}
+          onChange={(event) => onStatusChange(program, event.target.value)}
+          onClick={(event) => event.stopPropagation()}
+          aria-label={`Change status for ${program.name}`}
+          className={`self-start rounded-full border-0 px-2 py-0.5 text-[9px] font-bold uppercase outline-none cursor-pointer ${statusColor}`}
+        >
+          <option value="Draft">Draft</option>
+          <option value="Published">Published</option>
+          <option value="Archived">Archived</option>
+        </select>
         <div className="min-h-[30px] flex items-center py-0.5">
           <h3 className="text-xs md:text-sm leading-tight font-bold text-slate-900 dark:text-white line-clamp-2">{program.name}</h3>
         </div>
@@ -1336,7 +1722,7 @@ function ProgramCard({ program, selected, onSelectToggle, onEdit, onDelete, onVi
           <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-500 dark:text-slate-400">
             <span>Pricing</span>
             <span className="font-semibold text-slate-800 dark:text-slate-200">
-              {programPrice}
+              {program.pricingType === 'Paid' ? `₹${program.programFee}` : 'Free'}
             </span>
           </div>
         </div>

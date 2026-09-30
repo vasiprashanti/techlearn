@@ -100,9 +100,21 @@ const programSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Draft", "Active", "Archived"],
+      // Active is retained for backwards compatibility with existing records;
+      // new and updated admin workflows use Published.
+      enum: ["Draft", "Published", "Archived", "Active"],
       default: "Draft",
       index: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
     visibility: {
       type: String,
@@ -115,14 +127,14 @@ const programSchema = new mongoose.Schema(
       enum: ["Free", "Paid"],
       default: "Free",
     },
-    billingOptions: {
-      type: [{ type: String, enum: ["Monthly", "Annual"] }],
-      default: [],
-    },
     availability: {
       type: String,
       enum: ["Structured", "Trainer-Led", "Both"],
-      default: undefined,
+      default: "Structured",
+    },
+    billingOptions: {
+      type: [{ type: String, enum: ["Monthly", "Annual"] }],
+      default: [],
     },
     structuredFee: {
       type: Number,

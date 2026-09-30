@@ -318,6 +318,7 @@ export const adminAPI = {
   getStudent: (studentId) => request(`/admin/students/${studentId}`),
   createStudent: (body) => request('/admin/students', { method: 'POST', body: JSON.stringify(body) }),
   updateStudent: (studentId, body) => request(`/admin/students/${studentId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  updateStudentPayment: (studentId, payment) => request(`/admin/students/${studentId}/payment`, { method: 'PATCH', body: JSON.stringify({ payment }) }),
   updateStudentProgramStartDate: (studentId, programId, individualStartDate) => request(
     `/admin/students/${studentId}/programs/${programId}/start-date`,
     { method: 'PATCH', body: JSON.stringify({ individualStartDate }) },
@@ -519,6 +520,7 @@ export const adminAPI = {
     if (params.limit) query.set('limit', params.limit);
     return request(`/admin/programs?${query.toString()}`);
   },
+  getProgramOptions: () => request('/admin/programs/options', { noCache: true }),
   getProgramFormOptions: () => request('/admin/programs/options', { noCache: true }),
   createProgram: (body) => request('/admin/programs', { method: 'POST', body: JSON.stringify(body) }),
   getProgramById: (id) => request(`/admin/programs/${id}`),

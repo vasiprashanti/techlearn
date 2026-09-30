@@ -178,7 +178,7 @@ function DelayedAnalytics() {
 
 function RouteFallback() {
   return (
-    <div className="flex min-h-[50vh] items-center justify-center">
+    <div className="flex min-h-[50vh] items-center justify-center bg-transparent text-slate-900 dark:bg-[#080d25] dark:text-white">
       <div className="h-9 w-9 animate-spin rounded-full border-2 border-[#7ec9ff] border-t-transparent" />
     </div>
   );
@@ -455,7 +455,7 @@ export default function App() {
               <ScrollToTop />
               <ExternalLinkHandler />
               <DelayedAnalytics />
-              <div className="relative min-h-screen overflow-x-clip bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:bg-[#080d25] transition-all duration-300">
+              <div className="relative min-h-screen overflow-x-clip bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:bg-[#080d25] dark:bg-none">
                 <FloatingCodeBackground />
                 <LayoutWrapper />
               </div>
