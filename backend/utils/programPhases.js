@@ -15,14 +15,8 @@ export const PROGRAM_PHASE_LABELS = Object.freeze({
 });
 
 export const PROGRAM_PHASES_BY_TYPE = Object.freeze({
-  Placement: Object.freeze([
-    "learning",
-    "revision",
-    "company_preparation",
-    "mock_interview",
-    "final_assessment",
-  ]),
-  Skill: Object.freeze(["learning", "final_assessment"]),
+  Placement: Object.freeze([...PROGRAM_PHASE_TYPES]),
+  Skill: Object.freeze([...PROGRAM_PHASE_TYPES]),
 });
 
 const PHASE_ALIASES = Object.freeze({
@@ -64,9 +58,7 @@ export const parseDurationDays = (duration) => {
   return Math.round(amount * multiplier);
 };
 
-export const getMinimumDurationDays = (programType) => (
-  programType === "Placement" ? 5 : 2
-);
+export const getMinimumDurationDays = () => 5;
 
 export const buildDefaultProgramPhases = (programType, durationDays) => {
   const totalDays = Number(durationDays);
@@ -84,7 +76,7 @@ export const buildDefaultProgramPhases = (programType, durationDays) => {
       ? [totalDays - 8, 2, 4, 1, 1]
       : [1 + (totalDays - 5), 1, 1, 1, 1];
   } else {
-    lengths = [totalDays - 1, 1];
+    lengths = [Math.max(1, totalDays - 4), 1, 1, 1, 1];
   }
 
   let nextStartDay = 1;

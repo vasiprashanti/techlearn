@@ -11,6 +11,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;700&family=Poppins:wght@400;500;600;700;800;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script>
+      (() => {
+        try {
+          const storedTheme = localStorage.getItem('theme_preference')
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const isDark = storedTheme === 'dark' || (storedTheme !== 'light' && prefersDark)
+          document.documentElement.classList.toggle('dark', isDark)
+          document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
+        } catch (_) {
+          // The app can still initialize if storage or matchMedia is unavailable.
+        }
+      })()
+    </script>
     <title>TechLearn Solutions</title>
   </head>
   <body>

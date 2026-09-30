@@ -1194,44 +1194,44 @@ export default function Courses() {
                 No courses match the selected filters. Click &ldquo;Add New Course&rdquo; above to create one.
               </div>
             ) : (
-              <div className="overflow-auto max-h-[75vh] bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl shadow-xs">
+              <div className="overflow-auto max-h-[78vh] bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl shadow-xs">
                 {/* Desktop View Table */}
-                <table className="hidden md:table w-full table-fixed">
+                <table className="hidden md:table w-full min-w-full table-fixed">
                   <thead>
-                    <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/70 dark:bg-slate-900/40 select-none text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                      <th className="px-3 py-3 text-center w-[5%]">#</th>
+                    <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30 select-none">
+                      <th className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[5%]">#</th>
                       <th
-                        className="px-3 py-3 text-left w-[22%] cursor-pointer hover:text-blue-500"
+                        className="px-3 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[22%] cursor-pointer hover:text-blue-500"
                         onClick={() => toggleCourseSort("title")}
                       >
                         Course Title {courseSortField === "title" && (courseSortDirection === "asc" ? "▲" : "▼")}
                       </th>
-                      <th className="px-3 py-3 text-center w-[12%]">Actions</th>
-                      <th className="px-3 py-3 text-left w-[18%]">Skills</th>
+                      <th className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[12%]">Actions</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[18%]">Skills</th>
                       <th
-                        className="px-3 py-3 text-center w-[10%] cursor-pointer hover:text-blue-500"
+                        className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[10%] cursor-pointer hover:text-blue-500"
                         onClick={() => toggleCourseSort("level")}
                       >
                         Level {courseSortField === "level" && (courseSortDirection === "asc" ? "▲" : "▼")}
                       </th>
-                      <th className="px-3 py-3 text-center w-[10%]">Delivery</th>
-                      <th className="px-3 py-3 text-center w-[9%]">Price</th>
-                      <th className="px-3 py-3 text-center w-[8%]">Status</th>
+                      <th className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[10%]">Delivery</th>
+                      <th className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[9%]">Price</th>
+                      <th className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[8%]">Status</th>
                       <th
-                        className="px-3 py-3 text-center w-[6%] cursor-pointer hover:text-blue-500"
+                        className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[6%] cursor-pointer hover:text-blue-500"
                         onClick={() => toggleCourseSort("topics")}
                       >
                         Topics {courseSortField === "topics" && (courseSortDirection === "asc" ? "▲" : "▼")}
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-black/5 dark:divide-white/10 text-xs">
+                  <tbody className="border-t border-black/5 dark:border-white/10 text-xs">
                     {filteredCourses.map((course, index) => {
                       const isFree = course.accessType === "Free" || Number(course.price) === 0;
                       return (
                         <tr
                           key={course._id}
-                          className="hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors"
+                          className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors"
                         >
                           <td className="px-3 py-3 text-center text-slate-400 font-semibold">{index + 1}</td>
                           <td className="px-3 py-3 font-semibold text-slate-800 dark:text-white truncate" title={course.title}>

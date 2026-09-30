@@ -22,10 +22,8 @@ import {
 
 const PROGRAM_TYPES = ['Placement', 'Skill'];
 
-const PHASE_TYPES_BY_PROGRAM_TYPE = {
-  Placement: ['learning', 'revision', 'company_preparation', 'mock_interview', 'final_assessment'],
-  Skill: ['learning', 'final_assessment'],
-};
+const PHASE_TYPES = ['learning', 'revision', 'company_preparation', 'mock_interview', 'final_assessment'];
+const PHASE_TYPES_BY_PROGRAM_TYPE = { Placement: PHASE_TYPES, Skill: PHASE_TYPES };
 
 const PHASE_LABELS = {
   learning: 'Learning',
@@ -78,17 +76,16 @@ const parseDurationDays = (value) => {
   return Math.round(amount * multiplier);
 };
 
-const getMinimumDurationDays = (programType) => (programType === 'Placement' ? 5 : 2);
+const getMinimumDurationDays = () => 5;
 
 const getDefaultPhases = (programType, value) => {
   const durationDays = Number(value);
   if (!Number.isInteger(durationDays) || durationDays < getMinimumDurationDays(programType)) return [];
 
-  const lengths = programType === 'Placement'
-    ? durationDays >= 9
-      ? [durationDays - 8, 2, 4, 1, 1]
-      : [1 + (durationDays - 5), 1, 1, 1, 1]
-    : [durationDays - 1, 1];
+  const baseLengths = programType === 'Placement' ? [Math.max(1, durationDays - 8), 2, 4, 1, 1] : [Math.max(1, durationDays - 4), 1, 1, 1, 1];
+  const lengths = [...baseLengths];
+  const total = lengths.reduce((sum, item) => sum + item, 0);
+  lengths[0] += durationDays - total;
   let nextStartDay = 1;
 
   return PHASE_TYPES_BY_PROGRAM_TYPE[programType].map((phase, index) => {
@@ -116,9 +113,10 @@ const getProgramType = (value) => {
 };
 
 const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
+const parseCommaString = (str) => (str || '').split(',').map((item) => item.trim()).filter(Boolean);
 
 const statusBadgeClass = (status) => {
-  if (status === 'Active') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
+  if (status === 'Published') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
   if (status === 'Draft') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300';
   if (status === 'Archived') return 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300';
   return 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300';
@@ -144,6 +142,7 @@ export default function Programs() {
 
   // Bulk Selection State
   const [selectedProgramIds, setSelectedProgramIds] = useState([]);
+  const [selectionMode, setSelectionMode] = useState(false);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
@@ -153,16 +152,25 @@ export default function Programs() {
   const [saving, setSaving] = useState(false);
   const [skillTagsOpen, setSkillTagsOpen] = useState(false);
   const [targetCompanyDraft, setTargetCompanyDraft] = useState('');
+  const [targetRoleDraft, setTargetRoleDraft] = useState('');
+  const [programOptions, setProgramOptions] = useState({ skills: [], companies: [], roles: [] });
 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     programType: 'Placement',
     durationDays: '30',
+    durationUnit: 'Days',
     phases: getDefaultPhases('Placement', 30),
     status: 'Draft',
     visibility: 'Public',
     pricingType: 'Free',
+    availability: 'Structured',
+    billingOptions: [],
+    monthlyStructuredFee: '0',
+    monthlyTrainerLedFee: '0',
+    annualStructuredFee: '0',
+    annualTrainerLedFee: '0',
     programFee: '0',
     pricingPlans: getDefaultPricingPlans('Placement'),
     learningGoalsText: '',
@@ -174,6 +182,12 @@ export default function Programs() {
 
   const [programToDelete, setProgramToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    adminAPI.getProgramOptions().then((response) => {
+      if (response?.success) setProgramOptions({ skills: response.skills || [], companies: response.companies || [], roles: response.roles || [] });
+    }).catch(() => {});
+  }, []);
 
   const fetchPrograms = useCallback(async () => {
     try {
@@ -216,6 +230,7 @@ export default function Programs() {
 
   const handleClearSelection = () => {
     setSelectedProgramIds([]);
+    setSelectionMode(false);
   };
 
   const handleBulkDelete = async () => {
@@ -250,8 +265,13 @@ export default function Programs() {
       }));
       return;
     }
-    if (name === 'durationDays') {
-      setFormData((prev) => ({ ...prev, durationDays: value, phases: getDefaultPhases(prev.programType, value) }));
+    if (name === 'durationDays' || name === 'durationUnit') {
+      setFormData((prev) => {
+        const next = { ...prev, [name]: value };
+        const duration = name === 'durationUnit' && value === 'Weeks' ? Number(prev.durationDays) * 7 : Number(next.durationDays);
+        next.phases = getDefaultPhases(prev.programType, duration);
+        return next;
+      });
       return;
     }
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -317,10 +337,17 @@ export default function Programs() {
       description: '',
       programType: 'Placement',
       durationDays: '30',
+      durationUnit: 'Days',
       phases: getDefaultPhases('Placement', 30),
       status: 'Draft',
       visibility: 'Public',
       pricingType: 'Free',
+      availability: 'Structured',
+      billingOptions: [],
+      monthlyStructuredFee: '0',
+      monthlyTrainerLedFee: '0',
+      annualStructuredFee: '0',
+      annualTrainerLedFee: '0',
       programFee: '0',
       pricingPlans: getDefaultPricingPlans('Placement'),
       learningGoalsText: 'Get Placed',
@@ -343,10 +370,17 @@ export default function Programs() {
       description: program.description || '',
       programType: getProgramType(program.programType),
       durationDays: String(program.durationDays || parseDurationDays(program.duration) || 30),
+      durationUnit: String(program.duration || '').toLowerCase().includes('week') ? 'Weeks' : 'Days',
       phases: normalizePhases(program.phases, getProgramType(program.programType), program.durationDays || parseDurationDays(program.duration) || 30),
       status: program.status || 'Draft',
       visibility: program.visibility || 'Public',
       pricingType: program.pricingType || 'Free',
+      availability: program.availability || 'Structured',
+      billingOptions: Array.isArray(program.billingOptions) ? program.billingOptions : [],
+      monthlyStructuredFee: String(program.monthlyStructuredFee || 0),
+      monthlyTrainerLedFee: String(program.monthlyTrainerLedFee || 0),
+      annualStructuredFee: String(program.annualStructuredFee || 0),
+      annualTrainerLedFee: String(program.annualTrainerLedFee || 0),
       programFee: String(program.programFee || 0),
       pricingPlans: Array.isArray(program.pricingPlans) && program.pricingPlans.length
         ? program.pricingPlans.map((plan) => ({
@@ -377,7 +411,7 @@ export default function Programs() {
     setModalError('');
 
     const finalType = formData.programType.trim();
-    const durationDays = Number(formData.durationDays);
+    const durationDays = Number(formData.durationDays) * (formData.durationUnit === 'Weeks' ? 7 : 1);
 
     if (!formData.name.trim()) { setModalError('Program name is required'); return; }
     if (!finalType) { setModalError('Program type is required'); return; }
@@ -407,16 +441,18 @@ export default function Programs() {
       return;
     }
     if (formData.pricingType === 'Paid') {
-      const feeNum = Number(formData.programFee);
-      if (isNaN(feeNum) || feeNum < 0) { setModalError('Valid non-negative fee is required for Paid programs'); return; }
-      if (!formData.pricingPlans.length || formData.pricingPlans.some((plan) => !plan.title.trim() || !Number.isFinite(Number(plan.price)) || Number(plan.price) < 0)) {
-        setModalError('Configure at least one valid pricing plan for Paid programs.');
+      if (!formData.billingOptions.length) { setModalError('Select at least one billing option for Paid programs.'); return; }
+      const availabilityFields = {
+        Structured: ['monthlyStructuredFee', 'annualStructuredFee'],
+        'Trainer-Led': ['monthlyTrainerLedFee', 'annualTrainerLedFee'],
+        Both: ['monthlyStructuredFee', 'monthlyTrainerLedFee', 'annualStructuredFee', 'annualTrainerLedFee'],
+      }[formData.availability] || [];
+      const requiredFields = availabilityFields.filter((field) => field.startsWith('monthly') ? formData.billingOptions.includes('Monthly') : formData.billingOptions.includes('Annual'));
+      if (requiredFields.some((field) => !Number.isFinite(Number(formData[field])) || Number(formData[field]) < 0)) {
+        setModalError('Enter a valid fee for every selected billing and delivery option.');
         return;
       }
     }
-
-    const parseCommaString = (str) =>
-      (str || '').split(',').map((item) => item.trim()).filter(Boolean);
 
     try {
       setSaving(true);
@@ -424,23 +460,21 @@ export default function Programs() {
         name: formData.name.trim(),
         description: formData.description.trim(),
         programType: finalType,
-        duration: `${durationDays} Days`,
+        duration: `${formData.durationDays} ${formData.durationUnit}`,
         durationDays,
         phases,
-        status: formData.status,
         visibility: formData.visibility,
         pricingType: formData.pricingType,
-        programFee: formData.pricingType === 'Paid' ? Number(formData.programFee) : 0,
-        pricingPlans: formData.pricingType === 'Paid'
-          ? formData.pricingPlans.map((plan) => ({
-              key: plan.key,
-              title: plan.title,
-              price: Number(plan.price),
-              benefits: (plan.benefitsText || '').split(',').map((item) => item.trim()).filter(Boolean),
-            }))
-          : [],
-        learningGoals: parseCommaString(formData.learningGoalsText),
-        placementCategories: finalType === 'Placement' ? [formData.placementCategory] : [],
+        availability: formData.availability,
+        billingOptions: formData.pricingType === 'Paid' ? formData.billingOptions : [],
+        monthlyStructuredFee: Number(formData.monthlyStructuredFee) || 0,
+        monthlyTrainerLedFee: Number(formData.monthlyTrainerLedFee) || 0,
+        annualStructuredFee: Number(formData.annualStructuredFee) || 0,
+        annualTrainerLedFee: Number(formData.annualTrainerLedFee) || 0,
+        programFee: formData.pricingType === 'Paid' ? Number(formData.monthlyStructuredFee || formData.monthlyTrainerLedFee || formData.annualStructuredFee || formData.annualTrainerLedFee) : 0,
+        pricingPlans: [],
+        learningGoals: [],
+        placementCategories: [],
         targetCompanies: formData.targetCompanies,
         skillTags: formData.skillTags,
         targetRoles: parseCommaString(formData.targetRolesText),
@@ -477,6 +511,24 @@ export default function Programs() {
     }
   };
 
+  const handleAddTargetRole = () => {
+    const role = targetRoleDraft.trim().replace(/,$/, '');
+    if (!role) return;
+    setFormData((prev) => ({ ...prev, targetRolesText: [...new Set([...parseCommaString(prev.targetRolesText), role])].join(', ') }));
+    setTargetRoleDraft('');
+  };
+
+  const handleStatusChange = async (program, status) => {
+    if (!status || status === program.status) return;
+    try {
+      await adminAPI.updateProgram(program._id, { status });
+      await fetchPrograms();
+    } catch (err) {
+      console.error('Error updating program status:', err);
+      alert(err.message || 'Failed to update program status');
+    }
+  };
+
   const handleClearFilters = () => {
     setSearchTerm('');
     setSelectedType('');
@@ -487,7 +539,7 @@ export default function Programs() {
 
   const programFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
-  const activeCount = programs.filter(p => p.status === 'Active').length;
+  const activeCount = programs.filter(p => p.status === 'Published').length;
   const draftCount = programs.filter(p => p.status === 'Draft').length;
   const totalStudents = programs.reduce((sum, p) => sum + (p.studentCount || 0), 0);
 
@@ -505,8 +557,8 @@ export default function Programs() {
           <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 p-6 shadow-2xl">
             <h3 className="text-lg font-semibold text-[#3C83F6] dark:text-[#bceaff]">Delete Program?</h3>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              Are you sure you want to delete{' '}
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{programToDelete.name}</span>? This action cannot be undone.
+              This program will be removed from active use. Student XP, accuracy, progress, submissions, assessment results, and historical records will be preserved. Continue deleting{' '}
+              <span className="font-semibold text-slate-800 dark:text-slate-200">{programToDelete.name}</span>?
             </p>
             <div className="mt-5 flex items-center justify-end gap-3">
               <button
@@ -535,7 +587,7 @@ export default function Programs() {
           <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 p-6 shadow-2xl">
             <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Bulk Delete Programs?</h3>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              Are you sure you want to delete the {selectedProgramIds.length} selected programs? This action cannot be undone.
+              These programs will be removed from active use. Student history will be preserved. Continue?
             </p>
             <div className="mt-5 flex items-center justify-end gap-3">
               <button
@@ -561,7 +613,7 @@ export default function Programs() {
       {isModalOpen && (
         <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-          <div className="relative w-full max-w-2xl rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="course-form-modal relative w-full max-w-2xl bg-white border border-black/10 dark:bg-[#0a1737] dark:border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-visible">
             {/* Fixed Header */}
             <div className="px-5 py-3.5 border-b border-black/10 dark:border-white/10 flex items-center justify-between shrink-0">
               <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-[#bceaff]">
@@ -575,9 +627,9 @@ export default function Programs() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitProgram} className="flex-1 flex flex-col min-h-0">
+            <form onSubmit={handleSubmitProgram} className="flex min-h-0 flex-1 flex-col overflow-visible">
               {/* Scrollable Body */}
-              <div className="flex-1 overflow-y-auto p-5 space-y-3.5 min-h-0">
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-visible p-5 space-y-4 minimal-scrollbar">
                 {modalError && (
                   <p className="text-sm text-red-500 dark:text-red-400">{modalError}</p>
                 )}
@@ -596,10 +648,11 @@ export default function Programs() {
                 </div>
 
                 <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Description</label>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Description*</label>
                   <textarea
                     name="description"
                     rows={2}
+                    required
                     placeholder="Provide an overview of this learning program..."
                     value={formData.description}
                     onChange={handleFormChange}
@@ -608,6 +661,17 @@ export default function Programs() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Availability*</label>
+                    <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                      <select name="availability" value={formData.availability} onChange={handleFormChange} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none">
+                        <option className={dropdownOptionClass} value="Structured">Structured</option>
+                        <option className={dropdownOptionClass} value="Trainer-Led">Trainer-Led</option>
+                        <option className={dropdownOptionClass} value="Both">Both</option>
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                    </div>
+                  </div>
                   <div>
                     <label className="admin-micro-label text-black/45 dark:text-white/45">Program Type*</label>
                     <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
@@ -626,11 +690,11 @@ export default function Programs() {
                   </div>
 
                   <div>
-                    <label className="admin-micro-label text-black/45 dark:text-white/45">Duration (days)*</label>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Duration*</label>
                     <input
                       type="number"
                       name="durationDays"
-                      min={getMinimumDurationDays(formData.programType)}
+                      min="1"
                       step="1"
                       required
                       placeholder="e.g. 30"
@@ -638,6 +702,13 @@ export default function Programs() {
                       onChange={handleFormChange}
                       className={programFormInputClass}
                     />
+                  </div>
+                  <div>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Duration Unit*</label>
+                    <select name="durationUnit" value={formData.durationUnit} onChange={handleFormChange} className={programFormInputClass}>
+                      <option value="Days">Days</option>
+                      <option value="Weeks">Weeks</option>
+                    </select>
                   </div>
                 </div>
 
@@ -668,24 +739,7 @@ export default function Programs() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="admin-micro-label text-black/45 dark:text-white/45">Status</label>
-                    <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                      <select
-                        name="status"
-                        value={formData.status}
-                        onChange={handleFormChange}
-                        className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-                      >
-                        <option className={dropdownOptionClass} value="Active">Active</option>
-                        <option className={dropdownOptionClass} value="Draft">Draft</option>
-                        <option className={dropdownOptionClass} value="Archived">Archived</option>
-                      </select>
-                      <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                    </div>
-                  </div>
-
+                <div className="grid grid-cols-1 gap-3">
                   <div>
                     <label className="admin-micro-label text-black/45 dark:text-white/45">Visibility</label>
                     <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
@@ -720,25 +774,37 @@ export default function Programs() {
                     </div>
                   </div>
 
-                  {formData.pricingType === 'Paid' && (
-                    <div>
-                      <label className="admin-micro-label text-black/45 dark:text-white/45">Program Fee (₹)*</label>
-                      <input
-                        type="number"
-                        name="programFee"
-                        min="0"
-                        step="any"
-                        required
-                        placeholder="e.g. 4999"
-                        value={formData.programFee}
-                        onChange={handleFormChange}
-                        className={programFormInputClass}
-                      />
-                    </div>
-                  )}
+                  {false && formData.pricingType === 'Paid' && <div />}
                 </div>
 
                 {formData.pricingType === 'Paid' && (
+                  <div className="rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] p-3 space-y-3">
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Billing Options*</label>
+                    <div className="flex gap-4 text-sm text-slate-700 dark:text-slate-200">
+                      {['Monthly', 'Annual'].map((option) => (
+                        <label key={option} className="flex items-center gap-2">
+                          <input type="checkbox" checked={formData.billingOptions.includes(option)} onChange={() => setFormData((current) => ({ ...current, billingOptions: current.billingOptions.includes(option) ? current.billingOptions.filter((item) => item !== option) : [...current.billingOptions, option] }))} />
+                          {option}
+                        </label>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {[
+                        ['monthlyStructuredFee', 'Monthly Structured Fee (₹)'],
+                        ['monthlyTrainerLedFee', 'Monthly Trainer-Led Fee (₹)'],
+                        ['annualStructuredFee', 'Annual Structured Fee (₹)'],
+                        ['annualTrainerLedFee', 'Annual Trainer-Led Fee (₹)'],
+                      ].map(([name, label]) => (
+                        <label key={name} className="text-xs text-slate-600 dark:text-slate-300">
+                          {label}
+                          <input type="number" min="0" step="0.01" name={name} value={formData[name]} onChange={handleFormChange} className={programFormInputClass} />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {false && formData.pricingType === 'Paid' && (
                   <div className="rounded-xl border border-blue-500/20 bg-blue-500/[0.04] p-3 dark:border-blue-400/20 dark:bg-blue-400/[0.04]">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff]">Annual Pricing Plans</p>
                     <p className="mt-1 text-[11px] text-black/45 dark:text-white/45">Configure the plans shown to learners. Prices are read from this program at checkout.</p>
@@ -758,22 +824,12 @@ export default function Programs() {
                   <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff] pt-1">Student Matching Metadata</p>
 
                   <div className="grid grid-cols-1 gap-3">
-                    <div>
-                      <label className="admin-micro-label text-black/45 dark:text-white/45">Learning Goal</label>
-                      <div className="relative mt-1 rounded-xl border border-black/10 bg-white/85 shadow-[0_4px_14px_rgba(15,23,42,0.06)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:border-white/15 dark:bg-[#0f1f43] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)]">
-                        <select name="learningGoalsText" value={formData.learningGoalsText} onChange={handleFormChange} className="appearance-none w-full rounded-xl border-0 bg-transparent px-3 py-2.5 pr-10 text-sm font-medium text-slate-800 outline-none dark:text-white">
-                          {LEARNING_GOALS.map((goal) => <option key={goal} className={dropdownOptionClass} value={goal}>{goal}</option>)}
-                        </select>
-                        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
-                      </div>
-                    </div>
-
                     <div className="relative">
                       <label className="admin-micro-label text-black/45 dark:text-white/45">Skill Tags</label>
                       <button
                         type="button"
                         onClick={() => setSkillTagsOpen((open) => !open)}
-                        className="relative mt-1 flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border border-black/10 bg-white/85 px-3 py-2 text-left text-sm font-medium text-slate-800 shadow-[0_4px_14px_rgba(15,23,42,0.06)] outline-none transition-all hover:bg-white dark:border-white/15 dark:bg-[#0f1f43] dark:text-white dark:hover:bg-[#162a52]"
+                        className={`${programFormInputClass} flex items-center justify-between text-left`}
                       >
                         <span className={formData.skillTags.length ? 'text-slate-800 dark:text-white' : 'text-black/35 dark:text-white/40'}>
                           {formData.skillTags.length ? formData.skillTags.join(', ') : 'Select skills'}
@@ -781,8 +837,16 @@ export default function Programs() {
                         <FiChevronDown className="h-4 w-4 shrink-0 text-black/45 dark:text-white/60" />
                       </button>
                       {skillTagsOpen && (
-                        <div className="absolute left-0 right-0 z-20 mt-2 max-h-52 overflow-y-auto rounded-xl border border-black/10 bg-white p-2 shadow-xl dark:border-white/15 dark:bg-[#0f1f43]">
-                          {SKILL_TAG_OPTIONS.map((tag) => (
+                        <div
+                          className="course-skills-dropdown absolute left-0 right-0 top-full mt-1.5 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-3 shadow-xl max-h-56 overflow-y-auto"
+                          style={{
+                            backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff',
+                            opacity: 1,
+                            backdropFilter: 'none',
+                            WebkitBackdropFilter: 'none',
+                          }}
+                        >
+                          {(programOptions.skills.length ? programOptions.skills : SKILL_TAG_OPTIONS).map((tag) => (
                             <label key={tag} className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-slate-700 hover:bg-black/5 dark:text-slate-200 dark:hover:bg-white/10">
                               <input type="checkbox" checked={formData.skillTags.includes(tag)} onChange={() => handleToggleSkillTag(tag)} className="h-3.5 w-3.5 rounded border-black/20 text-[#3C83F6] focus:ring-[#3C83F6]" />
                               {tag}
@@ -792,47 +856,21 @@ export default function Programs() {
                       )}
                     </div>
 
+                    {formData.programType === 'Placement' && <>
                     <div>
                       <label className="admin-micro-label text-black/45 dark:text-white/45">Target Companies</label>
-                      <div className="mt-1 rounded-xl border border-black/10 bg-white/85 px-3 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.06)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:border-white/15 dark:bg-[#0f1f43] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)]">
-                        <div className="flex flex-wrap gap-1.5">
-                          {formData.targetCompanies.map((company) => (
-                            <span key={company} className="inline-flex items-center gap-1 rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-[11px] font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]">
-                              {company}
-                              <button type="button" onClick={() => handleRemoveTargetCompany(company)} className="rounded-full hover:bg-black/10 dark:hover:bg-white/10" title={`Remove ${company}`}>
-                                <FiX className="h-3 w-3" />
-                              </button>
-                            </span>
-                          ))}
-                          <input
-                            type="text"
-                            value={targetCompanyDraft}
-                            onChange={(event) => setTargetCompanyDraft(event.target.value)}
-                            onKeyDown={handleTargetCompanyKeyDown}
-                            onBlur={handleAddTargetCompany}
-                            placeholder="Type a company and press Enter"
-                            className="min-w-[220px] flex-1 border-0 bg-transparent py-1 text-sm text-slate-800 outline-none placeholder:text-black/35 dark:text-white dark:placeholder:text-white/40"
-                          />
-                        </div>
-                      </div>
+                      <div className="mt-1 flex gap-2"><input type="text" value={targetCompanyDraft} onChange={(event) => setTargetCompanyDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); handleAddTargetCompany(); } }} placeholder="Search or add a company" list="program-company-options" className={programFormInputClass} /><button type="button" onClick={handleAddTargetCompany} className="mt-1 rounded-xl bg-[#3C83F6] px-3 text-xs font-bold text-white">Add</button></div>
+                      <datalist id="program-company-options">{programOptions.companies.map((company) => <option key={company} value={company} />)}</datalist>
+                      <div className="mt-2 flex flex-wrap gap-1.5">{formData.targetCompanies.map((company) => <span key={company} className="rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-[11px] font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]">{company}<button type="button" className="ml-1" onClick={() => handleRemoveTargetCompany(company)}><FiX className="inline h-3 w-3" /></button></span>)}</div>
                     </div>
-
-                    {formData.programType === 'Placement' && (
-                      <div>
-                        <label className="admin-micro-label text-black/45 dark:text-white/45">Placement Category</label>
-                        <div className="relative mt-1 rounded-xl border border-black/10 bg-white/85 shadow-[0_4px_14px_rgba(15,23,42,0.06)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:border-white/15 dark:bg-[#0f1f43] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)]">
-                          <select name="placementCategory" value={formData.placementCategory} onChange={handleFormChange} className="appearance-none w-full rounded-xl border-0 bg-transparent px-3 py-2.5 pr-10 text-sm font-medium text-slate-800 outline-none dark:text-white">
-                            {PLACEMENT_CATEGORIES.map((category) => <option key={category} className={dropdownOptionClass} value={category}>{category}</option>)}
-                          </select>
-                          <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
-                        </div>
-                      </div>
-                    )}
 
                     <div>
                       <label className="admin-micro-label text-black/45 dark:text-white/45">Target Roles</label>
-                      <input type="text" name="targetRolesText" placeholder="Frontend Developer, Java Developer" value={formData.targetRolesText} onChange={handleFormChange} className={programFormInputClass} />
+                      <div className="mt-1 flex gap-2"><input type="text" value={targetRoleDraft} onChange={(event) => setTargetRoleDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); handleAddTargetRole(); } }} placeholder="Search or add a role" list="program-role-options" className={programFormInputClass} /><button type="button" onClick={handleAddTargetRole} className="mt-1 rounded-xl bg-[#3C83F6] px-3 text-xs font-bold text-white">Add</button></div>
+                      <datalist id="program-role-options">{programOptions.roles.map((role) => <option key={role} value={role} />)}</datalist>
+                      <div className="mt-2 flex flex-wrap gap-1.5">{parseCommaString(formData.targetRolesText).map((role) => <span key={role} className="rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-[11px] font-semibold text-[#3C83F6]">{role}<button type="button" className="ml-1" onClick={() => setFormData((prev) => ({ ...prev, targetRolesText: parseCommaString(prev.targetRolesText).filter((item) => item !== role).join(', ') }))}><FiX className="inline h-3 w-3" /></button></span>)}</div>
                     </div>
+                    </>}
                   </div>
                 </div>
               </div>
@@ -891,7 +929,7 @@ export default function Programs() {
             <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-4 py-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
               <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{activeCount}</p>
               <div className="mt-1 flex items-center justify-between gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">Active Programs</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">Published Programs</span>
                 <FiCheckSquare className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
               </div>
             </article>
@@ -921,7 +959,8 @@ export default function Programs() {
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">All Programs</h2>
 
-                <div className="flex items-center gap-2 px-2.5 py-1 bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl h-9 shrink-0">
+                <button type="button" onClick={() => { setSelectionMode(true); setSelectedProgramIds(programs.map((program) => program._id)); }} className="h-9 px-3 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-[11px] font-bold text-slate-700 dark:text-slate-200 hover:bg-black/5 dark:hover:bg-white/10">Select All</button>
+                {false && (<div className="flex items-center gap-2 px-2.5 py-1 bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl h-9 shrink-0">
                   <input
                     type="checkbox"
                     checked={programs.length > 0 && programs.every(p => selectedProgramIds.includes(p._id))}
@@ -936,7 +975,7 @@ export default function Programs() {
                     className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
                   />
                   <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">Select All</span>
-                </div>
+                </div>)}
 
                 {/* Search Bar cleanly placed on left */}
                 <div className="relative w-44 sm:w-60">
@@ -981,7 +1020,7 @@ export default function Programs() {
                     className="appearance-none h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-2.5 pr-7 text-[11px] font-bold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 cursor-pointer"
                   >
                     <option className={dropdownOptionClass} value="">All Statuses</option>
-                    <option className={dropdownOptionClass} value="Active">Active</option>
+                    <option className={dropdownOptionClass} value="Published">Published</option>
                     <option className={dropdownOptionClass} value="Draft">Draft</option>
                     <option className={dropdownOptionClass} value="Archived">Archived</option>
                   </select>
@@ -1044,20 +1083,26 @@ export default function Programs() {
               </div>
             ) : (
               <>
-                {/* Program Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {programs.map((program) => (
-                    <ProgramCard
-                      key={program._id}
-                      program={program}
-                      selected={selectedProgramIds.includes(program._id)}
-                      onSelectToggle={handleSelectToggle}
-                      onEdit={handleOpenEditModal}
-                      onDelete={setProgramToDelete}
-                      onView={() => navigate(`/programs/${program._id}`)}
-                    />
-                  ))}
-                </div>
+                <div className="overflow-auto max-h-[78vh] bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl shadow-xs">
+                  <table className={`w-full min-w-full table-fixed ${selectionMode ? '' : 'program-selection-hidden'}`}>
+                    <thead>
+                      <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30 select-none"><th className="px-3 py-2.5 text-center w-[7%]"><input type="checkbox" aria-label="Select all programs" checked={programs.length > 0 && programs.every((program) => selectedProgramIds.includes(program._id))} onChange={(event) => { if (event.target.checked) setSelectedProgramIds((current) => [...new Set([...current, ...programs.map((program) => program._id)])]); else setSelectedProgramIds((current) => current.filter((id) => !programs.some((program) => program._id === id))); }} className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6]" /></th><th className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[6%]">#</th><th className="px-3 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[29%]">Program Name</th><th className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[15%]">Program Type</th><th className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[17%]">Status</th><th className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[14%]">Students</th><th className="px-3 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[12%]">Actions</th></tr>
+                    </thead>
+                    <tbody className="border-t border-black/5 dark:border-white/10">
+                      {programs.map((program, index) => (
+                        <tr key={program._id} onClick={() => navigate(`/programs/${program._id}`)} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors cursor-pointer">
+                          <td className="px-3 py-3 text-center"><input type="checkbox" aria-label={`Select ${program.name}`} checked={selectedProgramIds.includes(program._id)} onChange={() => handleSelectToggle(program._id)} onClick={(event) => event.stopPropagation()} className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6]" /></td>
+                          <td className="px-3 py-3 text-center text-xs text-slate-400 dark:text-slate-500 tabular-nums">{index + 1 + ((pagination.page || 1) - 1) * (pagination.limit || programs.length)}</td>
+                          <td className="px-3 py-3 text-[12px] sm:text-sm font-semibold text-slate-800 dark:text-white truncate">{program.name}</td>
+                          <td className="px-3 py-3 text-center text-xs text-slate-500 dark:text-slate-400">{getProgramType(program.programType)}</td>
+                          <td className="px-3 py-3 text-center" onClick={(event) => event.stopPropagation()}><div className="inline-block relative"><select value={program.status === 'Active' ? 'Published' : program.status} onChange={(event) => handleStatusChange(program, event.target.value)} className={`appearance-none pr-6 px-2.5 py-1 rounded-lg text-[11px] font-semibold border outline-none cursor-pointer transition ${program.status === 'Published' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800' : program.status === 'Draft' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700'}`}><option value="Published">Published</option><option value="Draft">Draft</option><option value="Archived">Archived</option></select><FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 opacity-60" /></div></td>
+                          <td className="px-3 py-3 text-center"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">{program.studentCount || 0}</span></td>
+                          <td className="px-3 py-3 text-center" onClick={(event) => event.stopPropagation()}><div className="flex items-center justify-center gap-1.5"><button aria-label={`View ${program.name}`} onClick={() => navigate(`/programs/${program._id}`)} className="p-1.5 rounded-lg text-slate-400 hover:text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/10 transition"><FiEye className="w-3.5 h-3.5" /></button><button aria-label={`Delete ${program.name}`} onClick={() => setProgramToDelete(program)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition"><FiTrash2 className="w-3.5 h-3.5" /></button></div></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  </div>
 
                 {pagination.totalPages > 1 && (
                   <div className="flex items-center justify-between py-4">
@@ -1115,7 +1160,7 @@ export default function Programs() {
 }
 
 /* ─── ProgramCard ─── styled after CategoryCard with Checkbox selection */
-function ProgramCard({ program, selected, onSelectToggle, onEdit, onDelete, onView }) {
+function ProgramCard({ program, selected, onSelectToggle, onEdit, onDelete, onView, onStatusChange }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -1180,9 +1225,17 @@ function ProgramCard({ program, selected, onSelectToggle, onEdit, onDelete, onVi
         className="px-4 pt-2.5 pb-2 min-h-[92px] border-b border-black/10 dark:border-white/15 bg-[#dbe7f3]/90 dark:bg-[#1a2d48] pl-10 pr-9 flex flex-col justify-between cursor-pointer"
         onClick={onView}
       >
-        <span className={`inline-flex self-start px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${statusColor}`}>
-          {program.status}
-        </span>
+        <select
+          value={program.status === 'Active' ? 'Published' : program.status}
+          onChange={(event) => onStatusChange(program, event.target.value)}
+          onClick={(event) => event.stopPropagation()}
+          aria-label={`Change status for ${program.name}`}
+          className={`self-start rounded-full border-0 px-2 py-0.5 text-[9px] font-bold uppercase outline-none cursor-pointer ${statusColor}`}
+        >
+          <option value="Draft">Draft</option>
+          <option value="Published">Published</option>
+          <option value="Archived">Archived</option>
+        </select>
         <div className="min-h-[30px] flex items-center py-0.5">
           <h3 className="text-xs md:text-sm leading-tight font-bold text-slate-900 dark:text-white line-clamp-2">{program.name}</h3>
         </div>

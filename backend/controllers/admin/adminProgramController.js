@@ -13,6 +13,8 @@ import DailyTaskAttempt from "../../models/DailyTaskAttempt.js";
 import DailyChallengeAttempt from "../../models/DailyChallengeAttempt.js";
 import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import Blueprint from "../../models/Blueprint.js";
+import Questions from "../../models/Questions.js";
+import Role from "../../models/Role.js";
 import {
   pauseProgramEnrollment,
   assignProgramToBatch,
@@ -77,6 +79,12 @@ export const ENTITY_CONFIG = {
 const PROGRAM_REPORT_DAYS = 30;
 const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
 const IST_OFFSET_MILLISECONDS = (5 * 60 + 30) * 60 * 1000;
+
+const normalizeList = (values) => [...new Map((Array.isArray(values) ? values : [])
+  .map((value) => String(value || "").trim())
+  .filter(Boolean)
+  .map((value) => [value.toLocaleLowerCase(), value])).values()];
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const getIdString = (value) => {
   const id = value && typeof value === "object" && value._id ? value._id : value;
@@ -496,7 +504,7 @@ export const listPrograms = async (req, res) => {
       limit = 10,
     } = req.query;
 
-    const query = {};
+    const query = { deletedAt: null };
 
     // Search filter
     if (search.trim()) {
@@ -596,6 +604,24 @@ export const listPrograms = async (req, res) => {
   }
 };
 
+export const getProgramOptionLists = async (req, res) => {
+  try {
+    const [courses, questions, roles] = await Promise.all([
+      Course.find({}).select("skills").lean(),
+      Questions.find({}).select("companies").lean(),
+      Role.find({ status: { $ne: "Archived" } }).select("roleName").sort({ roleName: 1 }).lean(),
+    ]);
+    return res.json({
+      success: true,
+      skills: normalizeList(courses.flatMap((item) => item.skills || [])),
+      companies: normalizeList(questions.flatMap((item) => item.companies || [])),
+      roles: normalizeList(roles.map((item) => item.roleName)),
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to fetch program options" });
+  }
+};
+
 /**
  * POST /api/admin/programs
  * Create a new program
@@ -612,6 +638,12 @@ export const createProgram = async (req, res) => {
       status,
       visibility,
       pricingType,
+      availability,
+      billingOptions,
+      monthlyStructuredFee,
+      monthlyTrainerLedFee,
+      annualStructuredFee,
+      annualTrainerLedFee,
       programFee,
       pricingPlans,
       learningGoals,
@@ -644,6 +676,14 @@ export const createProgram = async (req, res) => {
       });
     }
 
+    const normalizedName = String(name).trim();
+    const duplicate = await Program.findOne({ name: { $regex: `^${escapeRegex(normalizedName)}$`, $options: "i" }, deletedAt: null }).select("_id").lean();
+    if (duplicate) return res.status(409).json({ success: false, message: "A program with this name already exists." });
+    if (!String(description || "").trim()) return res.status(400).json({ success: false, message: "Description is required." });
+    if (normalizedProgramType === "Placement" && (!Array.isArray(targetCompanies) || !targetCompanies.length || !Array.isArray(targetRoles) || !targetRoles.length)) {
+      return res.status(400).json({ success: false, message: "Placement programs require at least one target company and target role." });
+    }
+
     const phaseValidation = validateAndNormalizeProgramPhases({
       programType: normalizedProgramType,
       durationDays: resolvedDurationDays,
@@ -670,15 +710,21 @@ export const createProgram = async (req, res) => {
     }
 
     const program = new Program({
-      name: name.trim(),
+      name: normalizedName,
       description: (description || "").trim(),
       programType: normalizedProgramType,
       duration: `${resolvedDurationDays} Days`,
       durationDays: resolvedDurationDays,
       phases: phaseValidation.phases,
-      status: status || "Draft",
+      status: "Draft",
       visibility: visibility || "Public",
       pricingType: pricingType || "Free",
+      availability: availability || "Structured",
+      billingOptions: pricingType === "Paid" && Array.isArray(billingOptions) ? billingOptions : [],
+      monthlyStructuredFee: Number(monthlyStructuredFee) || 0,
+      monthlyTrainerLedFee: Number(monthlyTrainerLedFee) || 0,
+      annualStructuredFee: Number(annualStructuredFee) || 0,
+      annualTrainerLedFee: Number(annualTrainerLedFee) || 0,
       programFee: pricingType === "Paid" ? parsedFee : 0,
       pricingPlans: pricingType === "Paid" ? normalizePricingPlans(pricingPlans) : [],
       learningGoals: Array.isArray(learningGoals) ? learningGoals : [],
@@ -825,6 +871,12 @@ export const updateProgram = async (req, res) => {
       status,
       visibility,
       pricingType,
+      availability,
+      billingOptions,
+      monthlyStructuredFee,
+      monthlyTrainerLedFee,
+      annualStructuredFee,
+      annualTrainerLedFee,
       programFee,
       pricingPlans,
       learningGoals,
@@ -879,6 +931,15 @@ export const updateProgram = async (req, res) => {
     program.phases = phaseValidation.phases;
     if (status !== undefined) program.status = status;
     if (visibility !== undefined) program.visibility = visibility;
+    if (availability !== undefined) program.availability = availability;
+    if (billingOptions !== undefined) program.billingOptions = program.pricingType === "Paid" && Array.isArray(billingOptions) ? billingOptions : [];
+    for (const [field, value] of Object.entries({ monthlyStructuredFee, monthlyTrainerLedFee, annualStructuredFee, annualTrainerLedFee })) {
+      if (value !== undefined) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed) || parsed < 0) return res.status(400).json({ success: false, message: `${field} must be a non-negative number.` });
+        program[field] = parsed;
+      }
+    }
     if (learningGoals !== undefined) program.learningGoals = Array.isArray(learningGoals) ? learningGoals : [];
     if (placementCategories !== undefined) {
       const placementCategoryResult = normalizePlacementCategories(placementCategories);
@@ -971,17 +1032,18 @@ export const deleteProgram = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid program ID format" });
     }
 
-    const program = await Program.findByIdAndDelete(programId);
+    const program = await Program.findOneAndUpdate(
+      { _id: programId, deletedAt: null },
+      { $set: { status: "Archived", deletedAt: new Date(), deletedBy: req.user?._id || null } },
+      { new: true, runValidators: true }
+    );
     if (!program) {
       return res.status(404).json({ success: false, message: "Program not found" });
     }
 
-    await Blueprint.deleteMany({ programId });
-    await deleteProgramPerformance(programId);
-
     res.json({
       success: true,
-      message: "Program deleted successfully (attached resources were preserved)",
+      message: "Program archived successfully. Student history and related records were preserved.",
     });
   } catch (error) {
     console.error("Error deleting program:", error);

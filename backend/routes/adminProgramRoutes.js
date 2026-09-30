@@ -3,6 +3,7 @@ import { protect, isAdmin } from "../middleware/authMiddleware.js";
 import { ADMIN_PERMISSIONS, requireAdminPermission } from "../utils/rbac.js";
 import {
   listPrograms,
+  getProgramOptionLists,
   createProgram,
   getProgramById,
   getProgramDiagnostics,
@@ -32,6 +33,7 @@ router.use(protect, isAdmin, requireAdminPermission(ADMIN_PERMISSIONS.PROGRAMS_R
 
 // Program CRUD routes
 router.get("/", listPrograms);
+router.get("/options", getProgramOptionLists);
 router.post("/", requireAdminPermission(ADMIN_PERMISSIONS.PROGRAMS_WRITE), createProgram);
 router.get("/:programId/blueprints", listBlueprints);
 router.post("/:programId/blueprints", requireAdminPermission(ADMIN_PERMISSIONS.PROGRAMS_WRITE), createBlueprint);

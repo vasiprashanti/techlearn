@@ -17,15 +17,22 @@
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;
+    background-color: #ffffff;
+  }
+
+  html.dark {
+    background-color: #020b23;
   }
 
   body {
     @apply antialiased;
     color: #001862;
+    background-color: #ffffff;
   }
 
   .dark body {
     color: #e0e6f5;
+    background-color: #020b23;
   }
 }
 
@@ -3878,3 +3885,12 @@ body .admin-dashboard-typography.dark .course-form-modal.course-form-modal.cours
   }
 }
 
+.program-selection-hidden input[type="checkbox"] { visibility: hidden; }
+.program-selection-hidden th:first-child,
+.program-selection-hidden td:first-child {
+  width: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  overflow: hidden;
+  white-space: nowrap;
+}
