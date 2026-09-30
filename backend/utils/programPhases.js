@@ -22,8 +22,19 @@ export const PROGRAM_PHASES_BY_TYPE = Object.freeze({
     "mock_interview",
     "final_assessment",
   ]),
-  Skill: Object.freeze(["learning", "final_assessment"]),
+  Skill: Object.freeze([
+    "learning",
+    "revision",
+    "company_preparation",
+    "mock_interview",
+    "final_assessment",
+  ]),
 });
+
+// Older Skill Programs used only Learning and Final Assessment. Keep accepting
+// that stored shape so unrelated edits to existing programs don't fail schema
+// validation; the admin form upgrades it to the current five-phase structure.
+const LEGACY_SKILL_PHASES = Object.freeze(["learning", "final_assessment"]);
 
 const PHASE_ALIASES = Object.freeze({
   learning: "learning",
@@ -64,9 +75,7 @@ export const parseDurationDays = (duration) => {
   return Math.round(amount * multiplier);
 };
 
-export const getMinimumDurationDays = (programType) => (
-  programType === "Placement" ? 5 : 2
-);
+export const getMinimumDurationDays = () => 5;
 
 export const buildDefaultProgramPhases = (programType, durationDays) => {
   const totalDays = Number(durationDays);
@@ -76,16 +85,11 @@ export const buildDefaultProgramPhases = (programType, durationDays) => {
     return [];
   }
 
-  let lengths;
-  if (programType === "Placement") {
-    // Keep the requested 30-day shape (22/2/4/1/1) while still producing a
-    // valid contiguous configuration for shorter placement programs.
-    lengths = totalDays >= 9
-      ? [totalDays - 8, 2, 4, 1, 1]
-      : [1 + (totalDays - 5), 1, 1, 1, 1];
-  } else {
-    lengths = [totalDays - 1, 1];
-  }
+  // Keep the established 30-day shape (22/2/4/1/1) for both program types,
+  // while still producing five non-empty contiguous phases for shorter runs.
+  const lengths = totalDays >= 9
+    ? [totalDays - 8, 2, 4, 1, 1]
+    : [1 + (totalDays - 5), 1, 1, 1, 1];
 
   let nextStartDay = 1;
   return phaseTypes.map((phase, index) => {
@@ -104,12 +108,6 @@ export const validateAndNormalizeProgramPhases = ({ programType, durationDays, p
     return { error: "Program type must be Placement or Skill." };
   }
 
-  if (!Number.isInteger(totalDays) || totalDays < getMinimumDurationDays(programType)) {
-    return {
-      error: `${programType} programs must be at least ${getMinimumDurationDays(programType)} days long.`,
-    };
-  }
-
   const sourcePhases = Array.isArray(phases) && phases.length
     ? phases
     : buildDefaultProgramPhases(programType, totalDays);
@@ -123,7 +121,17 @@ export const validateAndNormalizeProgramPhases = ({ programType, durationDays, p
     return { error: "Each phase must have a valid phase, start day, and end day." };
   }
 
-  if (normalized.length !== expectedPhases.length || normalized.some((item, index) => item.phase !== expectedPhases[index])) {
+  const isLegacySkillShape = programType === "Skill"
+    && normalized.length === LEGACY_SKILL_PHASES.length
+    && normalized.every((item, index) => item.phase === LEGACY_SKILL_PHASES[index]);
+  const requiredMinimumDays = isLegacySkillShape ? 2 : getMinimumDurationDays(programType);
+  if (!Number.isInteger(totalDays) || totalDays < requiredMinimumDays) {
+    return {
+      error: `${programType} programs must be at least ${requiredMinimumDays} days long.`,
+    };
+  }
+
+  if (!isLegacySkillShape && (normalized.length !== expectedPhases.length || normalized.some((item, index) => item.phase !== expectedPhases[index]))) {
     return {
       error: `${programType} programs must use these phases: ${expectedPhases.map((phase) => PROGRAM_PHASE_LABELS[phase]).join(", ")}.`,
     };

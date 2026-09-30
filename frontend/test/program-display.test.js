@@ -20,6 +20,17 @@ test("Program cards show the configured lowest price and identify multiple optio
   assert.equal(getProgramPriceLabel({ pricingType: "Paid", programFee: 799 }), "₹799");
 });
 
+test("Program cards identify Monthly and Annual plan prices", () => {
+  assert.equal(getProgramPriceLabel({
+    pricingType: "Paid",
+    pricingPlans: [
+      { price: 499, billingPeriod: "Monthly", active: true },
+      { price: 899, billingPeriod: "Monthly", active: true },
+      { price: 4999, billingPeriod: "Annual", active: true },
+    ],
+  }), "Monthly ₹499 · Annual ₹4,999");
+});
+
 test("Free and legacy Program pricing labels remain supported", () => {
   assert.equal(getProgramPriceLabel({ pricingType: "Free", programFee: 0 }), "FREE");
   assert.equal(getProgramPriceLabel({ price: "Free" }), "FREE");

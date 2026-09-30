@@ -249,6 +249,9 @@ export default function OnboardingPrograms() {
         id: plan.key || fallback.id,
         title: plan.title || fallback.title,
         price: `₹${Number(plan.price || 0).toLocaleString('en-IN')}`,
+        subtitle: plan.billingPeriod
+          ? [plan.billingPeriod, plan.availability].filter(Boolean).join(' · ')
+          : fallback.subtitle,
         features: Array.isArray(plan.benefits) && plan.benefits.length ? plan.benefits : fallback.features,
       };
     });

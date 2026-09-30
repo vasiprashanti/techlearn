@@ -25,9 +25,25 @@ export const getProgramPriceLabel = (program) => {
   const configuredPlanPrices = Array.isArray(program?.pricingPlans)
     ? program.pricingPlans
       .filter((plan) => plan?.active !== false)
-      .map((plan) => parsePositivePrice(plan?.price))
-      .filter((price) => price !== null)
+      .map((plan) => ({
+        billingPeriod: plan?.billingPeriod,
+        price: parsePositivePrice(plan?.price),
+      }))
+      .filter((plan) => plan.price !== null)
     : [];
+  const pricesByBillingPeriod = new Map();
+  configuredPlanPrices.forEach(({ billingPeriod, price }) => {
+    if (!['Monthly', 'Annual'].includes(billingPeriod)) return;
+    pricesByBillingPeriod.set(
+      billingPeriod,
+      Math.min(pricesByBillingPeriod.get(billingPeriod) ?? Infinity, price),
+    );
+  });
+  if (pricesByBillingPeriod.size > 0) {
+    return [...pricesByBillingPeriod.entries()]
+      .map(([billingPeriod, price]) => `${billingPeriod} ₹${price.toLocaleString('en-IN')}`)
+      .join(' · ');
+  }
   const fallbackPrice = [
     program?.structuredFee,
     program?.trainerLedFee,
@@ -37,7 +53,7 @@ export const getProgramPriceLabel = (program) => {
     .map(parsePositivePrice)
     .find((price) => price !== null);
   const prices = configuredPlanPrices.length > 0
-    ? configuredPlanPrices
+    ? configuredPlanPrices.map((plan) => plan.price)
     : fallbackPrice === undefined ? [] : [fallbackPrice];
 
   if (prices.length === 0) return "Price unavailable";

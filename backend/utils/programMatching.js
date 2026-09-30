@@ -78,6 +78,7 @@ export const matchProgramsForUser = async (onboardingData = {}) => {
     const progDesc = normalizeString(program.description);
     const progCategories = normalizeArray(program.placementCategories);
     const progCompanies = normalizeArray(program.targetCompanies);
+    const manualCompany = normalizeString(program.company);
     const progSkills = normalizeArray(program.skillTags);
     const progRoles = normalizeArray(program.targetRoles);
 
@@ -98,7 +99,7 @@ export const matchProgramsForUser = async (onboardingData = {}) => {
       // Target Companies Match (Exact matches get high weight)
       if (userCompanies.length > 0) {
         const matchingCompanies = userCompanies.filter((c) =>
-          progCompanies.includes(c) || progName.includes(c) || progDesc.includes(c)
+          progCompanies.includes(c) || manualCompany === c || progName.includes(c) || progDesc.includes(c)
         );
         score += matchingCompanies.length * 10;
       }

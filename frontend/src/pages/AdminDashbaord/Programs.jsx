@@ -5,6 +5,7 @@ import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 import { adminAPI } from '../../services/adminApi';
 import { STANDARD_COURSE_SKILLS } from '../../constants/courseSkills';
+import { ONBOARDING_COMPANY_OPTIONS } from '../../constants/onboardingCompanies';
 import {
   FiSearch,
   FiPlus,
@@ -32,11 +33,12 @@ const PROGRAM_STATUS_TABS = [
   { value: 'Archived', label: 'Archived' },
 ];
 const PROGRAM_AVAILABILITIES = ['Structured', 'Trainer-Led', 'Both'];
+const PROGRAM_BILLING_OPTIONS = ['Monthly', 'Annual'];
 const DURATION_UNITS = ['Days', 'Weeks', 'Months', 'Years'];
 
 const PHASE_TYPES_BY_PROGRAM_TYPE = {
   Placement: ['learning', 'revision', 'company_preparation', 'mock_interview', 'final_assessment'],
-  Skill: ['learning', 'final_assessment'],
+  Skill: ['learning', 'revision', 'company_preparation', 'mock_interview', 'final_assessment'],
 };
 
 const PHASE_LABELS = {
@@ -87,17 +89,15 @@ const uniqueOptions = (values) => {
 
 const getProgramStatusLabel = (status) => status === 'Active' || status === 'Published' ? 'Published' : status;
 
-const getMinimumDurationDays = (programType) => (programType === 'Placement' ? 5 : 2);
+const getMinimumDurationDays = () => 5;
 
 const getDefaultPhases = (programType, value) => {
   const durationDays = Number(value);
   if (!Number.isInteger(durationDays) || durationDays < getMinimumDurationDays(programType)) return [];
 
-  const lengths = programType === 'Placement'
-    ? durationDays >= 9
-      ? [durationDays - 8, 2, 4, 1, 1]
-      : [1 + (durationDays - 5), 1, 1, 1, 1]
-    : [durationDays - 1, 1];
+  const lengths = durationDays >= 9
+    ? [durationDays - 8, 2, 4, 1, 1]
+    : [1 + (durationDays - 5), 1, 1, 1, 1];
   let nextStartDay = 1;
 
   return PHASE_TYPES_BY_PROGRAM_TYPE[programType].map((phase, index) => {
@@ -133,30 +133,107 @@ const statusBadgeClass = (status) => {
   return 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300';
 };
 
-function ProgramMultiSelect({ label, placeholder, options, selected, isOpen, onToggleOpen, onToggle }) {
-  const availableOptions = uniqueOptions([...(options || []), ...(selected || [])]);
+const roadmapChipColors = [
+  'bg-[#e6f2ff] text-[#3d638c]',
+  'bg-[#eee7ff] text-[#6c5b93]',
+  'bg-[#e4f5e9] text-[#347555]',
+  'bg-[#fff0d7] text-[#95672a]',
+  'bg-[#def2f3] text-[#347678]',
+  'bg-[#f2e3f5] text-[#855387]',
+  'bg-[#e4efff] text-[#3f6390]',
+  'bg-[#ffe4e5] text-[#a25e62]',
+];
+
+function ProgramChipSelect({ label, placeholder, options, selected, isDarkMode, onToggle }) {
+  const [search, setSearch] = useState('');
+  const availableOptions = uniqueOptions([...(selected || []), ...(options || [])]);
+  const visibleOptions = availableOptions.filter((option) => option.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
+  return (
+    <fieldset>
+      <legend className="admin-micro-label text-black/45 dark:text-white/45">{label}</legend>
+      <input
+        type="search"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder={placeholder}
+        className={`${programFormInputClass} mt-1`}
+      />
+      <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={label}>
+        {visibleOptions.length ? visibleOptions.map((option, index) => {
+          const isSelected = selected.some((item) => item.toLocaleLowerCase() === option.toLocaleLowerCase());
+          return (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => onToggle(option)}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3C83F6] ${isSelected
+                ? 'border-[#3C83F6] bg-[#3C83F6] text-white shadow-sm'
+                : `${roadmapChipColors[index % roadmapChipColors.length]} ${isDarkMode ? 'border-white/25' : 'border-black/10'} hover:border-[#3C83F6]/50`}`}
+            >
+              {option}
+            </button>
+          );
+        }) : <p className="py-1 text-xs text-slate-500 dark:text-slate-400">No matching options.</p>}
+      </div>
+      {selected.length > 0 && <p className="mt-1.5 text-[10px] text-black/40 dark:text-white/40">{selected.length} selected</p>}
+    </fieldset>
+  );
+}
+
+function ProgramCourseSelect({ courses, selectedIds, onToggle }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const selectedCourses = courses.filter((course) => selectedIds.includes(String(course._id)));
+  const visibleCourses = courses.filter((course) => (
+    `${course.title || ''} ${course.level || ''}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())
+  ));
+
   return (
     <div className="relative">
-      <label className="admin-micro-label text-black/45 dark:text-white/45">{label}</label>
-      <button type="button" onClick={onToggleOpen} className="relative mt-1 flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border border-black/10 bg-white/85 px-3 py-2 text-left text-sm font-medium text-slate-800 shadow-[0_4px_14px_rgba(15,23,42,0.06)] outline-none transition-all hover:bg-white dark:border-white/15 dark:bg-[#0f1f43] dark:text-white dark:hover:bg-[#162a52]">
-        <span className={selected.length ? 'truncate text-slate-800 dark:text-white' : 'text-black/35 dark:text-white/40'}>
-          {selected.length ? selected.join(', ') : placeholder}
+      <label className="admin-micro-label text-black/45 dark:text-white/45">Attach Course</label>
+      <button type="button" onClick={() => setIsOpen((open) => !open)} aria-expanded={isOpen} className="relative mt-1 flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border border-black/10 bg-white/85 px-3 py-2 text-left text-sm font-medium text-slate-800 shadow-[0_4px_14px_rgba(15,23,42,0.06)] outline-none transition-all hover:bg-white dark:border-white/15 dark:bg-[#0f1f43] dark:text-white dark:hover:bg-[#162a52]">
+        <span className={selectedCourses.length ? 'truncate text-slate-800 dark:text-white' : 'text-black/35 dark:text-white/40'}>
+          {selectedCourses.length ? `${selectedCourses.length} course${selectedCourses.length === 1 ? '' : 's'} selected` : 'Select courses to attach'}
         </span>
         <FiChevronDown className="h-4 w-4 shrink-0 text-black/45 dark:text-white/60" />
       </button>
+      {selectedCourses.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {selectedCourses.map((course) => (
+            <span key={course._id} className="inline-flex items-center gap-1 rounded-full border border-[#3C83F6]/25 bg-[#3C83F6]/10 px-2.5 py-1 text-[11px] font-medium text-[#245ca8] dark:text-[#bceaff]">
+              {course.title}
+              <button type="button" aria-label={`Remove ${course.title}`} onClick={() => onToggle(String(course._id))} className="ml-0.5 text-current opacity-70 hover:opacity-100">×</button>
+            </span>
+          ))}
+        </div>
+      )}
       {isOpen && (
-        <div className="absolute left-0 right-0 z-20 mt-2 max-h-52 overflow-y-auto rounded-xl border border-black/10 bg-white p-2 shadow-xl dark:border-white/15 dark:bg-[#0f1f43]">
-          {availableOptions.length ? availableOptions.map((option) => (
-            <label key={option} className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-slate-700 hover:bg-black/5 dark:text-slate-200 dark:hover:bg-white/10">
-              <input type="checkbox" checked={selected.some((item) => item.toLocaleLowerCase() === option.toLocaleLowerCase())} onChange={() => onToggle(option)} className="h-3.5 w-3.5 rounded border-black/20 text-[#3C83F6] focus:ring-[#3C83F6]" />
-              {option}
-            </label>
-          )) : <p className="px-2.5 py-2 text-xs text-slate-500 dark:text-slate-400">No options available yet.</p>}
+        <div className="absolute left-0 right-0 z-30 mt-2 rounded-xl border border-black/10 bg-white p-2 shadow-xl dark:border-white/15 dark:bg-[#0f1f43]">
+          <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search courses..." className={`${programFormInputClass} mb-2`} />
+          <div className="max-h-56 overflow-y-auto">
+            {visibleCourses.length ? visibleCourses.map((course) => {
+              const id = String(course._id);
+              const checked = selectedIds.includes(id);
+              return (
+                <button key={id} type="button" aria-pressed={checked} onClick={() => onToggle(id)} className={`flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left transition ${checked ? 'bg-[#3C83F6]/10' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>
+                  <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] ${checked ? 'border-[#3C83F6] bg-[#3C83F6] text-white' : 'border-slate-400 dark:border-white/40'}`}>{checked ? '✓' : ''}</span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-slate-800 dark:text-white">{course.title}</span>
+                    <span className="block text-[10px] text-slate-500 dark:text-slate-400">{[course.level, course.numTopics ? `${course.numTopics} topics` : ''].filter(Boolean).join(' · ')}</span>
+                  </span>
+                </button>
+              );
+            }) : <p className="px-2.5 py-3 text-xs text-slate-500 dark:text-slate-400">No courses match your search.</p>}
+          </div>
+          {courses.length === 0 && <p className="px-2.5 py-2 text-xs text-slate-500 dark:text-slate-400">Create courses in Admin → Courses first.</p>}
         </div>
       )}
     </div>
   );
 }
+
+const programFormInputClass = 'mt-1 w-full rounded-xl border border-black/10 bg-white/85 px-3 py-2.5 text-sm font-medium text-slate-800 shadow-[0_4px_14px_rgba(15,23,42,0.06)] outline-none transition-all placeholder:text-black/35 focus:border-[#3C83F6]/50 focus:ring-2 focus:ring-[#3C83F6]/20 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white dark:placeholder:text-white/35';
 
 export default function Programs() {
   const { theme } = useTheme();
@@ -186,13 +263,11 @@ export default function Programs() {
   const [editingProgram, setEditingProgram] = useState(null);
   const [modalError, setModalError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [skillTagsOpen, setSkillTagsOpen] = useState(false);
-  const [targetCompaniesOpen, setTargetCompaniesOpen] = useState(false);
-  const [targetRolesOpen, setTargetRolesOpen] = useState(false);
   const [formOptions, setFormOptions] = useState({
     skillTags: STANDARD_COURSE_SKILLS,
-    targetCompanies: [],
+    targetCompanies: ONBOARDING_COMPANY_OPTIONS,
     targetRoles: [],
+    courses: [],
   });
 
   const [formData, setFormData] = useState({
@@ -207,11 +282,17 @@ export default function Programs() {
     visibility: 'Public',
     availability: 'Structured',
     pricingType: 'Free',
-    structuredFee: '',
-    trainerLedFee: '',
+    billingOptions: [],
+    monthlyStructuredFee: '',
+    monthlyTrainerLedFee: '',
+    annualStructuredFee: '',
+    annualTrainerLedFee: '',
     targetCompanies: [],
+    company: '',
     skillTags: [],
     targetRoles: [],
+    courseIds: [],
+    primaryCourseId: '',
   });
 
   const [programToDelete, setProgramToDelete] = useState(null);
@@ -257,8 +338,9 @@ export default function Programs() {
         if (!mounted) return;
         setFormOptions({
           skillTags: uniqueOptions([...STANDARD_COURSE_SKILLS, ...(options?.skillTags || [])]),
-          targetCompanies: uniqueOptions(options?.targetCompanies || []),
+          targetCompanies: ONBOARDING_COMPANY_OPTIONS,
           targetRoles: uniqueOptions(options?.targetRoles || []),
+          courses: Array.isArray(options?.courses) ? options.courses : [],
         });
       })
       .catch((optionsError) => {
@@ -338,6 +420,30 @@ export default function Programs() {
     }));
   };
 
+  const handleToggleCourse = (courseId) => {
+    setFormData((prev) => {
+      const isSelected = prev.courseIds.includes(courseId);
+      const courseIds = isSelected
+        ? prev.courseIds.filter((id) => id !== courseId)
+        : [...prev.courseIds, courseId];
+      const primaryCourseId = courseIds.includes(prev.primaryCourseId)
+        ? prev.primaryCourseId
+        : courseIds[0] || '';
+      return { ...prev, courseIds, primaryCourseId };
+    });
+  };
+
+  const handleBillingOptionToggle = (option) => {
+    setFormData((prev) => ({
+      ...prev,
+      billingOptions: prev.billingOptions.includes(option)
+        ? prev.billingOptions.filter((selected) => selected !== option)
+        : PROGRAM_BILLING_OPTIONS.filter((candidate) => (
+            candidate === option || prev.billingOptions.includes(candidate)
+          )),
+    }));
+  };
+
   const handleOpenCreateModal = () => {
     setEditingProgram(null);
     setFormData({
@@ -352,15 +458,18 @@ export default function Programs() {
       visibility: 'Public',
       availability: 'Structured',
       pricingType: 'Free',
-      structuredFee: '',
-      trainerLedFee: '',
+      billingOptions: [],
+      monthlyStructuredFee: '',
+      monthlyTrainerLedFee: '',
+      annualStructuredFee: '',
+      annualTrainerLedFee: '',
       targetCompanies: [],
+      company: '',
       skillTags: [],
       targetRoles: [],
+      courseIds: [],
+      primaryCourseId: '',
     });
-    setSkillTagsOpen(false);
-    setTargetCompaniesOpen(false);
-    setTargetRolesOpen(false);
     setModalError('');
     setIsModalOpen(true);
   };
@@ -376,6 +485,10 @@ export default function Programs() {
     const availability = program.availability || (savedPlans.length > 1 ? 'Both' : 'Structured');
     const firstPlanFee = savedPlans[0]?.price ?? program.programFee ?? '';
     const secondPlanFee = savedPlans[1]?.price ?? '';
+    const hasSavedBillingOptions = Array.isArray(program.billingOptions) && program.billingOptions.length > 0;
+    const billingOptions = hasSavedBillingOptions
+      ? PROGRAM_BILLING_OPTIONS.filter((option) => program.billingOptions.includes(option))
+      : program.pricingType === 'Paid' ? ['Annual'] : [];
     setFormData({
       name: program.name || '',
       description: program.description || '',
@@ -388,15 +501,18 @@ export default function Programs() {
       visibility: program.visibility || 'Public',
       availability,
       pricingType: program.pricingType || 'Free',
-      structuredFee: String(program.structuredFee ?? (availability !== 'Trainer-Led' ? firstPlanFee : '') ?? ''),
-      trainerLedFee: String(program.trainerLedFee ?? (availability !== 'Structured' ? (secondPlanFee || firstPlanFee) : '') ?? ''),
+      billingOptions,
+      monthlyStructuredFee: String(program.monthlyStructuredFee ?? ''),
+      monthlyTrainerLedFee: String(program.monthlyTrainerLedFee ?? ''),
+      annualStructuredFee: String(program.annualStructuredFee ?? (!hasSavedBillingOptions && availability !== 'Trainer-Led' ? program.structuredFee ?? firstPlanFee : '') ?? ''),
+      annualTrainerLedFee: String(program.annualTrainerLedFee ?? (!hasSavedBillingOptions && availability !== 'Structured' ? program.trainerLedFee ?? (secondPlanFee || firstPlanFee) : '') ?? ''),
       targetCompanies: uniqueOptions(program.targetCompanies || []),
+      company: program.company || '',
       skillTags: uniqueOptions(program.skillTags || []),
       targetRoles: uniqueOptions(program.targetRoles || []),
+      courseIds: (program.courseIds || []).map((course) => String(course?._id || course)),
+      primaryCourseId: String(program.primaryCourseId?._id || program.primaryCourseId || ''),
     });
-    setSkillTagsOpen(false);
-    setTargetCompaniesOpen(false);
-    setTargetRolesOpen(false);
     setModalError('');
     setIsModalOpen(true);
   };
@@ -436,15 +552,25 @@ export default function Programs() {
       return;
     }
     if (formData.pricingType === 'Paid') {
-      if ((formData.availability === 'Structured' || formData.availability === 'Both')
-        && (!Number.isFinite(Number(formData.structuredFee)) || Number(formData.structuredFee) <= 0)) {
-        setModalError('Structured Fee must be a number greater than zero.');
+      if (formData.billingOptions.length === 0) {
+        setModalError('Select at least one billing option: Monthly or Annual.');
         return;
       }
-      if ((formData.availability === 'Trainer-Led' || formData.availability === 'Both')
-        && (!Number.isFinite(Number(formData.trainerLedFee)) || Number(formData.trainerLedFee) <= 0)) {
-        setModalError('Trainer-Led Fee must be a number greater than zero.');
-        return;
+
+      const feeFields = [
+        ['Monthly', 'Structured', 'monthlyStructuredFee'],
+        ['Monthly', 'Trainer-Led', 'monthlyTrainerLedFee'],
+        ['Annual', 'Structured', 'annualStructuredFee'],
+        ['Annual', 'Trainer-Led', 'annualTrainerLedFee'],
+      ];
+      for (const [billingPeriod, availabilityType, fieldName] of feeFields) {
+        const periodSelected = formData.billingOptions.includes(billingPeriod);
+        const availabilitySelected = formData.availability === 'Both' || formData.availability === availabilityType;
+        if (periodSelected && availabilitySelected
+          && (!Number.isFinite(Number(formData[fieldName])) || Number(formData[fieldName]) <= 0)) {
+          setModalError(`${billingPeriod} ${availabilityType} Fee must be a number greater than zero.`);
+          return;
+        }
       }
     }
 
@@ -461,11 +587,17 @@ export default function Programs() {
         visibility: formData.visibility,
         availability: formData.availability,
         pricingType: formData.pricingType,
-        structuredFee: formData.structuredFee === '' ? null : Number(formData.structuredFee),
-        trainerLedFee: formData.trainerLedFee === '' ? null : Number(formData.trainerLedFee),
+        billingOptions: formData.pricingType === 'Paid' ? formData.billingOptions : [],
+        monthlyStructuredFee: formData.monthlyStructuredFee === '' ? null : Number(formData.monthlyStructuredFee),
+        monthlyTrainerLedFee: formData.monthlyTrainerLedFee === '' ? null : Number(formData.monthlyTrainerLedFee),
+        annualStructuredFee: formData.annualStructuredFee === '' ? null : Number(formData.annualStructuredFee),
+        annualTrainerLedFee: formData.annualTrainerLedFee === '' ? null : Number(formData.annualTrainerLedFee),
         targetCompanies: formData.targetCompanies,
+        company: formData.company.trim(),
         skillTags: formData.skillTags,
         targetRoles: formData.targetRoles,
+        courseIds: formData.courseIds,
+        primaryCourseId: formData.primaryCourseId || formData.courseIds[0] || null,
       };
 
       if (editingProgram) {
@@ -655,7 +787,7 @@ export default function Programs() {
                   <div>
                     <label className="admin-micro-label text-black/45 dark:text-white/45">Duration*</label>
                     <div className="mt-1 grid grid-cols-[1fr_130px] gap-2">
-                      <input type="number" name="durationValue" min="1" step="any" required placeholder="e.g. 30" value={formData.durationValue} onChange={handleFormChange} className={programFormInputClass} />
+                      <input type="number" name="durationValue" min="5" step="any" required placeholder="e.g. 30" value={formData.durationValue} onChange={handleFormChange} className={programFormInputClass} />
                       <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43]">
                         <select name="durationUnit" value={formData.durationUnit} onChange={handleFormChange} className="w-full appearance-none rounded-xl border-0 bg-transparent px-3 py-2.5 pr-9 text-sm font-medium text-slate-800 outline-none dark:text-white">
                           {DURATION_UNITS.map((unit) => <option key={unit} className={dropdownOptionClass} value={unit}>{unit}</option>)}
@@ -664,33 +796,6 @@ export default function Programs() {
                       </div>
                     </div>
                     <p className="mt-1 text-[10px] text-black/40 dark:text-white/40">Learning phases use {formData.durationDays || '—'} total days.</p>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-black/10 bg-black/[0.02] p-3 dark:border-white/10 dark:bg-white/[0.03]">
-                  <div className="mb-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff]">Learning Phases</p>
-                    <p className="mt-1 text-[11px] text-black/45 dark:text-white/45">Phases must cover every day exactly once. Changing the duration regenerates the default ranges, which you can then adjust.</p>
-                  </div>
-                  <div className="space-y-2">
-                    {formData.phases.map((phase, index) => (
-                      <div key={phase.phase} className="grid grid-cols-[minmax(0,1fr)_90px_90px] items-end gap-2">
-                        <div className="min-w-0">
-                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Phase</span>
-                          <div className="flex h-10 items-center rounded-lg border border-black/10 bg-white/70 px-3 text-sm font-semibold text-slate-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-white">
-                            {PHASE_LABELS[phase.phase]}
-                          </div>
-                        </div>
-                        <label className="block">
-                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Start</span>
-                          <input type="number" min="1" step="1" value={phase.startDay} onChange={(event) => handlePhaseChange(index, 'startDay', event.target.value)} className={programFormInputClass} />
-                        </label>
-                        <label className="block">
-                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">End</span>
-                          <input type="number" min="1" step="1" value={phase.endDay} onChange={(event) => handlePhaseChange(index, 'endDay', event.target.value)} className={programFormInputClass} />
-                        </label>
-                      </div>
-                    ))}
                   </div>
                 </div>
 
@@ -757,38 +862,93 @@ export default function Programs() {
                 </div>
 
                 {formData.pricingType === 'Paid' && (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {(formData.availability === 'Structured' || formData.availability === 'Both') && (
-                    <div>
-                      <label className="admin-micro-label text-black/45 dark:text-white/45">Structured Fee (₹)*</label>
-                      <input
-                        type="number"
-                        name="structuredFee"
-                        min="0.01"
-                        step="any"
-                        required
-                        placeholder="e.g. 499"
-                        value={formData.structuredFee}
-                        onChange={handleFormChange}
-                        className={programFormInputClass}
-                      />
-                    </div>
-                    )}
-                    {(formData.availability === 'Trainer-Led' || formData.availability === 'Both') && (
-                      <div>
-                        <label className="admin-micro-label text-black/45 dark:text-white/45">Trainer-Led Fee (₹)*</label>
-                        <input type="number" name="trainerLedFee" min="0.01" step="any" required placeholder="e.g. 999" value={formData.trainerLedFee} onChange={handleFormChange} className={programFormInputClass} />
+                  <div className="space-y-3">
+                    <fieldset>
+                      <legend className="admin-micro-label text-black/45 dark:text-white/45">Billing Options*</legend>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {PROGRAM_BILLING_OPTIONS.map((option) => (
+                          <label key={option} className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-white/70 px-3 py-2 text-sm text-slate-700 dark:border-white/15 dark:bg-white/[0.04] dark:text-white/80">
+                            <input
+                              type="checkbox"
+                              checked={formData.billingOptions.includes(option)}
+                              onChange={() => handleBillingOptionToggle(option)}
+                              className="h-4 w-4 rounded border-black/20 text-[#3C83F6] focus:ring-[#3C83F6]"
+                            />
+                            {option}
+                          </label>
+                        ))}
                       </div>
-                    )}
+                      <p className="mt-1 text-[10px] text-black/40 dark:text-white/40">Choose Monthly, Annual, or both.</p>
+                    </fieldset>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {formData.billingOptions.flatMap((billingPeriod) => {
+                        const modalities = formData.availability === 'Both'
+                          ? ['Structured', 'Trainer-Led']
+                          : [formData.availability];
+                        return modalities.map((modality) => {
+                          const fieldName = `${billingPeriod.toLowerCase()}${modality === 'Trainer-Led' ? 'TrainerLed' : 'Structured'}Fee`;
+                          const label = `${billingPeriod} ${modality} Fee (₹)*`;
+                          return (
+                            <label key={fieldName} className="block">
+                              <span className="admin-micro-label text-black/45 dark:text-white/45">{label}</span>
+                              <input
+                                type="number"
+                                name={fieldName}
+                                min="0.01"
+                                step="any"
+                                required
+                                placeholder="e.g. 499"
+                                value={formData[fieldName]}
+                                onChange={handleFormChange}
+                                className={programFormInputClass}
+                              />
+                            </label>
+                          );
+                        });
+                      })}
+                    </div>
                   </div>
                 )}
 
                 <div className="pt-1 border-t border-black/5 dark:border-white/5 space-y-3.5">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff] pt-1">Student Matching Metadata</p>
                   <div className="grid grid-cols-1 gap-3">
-                    <ProgramMultiSelect label="Skill Tags" placeholder="Select skills" options={formOptions.skillTags} selected={formData.skillTags} isOpen={skillTagsOpen} onToggleOpen={() => setSkillTagsOpen((open) => !open)} onToggle={(value) => handleToggleSelection('skillTags', value)} />
-                    <ProgramMultiSelect label="Target Companies" placeholder="Select companies from Question Bank tags" options={formOptions.targetCompanies} selected={formData.targetCompanies} isOpen={targetCompaniesOpen} onToggleOpen={() => setTargetCompaniesOpen((open) => !open)} onToggle={(value) => handleToggleSelection('targetCompanies', value)} />
-                    <ProgramMultiSelect label="Target Roles" placeholder="Select roles from Hiring" options={formOptions.targetRoles} selected={formData.targetRoles} isOpen={targetRolesOpen} onToggleOpen={() => setTargetRolesOpen((open) => !open)} onToggle={(value) => handleToggleSelection('targetRoles', value)} />
+                    <ProgramChipSelect label="Skills" placeholder="Search skills..." options={formOptions.skillTags} selected={formData.skillTags} isDarkMode={isDarkMode} onToggle={(value) => handleToggleSelection('skillTags', value)} />
+                    <ProgramChipSelect label="Target Companies" placeholder="Search onboarding companies..." options={formOptions.targetCompanies} selected={formData.targetCompanies} isDarkMode={isDarkMode} onToggle={(value) => handleToggleSelection('targetCompanies', value)} />
+                    <label className="block">
+                      <span className="admin-micro-label text-black/45 dark:text-white/45">Company (manual)</span>
+                      <input type="text" name="company" maxLength={120} value={formData.company} onChange={handleFormChange} placeholder="Enter a company not in the standard list" className={programFormInputClass} />
+                    </label>
+                    <ProgramChipSelect label="Target Roles" placeholder="Search roles..." options={formOptions.targetRoles} selected={formData.targetRoles} isDarkMode={isDarkMode} onToggle={(value) => handleToggleSelection('targetRoles', value)} />
+                    <ProgramCourseSelect courses={formOptions.courses} selectedIds={formData.courseIds} onToggle={handleToggleCourse} />
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-black/10 bg-black/[0.02] p-3 dark:border-white/10 dark:bg-white/[0.03]">
+                  <div className="mb-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff]">Learning Phases</p>
+                    <p className="mt-1 text-[11px] text-black/45 dark:text-white/45">Phases must cover every day exactly once. Changing the duration regenerates the default ranges, which you can then adjust.</p>
+                  </div>
+                  <div className="space-y-2">
+                    {formData.phases.map((phase, index) => (
+                      <div key={phase.phase} className="grid grid-cols-[minmax(0,1fr)_90px_90px] items-end gap-2">
+                        <div className="min-w-0">
+                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Phase</span>
+                          <div className="flex h-10 items-center rounded-lg border border-black/10 bg-white/70 px-3 text-sm font-semibold text-slate-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-white">
+                            {PHASE_LABELS[phase.phase]}
+                          </div>
+                        </div>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Start</span>
+                          <input type="number" min="1" step="1" value={phase.startDay} onChange={(event) => handlePhaseChange(index, 'startDay', event.target.value)} className={programFormInputClass} />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">End</span>
+                          <input type="number" min="1" step="1" value={phase.endDay} onChange={(event) => handlePhaseChange(index, 'endDay', event.target.value)} className={programFormInputClass} />
+                        </label>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1076,11 +1236,28 @@ function ProgramCard({ program, selected, onSelectToggle, onEdit, onDelete, onVi
 
   const statusColor = statusBadgeClass(program.status);
   const statusLabel = getProgramStatusLabel(program.status);
+  const configuredPrices = (program.pricingPlans || [])
+    .filter((plan) => plan.active !== false)
+    .map((plan) => Number(plan.price))
+    .filter((price) => Number.isFinite(price) && price > 0);
+  const pricesByBillingPeriod = new Map();
+  (program.pricingPlans || []).forEach((plan) => {
+    if (plan.active === false || !['Monthly', 'Annual'].includes(plan.billingPeriod)) return;
+    const price = Number(plan.price);
+    if (Number.isFinite(price) && price > 0) {
+      pricesByBillingPeriod.set(plan.billingPeriod, Math.min(pricesByBillingPeriod.get(plan.billingPeriod) ?? Infinity, price));
+    }
+  });
+  const billingPeriodPrice = [...pricesByBillingPeriod.entries()]
+    .map(([billingPeriod, price]) => `${billingPeriod} ₹${price.toLocaleString('en-IN')}`)
+    .join(' · ');
   const programPrice = program.pricingType !== 'Paid'
     ? 'Free'
-    : program.availability === 'Both'
-      ? `₹${program.structuredFee ?? program.pricingPlans?.[0]?.price ?? program.programFee} / ₹${program.trainerLedFee ?? program.pricingPlans?.[1]?.price ?? '—'}`
-      : `₹${program.structuredFee ?? program.trainerLedFee ?? program.programFee ?? program.pricingPlans?.[0]?.price ?? '—'}`;
+    : billingPeriodPrice
+      ? billingPeriodPrice
+      : configuredPrices.length
+        ? `From ₹${Math.min(...configuredPrices).toLocaleString('en-IN')}`
+      : `₹${Number(program.programFee || 0).toLocaleString('en-IN')}`;
 
   return (
     <article className={`relative rounded-xl overflow-hidden border ${selected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col justify-between hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group`}>
