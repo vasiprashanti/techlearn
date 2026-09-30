@@ -318,6 +318,7 @@ export const adminAPI = {
   getStudent: (studentId) => request(`/admin/students/${studentId}`),
   createStudent: (body) => request('/admin/students', { method: 'POST', body: JSON.stringify(body) }),
   updateStudent: (studentId, body) => request(`/admin/students/${studentId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  updateStudentPayment: (studentId, payment) => request(`/admin/students/${studentId}/payment`, { method: 'PATCH', body: JSON.stringify({ payment }) }),
   updateStudentProgramStartDate: (studentId, programId, individualStartDate) => request(
     `/admin/students/${studentId}/programs/${programId}/start-date`,
     { method: 'PATCH', body: JSON.stringify({ individualStartDate }) },

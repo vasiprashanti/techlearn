@@ -32,11 +32,11 @@ import {
 
 const SECTIONS = [
   { key: 'students', label: 'Students', icon: FiUsers, field: 'studentIds', route: '/students' },
-  { key: 'blueprints', label: 'Blueprints', icon: FiLayers, field: null, route: null },
   { key: 'batches', label: 'Batches', icon: FiLayers, field: 'batchIds', route: '/batches' },
   { key: 'courses', label: 'Courses', icon: FiBookOpen, field: 'courseIds', route: '/admin/courses' },
-  { key: 'roadmaps', label: 'Roadmaps', icon: FiFileText, field: 'roadmapIds', route: '/admin/roadmaps' },
   { key: 'track-templates', label: 'Track Templates', icon: FiGitCommit, field: 'trackTemplateIds', route: '/track-templates' },
+  { key: 'roadmaps', label: 'Roadmaps', icon: FiFileText, field: 'roadmapIds', route: '/admin/roadmaps' },
+  { key: 'blueprints', label: 'Blueprints', icon: FiLayers, field: null, route: null },
   { key: 'certificates', label: 'Certificates', icon: FiAward, field: 'certificateTemplateIds', route: '/certificates' },
   { key: 'projects', label: 'Projects', icon: FiClipboard, field: 'projectIds', route: '/admin/projects' },
   { key: 'analytics', label: 'Analytics', icon: FiBarChart2, field: null, route: null },
@@ -148,8 +148,11 @@ const buildStudentTableRow = (student, program) => {
     ? 'Paid'
     : (totalDays ? `${totalDays}-Day Trial` : 'Free Access'));
 
+  const paymentStatus = enrollment?.paymentStatus || (isPaid ? 'Paid' : (program?.pricingType === 'Free' ? 'Free' : 'Pending'));
+
   return {
     access: isPaid ? 'Paid' : 'Trial',
+    payment: paymentStatus,
     plan: isPaid && feeLabel && !planBase.includes('₹') ? `${planBase}${feeLabel}` : planBase,
     started,
     expires,
@@ -168,14 +171,14 @@ const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach, onEd
         <thead className="bg-black/[0.03] dark:bg-white/[0.04]">
           <tr className="border-b border-black/10 dark:border-white/10">
             {[
-              { label: '#', width: 'w-12 min-w-12' },
-              { label: 'Student', width: 'w-44 min-w-44' },
-              { label: 'Access', width: 'w-20 min-w-20' },
-              { label: 'Plan', width: 'w-28 min-w-28' },
-              { label: 'Started', width: 'w-24 min-w-24' },
-              { label: 'Expires', width: 'w-24 min-w-24' },
-              { label: 'Progress', width: 'w-28 min-w-28' },
-              { label: 'Status', width: 'w-28 min-w-28' },
+              { label: '#', width: 'w-12 min-w-12 text-center' },
+              { label: 'Student', width: 'w-48 min-w-48 text-left' },
+              { label: 'Status', width: 'w-24 min-w-24 text-center' },
+              { label: 'Payment', width: 'w-24 min-w-24 text-center' },
+              { label: 'Starts', width: 'w-28 min-w-28 text-left' },
+              { label: 'Expires', width: 'w-28 min-w-28 text-left' },
+              { label: 'Progress', width: 'w-28 min-w-28 text-center' },
+              { label: 'Action', width: 'w-16 min-w-16 text-center' },
             ].map(({ label, width }) => (
               <th
                 key={label}
@@ -196,7 +199,8 @@ const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach, onEd
             </tr>
           ) : students.map((student, index) => {
             const row = buildStudentTableRow(student, program);
-            const isActive = row.status === 'Active';
+            const statusLower = String(row.status || '').toLowerCase();
+            const paymentLower = String(row.payment || '').toLowerCase();
 
             return (
               <tr
@@ -204,10 +208,10 @@ const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach, onEd
                 onClick={() => onOpenStudent(student)}
                 className="group border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-[#3C83F6]/[0.04] dark:hover:bg-white/[0.04] cursor-pointer transition-colors"
               >
-                <td className="w-12 min-w-12 px-3 py-3.5 text-xs font-semibold tabular-nums text-black/45 dark:text-white/45">
+                <td className="w-12 min-w-12 px-3 py-3.5 text-center text-xs font-semibold tabular-nums text-black/45 dark:text-white/45">
                   {String(index + 1).padStart(3, '0')}
                 </td>
-                <td className="w-44 min-w-44 px-3 py-3.5">
+                <td className="w-48 min-w-48 px-3 py-3.5">
                   <button
                     type="button"
                     onClick={(event) => {
@@ -216,29 +220,43 @@ const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach, onEd
                     }}
                     className="text-left group/student"
                   >
-                    <span className="block max-w-[150px] truncate text-sm font-bold text-slate-800 dark:text-white group-hover/student:text-[#3C83F6] dark:group-hover/student:text-[#bceaff] transition-colors whitespace-nowrap">
+                    <span className="block max-w-[170px] truncate text-sm font-bold text-slate-800 dark:text-white group-hover/student:text-[#3C83F6] dark:group-hover/student:text-[#bceaff] transition-colors whitespace-nowrap">
                       {student.name || student.email || 'Unnamed Student'}
                     </span>
                     {student.email && (
-                      <span className="block max-w-[150px] truncate text-[11px] text-black/40 dark:text-white/40 mt-0.5">
+                      <span className="block max-w-[170px] truncate text-[11px] text-black/40 dark:text-white/40 mt-0.5">
                         {student.email}
                       </span>
                     )}
                   </button>
                 </td>
-                <td className="px-4 py-3.5">
-                  <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${
-                    row.access === 'Paid'
+                <td className="px-3 py-3.5 text-center">
+                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                    statusLower === 'active'
                       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
-                      : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'
+                      : statusLower === 'completed'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'
+                        : statusLower === 'paused'
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300'
                   }`}>
-                    {row.access}
+                    {row.status}
                   </span>
                 </td>
-                <td className="px-4 py-3.5 text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">
-                  {row.plan}
+                <td className="px-3 py-3.5 text-center">
+                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                    paymentLower === 'paid'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                      : paymentLower === 'pending'
+                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
+                        : paymentLower === 'failed'
+                          ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300'
+                  }`}>
+                    {row.payment}
+                  </span>
                 </td>
-                <td className="px-4 py-3.5 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                <td className="px-3 py-3.5 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
                   <div className="flex items-center gap-1.5">
                     <span>{formatCompactDate(row.started)}</span>
                     <button
@@ -255,34 +273,25 @@ const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach, onEd
                     </button>
                   </div>
                 </td>
-                <td className="px-4 py-3.5 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                <td className="px-3 py-3.5 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
                   {formatCompactDate(row.expires)}
                 </td>
-                <td className="px-4 py-3.5 text-xs font-semibold tabular-nums text-slate-700 dark:text-slate-200 whitespace-nowrap">
+                <td className="px-3 py-3.5 text-center text-xs font-semibold tabular-nums text-slate-700 dark:text-slate-200 whitespace-nowrap">
                   {row.progress}
                 </td>
-                <td className="px-4 py-3.5">
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${
-                      isActive
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
-                        : 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300'
-                    }`}>
-                      {row.status}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onDetach(student);
-                      }}
-                      title="Detach from Program"
-                      aria-label={`Detach ${student.name || 'student'} from Program`}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                    >
-                      <FiTrash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                <td className="px-3 py-3.5 text-center">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onDetach(student);
+                    }}
+                    title="Detach from Program"
+                    aria-label={`Detach ${student.name || 'student'} from Program`}
+                    className="w-7 h-7 rounded-lg inline-flex items-center justify-center text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  >
+                    <FiTrash2 className="w-3.5 h-3.5" />
+                  </button>
                 </td>
               </tr>
             );
@@ -596,8 +605,8 @@ export default function ProgramDetails() {
   });
   const [studentsSubTab, setStudentsSubTab] = useState('students');
   const [studentSearch, setStudentSearch] = useState('');
-  const [studentPeriodFilter, setStudentPeriodFilter] = useState('active');
-  const [studentStatusFilter, setStudentStatusFilter] = useState('Active');
+  const [studentPeriodFilter, setStudentPeriodFilter] = useState('all');
+  const [studentStatusFilter, setStudentStatusFilter] = useState('all');
   const [studentAccessFilter, setStudentAccessFilter] = useState('all');
   const [studentPlanFilter, setStudentPlanFilter] = useState('all');
   const [studentSort, setStudentSort] = useState('latest');
@@ -1484,22 +1493,8 @@ export default function ProgramDetails() {
                   {program.name}
                 </h1>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
-                  <FiTag className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
-                  {getProgramType(program.programType)}
-                </span>
-                <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
-                  <FiClock className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
-                  {program.duration || '—'}
-                </span>
-                <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-emerald-300/60 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
-                  {programPrice}
-                </span>
-                <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
-                  <FiUsers className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
-                  {totalEnrolled} Students
-                </span>
+              <div className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
+                {getProgramType(program.programType)} · {program.duration || '—'} · {programPrice} · {totalEnrolled} Students
               </div>
             </div>
           </div>
@@ -1529,9 +1524,11 @@ export default function ProgramDetails() {
               const Icon = sec.icon;
               const count = sec.key === 'blueprints'
                 ? Number(program.blueprintCount || 0)
-                : sec.field
-                  ? (program[sec.field] || []).length
-                  : null;
+                : sec.key === 'students'
+                  ? totalEnrolled
+                  : sec.field
+                    ? (program[sec.field] || []).length
+                    : null;
               const isActive = activeTab === sec.key;
               return (
                 <button
@@ -1574,7 +1571,7 @@ export default function ProgramDetails() {
                     : `Attached ${currentSection.label}`}
                   {currentSection.key !== 'analytics' && currentSection.key !== 'blueprints' && (
                     <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[#3C83F6]/10 dark:bg-[#bceaff]/15 text-[#3C83F6] dark:text-[#bceaff]">
-                      {attachedItems.length}
+                      {currentSection.key === 'students' ? visibleStudentItems.length : attachedItems.length}
                     </span>
                   )}
                 </h2>

@@ -559,7 +559,22 @@ export const listPrograms = async (req, res) => {
       .limit(limitNum)
       .lean();
 
-    const programs = rawPrograms.map((p) => ({
+    const programIds = rawPrograms.map((p) => p._id);
+    const enrollments = await ProgramEnrollment.find({ programId: { $in: programIds } })
+      .select('programId studentId')
+      .lean();
+    const enrolledStudentsByProgram = new Map();
+    enrollments.forEach((e) => {
+      const pid = e.programId?.toString();
+      if (!pid) return;
+      if (!enrolledStudentsByProgram.has(pid)) enrolledStudentsByProgram.set(pid, new Set());
+      if (e.studentId) enrolledStudentsByProgram.get(pid).add(e.studentId.toString());
+    });
+
+    const programs = rawPrograms.map((p) => {
+      const enrolledSet = enrolledStudentsByProgram.get(p._id.toString()) || new Set();
+      (p.studentIds || []).forEach((sId) => enrolledSet.add(sId.toString()));
+      return {
       _id: p._id,
       name: p.name,
       description: p.description,
@@ -577,7 +592,7 @@ export const listPrograms = async (req, res) => {
       targetCompanies: p.targetCompanies || [],
       skillTags: p.skillTags || [],
       targetRoles: p.targetRoles || [],
-      studentCount: Array.isArray(p.studentIds) ? p.studentIds.length : 0,
+      studentCount: enrolledSet.size,
       batchCount: Array.isArray(p.batchIds) ? p.batchIds.length : 0,
       courseCount: Array.isArray(p.courseIds) ? p.courseIds.length : 0,
       roadmapCount: Array.isArray(p.roadmapIds) ? p.roadmapIds.length : 0,
@@ -586,7 +601,7 @@ export const listPrograms = async (req, res) => {
       projectCount: Array.isArray(p.projectIds) ? p.projectIds.length : 0,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
-    }));
+    };});
 
     res.json({
       success: true,
@@ -804,7 +819,28 @@ export const getProgramById = async (req, res) => {
       }
     });
 
-    const baseStudents = (program.studentIds || []).map((student) => ({
+    const existingStudentIds = new Set((program.studentIds || []).map((s) => s._id?.toString()).filter(Boolean));
+    const missingStudentIds = enrollments
+      .map((e) => e.studentId?.toString())
+      .filter((id) => id && !existingStudentIds.has(id));
+
+    let allStudents = [...(program.studentIds || [])];
+    if (missingStudentIds.length > 0) {
+      const extraStudents = await Student.find({ _id: { $in: missingStudentIds } })
+        .select(ENTITY_CONFIG.students.selectFields)
+        .populate({
+          path: 'batchId',
+          select: '_id name startDate expiryDate releaseTime',
+        })
+        .lean();
+      allStudents.push(...extraStudents);
+
+      await Program.findByIdAndUpdate(programId, {
+        $addToSet: { studentIds: { $each: missingStudentIds } },
+      });
+    }
+
+    const baseStudents = allStudents.map((student) => ({
       ...student,
       enrollment: enrollmentByStudentId.get(student._id?.toString()) || null,
     }));

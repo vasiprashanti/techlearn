@@ -738,6 +738,7 @@ export const listBatches = async (req, res) => {
         program: batch.programId && typeof batch.programId === "object"
           ? batch.programId
           : null,
+        schedule: batch.schedule || "Mon–Fri",
       };
     });
 
@@ -864,6 +865,7 @@ export const createBatchAdmin = async (req, res) => {
               programType: selectedProgram?.programType || null,
               attachedCourse: resolvedAttached,
               supportingCourses: resolvedSupporting,
+              schedule: req.body.schedule || "Mon–Fri",
             },
           ],
           { session, ordered: true }
@@ -2944,6 +2946,7 @@ export const updateBatchAdmin = async (req, res) => {
       programId: nextProgramId,
       programType: selectedProgram?.programType
         || (nextProgramId ? existingBatch.programType : null),
+      schedule: req.body.schedule || existingBatch.schedule || "Mon–Fri",
     };
 
     let primaryCourseId = undefined;
@@ -4057,7 +4060,7 @@ export const getGlobalStudentsAdmin = async (req, res) => {
         .populate("programId", "name programType duration durationDays")
         .populate("batchId", "name startDate expiryDate status")
         .lean(),
-      Payment.find({ status: "captured" }).lean(),
+      Payment.find().sort({ createdAt: -1 }).lean(),
       PricingExitFeedback.find().sort({ createdAt: -1 }).lean(),
       User.find().select("_id email collegeName customCollege goal targetRole targetCompanies onboardingCompleted onboardingCompletedAt createdAt").lean(),
     ]);
@@ -4076,7 +4079,22 @@ export const getGlobalStudentsAdmin = async (req, res) => {
     });
 
     // Map paid payments: userId -> boolean/list
-    const paidUsersSet = new Set(allPayments.map((p) => String(p.userId)));
+    const paidUsersSet = new Set(allPayments.filter((p) => ["captured", "approved"].includes(p.status)).map((p) => String(p.userId)));
+
+    // Map payment status: userId or studentId -> Paid | Pending | Failed
+    const paymentStatusByUser = new Map();
+    allPayments.forEach((p) => {
+      const uKey = String(p.userId || p.studentId || "");
+      if (uKey && !paymentStatusByUser.has(uKey)) {
+        if (["captured", "approved"].includes(p.status)) {
+          paymentStatusByUser.set(uKey, "Paid");
+        } else if (["failed", "rejected"].includes(p.status)) {
+          paymentStatusByUser.set(uKey, "Failed");
+        } else if (["pending", "created"].includes(p.status)) {
+          paymentStatusByUser.set(uKey, "Pending");
+        }
+      }
+    });
 
     // Map pricing exit feedback by student/user ID
     const exitFeedbackMap = new Map();
@@ -4263,6 +4281,7 @@ export const getGlobalStudentsAdmin = async (req, res) => {
         studentIdStr: student.rollNo || String(student._id).slice(-6),
         college: collegeName,
         access: accessType,
+        payment: paymentStatusByUser.get(uId) || paymentStatusByUser.get(sId) || (accessType === "Paid" ? "Paid" : "Pending"),
         programs: programNamesList,
         programId: primaryProgramId || null,
         batchId: primaryEnrollment?.batchId?._id || student.batchId?._id || student.batchId || null,
@@ -4294,11 +4313,12 @@ export const getGlobalStudentsAdmin = async (req, res) => {
 
     // Filter by Tab
     let tabStudents = processedStudents.filter((s) => {
+      if (tab === "all" || tab === "all-students" || tab === "all_students") return true;
       if (tab === "enrolled") return s.isEnrolled;
       if (tab === "leads") return s.isLead;
       if (tab === "skill") return s.hasSkill;
       if (tab === "exploring") return s.isExploring;
-      return s.isEnrolled;
+      return true;
     });
 
     // Apply Month Filter
@@ -4311,9 +4331,13 @@ export const getGlobalStudentsAdmin = async (req, res) => {
       });
     }
 
-    // Apply Access Filter
-    if (accessFilter !== "all") {
-      tabStudents = tabStudents.filter((s) => s.access.toLowerCase() === accessFilter);
+    // Apply Payment / Access Filter
+    const effectivePaymentFilter = String(req.query.payment || req.query.access || "all").toLowerCase();
+    if (effectivePaymentFilter !== "all") {
+      tabStudents = tabStudents.filter((s) => {
+        const pay = String(s.payment || s.access || "").toLowerCase();
+        return pay === effectivePaymentFilter || (effectivePaymentFilter === "college" && s.access.toLowerCase() === "college");
+      });
     }
 
     // Apply Status Filter
@@ -4562,5 +4586,56 @@ export const bulkUploadStudentsAdmin = async (req, res) => {
   } catch (error) {
     console.error("bulkUploadStudentsAdmin error:", error);
     return res.status(500).json({ success: false, message: "Bulk upload failed.", error: error.message });
+  }
+};
+
+export const updateStudentPaymentAdmin = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    if (!assertObjectId(studentId, "studentId", res)) return;
+    const { payment } = req.body;
+    const rawPayment = String(payment || "").trim();
+    if (!["Paid", "Pending", "Failed", "paid", "pending", "failed"].includes(rawPayment)) {
+      return res.status(400).json({ success: false, message: "Payment status must be Paid, Pending, or Failed." });
+    }
+
+    const titleCased = rawPayment.charAt(0).toUpperCase() + rawPayment.slice(1).toLowerCase();
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found." });
+    }
+
+    const statusMap = {
+      Paid: "captured",
+      Pending: "pending",
+      Failed: "failed",
+    };
+    const paymentStatus = statusMap[titleCased] || "pending";
+    const accessTier = titleCased === "Paid" ? "Member" : "Free";
+
+    await Payment.findOneAndUpdate(
+      { $or: [{ studentId: student._id }, ...(student.userId ? [{ userId: student.userId }] : [])] },
+      {
+        $set: {
+          userId: student.userId || student._id,
+          studentId: student._id,
+          programId: student.programId || null,
+          status: paymentStatus,
+          paymentType: "Admin",
+          paymentDate: new Date(),
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    await ProgramEnrollment.updateMany(
+      { $or: [{ studentId: student._id }, ...(student.userId ? [{ userId: student.userId }] : [])] },
+      { $set: { accessTier, paymentStatus: titleCased } }
+    );
+
+    return res.json({ success: true, message: `Payment updated to ${titleCased}.`, payment: titleCased });
+  } catch (error) {
+    console.error("updateStudentPaymentAdmin error:", error);
+    return res.status(500).json({ success: false, message: error.message || "Failed to update payment status." });
   }
 };

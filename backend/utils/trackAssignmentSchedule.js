@@ -35,7 +35,20 @@ const getISTDateParts = (date) => {
     year: istDate.getUTCFullYear(),
     month: istDate.getUTCMonth(),
     date: istDate.getUTCDate(),
+    dayOfWeek: istDate.getUTCDay(),
   };
+};
+
+export const isScheduledDayOfWeek = (dayOfWeek, scheduleString = "Mon–Fri") => {
+  if (!scheduleString || scheduleString === "Daily" || scheduleString === "All Days") return true;
+  const normalized = String(scheduleString).toLowerCase().replace(/\s+/g, "");
+  if (normalized.includes("mon") && normalized.includes("fri")) {
+    return dayOfWeek >= 1 && dayOfWeek <= 5;
+  }
+  if (normalized.includes("sat") && normalized.includes("sun")) {
+    return dayOfWeek === 0 || dayOfWeek === 6;
+  }
+  return true;
 };
 
 export const combineDateAndTime = (date, timeString = "00:00") => {
@@ -89,6 +102,24 @@ export const getTrackScheduleDays = ({
   return highestAssignmentDay || templateDays || 1;
 };
 
+export const getScheduledReleaseDateForDay = (batch, dayIndex) => {
+  if (!batch || !batch.startDate) return null;
+  const baseStart = new Date(batch.startDate);
+  const schedule = batch.schedule || "Mon–Fri";
+  let count = 0;
+  let offset = 1; // Batch Day 1 starts the day after startDate
+  while (count < dayIndex && offset <= 3650) {
+    const candidate = new Date(baseStart.getTime() + offset * 24 * 60 * 60 * 1000);
+    const dayOfWeek = getISTDateParts(candidate).dayOfWeek;
+    if (isScheduledDayOfWeek(dayOfWeek, schedule)) {
+      count++;
+      if (count === dayIndex) return candidate;
+    }
+    offset++;
+  }
+  return new Date(baseStart.getTime() + dayIndex * 24 * 60 * 60 * 1000);
+};
+
 export const calculateCurrentDayNumber = (
   batch,
   trackTemplate,
@@ -103,7 +134,9 @@ export const calculateCurrentDayNumber = (
   const maxDays = getTrackScheduleDays({ batch, trackTemplate, programDurationDays });
   
   for (let d = 1; d <= maxDays; d++) {
-    const dayDate = new Date(trackAssignmentDate.getTime() + (d - 1) * 24 * 60 * 60 * 1000);
+    const dayDate = batch?.startDate && batch?.schedule
+      ? getScheduledReleaseDateForDay(batch, d)
+      : new Date(trackAssignmentDate.getTime() + (d - 1) * 24 * 60 * 60 * 1000);
     
     let releaseTime = batch?.releaseTime || "00:00";
     if (trackTemplate) {

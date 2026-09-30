@@ -263,23 +263,23 @@ function RoadmapRow({ roadmap, isDarkMode, onOpen }) {
   }
 
   return (
-    <div className={`grid min-h-[128px] grid-cols-1 items-center gap-5 rounded-[15px] border px-[26px] py-[22px] transition-all duration-200 lg:grid-cols-[366px_minmax(0,1fr)_250px_172px] lg:gap-0 ${
+    <div className={`grid min-h-[128px] grid-cols-1 items-start sm:items-center gap-4 sm:gap-5 rounded-[15px] border p-4 sm:px-[26px] sm:py-[22px] transition-all duration-200 lg:grid-cols-[366px_minmax(0,1fr)_250px_172px] lg:gap-0 ${
       isDarkMode
         ? "border-white/10 bg-white/5 hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/10"
         : "border-[#c5dfe6] bg-[#d9eef3] shadow-sm hover:-translate-y-[1px] hover:border-[#00113b]/20 hover:bg-[#e0f2f5] hover:shadow-md"
     }`}
     >
       <div className="min-w-0 pr-2">
-        <div className={`mb-[7px] truncate text-[17px] font-bold leading-[1.35] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
+        <div className={`mb-1 sm:mb-[7px] text-base sm:text-[17px] font-bold leading-snug sm:leading-[1.35] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
           {title}
         </div>
-        <div className={`truncate text-[12px] ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
+        <div className={`text-xs sm:text-[12px] ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
           {getRoadmapCategory(roadmap)}
         </div>
       </div>
 
       <div className="min-w-0 pr-2">
-        <div className={`mb-[9px] text-[17px] font-bold leading-[1.35] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
+        <div className={`mb-1.5 sm:mb-[9px] text-xs sm:text-[17px] font-bold leading-[1.35] uppercase sm:normal-case tracking-wide sm:tracking-normal ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
           Tech Stack
         </div>
         <div className="flex flex-col gap-[5px]">
@@ -297,20 +297,20 @@ function RoadmapRow({ roadmap, isDarkMode, onOpen }) {
         </div>
       </div>
 
-      <div>
-        <div className={`text-[18px] font-bold leading-[1.4] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
+      <div className="flex items-baseline sm:block gap-2">
+        <div className={`text-base sm:text-[18px] font-bold leading-[1.4] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
           {formatRoadmapSalary(roadmap)}
         </div>
-        <span className={`mt-[3px] block text-[10px] font-medium ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+        <span className={`text-[10px] font-medium ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
           Estimated Salary
         </span>
       </div>
 
-      <div>
+      <div className="w-full">
         <button
           type="button"
           onClick={() => onOpen(roadmap)}
-          className="inline-flex min-h-[45px] w-full items-center justify-center rounded-[8px] border-none bg-[#b2e96a] px-[10px] py-[13px] font-['Press_Start_2P'] text-[8px] font-bold leading-[1.5] text-[#0a1128] transition-all hover:-translate-y-[2px] hover:shadow-[0_5px_0_rgba(0,17,59,0.15)] active:translate-y-0 active:shadow-none"
+          className="inline-flex min-h-[40px] sm:min-h-[45px] w-full items-center justify-center rounded-[8px] border-none bg-[#b2e96a] px-[10px] py-[11px] sm:py-[13px] font-['Press_Start_2P'] text-[7px] sm:text-[8px] font-bold leading-[1.5] text-[#0a1128] transition-all hover:-translate-y-[2px] hover:shadow-[0_5px_0_rgba(0,17,59,0.15)] active:translate-y-0 active:shadow-none"
         >
           SHOW ROADMAP
         </button>
@@ -454,34 +454,34 @@ export default function Roadmaps() {
 
   const listContent = (
     <>
-      <header className="mb-[34px]">
-        <h1 className={`font-['Press_Start_2P'] text-[28px] leading-[1.35] tracking-[-1px] sm:text-[32px] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
+      <header className="mb-6 sm:mb-[34px]">
+        <h1 className={`font-['Press_Start_2P'] text-[20px] leading-[1.35] tracking-[-1px] sm:text-[32px] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
           Roadmaps
         </h1>
-        <p className={`mt-[10px] text-[15px] ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
+        <p className={`mt-2 sm:mt-[10px] text-xs sm:text-[15px] ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
           Opportunities matched to your career goals.
         </p>
       </header>
 
-      <div className={`mb-[29px] flex h-[62px] w-full items-center rounded-[13px] border px-[20px] transition-colors ${isDarkMode ? "border-white/10 bg-white/5 text-white focus-within:border-white/20 focus-within:bg-white/10" : "border-[#c4dfe6] bg-[#def0f4] text-[#00113b] shadow-sm focus-within:border-[#00113b]/30 focus-within:bg-[#e5f4f7]"}`}>
-        <Search className={`mr-[12px] h-5 w-5 shrink-0 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`} />
+      <div className={`mb-5 sm:mb-[29px] flex h-12 sm:h-[62px] w-full items-center rounded-xl sm:rounded-[13px] border px-3 sm:px-[20px] transition-colors ${isDarkMode ? "border-white/10 bg-white/5 text-white focus-within:border-white/20 focus-within:bg-white/10" : "border-[#c4dfe6] bg-[#def0f4] text-[#00113b] shadow-sm focus-within:border-[#00113b]/30 focus-within:bg-[#e5f4f7]"}`}>
+        <Search className={`mr-2.5 sm:mr-[12px] h-4 w-4 sm:h-5 sm:w-5 shrink-0 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`} />
         <input
           id="roadmapSearchInput"
           type="text"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           placeholder="Search roadmaps, skills, roles or companies..."
-          className={`w-full border-none bg-transparent text-[13px] outline-none placeholder:text-slate-400 ${isDarkMode ? "text-white" : "text-[#00113b]"}`}
+          className={`w-full border-none bg-transparent text-xs sm:text-[13px] outline-none placeholder:text-slate-400 ${isDarkMode ? "text-white" : "text-[#00113b]"}`}
         />
       </div>
 
-      <div className={`mb-[20px] flex items-center gap-[7px] border-b ${isDarkMode ? "border-white/10" : "border-[#00113b]/15"}`}>
+      <div className={`mb-4 sm:mb-[20px] flex items-center gap-[7px] border-b ${isDarkMode ? "border-white/10" : "border-[#00113b]/15"}`}>
         {[{ id: "for-you", label: "For You" }, { id: "all", label: "All Roadmaps" }].map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`-mb-[1px] cursor-pointer border-b-2 px-[14px] py-[11px] text-[11px] font-bold transition-colors ${
+            className={`-mb-[1px] cursor-pointer border-b-2 px-3 sm:px-[14px] py-2 sm:py-[11px] text-[11px] font-bold transition-colors ${
               activeTab === tab.id
                 ? isDarkMode ? "border-white text-white" : "border-[#00113b] text-[#00113b]"
                 : isDarkMode ? "border-transparent text-slate-400 hover:text-white" : "border-transparent text-slate-500 hover:text-[#00113b]"
@@ -492,14 +492,14 @@ export default function Roadmaps() {
         ))}
       </div>
 
-      <div className="mb-[28px] flex flex-wrap items-center justify-between gap-[15px] md:flex-nowrap">
-        <div className="flex max-w-full gap-[7px] overflow-x-auto scrollbar-none">
+      <div className="mb-5 sm:mb-[28px] flex flex-wrap items-center justify-between gap-3 sm:gap-[15px] md:flex-nowrap">
+        <div className="flex max-w-full gap-1.5 sm:gap-[7px] overflow-x-auto scrollbar-none pb-1">
           {roadmapCategories.map((category) => (
             <button
               key={category.id}
               type="button"
               onClick={() => setActiveCategory(category.id)}
-              className={`whitespace-nowrap rounded-[100px] border px-[13px] py-[9px] text-[10px] transition-colors ${
+              className={`whitespace-nowrap rounded-[100px] border px-3 sm:px-[13px] py-1.5 sm:py-[9px] text-[10px] transition-colors ${
                 activeCategory === category.id
                   ? isDarkMode ? "border-[#b2e96a] bg-[#b2e96a] font-bold text-[#0a1128]" : "border-[#00113b] bg-[#00113b] font-semibold text-white shadow-sm"
                   : isDarkMode ? "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10" : "border-[#c6e0e6] bg-[#def0f4] text-[#00113b] shadow-xs hover:bg-[#e8f6f8]"
@@ -510,11 +510,11 @@ export default function Roadmaps() {
           ))}
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center gap-[8px] sm:flex-nowrap">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-[8px]">
           <button
             type="button"
             onClick={() => setFilterDrawerOpen(true)}
-            className={`flex h-[42px] cursor-pointer items-center gap-1.5 rounded-[8px] border px-[12px] text-[10px] transition-colors ${
+            className={`flex h-9 sm:h-[42px] cursor-pointer items-center gap-1.5 rounded-[8px] border px-3 sm:px-[12px] text-[10px] transition-colors ${
               selectedFilterCount
                 ? isDarkMode ? "border-[#b2e96a] bg-[#b2e96a]/20 font-bold text-[#b2e96a]" : "border-[#00113b] bg-[#00113b] font-bold text-white shadow-sm"
                 : isDarkMode ? "border-white/10 bg-white/5 text-white hover:bg-white/15" : "border-[#c6e0e6] bg-[#def0f4] text-[#00113b] shadow-xs hover:bg-[#e8f6f8]"
@@ -527,7 +527,7 @@ export default function Roadmaps() {
             aria-label="Sort roadmaps"
             value={sortBy}
             onChange={(event) => setSortBy(event.target.value)}
-            className={`h-[42px] cursor-pointer rounded-[8px] border pl-[10px] pr-[28px] text-[10px] outline-none transition-colors ${isDarkMode ? "border-white/10 bg-[#071532] text-white" : "border-[#c6e0e6] bg-[#def0f4] text-[#00113b] shadow-xs hover:bg-[#e8f6f8]"}`}
+            className={`h-9 sm:h-[42px] cursor-pointer rounded-[8px] border pl-2.5 sm:pl-[10px] pr-6 sm:pr-[28px] text-[10px] outline-none transition-colors ${isDarkMode ? "border-white/10 bg-[#071532] text-white" : "border-[#c6e0e6] bg-[#def0f4] text-[#00113b] shadow-xs hover:bg-[#e8f6f8]"}`}
           >
             <option value="newest">Newest</option>
             <option value="duration">Shortest</option>
@@ -565,7 +565,7 @@ export default function Roadmaps() {
             )}
           </div>
         ) : (
-          <div className="flex flex-col gap-[12px]">
+          <div className="flex flex-col gap-3 sm:gap-[12px]">
             {visibleRoadmaps.map((roadmap) => (
               <RoadmapRow
                 key={getRoadmapId(roadmap) || roadmap.title}
@@ -585,7 +585,7 @@ export default function Roadmaps() {
       <div className={`fixed inset-0 -z-10 transition-colors duration-300 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-[#d6eef4]"}`} />
 
       <main className="min-h-screen w-full">
-        <div className="mx-auto w-[calc(100%-2rem)] max-w-none px-0 pb-16 pt-28 sm:w-[calc(100%-3rem)] lg:w-[86%]">
+        <div className="mx-auto w-[calc(100%-1.5rem)] sm:w-[calc(100%-3rem)] lg:w-[86%] max-w-none px-0 pb-16 pt-20 sm:pt-28">
           {roadmapId ? detailContent : listContent}
         </div>
       </main>

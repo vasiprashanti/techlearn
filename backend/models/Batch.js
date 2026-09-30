@@ -125,6 +125,11 @@ const batchSchema = new mongoose.Schema(
       enum: ["Placement", "Skill"],
       default: null,
     },
+    schedule: {
+      type: String,
+      default: "Mon–Fri",
+      trim: true,
+    },
   },
   { timestamps: true }
 );

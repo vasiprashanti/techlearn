@@ -4,7 +4,7 @@ import axios from "axios";
 import { HiOutlineUpload } from "react-icons/hi";
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import { useTheme } from "../../context/ThemeContext";
-import { FiArrowLeft, FiEdit2, FiSave, FiAward, FiFileText, FiTrash2, FiPlus, FiChevronDown } from "react-icons/fi";
+import { FiArrowLeft, FiEdit2, FiSave, FiAward, FiFileText, FiTrash2, FiPlus, FiChevronDown, FiClock, FiBookOpen, FiCheckCircle } from "react-icons/fi";
 import { prepareBannerImage } from "../../utils/bannerImage";
 import adminAPI from "../../services/adminApi";
 
@@ -843,10 +843,10 @@ const AdminTopicsList = () => {
           <section className="space-y-6">
 
             {/* Course configuration cards */}
-            <div className="space-y-4 pb-6 border-b border-black/5 dark:border-white/10">
+            <div className="hidden">
 
-              {/* Edit Course Details */}
-              <div className={configCardClass}>
+              {/* Edit Course Details is now handled from the Courses table modal. */}
+              {false && <div className={configCardClass}>
                 <div className="flex items-center gap-3 px-5 py-4 border-b border-black/5 dark:border-white/10">
                   <div className="w-8 h-8 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center shrink-0">
                     <FiSave className="w-4 h-4 text-[#3C83F6] dark:text-blue-300" />
@@ -1180,10 +1180,45 @@ const AdminTopicsList = () => {
                     </button>
                   </div>
                 </form>
+              </div>}
+
+
+
+            </div>
+
+            {/* Course summary, styled to match the Program Details header */}
+            <div className="rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl px-5 py-4 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${status === "Published" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300" : status === "Archived" ? "bg-slate-500/10 text-slate-500 dark:text-slate-300" : "bg-amber-500/10 text-amber-600 dark:text-amber-300"}`}>
+                      {status}
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black/40 dark:text-white/40">Course Curriculum</span>
+                  </div>
+                  <h1 className="truncate text-xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-2xl">{courseTitle || "Untitled Course"}</h1>
+                  {description && <p className="mt-1 max-w-2xl truncate text-xs text-black/50 dark:text-white/50">{description}</p>}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-black/10 bg-white/60 px-2.5 text-xs font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"><FiBookOpen className="h-3.5 w-3.5 text-[#3C83F6]" />{topics.length} Topics</span>
+                  <span className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-black/10 bg-white/60 px-2.5 text-xs font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"><FiAward className="h-3.5 w-3.5 text-[#3C83F6]" />{level}</span>
+                  <span className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-black/10 bg-white/60 px-2.5 text-xs font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"><FiClock className="h-3.5 w-3.5 text-[#3C83F6]" />{deliveryType || "Self-Paced"}</span>
+                </div>
               </div>
+            </div>
 
-
-
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {[
+                { label: "Configured Topics", value: topics.length, icon: FiFileText },
+                { label: "Planned Topics", value: numTopics, icon: FiBookOpen },
+                { label: "Skills", value: skills.length, icon: FiAward },
+                { label: "Course Status", value: status, icon: FiCheckCircle },
+              ].map((stat) => (
+                <div key={stat.label} className="rounded-xl border border-black/10 bg-white/75 px-4 py-3 shadow-[0_3px_10px_rgba(15,23,42,0.03)] dark:border-white/10 dark:bg-[#0f1f43] dark:shadow-[0_6px_16px_rgba(0,0,0,0.12)]">
+                  <p className="truncate text-lg font-extrabold text-slate-900 dark:text-white">{stat.value}</p>
+                  <div className="mt-1 flex items-center justify-between gap-2"><span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">{stat.label}</span><stat.icon className="h-3.5 w-3.5 text-[#3C83F6] dark:text-[#bceaff]" /></div>
+                </div>
+              ))}
             </div>
 
             {/* Curriculum topics table */}
