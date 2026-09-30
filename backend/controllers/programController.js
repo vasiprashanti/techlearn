@@ -55,8 +55,7 @@ export const getPublicPrograms = async (req, res) => {
         ...p,
         courseIds: (p.courseIds || []).filter(isUserVisibleCourse),
         hasFreeAssessment: readinessSet.has(String(p._id)),
-      }))
-      .filter((p) => p.courseIds.length > 0);
+      }));
 
     return res.json({ success: true, programs: formatted });
   } catch (error) {
@@ -93,8 +92,7 @@ export const getProgramCatalog = async (req, res) => {
           trackCount: program.trackTemplateIds?.length || 0,
           projectCount: program.projectIds?.length || 0,
           certificateCount: program.certificateTemplateIds?.length || 0,
-        }))
-        .filter((program) => program.courseIds.length > 0),
+        })),
     });
   } catch (error) {
     console.error("Error fetching public program catalog:", error);

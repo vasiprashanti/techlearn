@@ -1,5 +1,8 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import Student from "../models/Student.js";
+import ProgramEnrollment from "../models/ProgramEnrollment.js";
+import { isProgramLearningSelection } from "../utils/programTypeNormalization.js";
 
 export const protect = async (req, res, next) => {
   let token;
@@ -114,13 +117,49 @@ export const optionalProtect = async (req, res, next) => {
 
 export const protectOptional = optionalProtect;
 
-export const requirePlacementProgram = (req, res, next) => {
-  if (["Placement Sprint", "Both"].includes(req.user?.programSelection)) {
-    return next();
-  }
+export const requireProgramLearning = async (req, res, next) => {
+  if (req.user?.role === "admin") return next();
 
-  return res.status(403).json({
-    success: false,
-    message: "Placement access is not enabled for this account.",
-  });
+  try {
+    const email = String(req.user?.email || "").trim().toLowerCase();
+    const student = await Student.findOne({
+      $or: [
+        ...(req.user?._id ? [{ userId: req.user._id }] : []),
+        ...(email ? [{ email }] : []),
+      ],
+    }).select("_id").lean();
+    const identifiers = [
+      req.user?._id ? { userId: req.user._id } : null,
+      student?._id ? { studentId: student._id } : null,
+    ].filter(Boolean);
+    const activeEnrollment = identifiers.length
+      ? await ProgramEnrollment.exists({ status: "Active", $or: identifiers })
+      : null;
+
+    if (activeEnrollment) return next();
+
+    // Preserve the legacy selection-only experience only for accounts that
+    // predate ProgramEnrollment. A paused/completed enrollment is not active
+    // and must not regain today's tasks from a stale profile selection.
+    const anyEnrollment = identifiers.length
+      ? await ProgramEnrollment.exists({ $or: identifiers })
+      : null;
+    if (!anyEnrollment && isProgramLearningSelection(req.user?.programSelection)) {
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      message: "An active program is required to access daily program tasks.",
+    });
+  } catch (error) {
+    console.error("requireProgramLearning error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to verify program access.",
+    });
+  }
 };
+
+// Backward-compatible export for any older route modules still using the name.
+export const requirePlacementProgram = requireProgramLearning;

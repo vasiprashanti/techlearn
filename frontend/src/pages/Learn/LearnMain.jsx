@@ -7,6 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 import JoinWaitlistModal from '../../components/Learn/JoinWaitlistModal';
 import ScrollProgress from '../../components/ScrollProgress';
 import { readCachedCourseDetails, writeCachedCourseDetails } from '../../utils/courseCache';
+import { getProgramPriceLabel, isFreeProgramItem } from '../../utils/programDisplay';
 import './learnPage.css';
 
 const COURSES_CACHE_KEY = 'learn-courses-cache-v2';
@@ -130,15 +131,6 @@ const isFreeCourseItem = (course) => {
     (!String(rawPrice).includes('₹') && isNaN(Number(rawPrice))) ||
     Number(rawPrice) === 0
   );
-};
-
-const isFreeProgramItem = (program) => {
-  if (String(program?.pricingType || '').toLowerCase() === 'free') return true;
-  if (program?.programFee !== undefined && program?.programFee !== null && Number(program?.programFee) === 0) return true;
-  const rawPrice = program?.price;
-  if (!rawPrice) return false;
-  const p = String(rawPrice).toLowerCase().trim();
-  return p === 'free' || p === 'FREE' || p === '₹0' || p === '0';
 };
 
 const STANDARD_SKILLS = [
@@ -677,13 +669,8 @@ const LearnMain = () => {
             ) : filteredPrograms.length > 0 ? (
               <div className="card-grid" id="programGrid">
                 {filteredPrograms.map((program) => {
-                  const rawPrice = program.price || (program.pricingType === 'Free' ? 'FREE' : '₹399');
                   const isFree = isFreeProgramItem(program);
-                  const displayPrice = isFree
-                    ? 'FREE'
-                    : String(rawPrice).startsWith('₹')
-                    ? rawPrice
-                    : `₹${rawPrice}`;
+                  const displayPrice = getProgramPriceLabel(program);
 
                   const metaItems = program.metaTags || [
                     program.duration || `${program.durationDays || 30} Days`,

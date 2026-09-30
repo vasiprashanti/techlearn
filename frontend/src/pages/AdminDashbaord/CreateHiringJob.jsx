@@ -74,8 +74,8 @@ export default function CreateHiringJob() {
   const [submitting, setSubmitting] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Creation mode tab: "upload" (Upload .md) or "manual" (Field-by-field entry)
-  const [entryMode, setEntryMode] = useState("upload");
+  // Field-by-field entry is primary; Markdown upload remains a secondary shortcut.
+  const [entryMode, setEntryMode] = useState("manual");
 
   // Raw text state for paste mode
   const [rawPastedText, setRawPastedText] = useState("");
@@ -451,21 +451,8 @@ export default function CreateHiringJob() {
             </div>
           )}
 
-          {/* Primary Method Selection Tabs: Markdown First, Text First, Manual */}
+          {/* Manual entry stays primary; Markdown is an optional shortcut. */}
           <div className="border-b border-black/10 dark:border-white/10 flex gap-2">
-            <button
-              type="button"
-              onClick={() => setEntryMode("upload")}
-              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${
-                entryMode === "upload"
-                  ? "border-[#3C83F6] text-[#3C83F6] dark:text-[#bceaff]"
-                  : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400"
-              }`}
-            >
-              <FiUpload className="w-3.5 h-3.5" />
-              Upload Markdown (.md)
-            </button>
-
             <button
               type="button"
               onClick={() => setEntryMode("manual")}
@@ -476,7 +463,20 @@ export default function CreateHiringJob() {
               }`}
             >
               <FiEdit3 className="w-3.5 h-3.5" />
-              Manual Entry
+              Manual Entry (Recommended)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setEntryMode("upload")}
+              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${
+                entryMode === "upload"
+                  ? "border-[#3C83F6] text-[#3C83F6] dark:text-[#bceaff]"
+                  : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400"
+              }`}
+            >
+              <FiUpload className="w-3.5 h-3.5" />
+              Optional .md Upload
             </button>
           </div>
 
@@ -490,7 +490,7 @@ export default function CreateHiringJob() {
                     Upload Job Markdown File (.md)
                   </h3>
                   <span className="text-xs text-slate-400">
-                    Primary parser extracts all structured fields automatically
+                    Optional shortcut: fields are parsed for review in the form below.
                   </span>
                 </div>
 

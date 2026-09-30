@@ -1,5 +1,5 @@
 import express from "express";
-import { protect, requirePlacementProgram } from "../middleware/authMiddleware.js";
+import { protect, requireProgramLearning } from "../middleware/authMiddleware.js";
 import {
   getPracticeStats,
   listPracticeQuestions,
@@ -11,7 +11,7 @@ const router = express.Router();
 
 router.get("/categories", protect, listPracticeCategoriesForStudent);
 router.get("/questions", protect, listPracticeQuestions);
-router.get("/stats", protect, requirePlacementProgram, getPracticeStats);
-router.post("/submissions", protect, requirePlacementProgram, recordPracticeSubmission);
+router.get("/stats", protect, requireProgramLearning, getPracticeStats);
+router.post("/submissions", protect, requireProgramLearning, recordPracticeSubmission);
 
 export default router;

@@ -11,6 +11,12 @@ const LEGACY_SKILL_TYPES = new Set([
   "project program",
 ]);
 
+const PLACEMENT_ONBOARDING_GOALS = new Set([
+  "get job-ready",
+  "get job ready",
+  "get placed",
+]);
+
 const PROGRAM_TYPE_ALIASES = Object.freeze({
   Placement: ["Placement", "Placement Sprint", "Placement Program", "placement", "placement sprint", "placement program"],
   Skill: ["Skill", "Skill Program", "Full Stack Project Program", "Project Program", "skill", "skill program", "full stack project program", "project program"],
@@ -24,6 +30,7 @@ const PROGRAM_TYPE_ALIASES = Object.freeze({
 export const normalizeProgramType = (value) => {
   const normalized = String(value || "").trim().toLowerCase();
   if (!normalized) return null;
+  if (PLACEMENT_ONBOARDING_GOALS.has(normalized)) return "Placement";
   if (normalized === "placement" || normalized.includes("placement") || LEGACY_PLACEMENT_TYPES.has(normalized)) {
     return "Placement";
   }
@@ -31,6 +38,11 @@ export const normalizeProgramType = (value) => {
     return "Skill";
   }
   return null;
+};
+
+export const isProgramLearningSelection = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized === "both" || Boolean(normalizeProgramType(value));
 };
 
 export const isLegacyProgramType = (value) => {

@@ -21,6 +21,46 @@ const getValidDate = (...values) => {
   return new Date();
 };
 
+const getEnrollmentTimestamp = (enrollment) => {
+  const date = new Date(enrollment?.assignedAt || enrollment?.createdAt || 0).getTime();
+  return Number.isFinite(date) ? date : 0;
+};
+
+/**
+ * A learner has one active Program; historical completed enrollments must
+ * never win merely because their legacy User/Student program pointer is stale.
+ * An explicit programId still takes precedence when resolving a specific
+ * Program's resource page.
+ */
+export const chooseProgramScheduleEnrollment = ({
+  enrollments = [],
+  preferredProgramId = null,
+  requestedProgramId = null,
+} = {}) => {
+  const eligible = (enrollments || []).filter((enrollment) =>
+    ["Active", "Completed"].includes(enrollment?.status)
+  );
+  const requestedId = getId(requestedProgramId);
+  const candidates = requestedId
+    ? eligible.filter((enrollment) => String(getId(enrollment.programId)) === String(requestedId))
+    : eligible;
+  if (!candidates.length) return null;
+
+  const preferredId = getId(preferredProgramId);
+  const preferred = preferredId
+    ? candidates.find((enrollment) => String(getId(enrollment.programId)) === String(preferredId))
+    : null;
+  if (requestedId) return preferred || candidates.sort((a, b) => getEnrollmentTimestamp(b) - getEnrollmentTimestamp(a))[0];
+
+  const active = candidates.filter((enrollment) => enrollment.status === "Active");
+  if (active.length) {
+    return (preferred?.status === "Active" ? preferred : null)
+      || active.sort((a, b) => getEnrollmentTimestamp(b) - getEnrollmentTimestamp(a))[0];
+  }
+
+  return preferred || candidates.sort((a, b) => getEnrollmentTimestamp(b) - getEnrollmentTimestamp(a))[0];
+};
+
 const resolveLegacyBatchId = async ({ legacyBatchId, programId }) => {
   if (!legacyBatchId) return null;
 
@@ -45,20 +85,28 @@ const resolveLegacyBatchId = async ({ legacyBatchId, programId }) => {
  * predates the batchId field entirely.
  */
 export const resolveProgramSchedule = async ({ user, student, programId: requestedProgramId = null }) => {
-  const programId = getId(requestedProgramId) || getId(student?.programId) || getId(user?.programId) || null;
+  const requestedId = getId(requestedProgramId);
+  const preferredProgramId = getId(student?.programId) || getId(user?.programId) || null;
   const identifiers = [
     user?._id ? { userId: user._id } : null,
     student?._id ? { studentId: student._id } : null,
   ].filter(Boolean);
 
-  let enrollment = null;
-  if (identifiers.length > 0) {
-    const query = { status: { $in: ["Active", "Completed"] }, $or: identifiers };
-    if (programId) query.programId = programId;
-    enrollment = await ProgramEnrollment.findOne(query)
-      .sort({ assignedAt: -1, createdAt: -1 })
-      .lean();
-  }
+  const enrollments = identifiers.length
+    ? await ProgramEnrollment.find({
+        status: { $in: ["Active", "Completed"] },
+        $or: identifiers,
+        ...(requestedId ? { programId: requestedId } : {}),
+      })
+        .sort({ assignedAt: -1, createdAt: -1 })
+        .lean()
+    : [];
+  const enrollment = chooseProgramScheduleEnrollment({
+    enrollments,
+    preferredProgramId,
+    requestedProgramId: requestedId,
+  });
+  const programId = requestedId || getId(enrollment?.programId) || preferredProgramId;
 
   const legacyBatchPointer = getId(student?.batchId) || getId(user?.batchId) || null;
   if (enrollment) {
