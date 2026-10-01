@@ -384,6 +384,16 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                           <span className="font-semibold">{formatDateValue(studentDetails?.lastActive || studentDetails?.lastActiveAt)}</span>
                         </div>
                         <div className="flex justify-between text-xs py-1 border-b border-black/5 dark:border-white/5">
+                          <span className="text-slate-400">Payment Status:</span>
+                          <span className={`font-bold px-2 py-0.5 rounded text-[11px] ${
+                            (studentBasic?.payment === 'Paid' || studentDetails?.payment === 'Paid' || studentBasic?.access === 'Paid')
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                          }`}>
+                            {studentBasic?.payment || studentDetails?.payment || (studentBasic?.access === 'Paid' ? 'Paid' : 'Pending')}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs py-1 border-b border-black/5 dark:border-white/5">
                           <span className="text-slate-400">Status Badge:</span>
                           <span className="font-semibold">{status}</span>
                         </div>
@@ -462,17 +472,33 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                     </div>
                   </div>
 
-                  {/* Enrollment Section */}
+                  {/* Enrollment & Payment Section */}
                   <div className="space-y-3">
-                    <h3 className="text-xs uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">Enrollment Info</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <h3 className="text-xs uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">Enrollment & Payment Info</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Batch</span>
-                        <span className="font-semibold mt-0.5 block">{profileEnrollment.batch?.name || legacyProfile.batch || batch}</span>
+                        <span className="font-semibold mt-0.5 block truncate">{profileEnrollment.batch?.name || legacyProfile.batch || batch}</span>
                       </div>
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Program</span>
-                        <span className="font-bold text-blue-600 dark:text-blue-400 mt-0.5 block">{profileEnrollment.program?.name || legacyProfile.program || track}</span>
+                        <span className="font-bold text-blue-600 dark:text-blue-400 mt-0.5 block truncate">{profileEnrollment.program?.name || legacyProfile.program || track}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Payment Status</span>
+                        <span className={`font-bold mt-0.5 inline-flex items-center px-2 py-0.5 rounded-md text-[11px] ${
+                          (studentBasic?.payment === 'Paid' || studentDetails?.payment === 'Paid' || studentBasic?.access === 'Paid')
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                        }`}>
+                          {studentBasic?.payment || studentDetails?.payment || (studentBasic?.access === 'Paid' ? 'Paid' : 'Pending')}
+                        </span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Access Tier</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5 block">
+                          {studentBasic?.access || studentDetails?.access || 'Free'}
+                        </span>
                       </div>
                     </div>
                   </div>

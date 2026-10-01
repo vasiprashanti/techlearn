@@ -35,18 +35,37 @@ const getRazorpayInstance = () => {
 const DEFAULT_PRICING_PLANS = {
   Placement: [
     { key: "placement-basic", title: "Placement Program", price: 799 },
-    { key: "placement-pro", title: "Placement Program Pro", price: 1199 },
+    { key: "placement-pro", title: "Placement Program Pro", price: 999 },
   ],
   Skill: [
-    { key: "skill-basic", title: "Skill Program", price: 399 },
-    { key: "skill-pro", title: "Skill Program Pro", price: 699 },
+    { key: "skill-basic", title: "Skill Program", price: 499 },
+    { key: "skill-pro", title: "Skill Program Pro", price: 499 },
   ],
 };
 
-const getPricingPlan = (program, planId) => {
+const PLACEMENT_REFUND_POLICY = "Cancel anytime. Get refunded if you cancel within 5 days.";
+const SKILL_REFUND_POLICY = "No refunds or cancellations after purchase.";
+
+const getPricingPlan = async (program, planId, userId = null) => {
   const type = normalizeProgramType(program?.programType) === "Skill" ? "Skill" : "Placement";
   const hasConfiguredPlans = Array.isArray(program?.pricingPlans) && program.pricingPlans.length > 0;
   if (hasConfiguredPlans) return resolveConfiguredProgramPricingPlan(program, planId);
+  
+  if (type === "Skill" && userId) {
+    const hasPreviousCapturedPayment = await Payment.exists({
+      userId,
+      status: { $in: ["captured", "approved"] },
+    });
+    const skillPrice = hasPreviousCapturedPayment ? 199 : 499;
+    const requested = String(planId || "").toLowerCase();
+    const title = requested.includes("pro") ? "Skill Program Pro" : "Skill Program";
+    return {
+      key: requested.includes("pro") ? "skill-pro" : "skill-basic",
+      title,
+      price: skillPrice,
+    };
+  }
+
   const defaults = DEFAULT_PRICING_PLANS[type];
   const requested = String(planId || "").toLowerCase();
   return requested
@@ -142,17 +161,19 @@ export const checkPaymentEligibility = async (req, res) => {
 
     const type = normalizeProgramType(program?.programType || requestedType) || "Placement";
 
-    const plan = getPricingPlan(program, planId);
+    const plan = await getPricingPlan(program, planId, req.user?._id || null);
     if (!plan || !Number.isFinite(Number(plan.price)) || Number(plan.price) <= 0) {
       return res.status(400).json({ success: false, message: "The selected pricing plan is unavailable." });
     }
+    const refundPolicy = type === "Placement" ? PLACEMENT_REFUND_POLICY : SKILL_REFUND_POLICY;
+
     return res.json({
       success: true,
       programType: type,
       plan: plan.title,
       price: Number(plan.price),
       currency: "INR",
-      refundPolicy: "No refunds or cancellations after purchase",
+      refundPolicy,
     });
   } catch (error) {
     console.error("checkPaymentEligibility error:", error);
@@ -325,12 +346,13 @@ export const createPaymentOrder = async (req, res) => {
 
     // Only use a plan explicitly defined by this Program (or the legacy
     // program-type defaults when the Program has no custom pricing plans).
-    const selectedPlan = getPricingPlan(program, planId);
+    const selectedPlan = await getPricingPlan(program, planId, user._id);
     if (!selectedPlan || !Number.isFinite(Number(selectedPlan.price)) || Number(selectedPlan.price) <= 0) {
       return res.status(400).json({ success: false, message: "The selected pricing plan is unavailable." });
     }
     const amount = Number(selectedPlan.price);
     const planName = selectedPlan.title;
+    const refundPolicy = programType === "Placement" ? PLACEMENT_REFUND_POLICY : SKILL_REFUND_POLICY;
 
     const currency = "INR";
     const receipt = `rcpt_${user._id}_${Date.now()}`;
@@ -350,7 +372,7 @@ export const createPaymentOrder = async (req, res) => {
         programId: program._id.toString(),
         programType,
         planName,
-        refundPolicy: "No refunds or cancellations after purchase",
+        refundPolicy,
       },
     });
     const razorpayOrderId = razorpayOrder.id;
@@ -381,7 +403,7 @@ export const createPaymentOrder = async (req, res) => {
       key: process.env.RAZORPAY_KEY_ID,
       programType,
       planName,
-      refundPolicy: "No refunds or cancellations after purchase",
+      refundPolicy,
     });
   } catch (error) {
     console.error("createPaymentOrder error:", error.message);
@@ -505,6 +527,8 @@ export const verifyPayment = async (req, res) => {
       enrollment = await activateProgramEnrollmentForPayment({ payment, user, student });
     }
 
+    const refundPolicy = payment.programType === "Placement" ? PLACEMENT_REFUND_POLICY : SKILL_REFUND_POLICY;
+
     res.json({
       success: true,
       message: isCoursePurchase
@@ -514,7 +538,7 @@ export const verifyPayment = async (req, res) => {
       enrollment,
       courseId: isCoursePurchase ? payment.courseId : undefined,
       hasAccess: isCoursePurchase,
-      refundPolicy: "No refunds or cancellations after purchase",
+      refundPolicy,
     });
   } catch (error) {
     console.error("verifyPayment error:", error);
