@@ -1,147 +1,489 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, BookOpen, Clock, FolderKanban, Layers3, Map } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
+import ScrollProgress from "../../components/ScrollProgress";
+import LoadingScreen from "../../components/LoadingScreen";
 import { programLearningAPI } from "../../services/programLearningApi";
+import { useTheme } from "../../context/ThemeContext";
+import "../../styles/courseDetails.css";
 
-const materialIcon = (type) => {
-  if (type === "Course") return BookOpen;
-  if (type === "Roadmap") return Map;
-  if (type === "Project") return FolderKanban;
-  return Layers3;
+const formatPhaseName = (phaseKey) => {
+  if (!phaseKey) return "";
+  const map = {
+    day_0_readiness: "Phase 1: Day 0 Readiness",
+    core_learning: "Phase 2: Core Learning",
+    revision: "Phase 3: Revision",
+    company_preparation: "Phase 4: Company Preparation",
+    final_assessment: "Phase 5: Final Assessment",
+  };
+  return map[phaseKey] || phaseKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
 export default function ProgramPreview() {
+  const { theme } = useTheme();
   const { programId } = useParams();
   const navigate = useNavigate();
+
+  const isDarkMode = theme === "dark";
+
+  const [activeTab, setActiveTab] = useState("curriculum");
   const [program, setProgram] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setError("");
+    setError(null);
 
-    programLearningAPI.getPublicProgramPreview(programId)
+    programLearningAPI
+      .getPublicProgramPreview(programId)
       .then((payload) => {
-        if (!cancelled) setProgram(payload.program || null);
+        if (!cancelled) {
+          const prog = payload.program || null;
+          if (!prog || !prog._id) {
+            throw new Error("No valid program data received from backend");
+          }
+          setProgram(prog);
+        }
       })
-      .catch((loadError) => {
-        if (!cancelled) setError(loadError.message || "This program is not available.");
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err.message || "This program is not available.");
+          setProgram(null);
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [programId]);
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-6 pt-24 text-sm text-[#00113b] dark:text-white">
-        Loading program...
-      </main>
+      <>
+        <ScrollProgress />
+        <LoadingScreen showMessage={false} size={48} duration={800} />
+      </>
     );
   }
 
   if (error || !program) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-6 pt-24 text-[#00113b] dark:text-white">
-        <section className="dashboard-surface max-w-xl p-10 text-center">
-          <h1 className="text-2xl font-black">Program not available</h1>
-          <p className="mt-3 text-sm text-black/60 dark:text-white/65">{error || "This free program is not currently published."}</p>
-          <button type="button" onClick={() => navigate("/learn")} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#3c83f6] px-4 py-3 text-sm font-bold text-white">
-            <ArrowLeft className="h-4 w-4" /> Back to Learn
+      <div
+        className={`course-details-page ${
+          isDarkMode ? "dark-mode" : "light-mode"
+        } flex min-h-screen items-center justify-center`}
+      >
+        <div className="page text-center py-20">
+          <h1 className="course-title mb-4">
+            {error ? "Program not available" : "Program Not Found"}
+          </h1>
+          {error && <p className="course-description mb-6 mx-auto">{error}</p>}
+          <button
+            onClick={() => navigate("/learn")}
+            className="start-button mx-auto"
+            type="button"
+          >
+            <span>BACK TO LEARN</span>
+            <span className="button-arrow">←</span>
           </button>
-        </section>
-      </main>
+        </div>
+      </div>
     );
   }
 
   const intent = program.programType === "Skill" ? "skill" : "placement";
   const materials = Array.isArray(program.materials) ? program.materials : [];
+  const phases = Array.isArray(program.phases) ? program.phases : [];
+  const learningGoals = Array.isArray(program.learningGoals) && program.learningGoals.length > 0
+    ? program.learningGoals
+    : [];
+
+  const handleStartProgram = () => {
+    navigate(`/onboarding?intent=${intent}`);
+  };
 
   return (
-    <div className="min-h-screen px-5 pb-20 pt-28 text-[#00113b] dark:text-white md:px-10 lg:px-16">
-      <main className="mx-auto w-full max-w-[1240px]">
-        <Link to="/learn" className="inline-flex items-center gap-2 text-sm font-semibold text-black/55 transition hover:text-black dark:text-white/60 dark:hover:text-white">
-          <ArrowLeft className="h-4 w-4" /> Back to Learn
-        </Link>
+    <div
+      className={`course-details-page ${
+        isDarkMode ? "dark-mode" : "light-mode"
+      }`}
+    >
+      <ScrollProgress />
 
-        <section className="dashboard-surface mt-8 overflow-hidden p-6 sm:p-10">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <p className="font-press-start text-[9px] uppercase tracking-[0.16em] text-[#3c83f6] dark:text-[#bceaff]">
-                {program.programType} PROGRAM
-              </p>
-              <h1 className="mt-5 text-4xl font-black tracking-tight sm:text-6xl">{program.name}</h1>
-              <p className="mt-5 text-base leading-7 text-black/60 dark:text-white/65">
-                {program.description || "Explore the published learning path and its available resources."}
-              </p>
+      <main className="page">
+        {/* =======================================
+             HERO
+        ======================================== */}
+        <section className="hero">
+          <div className="hero-left">
+            <div className="course-type">
+              {program.programType?.toUpperCase() || "SKILL"} PROGRAM
             </div>
-            <Link to={`/onboarding?intent=${intent}`} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#3c83f6] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20">
-              Create a learner profile <ArrowRight className="h-4 w-4" />
-            </Link>
+
+            <h1 className="course-title">{program.name}</h1>
+
+            <p className="course-description">
+              {program.description ||
+                "Explore the comprehensive structured curriculum, hands-on practice, and verified learning milestones."}
+            </p>
+
+            {/* PROGRAM META */}
+            <div className="course-meta">
+              <div className="meta-item">
+                <span className="meta-label">Duration</span>
+                <span className="meta-value">
+                  {program.duration || `${program.durationDays || "—"} Days`}
+                </span>
+              </div>
+
+              <div className="meta-item">
+                <span className="meta-label">Mode</span>
+                <span className="meta-value">
+                  {program.availability || "Structured"}
+                </span>
+              </div>
+
+              <div className="meta-item">
+                <span className="meta-label">Access</span>
+                <span className="meta-value">
+                  {program.pricingType === "Free" ? "Free" : "Paid"}
+                </span>
+              </div>
+            </div>
+
+            {/* SKILLS */}
+            {program.skillTags && program.skillTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3 mb-2">
+                {program.skillTags.map((sk) => (
+                  <span
+                    key={sk}
+                    className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#3C83F6]/15 text-[#3C83F6] dark:bg-blue-500/20 dark:text-blue-300"
+                  >
+                    {sk}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* TARGET COMPANIES (Placement programs) */}
+            {program.targetCompanies && program.targetCompanies.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mt-2 mb-2 text-xs opacity-80">
+                <span className="font-semibold uppercase tracking-wider text-[9px] opacity-60">
+                  Target Companies:
+                </span>
+                {program.targetCompanies.map((c) => (
+                  <span
+                    key={c}
+                    className="px-2 py-0.5 rounded border border-black/10 dark:border-white/10 text-xs font-medium"
+                  >
+                    {c}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* START / ONBOARDING BUTTON */}
+            <button
+              className="start-button"
+              id="startButton"
+              type="button"
+              onClick={handleStartProgram}
+            >
+              <span>CREATE LEARNER PROFILE</span>
+              <span className="button-arrow">→</span>
+            </button>
           </div>
 
-          <div className="mt-10 grid gap-3 sm:grid-cols-3">
-            <div className="dashboard-surface-strong p-4">
-              <Clock className="h-5 w-5 text-[#3c83f6] dark:text-[#bceaff]" />
-              <p className="mt-3 text-xs font-bold uppercase tracking-wider text-black/50 dark:text-white/55">Duration</p>
-              <p className="mt-1 font-bold">{program.duration || `${program.durationDays || "—"} days`}</p>
-            </div>
-            <div className="dashboard-surface-strong p-4">
-              <BookOpen className="h-5 w-5 text-[#3c83f6] dark:text-[#bceaff]" />
-              <p className="mt-3 text-xs font-bold uppercase tracking-wider text-black/50 dark:text-white/55">Courses</p>
-              <p className="mt-1 font-bold">{program.courseCount || 0}</p>
-            </div>
-            <div className="dashboard-surface-strong p-4">
-              <Layers3 className="h-5 w-5 text-[#3c83f6] dark:text-[#bceaff]" />
-              <p className="mt-3 text-xs font-bold uppercase tracking-wider text-black/50 dark:text-white/55">Published resources</p>
-              <p className="mt-1 font-bold">{materials.length}</p>
+          {/* HERO VISUAL */}
+          <div className="hero-visual">
+            <div className="code-card">
+              <div className="code-top">
+                <div className="code-label">
+                  {(program.name || "PROGRAM").toUpperCase()} / CURRICULUM
+                </div>
+                <div className="code-progress-label">
+                  {phases.length > 0 ? `01 / ${String(phases.length).padStart(2, "0")}` : "ACTIVE"}
+                </div>
+              </div>
+
+              <div className="code-window">
+                <div className="code-line">
+                  <span className="code-number">01</span>
+                  <span>
+                    <span className="code-keyword">const</span> program = &#123;
+                  </span>
+                </div>
+
+                <div className="code-line">
+                  <span className="code-number">02</span>
+                  <span>
+                    &nbsp;&nbsp;type: <span className="code-accent">"{program.programType}"</span>,
+                  </span>
+                </div>
+
+                <div className="code-line">
+                  <span className="code-number">03</span>
+                  <span>
+                    &nbsp;&nbsp;duration: <span className="code-accent">"{program.duration || `${program.durationDays || 30} Days`}"</span>,
+                  </span>
+                </div>
+
+                <div className="code-line">
+                  <span className="code-number">04</span>
+                  <span>
+                    &nbsp;&nbsp;resources: <span className="code-accent">{materials.length}</span>,
+                  </span>
+                </div>
+
+                <div className="code-line">
+                  <span className="code-number">05</span>
+                  <span>
+                    &nbsp;&nbsp;enrollment: <span className="code-accent">"Open"</span>
+                  </span>
+                </div>
+
+                <div className="code-line">
+                  <span className="code-number">06</span>
+                  <span>&#125;;</span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="mt-10">
-          <div className="mb-5">
-            <p className="font-press-start text-[9px] uppercase tracking-[0.16em] text-[#3c83f6] dark:text-[#bceaff]">LEARNING PATH</p>
-            <h2 className="mt-3 text-2xl font-black">Browse the available resources</h2>
-            <p className="mt-2 text-sm text-black/60 dark:text-white/65">You can read public material before deciding whether to create an account.</p>
+        {/* =======================================
+             TABS
+        ======================================== */}
+        <section className="tabs-section">
+          <div className="tabs">
+            <button
+              className={`tab ${activeTab === "curriculum" ? "active" : ""}`}
+              data-tab="curriculum"
+              type="button"
+              onClick={() => setActiveTab("curriculum")}
+            >
+              {phases.length > 0 ? "Phases & Schedule" : "Resources"}
+            </button>
+
+            {materials.length > 0 && phases.length > 0 && (
+              <button
+                className={`tab ${activeTab === "resources" ? "active" : ""}`}
+                data-tab="resources"
+                type="button"
+                onClick={() => setActiveTab("resources")}
+              >
+                Materials ({materials.length})
+              </button>
+            )}
+
+            {learningGoals.length > 0 && (
+              <button
+                className={`tab ${activeTab === "outcomes" ? "active" : ""}`}
+                data-tab="outcomes"
+                type="button"
+                onClick={() => setActiveTab("outcomes")}
+              >
+                Outcomes
+              </button>
+            )}
           </div>
 
-          {materials.length === 0 ? (
-            <div className="dashboard-surface p-8 text-sm text-black/60 dark:text-white/65">This program is published, but its resources are being prepared.</div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {materials.map((material) => {
-                const Icon = materialIcon(material.type);
-                const content = (
-                  <>
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <span className="rounded-xl bg-[#3c83f6]/10 p-3 text-[#3c83f6] dark:bg-white/5 dark:text-[#bceaff]"><Icon className="h-5 w-5" /></span>
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-[#3c83f6] dark:text-[#bceaff]">{material.type}</p>
-                          <h3 className="mt-1 font-bold">{material.title}</h3>
-                        </div>
-                      </div>
-                      {material.href && <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-black/40 dark:text-white/45" />}
-                    </div>
-                    {material.description && <p className="mt-4 text-sm leading-6 text-black/60 dark:text-white/65">{material.description}</p>}
-                  </>
-                );
+          {/* =====================================
+               PHASES / CURRICULUM
+          ====================================== */}
+          <div
+            className={`tab-content ${
+              activeTab === "curriculum" ? "active" : ""
+            }`}
+            id="curriculum"
+          >
+            <div className="section-eyebrow">
+              {phases.length > 0 ? "PROGRAM PHASES" : "PROGRAM RESOURCES"}
+            </div>
 
-                return material.href ? (
-                  <Link key={`${material.type}-${material.id}`} to={material.href} className="dashboard-surface p-5 transition hover:-translate-y-0.5 hover:border-[#3c83f6]/45">
-                    {content}
-                  </Link>
-                ) : (
-                  <article key={`${material.type}-${material.id}`} className="dashboard-surface p-5">
-                    {content}
-                  </article>
-                );
-              })}
+            <h2 className="section-title">What you'll learn.</h2>
+
+            <div className="curriculum-list">
+              {phases.length > 0 ? (
+                (() => {
+                  const mid = Math.ceil(phases.length / 2);
+                  const col1 = phases.slice(0, mid);
+                  const col2 = phases.slice(mid);
+
+                  return (
+                    <>
+                      <div className="curriculum-col">
+                        {col1.map((p, idx) => (
+                          <div className="curriculum-row" key={p.phase || idx}>
+                            <div className="chapter-number">
+                              {String(idx + 1).padStart(2, "0")}
+                            </div>
+                            <div>
+                              <div className="chapter-name">{formatPhaseName(p.phase)}</div>
+                              <span className="text-xs opacity-60">
+                                Day {p.startDay} - Day {p.endDay}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="curriculum-col">
+                        {col2.map((p, idx) => (
+                          <div className="curriculum-row" key={p.phase || idx}>
+                            <div className="chapter-number">
+                              {String(mid + idx + 1).padStart(2, "0")}
+                            </div>
+                            <div>
+                              <div className="chapter-name">{formatPhaseName(p.phase)}</div>
+                              <span className="text-xs opacity-60">
+                                Day {p.startDay} - Day {p.endDay}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()
+              ) : materials.length > 0 ? (
+                (() => {
+                  const mid = Math.ceil(materials.length / 2);
+                  const col1 = materials.slice(0, mid);
+                  const col2 = materials.slice(mid);
+
+                  return (
+                    <>
+                      <div className="curriculum-col">
+                        {col1.map((mat, idx) => (
+                          <div className="curriculum-row" key={mat.id || idx}>
+                            <div className="chapter-number">
+                              {String(idx + 1).padStart(2, "0")}
+                            </div>
+                            <div>
+                              <div className="chapter-name">{mat.title}</div>
+                              <span className="text-xs opacity-60">
+                                {mat.type} {mat.description ? `• ${mat.description}` : ""}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="curriculum-col">
+                        {col2.map((mat, idx) => (
+                          <div className="curriculum-row" key={mat.id || idx}>
+                            <div className="chapter-number">
+                              {String(mid + idx + 1).padStart(2, "0")}
+                            </div>
+                            <div>
+                              <div className="chapter-name">{mat.title}</div>
+                              <span className="text-xs opacity-60">
+                                {mat.type} {mat.description ? `• ${mat.description}` : ""}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()
+              ) : (
+                <div className="curriculum-col">
+                  <div className="curriculum-row">
+                    <div className="chapter-number">01</div>
+                    <div className="chapter-name">Foundations & Structured Learning</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* =====================================
+               RESOURCES TAB (when phases exist)
+          ====================================== */}
+          {materials.length > 0 && phases.length > 0 && (
+            <div
+              className={`tab-content ${
+                activeTab === "resources" ? "active" : ""
+              }`}
+              id="resources"
+            >
+              <div className="section-eyebrow">ATTACHED MATERIALS</div>
+
+              <h2 className="section-title">Included learning assets.</h2>
+
+              <div className="curriculum-list">
+                {(() => {
+                  const mid = Math.ceil(materials.length / 2);
+                  const col1 = materials.slice(0, mid);
+                  const col2 = materials.slice(mid);
+
+                  return (
+                    <>
+                      <div className="curriculum-col">
+                        {col1.map((mat, idx) => (
+                          <div className="curriculum-row" key={mat.id || idx}>
+                            <div className="chapter-number">
+                              {String(idx + 1).padStart(2, "0")}
+                            </div>
+                            <div>
+                              <div className="chapter-name">{mat.title}</div>
+                              <span className="text-xs opacity-60">
+                                {mat.type} {mat.description ? `• ${mat.description}` : ""}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="curriculum-col">
+                        {col2.map((mat, idx) => (
+                          <div className="curriculum-row" key={mat.id || idx}>
+                            <div className="chapter-number">
+                              {String(mid + idx + 1).padStart(2, "0")}
+                            </div>
+                            <div>
+                              <div className="chapter-name">{mat.title}</div>
+                              <span className="text-xs opacity-60">
+                                {mat.type} {mat.description ? `• ${mat.description}` : ""}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* =====================================
+               OUTCOMES
+          ====================================== */}
+          {learningGoals.length > 0 && (
+            <div
+              className={`tab-content ${
+                activeTab === "outcomes" ? "active" : ""
+              }`}
+              id="outcomes"
+            >
+              <div className="section-eyebrow">AFTER THIS PROGRAM</div>
+
+              <h2 className="section-title">What you'll achieve.</h2>
+
+              <div className="outcomes-grid">
+                {learningGoals.map((outcome, index) => (
+                  <div className="outcome-card" key={index}>
+                    <div className="outcome-number">
+                      {String(index + 1).padStart(2, "0")}
+                    </div>
+                    <div className="outcome-title">{outcome}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </section>
