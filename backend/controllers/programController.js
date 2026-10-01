@@ -118,7 +118,7 @@ export const getPublicProgramPreview = async (req, res) => {
       _id: programId,
       ...buildPublicFreeProgramQuery(),
     })
-      .select("_id name description programType duration durationDays phases pricingType courseIds roadmapIds trackTemplateIds projectIds")
+      .select("_id name description programType duration durationDays phases pricingType availability skillTags targetCompanies targetRoles learningGoals courseIds roadmapIds trackTemplateIds projectIds")
       .populate("courseIds", "_id title description level courseType numTopics assignedBatchIds")
       .populate("roadmapIds", "_id title description status assignedBatchIds")
       .populate("trackTemplateIds", "_id name trackType description totalDays status batchId")
@@ -179,6 +179,11 @@ export const getPublicProgramPreview = async (req, res) => {
         durationDays: program.durationDays,
         phases: program.phases || [],
         pricingType: program.pricingType,
+        availability: program.availability || "Structured",
+        skillTags: program.skillTags || [],
+        targetCompanies: program.targetCompanies || [],
+        targetRoles: program.targetRoles || [],
+        learningGoals: program.learningGoals || [],
         materials,
         courseCount: materials.filter((material) => material.type === "Course").length,
         roadmapCount: materials.filter((material) => material.type === "Roadmap").length,
