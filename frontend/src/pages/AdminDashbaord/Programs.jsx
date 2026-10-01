@@ -65,6 +65,39 @@ const SKILL_TAG_OPTIONS = [
   'Cloud',
 ];
 
+const TARGET_COMPANY_OPTIONS = [
+  'Google',
+  'Amazon',
+  'Microsoft',
+  'TCS',
+  'Infosys',
+  'Accenture',
+  'Cognizant',
+  'Deloitte',
+  'Capgemini',
+  'Wipro',
+  'Adobe',
+  'Flipkart',
+  'Walmart',
+  'Razorpay',
+  'Atlassian',
+  'HCL',
+];
+
+const TARGET_ROLE_OPTIONS = [
+  'Software Developer',
+  'Full Stack Developer',
+  'Backend Developer',
+  'Frontend Developer',
+  'Data Analyst',
+  'AI / ML Engineer',
+  'Data Scientist',
+  'DevOps Engineer',
+  'Cloud Engineer',
+  'QA / Test Engineer',
+  'System Engineer',
+];
+
 const parseDurationDays = (value) => {
   const match = String(value || '').match(/(\d+(?:\.\d+)?)\s*-?\s*(day|days|week|weeks|month|months|year|years)/i);
   if (!match) return null;
@@ -235,8 +268,24 @@ export default function Programs() {
 
   useEffect(() => {
     adminAPI.getProgramOptions().then((response) => {
-      if (response?.success) setProgramOptions({ skills: response.skills || [], companies: response.companies || [], roles: response.roles || [] });
-    }).catch(() => {});
+      if (response?.success) {
+        const fetchedSkills = (response.skills || response.skillTags || []).filter(Boolean);
+        const fetchedCompanies = (response.companies || response.targetCompanies || []).filter(Boolean);
+        const fetchedRoles = (response.roles || response.targetRoles || []).filter(Boolean);
+
+        setProgramOptions({
+          skills: fetchedSkills.length ? fetchedSkills : SKILL_TAG_OPTIONS,
+          companies: fetchedCompanies.length ? fetchedCompanies : TARGET_COMPANY_OPTIONS,
+          roles: fetchedRoles.length ? fetchedRoles : TARGET_ROLE_OPTIONS,
+        });
+      }
+    }).catch(() => {
+      setProgramOptions({
+        skills: SKILL_TAG_OPTIONS,
+        companies: TARGET_COMPANY_OPTIONS,
+        roles: TARGET_ROLE_OPTIONS,
+      });
+    });
   }, []);
 
   const fetchPrograms = useCallback(async () => {
@@ -966,93 +1015,134 @@ export default function Programs() {
                 </div>
 
                 {/* ── SKILLS ── */}
-                <div className="space-y-2 pt-1">
+                <div className="pt-1">
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Skill Tags*</label>
-                  {/* Selected Skill Chips */}
-                  {formData.skillTags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-1.5">
-                      {formData.skillTags.map((skill) => (
-                        <span
-                          key={skill}
-                          className="inline-flex items-center gap-1 rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-xs font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]"
-                        >
-                          {skill}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSkill(skill)}
-                            className="hover:opacity-75 focus:outline-none ml-0.5"
-                            aria-label={`Remove ${skill}`}
-                          >
-                            <FiX className="h-3 w-3" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Searchable dropdown & Other Skill Input */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={skillSearch}
-                        onChange={(e) => {
-                          setSkillSearch(e.target.value);
-                          setSkillDropdownOpen(true);
-                        }}
-                        onFocus={() => setSkillDropdownOpen(true)}
-                        placeholder="Search existing skills..."
-                        className={programFormInputClass}
+                  <div className="relative mt-1">
+                    <button
+                      type="button"
+                      onClick={() => setSkillDropdownOpen((prev) => !prev)}
+                      className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/35 dark:focus:ring-[#7fb1ff]/35 text-slate-800 dark:text-white"
+                    >
+                      <span className="truncate">
+                        {formData.skillTags.length === 0
+                          ? 'Select Skill Tags'
+                          : `${formData.skillTags.length} skill${formData.skillTags.length > 1 ? 's' : ''} selected: ${formData.skillTags.slice(0, 3).join(', ')}${formData.skillTags.length > 3 ? '...' : ''}`}
+                      </span>
+                      <FiChevronDown
+                        className={`w-4 h-4 text-black/45 dark:text-white/60 shrink-0 transition-transform duration-200 ${
+                          skillDropdownOpen ? 'rotate-180' : ''
+                        }`}
                       />
-                      {skillDropdownOpen && (
-                        <div
-                          className="absolute left-0 right-0 top-full mt-1 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-2 shadow-xl max-h-44 overflow-y-auto"
-                          style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
-                        >
-                          {((programOptions.skills.length ? programOptions.skills : SKILL_TAG_OPTIONS).filter((s) =>
-                            !formData.skillTags.includes(s) && (!skillSearch.trim() || normalizeSearchString(s).includes(normalizeSearchString(skillSearch)))
-                          )).length === 0 ? (
-                            <p className="px-2 py-1.5 text-xs text-black/45 dark:text-white/45">No matching skills found.</p>
-                          ) : (
-                            (programOptions.skills.length ? programOptions.skills : SKILL_TAG_OPTIONS)
-                              .filter((s) => !formData.skillTags.includes(s) && (!skillSearch.trim() || normalizeSearchString(s).includes(normalizeSearchString(skillSearch))))
-                              .map((tag) => (
-                                <button
-                                  key={tag}
-                                  type="button"
-                                  onClick={() => handleAddSkill(tag)}
-                                  className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200"
-                                >
-                                  + {tag}
-                                </button>
-                              ))
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    </button>
 
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={otherSkillDraft}
-                        onChange={(e) => setOtherSkillDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddSkill(otherSkillDraft);
-                          }
-                        }}
-                        placeholder="Other Skill (new)"
-                        className={programFormInputClass}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleAddSkill(otherSkillDraft)}
-                        className="shrink-0 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-xs font-bold text-white transition-colors"
+                    {skillDropdownOpen && (
+                      <div
+                        className="absolute left-0 right-0 top-full mt-1.5 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-3 shadow-2xl space-y-3"
+                        style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
                       >
-                        Add
-                      </button>
-                    </div>
+                        {/* Selected Skill Chips */}
+                        {formData.skillTags.length > 0 && (
+                          <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[11px] font-semibold text-black/50 dark:text-white/50">
+                                Selected ({formData.skillTags.length})
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setFormData((prev) => ({ ...prev, skillTags: [] }))}
+                                className="text-[10px] text-red-500 hover:underline"
+                              >
+                                Clear all
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                              {formData.skillTags.map((skill) => (
+                                <span
+                                  key={skill}
+                                  className="inline-flex items-center gap-1 rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-xs font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]"
+                                >
+                                  {skill}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveSkill(skill)}
+                                    className="hover:opacity-75 focus:outline-none ml-0.5"
+                                    aria-label={`Remove ${skill}`}
+                                  >
+                                    <FiX className="h-3 w-3" />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Searchable dropdown & Other Skill Input */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div>
+                            <input
+                              type="text"
+                              value={skillSearch}
+                              onChange={(e) => setSkillSearch(e.target.value)}
+                              placeholder="Search skills..."
+                              className={programFormInputClass}
+                            />
+                          </div>
+
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={otherSkillDraft}
+                              onChange={(e) => setOtherSkillDraft(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddSkill(otherSkillDraft);
+                                }
+                              }}
+                              placeholder="Other Skill (new)"
+                              className={programFormInputClass}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleAddSkill(otherSkillDraft)}
+                              className="shrink-0 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-xs font-bold text-white transition-colors"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Available Skill Options List */}
+                        <div className="border-t border-black/5 dark:border-white/10 pt-2">
+                          <span className="text-[11px] font-semibold text-black/50 dark:text-white/50 block mb-1">
+                            Available Skills
+                          </span>
+                          <div className="max-h-40 overflow-y-auto space-y-0.5">
+                            {((programOptions.skills.length ? programOptions.skills : SKILL_TAG_OPTIONS).filter((s) =>
+                              !formData.skillTags.includes(s) && (!skillSearch.trim() || normalizeSearchString(s).includes(normalizeSearchString(skillSearch)))
+                            )).length === 0 ? (
+                              <p className="px-2 py-1.5 text-xs text-black/45 dark:text-white/45">
+                                {skillSearch.trim() ? 'No matching skills found.' : 'All standard skills selected.'}
+                              </p>
+                            ) : (
+                              (programOptions.skills.length ? programOptions.skills : SKILL_TAG_OPTIONS)
+                                .filter((s) => !formData.skillTags.includes(s) && (!skillSearch.trim() || normalizeSearchString(s).includes(normalizeSearchString(skillSearch))))
+                                .map((tag) => (
+                                  <button
+                                    key={tag}
+                                    type="button"
+                                    onClick={() => handleAddSkill(tag)}
+                                    className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition-colors flex items-center justify-between"
+                                  >
+                                    <span>+ {tag}</span>
+                                    <span className="text-[10px] text-black/30 dark:text-white/30">Add</span>
+                                  </button>
+                                ))
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1062,180 +1152,266 @@ export default function Programs() {
                     <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff]">Placement Targeting</p>
 
                     {/* Target Companies */}
-                    <div className="space-y-2">
+                    <div className="pt-1">
                       <label className="admin-micro-label text-black/45 dark:text-white/45">Target Companies*</label>
-                      {formData.targetCompanies.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-1.5">
-                          {formData.targetCompanies.map((comp) => (
-                            <span
-                              key={comp}
-                              className="inline-flex items-center gap-1 rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-xs font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]"
-                            >
-                              {comp}
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveCompany(comp)}
-                                className="hover:opacity-75 focus:outline-none ml-0.5"
-                                aria-label={`Remove ${comp}`}
-                              >
-                                <FiX className="h-3 w-3" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={companySearch}
-                            onChange={(e) => {
-                              setCompanySearch(e.target.value);
-                              setCompanyDropdownOpen(true);
-                            }}
-                            onFocus={() => setCompanyDropdownOpen(true)}
-                            placeholder="Search Question Bank companies..."
-                            className={programFormInputClass}
+                      <div className="relative mt-1">
+                        <button
+                          type="button"
+                          onClick={() => setCompanyDropdownOpen((prev) => !prev)}
+                          className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/35 dark:focus:ring-[#7fb1ff]/35 text-slate-800 dark:text-white"
+                        >
+                          <span className="truncate">
+                            {formData.targetCompanies.length === 0
+                              ? 'Select Target Companies'
+                              : `${formData.targetCompanies.length} compan${formData.targetCompanies.length > 1 ? 'ies' : 'y'} selected: ${formData.targetCompanies.slice(0, 3).join(', ')}${formData.targetCompanies.length > 3 ? '...' : ''}`}
+                          </span>
+                          <FiChevronDown
+                            className={`w-4 h-4 text-black/45 dark:text-white/60 shrink-0 transition-transform duration-200 ${
+                              companyDropdownOpen ? 'rotate-180' : ''
+                            }`}
                           />
-                          {companyDropdownOpen && (
-                            <div
-                              className="absolute left-0 right-0 top-full mt-1 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-2 shadow-xl max-h-44 overflow-y-auto"
-                              style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
-                            >
-                              {(programOptions.companies.filter((c) =>
-                                !formData.targetCompanies.includes(c) && (!companySearch.trim() || normalizeSearchString(c).includes(normalizeSearchString(companySearch)))
-                              )).length === 0 ? (
-                                <p className="px-2 py-1.5 text-xs text-black/45 dark:text-white/45">No matching companies found.</p>
-                              ) : (
-                                programOptions.companies
-                                  .filter((c) => !formData.targetCompanies.includes(c) && (!companySearch.trim() || normalizeSearchString(c).includes(normalizeSearchString(companySearch))))
-                                  .map((comp) => (
-                                    <button
-                                      key={comp}
-                                      type="button"
-                                      onClick={() => handleAddCompany(comp)}
-                                      className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200"
-                                    >
-                                      + {comp}
-                                    </button>
-                                  ))
-                              )}
-                            </div>
-                          )}
-                        </div>
+                        </button>
 
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={otherCompanyDraft}
-                            onChange={(e) => setOtherCompanyDraft(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleAddCompany(otherCompanyDraft);
-                              }
-                            }}
-                            placeholder="Other Company (new)"
-                            className={programFormInputClass}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleAddCompany(otherCompanyDraft)}
-                            className="shrink-0 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-xs font-bold text-white transition-colors"
+                        {companyDropdownOpen && (
+                          <div
+                            className="absolute left-0 right-0 top-full mt-1.5 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-3 shadow-2xl space-y-3"
+                            style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
                           >
-                            Add
-                          </button>
-                        </div>
+                            {/* Selected Company Chips */}
+                            {formData.targetCompanies.length > 0 && (
+                              <div>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-[11px] font-semibold text-black/50 dark:text-white/50">
+                                    Selected ({formData.targetCompanies.length})
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setFormData((prev) => ({ ...prev, targetCompanies: [] }))}
+                                    className="text-[10px] text-red-500 hover:underline"
+                                  >
+                                    Clear all
+                                  </button>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                                  {formData.targetCompanies.map((comp) => (
+                                    <span
+                                      key={comp}
+                                      className="inline-flex items-center gap-1 rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-xs font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]"
+                                    >
+                                      {comp}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveCompany(comp)}
+                                        className="hover:opacity-75 focus:outline-none ml-0.5"
+                                        aria-label={`Remove ${comp}`}
+                                      >
+                                        <FiX className="h-3 w-3" />
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Searchable input & Other Company Input */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div>
+                                <input
+                                  type="text"
+                                  value={companySearch}
+                                  onChange={(e) => setCompanySearch(e.target.value)}
+                                  placeholder="Search companies..."
+                                  className={programFormInputClass}
+                                />
+                              </div>
+
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={otherCompanyDraft}
+                                  onChange={(e) => setOtherCompanyDraft(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleAddCompany(otherCompanyDraft);
+                                    }
+                                  }}
+                                  placeholder="Other Company (new)"
+                                  className={programFormInputClass}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddCompany(otherCompanyDraft)}
+                                  className="shrink-0 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-xs font-bold text-white transition-colors"
+                                >
+                                  Add
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Available Companies Options List */}
+                            <div className="border-t border-black/5 dark:border-white/10 pt-2">
+                              <span className="text-[11px] font-semibold text-black/50 dark:text-white/50 block mb-1">
+                                Available Companies
+                              </span>
+                              <div className="max-h-40 overflow-y-auto space-y-0.5">
+                                {(((programOptions.companies && programOptions.companies.length ? programOptions.companies : TARGET_COMPANY_OPTIONS)).filter((c) =>
+                                  !formData.targetCompanies.includes(c) && (!companySearch.trim() || normalizeSearchString(c).includes(normalizeSearchString(companySearch)))
+                                )).length === 0 ? (
+                                  <p className="px-2 py-1.5 text-xs text-black/45 dark:text-white/45">
+                                    {companySearch.trim() ? 'No matching companies found.' : 'All companies selected.'}
+                                  </p>
+                                ) : (
+                                  ((programOptions.companies && programOptions.companies.length ? programOptions.companies : TARGET_COMPANY_OPTIONS))
+                                    .filter((c) => !formData.targetCompanies.includes(c) && (!companySearch.trim() || normalizeSearchString(c).includes(normalizeSearchString(companySearch))))
+                                    .map((comp) => (
+                                      <button
+                                        key={comp}
+                                        type="button"
+                                        onClick={() => handleAddCompany(comp)}
+                                        className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition-colors flex items-center justify-between"
+                                      >
+                                        <span>+ {comp}</span>
+                                        <span className="text-[10px] text-black/30 dark:text-white/30">Add</span>
+                                      </button>
+                                    ))
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     {/* Target Roles */}
-                    <div className="space-y-2">
+                    <div className="pt-1">
                       <label className="admin-micro-label text-black/45 dark:text-white/45">Target Roles*</label>
-                      {((Array.isArray(formData.targetRoles) ? formData.targetRoles : [])).length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-1.5">
-                          {(Array.isArray(formData.targetRoles) ? formData.targetRoles : []).map((role) => (
-                            <span
-                              key={role}
-                              className="inline-flex items-center gap-1 rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-xs font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]"
-                            >
-                              {role}
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveRole(role)}
-                                className="hover:opacity-75 focus:outline-none ml-0.5"
-                                aria-label={`Remove ${role}`}
-                              >
-                                <FiX className="h-3 w-3" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={roleSearch}
-                            onChange={(e) => {
-                              setRoleSearch(e.target.value);
-                              setRoleDropdownOpen(true);
-                            }}
-                            onFocus={() => setRoleDropdownOpen(true)}
-                            placeholder="Search Hiring section roles..."
-                            className={programFormInputClass}
+                      <div className="relative mt-1">
+                        <button
+                          type="button"
+                          onClick={() => setRoleDropdownOpen((prev) => !prev)}
+                          className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/35 dark:focus:ring-[#7fb1ff]/35 text-slate-800 dark:text-white"
+                        >
+                          <span className="truncate">
+                            {(Array.isArray(formData.targetRoles) ? formData.targetRoles : []).length === 0
+                              ? 'Select Target Roles'
+                              : `${(formData.targetRoles || []).length} role${(formData.targetRoles || []).length > 1 ? 's' : ''} selected: ${(formData.targetRoles || []).slice(0, 3).join(', ')}${(formData.targetRoles || []).length > 3 ? '...' : ''}`}
+                          </span>
+                          <FiChevronDown
+                            className={`w-4 h-4 text-black/45 dark:text-white/60 shrink-0 transition-transform duration-200 ${
+                              roleDropdownOpen ? 'rotate-180' : ''
+                            }`}
                           />
-                          {roleDropdownOpen && (
-                            <div
-                              className="absolute left-0 right-0 top-full mt-1 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-2 shadow-xl max-h-44 overflow-y-auto"
-                              style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
-                            >
-                              {(programOptions.roles.filter((r) =>
-                                !(Array.isArray(formData.targetRoles) ? formData.targetRoles : []).includes(r) && (!roleSearch.trim() || normalizeSearchString(r).includes(normalizeSearchString(roleSearch)))
-                              )).length === 0 ? (
-                                <p className="px-2 py-1.5 text-xs text-black/45 dark:text-white/45">No matching roles found.</p>
-                              ) : (
-                                programOptions.roles
-                                  .filter((r) => !(Array.isArray(formData.targetRoles) ? formData.targetRoles : []).includes(r) && (!roleSearch.trim() || normalizeSearchString(r).includes(normalizeSearchString(roleSearch))))
-                                  .map((role) => (
-                                    <button
-                                      key={role}
-                                      type="button"
-                                      onClick={() => handleAddRole(role)}
-                                      className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200"
-                                    >
-                                      + {role}
-                                    </button>
-                                  ))
-                              )}
-                            </div>
-                          )}
-                        </div>
+                        </button>
 
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={otherRoleDraft}
-                            onChange={(e) => setOtherRoleDraft(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleAddRole(otherRoleDraft);
-                              }
-                            }}
-                            placeholder="Other Role (new)"
-                            className={programFormInputClass}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleAddRole(otherRoleDraft)}
-                            className="shrink-0 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-xs font-bold text-white transition-colors"
+                        {roleDropdownOpen && (
+                          <div
+                            className="absolute left-0 right-0 top-full mt-1.5 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-3 shadow-2xl space-y-3"
+                            style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
                           >
-                            Add
-                          </button>
-                        </div>
+                            {/* Selected Role Chips */}
+                            {((Array.isArray(formData.targetRoles) ? formData.targetRoles : [])).length > 0 && (
+                              <div>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-[11px] font-semibold text-black/50 dark:text-white/50">
+                                    Selected ({(formData.targetRoles || []).length})
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setFormData((prev) => ({ ...prev, targetRoles: [] }))}
+                                    className="text-[10px] text-red-500 hover:underline"
+                                  >
+                                    Clear all
+                                  </button>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                                  {(formData.targetRoles || []).map((role) => (
+                                    <span
+                                      key={role}
+                                      className="inline-flex items-center gap-1 rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-xs font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]"
+                                    >
+                                      {role}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveRole(role)}
+                                        className="hover:opacity-75 focus:outline-none ml-0.5"
+                                        aria-label={`Remove ${role}`}
+                                      >
+                                        <FiX className="h-3 w-3" />
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Searchable input & Other Role Input */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div>
+                                <input
+                                  type="text"
+                                  value={roleSearch}
+                                  onChange={(e) => setRoleSearch(e.target.value)}
+                                  placeholder="Search roles..."
+                                  className={programFormInputClass}
+                                />
+                              </div>
+
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={otherRoleDraft}
+                                  onChange={(e) => setOtherRoleDraft(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleAddRole(otherRoleDraft);
+                                    }
+                                  }}
+                                  placeholder="Other Role (new)"
+                                  className={programFormInputClass}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddRole(otherRoleDraft)}
+                                  className="shrink-0 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-xs font-bold text-white transition-colors"
+                                >
+                                  Add
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Available Roles Options List */}
+                            <div className="border-t border-black/5 dark:border-white/10 pt-2">
+                              <span className="text-[11px] font-semibold text-black/50 dark:text-white/50 block mb-1">
+                                Available Roles
+                              </span>
+                              <div className="max-h-40 overflow-y-auto space-y-0.5">
+                                {(((programOptions.roles && programOptions.roles.length ? programOptions.roles : TARGET_ROLE_OPTIONS)).filter((r) =>
+                                  !(Array.isArray(formData.targetRoles) ? formData.targetRoles : []).includes(r) && (!roleSearch.trim() || normalizeSearchString(r).includes(normalizeSearchString(roleSearch)))
+                                )).length === 0 ? (
+                                  <p className="px-2 py-1.5 text-xs text-black/45 dark:text-white/45">
+                                    {roleSearch.trim() ? 'No matching roles found.' : 'All roles selected.'}
+                                  </p>
+                                ) : (
+                                  ((programOptions.roles && programOptions.roles.length ? programOptions.roles : TARGET_ROLE_OPTIONS))
+                                    .filter((r) => !(Array.isArray(formData.targetRoles) ? formData.targetRoles : []).includes(r) && (!roleSearch.trim() || normalizeSearchString(r).includes(normalizeSearchString(roleSearch))))
+                                    .map((role) => (
+                                      <button
+                                        key={role}
+                                        type="button"
+                                        onClick={() => handleAddRole(role)}
+                                        className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition-colors flex items-center justify-between"
+                                      >
+                                        <span>+ {role}</span>
+                                        <span className="text-[10px] text-black/30 dark:text-white/30">Add</span>
+                                      </button>
+                                    ))
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

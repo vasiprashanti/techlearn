@@ -178,18 +178,33 @@ const normalizeDynamicOptions = (values) => {
 /** GET /api/admin/programs/options — dynamic learner-matching options. */
 export const getProgramFormOptions = async (_req, res) => {
   try {
-    const [courseSkills, questionTags, roles, courses] = await Promise.all([
-      Course.distinct("skills"),
-      Question.distinct("tags"),
-      Role.find({}).select("roleName").lean(),
-      Course.find({}).select("_id title level courseType numTopics status").sort({ title: 1 }).lean(),
+    const Job = mongoose.models.Job;
+    const [courseSkills, questionTags, questionCompanies, jobCompanies, roles, courses] = await Promise.all([
+      Course.distinct("skills").catch(() => []),
+      Question.distinct("tags").catch(() => []),
+      Question.distinct("companies").catch(() => []),
+      Job ? Job.distinct("companyName").catch(() => []) : Promise.resolve([]),
+      Role.find({}).select("roleName").lean().catch(() => []),
+      Course.find({}).select("_id title level courseType numTopics status").sort({ title: 1 }).lean().catch(() => []),
     ]);
+
+    const combinedCompanies = normalizeDynamicOptions([
+      ...(questionCompanies || []),
+      ...(questionTags || []),
+      ...(jobCompanies || []),
+    ]);
+
+    const combinedRoles = normalizeDynamicOptions((roles || []).map((role) => role.roleName));
+    const combinedSkills = normalizeDynamicOptions(courseSkills || []);
 
     return res.json({
       success: true,
-      skillTags: normalizeDynamicOptions(courseSkills || []),
-      targetCompanies: normalizeDynamicOptions(questionTags || []),
-      targetRoles: normalizeDynamicOptions((roles || []).map((role) => role.roleName)),
+      skillTags: combinedSkills,
+      skills: combinedSkills,
+      targetCompanies: combinedCompanies,
+      companies: combinedCompanies,
+      targetRoles: combinedRoles,
+      roles: combinedRoles,
       courses: courses || [],
     });
   } catch (error) {
