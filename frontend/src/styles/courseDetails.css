@@ -579,11 +579,35 @@
    RESPONSIVE MEDIA QUERIES
 ========================================= */
 
+@media (max-width: 1200px) {
+  .course-details-page .page {
+    padding: 0 24px 70px;
+  }
+
+  .course-details-page .hero {
+    gap: 40px;
+    padding: 50px 0 70px;
+    min-height: auto;
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  }
+
+  .course-details-page .course-title {
+    font-size: clamp(34px, 4.2vw, 48px);
+    letter-spacing: -2px;
+    margin-bottom: 18px;
+  }
+
+  .course-details-page .code-card {
+    max-width: 340px;
+    padding: 18px;
+  }
+}
+
 @media (max-width: 900px) {
   .course-details-page .hero {
     grid-template-columns: 1fr;
-    gap: 50px;
-    padding-top: 65px;
+    gap: 40px;
+    padding-top: 45px;
   }
 
   .course-details-page .hero-visual {
@@ -591,7 +615,7 @@
   }
 
   .course-details-page .code-card {
-    max-width: 500px;
+    max-width: 440px;
   }
 
   .course-details-page .trainer-section {
@@ -604,11 +628,11 @@
   }
 
   .course-details-page .outcome-card {
-    min-height: 150px;
+    min-height: 120px;
   }
 
   .course-details-page .outcome-number {
-    margin-bottom: 28px;
+    margin-bottom: 20px;
   }
 }
 

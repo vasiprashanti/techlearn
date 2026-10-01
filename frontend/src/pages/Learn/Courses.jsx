@@ -228,7 +228,7 @@ export default function Courses() {
   };
 
   const handleProgramAction = (program) => {
-    if (program.pricingType === 'Free' && program._id) {
+    if (program._id) {
       navigate(`/learn/programs/${program._id}`);
       return;
     }
@@ -674,7 +674,8 @@ export default function Courses() {
                       className="basis-full sm:basis-1/2 md:basis-1/2 lg:basis-1/3 xl:basis-1/3 px-3"
                     >
                       <div
-                        className="dashboard-surface p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[340px] hover:-translate-y-1 border border-black/5 bg-white/40 shadow-sm dark:border-[#15366f]/45 dark:bg-[#080d25] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]"
+                        onClick={() => handleProgramAction(program)}
+                        className="dashboard-surface p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[340px] hover:-translate-y-1 border border-black/5 bg-white/40 shadow-sm dark:border-[#15366f]/45 dark:bg-[#080d25] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] cursor-pointer"
                       >
                         <div className="flex justify-between items-center mb-4">
                           <span className={`text-[9px] uppercase tracking-widest px-3 py-1 rounded-full font-semibold ${levelTagStyles[program.level || 'Intermediate'] || 'bg-[#dff6e8] text-[#1f7d53] border border-[#b9e9c8]'}`}>
@@ -725,7 +726,7 @@ export default function Courses() {
                           onClick={() => handleProgramAction(program)}
                           className="w-full py-2.5 sm:py-3 flex items-center justify-center gap-2 rounded-xl bg-[#00113b] text-white text-xs sm:text-sm font-bold shadow-sm transition hover:bg-[#001b5c] dark:!bg-[#bceaff] dark:!text-[#020b23] dark:hover:!bg-[#daf0fa] cursor-pointer"
                         >
-                          <span>{program.pricingType === 'Free' ? 'Explore Program' : 'Join Waitlist'}</span>
+                          <span>Explore Program</span>
                           <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                       </div>

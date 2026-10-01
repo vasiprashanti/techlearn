@@ -60,6 +60,12 @@ const programEnrollmentSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    // Configured expiry date based on the program duration
+    expiryDate: {
+      type: Date,
+      default: null,
+      index: true,
+    },
     // Tracks whether the individual anchor was explicitly chosen or is an
     // inferred legacy value. This prevents reconciliation from overwriting a
     // valid admin/payment date simply because it resembles createdAt.
