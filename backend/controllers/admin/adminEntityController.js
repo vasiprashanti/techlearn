@@ -3637,7 +3637,13 @@ export const updateStudentAdmin = async (req, res) => {
       programSelection: LEGACY_PROGRAM_SELECTIONS.includes(req.body.programSelection)
         ? req.body.programSelection
         : (existingStudent.programSelection || "Placement Sprint"),
-      status: req.body.status,
+      // The Global Students response can expose a derived status (for
+      // example Expired/Completed). Do not pass that derived value into the
+      // Student schema enum, and never overwrite a valid stored status with
+      // undefined during a date-only edit.
+      status: ["Active", "Inactive", "Suspended"].includes(req.body.status)
+        ? req.body.status
+        : existingStudent.status || "Active",
     };
 
     const hasProgramId = Object.prototype.hasOwnProperty.call(req.body, "programId");
@@ -3689,6 +3695,9 @@ export const updateStudentAdmin = async (req, res) => {
     if (hasIndividualStartDate && req.body.individualStartDate
       && (!parsedIndividualStartDate || Number.isNaN(parsedIndividualStartDate.getTime()))) {
       return res.status(400).json({ success: false, message: "individualStartDate must be a valid date." });
+    }
+    if (hasIndividualStartDate && parsedIndividualStartDate && !nextBatchId) {
+      update.individualStartDate = parsedIndividualStartDate;
     }
 
     const nextCollegeId = update.collegeId || existingStudent.collegeId;
