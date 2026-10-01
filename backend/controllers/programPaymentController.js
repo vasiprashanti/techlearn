@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Razorpay from "razorpay";
 import Payment from "../models/Payment.js";
 import Program from "../models/Program.js";
+import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import Course from "../models/Course.js";
 import Topic from "../models/Topic.js";
 import Student from "../models/Student.js";
@@ -10,6 +11,7 @@ import PricingExitFeedback from "../models/PricingExitFeedback.js";
 import { upsertProgramEnrollment, syncPrimaryProgramPointers } from "../utils/programEnrollment.js";
 import { normalizeProgramType } from "../utils/programTypeNormalization.js";
 import { resolveConfiguredProgramPricingPlan } from "../utils/programPricing.js";
+import { parseDurationDays } from "../utils/programPhases.js";
 import {
   isCapturedPaymentForRecord,
   isPaymentForRecord,
@@ -344,6 +346,35 @@ export const createPaymentOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: "A paid program is required for checkout." });
     }
 
+    // Enforce one active paid program rule: a learner can have only one
+    // active paid program enrollment at a time. While active, block purchasing
+    // or switching to another paid program until it expires.
+    const activeEnrollments = await ProgramEnrollment.find({
+      userId: user._id,
+      status: "Active",
+      accessTier: "Member",
+    }).populate("programId", "name pricingType duration durationDays").lean();
+
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const activeUnexpiredEnrollment = activeEnrollments.find((enrollment) => {
+      const prog = enrollment.programId;
+      if (!prog || prog.pricingType !== "Paid") return false;
+      const durationDays = Number(prog.durationDays) || parseDurationDays(prog.duration) || 30;
+      const start = new Date(enrollment.individualStartDate || enrollment.assignedAt || enrollment.createdAt).getTime();
+      const expiry = start + (durationDays * DAY_MS);
+      return expiry > now;
+    });
+
+    if (activeUnexpiredEnrollment) {
+      const activeProgramName = activeUnexpiredEnrollment.programId?.name || "current program";
+      return res.status(409).json({
+        success: false,
+        activeProgramBlocked: true,
+        message: `You already have an active paid enrollment in "${activeProgramName}". You cannot purchase or switch to another paid program until your current enrollment expires.`,
+      });
+    }
+
     // Only use a plan explicitly defined by this Program (or the legacy
     // program-type defaults when the Program has no custom pricing plans).
     const selectedPlan = await getPricingPlan(program, planId, user._id);
@@ -406,8 +437,8 @@ export const createPaymentOrder = async (req, res) => {
       refundPolicy,
     });
   } catch (error) {
-    console.error("createPaymentOrder error:", error.message);
-    res.status(500).json({ success: false, message: "Order creation failed." });
+    console.error("createPaymentOrder error:", error);
+    res.status(500).json({ success: false, message: error?.message || "Order creation failed." });
   }
 };
 

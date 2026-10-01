@@ -4,6 +4,9 @@ import ScrollProgress from "../../components/ScrollProgress";
 import LoadingScreen from "../../components/LoadingScreen";
 import { programLearningAPI } from "../../services/programLearningApi";
 import { useTheme } from "../../context/ThemeContext";
+import { useAuth } from "../../context/AuthContext";
+import { useAuthModalContext } from "../../context/AuthModalContext";
+import { initiateRazorpayPayment } from "../../utils/razorpayCheckout";
 import "../../styles/courseDetails.css";
 
 const formatPhaseName = (phaseKey) => {
@@ -20,6 +23,8 @@ const formatPhaseName = (phaseKey) => {
 
 export default function ProgramPreview() {
   const { theme } = useTheme();
+  const { user, isAuthenticated } = useAuth();
+  const { openLogin } = useAuthModalContext();
   const { programId } = useParams();
   const navigate = useNavigate();
 
@@ -29,6 +34,10 @@ export default function ProgramPreview() {
   const [program, setProgram] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedBilling, setSelectedBilling] = useState("Monthly"); // 'Monthly' or 'Annual'
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState("");
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,6 +53,13 @@ export default function ProgramPreview() {
             throw new Error("No valid program data received from backend");
           }
           setProgram(prog);
+
+          // Initialize selected billing based on available options
+          if (prog.billingOptions?.length > 0) {
+            setSelectedBilling(prog.billingOptions[0]);
+          } else if (prog.pricingPlans?.length > 0) {
+            setSelectedBilling(prog.pricingPlans[0].billingPeriod || "Monthly");
+          }
         }
       })
       .catch((err) => {
@@ -95,6 +111,7 @@ export default function ProgramPreview() {
     );
   }
 
+  const isPaid = program.pricingType === "Paid";
   const intent = program.programType === "Skill" ? "skill" : "placement";
   const materials = Array.isArray(program.materials) ? program.materials : [];
   const phases = Array.isArray(program.phases) ? program.phases : [];
@@ -102,8 +119,64 @@ export default function ProgramPreview() {
     ? program.learningGoals
     : [];
 
-  const handleStartProgram = () => {
-    navigate(`/onboarding?intent=${intent}`);
+  // Determine pricing based on selected billing
+  const pricingPlans = program.pricingPlans || [];
+  const selectedPlan = pricingPlans.find(
+    (p) => String(p.billingPeriod || "").toLowerCase() === selectedBilling.toLowerCase()
+  ) || pricingPlans[0] || null;
+
+  let currentPrice = 0;
+  if (selectedPlan && typeof selectedPlan.price === "number") {
+    currentPrice = selectedPlan.price;
+  } else if (selectedBilling === "Monthly") {
+    currentPrice = program.monthlyStructuredFee ?? program.monthlyTrainerLedFee ?? program.programFee ?? 0;
+  } else {
+    currentPrice = program.annualStructuredFee ?? program.annualTrainerLedFee ?? program.programFee ?? 0;
+  }
+
+  // Handle Checkout / Payment
+  const handlePayment = () => {
+    if (!isPaid) {
+      navigate(`/onboarding?intent=${intent}`);
+      return;
+    }
+
+    if (!isAuthenticated) {
+      openLogin();
+      return;
+    }
+
+    if (isPaying) return;
+
+    setIsPaying(true);
+    setPaymentMessage("");
+
+    initiateRazorpayPayment({
+      programId: program._id,
+      planId: selectedPlan?.key || (selectedBilling === "Annual" ? "annual" : "monthly"),
+      programType: program.programType,
+      user,
+      onSuccess: (data) => {
+        setIsPaying(false);
+        setPaymentSuccess(true);
+        setPaymentMessage(`Payment of ₹${currentPrice} successful! Activating your enrollment in ${program.name}…`);
+        setTimeout(() => {
+          navigate(`/learn/program/${program._id}`);
+        }, 1500);
+      },
+      onFailure: (err) => {
+        setIsPaying(false);
+        setPaymentMessage(
+          err?.response?.data?.message ||
+          err?.message ||
+          "Payment was not completed. Please retry checkout."
+        );
+      },
+      onCancel: () => {
+        setIsPaying(false);
+        setPaymentMessage("Checkout was closed. You can retry anytime.");
+      },
+    });
   };
 
   return (
@@ -150,10 +223,49 @@ export default function ProgramPreview() {
               <div className="meta-item">
                 <span className="meta-label">Access</span>
                 <span className="meta-value">
-                  {program.pricingType === "Free" ? "Free" : "Paid"}
+                  {isPaid ? `₹${currentPrice} (${selectedBilling})` : "Free"}
                 </span>
               </div>
             </div>
+
+            {/* BILLING SELECTION (Only for Paid programs) */}
+            {isPaid && (
+              <div className="mt-4 mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider opacity-60 mb-2 font-mono">
+                  SELECT BILLING OPTION:
+                </p>
+                <div className="inline-flex rounded-xl p-1 bg-black/10 dark:bg-white/10 gap-1 border border-black/10 dark:border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedBilling("Monthly");
+                      setPaymentMessage("");
+                    }}
+                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                      selectedBilling === "Monthly"
+                        ? "bg-[#3c83f6] text-white shadow"
+                        : "opacity-70 hover:opacity-100"
+                    }`}
+                  >
+                    Pay Monthly {program.monthlyStructuredFee ? `(₹${program.monthlyStructuredFee})` : ""}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedBilling("Annual");
+                      setPaymentMessage("");
+                    }}
+                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                      selectedBilling === "Annual"
+                        ? "bg-[#3c83f6] text-white shadow"
+                        : "opacity-70 hover:opacity-100"
+                    }`}
+                  >
+                    Pay Annually {program.annualStructuredFee ? `(₹${program.annualStructuredFee})` : ""}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* SKILLS */}
             {program.skillTags && program.skillTags.length > 0 && (
@@ -186,16 +298,36 @@ export default function ProgramPreview() {
               </div>
             )}
 
-            {/* START / ONBOARDING BUTTON */}
+            {/* ACTION / CHECKOUT BUTTON */}
             <button
               className="start-button"
               id="startButton"
               type="button"
-              onClick={handleStartProgram}
+              disabled={isPaying}
+              onClick={handlePayment}
             >
-              <span>CREATE LEARNER PROFILE</span>
+              <span>
+                {isPaying
+                  ? "PROCESSING PAYMENT…"
+                  : isPaid
+                  ? `PAY ₹${currentPrice} WITH RAZORPAY`
+                  : "CREATE LEARNER PROFILE"}
+              </span>
               <span className="button-arrow">→</span>
             </button>
+
+            {/* PAYMENT RESULT / STATUS MESSAGE */}
+            {paymentMessage && (
+              <p
+                className={`mt-4 text-sm font-semibold max-w-lg ${
+                  paymentSuccess ? "text-emerald-500" : "text-amber-500 dark:text-amber-400"
+                }`}
+                role="status"
+                aria-live="polite"
+              >
+                {paymentMessage}
+              </p>
+            )}
           </div>
 
           {/* HERO VISUAL */}
@@ -203,7 +335,7 @@ export default function ProgramPreview() {
             <div className="code-card">
               <div className="code-top">
                 <div className="code-label">
-                  {(program.name || "PROGRAM").toUpperCase()} / CURRICULUM
+                  {(program.name || "PROGRAM").toUpperCase()} / {isPaid ? "ENROLLMENT" : "CURRICULUM"}
                 </div>
                 <div className="code-progress-label">
                   {phases.length > 0 ? `01 / ${String(phases.length).padStart(2, "0")}` : "ACTIVE"}
@@ -235,14 +367,14 @@ export default function ProgramPreview() {
                 <div className="code-line">
                   <span className="code-number">04</span>
                   <span>
-                    &nbsp;&nbsp;resources: <span className="code-accent">{materials.length}</span>,
+                    &nbsp;&nbsp;billing: <span className="code-accent">"{selectedBilling}"</span>,
                   </span>
                 </div>
 
                 <div className="code-line">
                   <span className="code-number">05</span>
                   <span>
-                    &nbsp;&nbsp;enrollment: <span className="code-accent">"Open"</span>
+                    &nbsp;&nbsp;fee: <span className="code-accent">{isPaid ? `"₹${currentPrice}"` : '"Free"'}</span>,
                   </span>
                 </div>
 

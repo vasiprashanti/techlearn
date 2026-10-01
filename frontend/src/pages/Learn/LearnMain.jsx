@@ -267,7 +267,7 @@ const LearnMain = () => {
   };
 
   const handleProgramClick = (program) => {
-    if (program.pricingType === 'Free' && program._id) {
+    if (program._id) {
       navigate(`/learn/programs/${program._id}`);
       return;
     }

@@ -116,17 +116,18 @@ export const getPublicProgramPreview = async (req, res) => {
 
     const program = await Program.findOne({
       _id: programId,
-      ...buildPublicFreeProgramQuery(),
+      status: "Active",
+      visibility: "Public",
     })
-      .select("_id name description programType duration durationDays phases pricingType availability skillTags targetCompanies targetRoles learningGoals courseIds roadmapIds trackTemplateIds projectIds")
+      .select("_id name description programType duration durationDays phases pricingType availability billingOptions structuredFee trainerLedFee monthlyStructuredFee monthlyTrainerLedFee annualStructuredFee annualTrainerLedFee programFee pricingPlans skillTags targetCompanies targetRoles learningGoals courseIds roadmapIds trackTemplateIds projectIds")
       .populate("courseIds", "_id title description level courseType numTopics assignedBatchIds")
       .populate("roadmapIds", "_id title description status assignedBatchIds")
       .populate("trackTemplateIds", "_id name trackType description totalDays status batchId")
       .populate("projectIds", "_id title description category duration_days status")
       .lean();
 
-    if (!program || !isUserVisibleProgram(program)) {
-      return res.status(404).json({ success: false, message: "Free program not found." });
+    if (!program) {
+      return res.status(404).json({ success: false, message: "Program not found." });
     }
 
     const materials = [
@@ -180,6 +181,13 @@ export const getPublicProgramPreview = async (req, res) => {
         phases: program.phases || [],
         pricingType: program.pricingType,
         availability: program.availability || "Structured",
+        billingOptions: program.billingOptions || [],
+        monthlyStructuredFee: program.monthlyStructuredFee ?? null,
+        monthlyTrainerLedFee: program.monthlyTrainerLedFee ?? null,
+        annualStructuredFee: program.annualStructuredFee ?? null,
+        annualTrainerLedFee: program.annualTrainerLedFee ?? null,
+        programFee: program.programFee ?? 0,
+        pricingPlans: program.pricingPlans || [],
         skillTags: program.skillTags || [],
         targetCompanies: program.targetCompanies || [],
         targetRoles: program.targetRoles || [],

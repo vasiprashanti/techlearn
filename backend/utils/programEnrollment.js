@@ -411,6 +411,12 @@ export const upsertProgramEnrollment = async ({
       : source === "payment" ? "explicit_payment" : "explicit")
     : null;
 
+  const resolvedStartDate = explicitIndividualStartDate
+    || existing?.individualStartDate
+    || existing?.assignedAt
+    || now;
+  const calculatedExpiryDate = getProgramExpiryDate(resolvedStartDate, program);
+
   const update = {
     $set: {
       userId,
@@ -419,10 +425,8 @@ export const upsertProgramEnrollment = async ({
       status: "Active",
       accessTier: getAccessTier(program, accessTier),
       batchId: resolvedBatchId || null,
-      individualStartDate: explicitIndividualStartDate
-        || existing?.individualStartDate
-        || existing?.assignedAt
-        || now,
+      individualStartDate: resolvedStartDate,
+      ...(calculatedExpiryDate ? { expiryDate: calculatedExpiryDate } : {}),
       ...(individualStartDateSource ? { individualStartDateSource } : {}),
     },
     $setOnInsert: {
