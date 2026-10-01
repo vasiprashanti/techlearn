@@ -998,63 +998,63 @@ const Batches = () => {
             </button>
           </div>
 
-          {/* Section 1B & 3: Summary Stats Cards (Clean responsive 2x2 grid on mobile, 4 columns on tablet/desktop) */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          {/* Section 1B & 3: Summary Stats Cards (All four stats fit in one row on mobile with reduced padding and compact typography) */}
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-4">
             {/* Card 1: Total Batches */}
-            <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3.5">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-500/10 text-[#3C83F6] flex items-center justify-center shrink-0">
-                <FiLayers className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-1.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center gap-1 sm:gap-3.5 text-center sm:text-left">
+              <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-lg bg-blue-500/10 text-[#3C83F6] flex items-center justify-center shrink-0">
+                <FiLayers className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
               </div>
               <div className="min-w-0">
-                <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">
-                  Total Batches
+                <span className="text-[9px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">
+                  Total
                 </span>
-                <span className="text-base sm:text-xl font-bold text-slate-800 dark:text-white">
+                <span className="text-xs sm:text-xl font-bold text-slate-800 dark:text-white leading-none">
                   {totalBatches}
                 </span>
               </div>
             </div>
 
             {/* Card 2: Active Batches */}
-            <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3.5">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <FiCheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-1.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center gap-1 sm:gap-3.5 text-center sm:text-left">
+              <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <FiCheckCircle className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
               </div>
               <div className="min-w-0">
-                <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">
-                  Active Batches
+                <span className="text-[9px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">
+                  Active
                 </span>
-                <span className="text-base sm:text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="text-xs sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 leading-none">
                   {activeBatches}
                 </span>
               </div>
             </div>
 
             {/* Card 3: Completed Batches */}
-            <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3.5">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                <FiClock className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-1.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center gap-1 sm:gap-3.5 text-center sm:text-left">
+              <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <FiClock className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
               </div>
               <div className="min-w-0">
-                <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">
-                  Completed Batches
+                <span className="text-[9px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">
+                  Completed
                 </span>
-                <span className="text-base sm:text-xl font-bold text-amber-600 dark:text-amber-400">
+                <span className="text-xs sm:text-xl font-bold text-amber-600 dark:text-amber-400 leading-none">
                   {completedBatches}
                 </span>
               </div>
             </div>
 
             {/* Card 4: Archived Batches */}
-            <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3.5">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-slate-500/10 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0">
-                <FiArchive className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/70 backdrop-blur-sm p-1.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center gap-1 sm:gap-3.5 text-center sm:text-left">
+              <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-lg bg-slate-500/10 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0">
+                <FiArchive className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
               </div>
               <div className="min-w-0">
-                <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">
-                  Archived Batches
+                <span className="text-[9px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">
+                  Archived
                 </span>
-                <span className="text-base sm:text-xl font-bold text-slate-700 dark:text-slate-300">
+                <span className="text-xs sm:text-xl font-bold text-slate-700 dark:text-slate-300 leading-none">
                   {archivedBatches}
                 </span>
               </div>

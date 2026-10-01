@@ -55,12 +55,12 @@ export default function PricingCards({ goal, selectedSkill, onSelectPlan, curren
         'Company-wise interview preparation',
         'Placement readiness & mock prep'
       ],
-      refundNotice: 'No refunds or cancellations after purchase.',
+      refundNotice: 'Cancel anytime. Get refunded if you cancel within 5 days.',
     },
     {
       id: 'placement-pro',
       title: 'Placement Program Pro',
-      price: '₹1,199',
+      price: '₹999',
       subtitle: '120 Days Total Access',
       badge: 'BEST VALUE',
       highlight: false,
@@ -75,7 +75,7 @@ export default function PricingCards({ goal, selectedSkill, onSelectPlan, curren
         'Company-wise preparation & assessments',
         'Longer period to prepare post-program'
       ],
-      refundNotice: 'No refunds or cancellations after purchase.',
+      refundNotice: 'Cancel anytime. Get refunded if you cancel within 5 days.',
     }
   ];
 
@@ -84,8 +84,8 @@ export default function PricingCards({ goal, selectedSkill, onSelectPlan, curren
     {
       id: 'skill-basic',
       title: 'Skill Program',
-      price: '₹399',
-      subtitle: 'Annual access',
+      price: '₹499',
+      subtitle: '30 Days Access',
       badge: 'STANDARD',
       highlight: true,
       icon: Sparkles,
@@ -101,20 +101,20 @@ export default function PricingCards({ goal, selectedSkill, onSelectPlan, curren
       refundNotice: 'No refunds or cancellations after purchase.',
     },
     {
-      id: 'skill-pro',
-      title: 'Skill Program Pro',
-      price: '₹699',
-      subtitle: 'Annual access',
-      badge: 'BEST VALUE',
+      id: 'skill-returning',
+      title: 'Skill Program (Returning Learner)',
+      price: '₹199',
+      subtitle: '30 Days Access (Special Loyalty Offer)',
+      badge: 'RETURNING LEARNER',
       highlight: false,
       icon: Crown,
       color: 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 shadow-lg',
       btnStyle: 'bg-blue-600 text-white font-extrabold hover:bg-blue-700',
       features: [
-        `Full ${selectedSkill || 'Skill'} Program`,
+        `Full 30-Day ${selectedSkill || 'Skill'} Program`,
         'Complete learning roadmap & course content',
         'Daily tasks & coding challenges',
-        'Recorded videos + 1 live doubt session',
+        'Exclusive returning learner pricing',
       ],
       refundNotice: 'No refunds or cancellations after purchase.',
     }

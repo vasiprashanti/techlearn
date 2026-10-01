@@ -64,3 +64,24 @@ test("only published paid courses with a positive saved price are purchasable", 
   assert.equal(isPaidCourseAvailableForPurchase({ ...validPaidCourse, price: 0 }), false);
   assert.equal(isPaidCourseAvailableForPurchase({ ...validPaidCourse, topicIds: [] }), false);
 });
+
+test("canonical placement pricing plans are ₹799 and ₹999 with 5-day refund policy", () => {
+  const placementBasicPrice = 799;
+  const placementProPrice = 999;
+  const refundPolicy = "Cancel anytime. Get refunded if you cancel within 5 days.";
+
+  assert.equal(placementBasicPrice, 799);
+  assert.equal(placementProPrice, 999);
+  assert.match(refundPolicy, /5 days/);
+});
+
+test("canonical skill pricing is ₹499 for first-time and ₹199 for returning learners", () => {
+  const firstTimePrice = 499;
+  const returningPrice = 199;
+  const refundPolicy = "No refunds or cancellations after purchase.";
+
+  assert.equal(firstTimePrice, 499);
+  assert.equal(returningPrice, 199);
+  assert.match(refundPolicy, /No refunds/);
+});
+

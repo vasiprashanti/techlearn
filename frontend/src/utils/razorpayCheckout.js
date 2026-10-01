@@ -50,7 +50,7 @@ export const initiateRazorpayPayment = async ({
       programType,
     });
 
-    const { orderId, amount, currency, key, planName } = orderRes.data;
+    const { orderId, amount, currency, key, planName, refundPolicy } = orderRes.data;
     if (!orderId || !key || !Number.isFinite(Number(amount)) || Number(amount) <= 0) {
       throw new Error('The server did not return a valid Razorpay order. Please try again later.');
     }
@@ -61,7 +61,7 @@ export const initiateRazorpayPayment = async ({
       amount: amount * 100, // paise
       currency,
       name: 'TechLearn',
-      description: `${planName || (courseId ? 'Course Access' : 'Program Access')} — No refunds or cancellations after purchase`,
+      description: `${planName || (courseId ? 'Course Access' : 'Program Access')}${refundPolicy ? ` — ${refundPolicy}` : ''}`,
       order_id: orderId,
       prefill: {
         name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || '',
