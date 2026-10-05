@@ -365,6 +365,7 @@ export const upsertProgramEnrollment = async ({
   batchId,
   accessTier,
   individualStartDate,
+  expiryDate,
   source = "admin",
 }) => {
   const userId = getId(user);
@@ -415,7 +416,10 @@ export const upsertProgramEnrollment = async ({
     || existing?.individualStartDate
     || existing?.assignedAt
     || now;
-  const calculatedExpiryDate = getProgramExpiryDate(resolvedStartDate, program);
+  const explicitExpiryDate = expiryDate ? new Date(expiryDate) : null;
+  const calculatedExpiryDate = explicitExpiryDate && !Number.isNaN(explicitExpiryDate.getTime())
+    ? explicitExpiryDate
+    : getProgramExpiryDate(resolvedStartDate, program);
 
   const update = {
     $set: {

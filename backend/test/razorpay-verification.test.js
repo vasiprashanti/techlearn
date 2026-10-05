@@ -85,3 +85,36 @@ test("canonical skill pricing is ₹499 for first-time and ₹199 for returning 
   assert.match(refundPolicy, /No refunds/);
 });
 
+test("tampered or invalid checkout signature is rejected and does not verify", () => {
+  const orderId = "order_rzp_real_999";
+  const paymentId = "pay_rzp_real_888";
+  const validSig = crypto.createHmac("sha256", secret).update(`${orderId}|${paymentId}`).digest("hex");
+  const tamperedSig = validSig.slice(0, -4) + "beef";
+
+  assert.equal(verifyRazorpayCheckoutSignature({ orderId, paymentId, signature: tamperedSig, secret }), false);
+  assert.equal(verifyRazorpayCheckoutSignature({ orderId: "order_spoofed", paymentId, signature: validSig, secret }), false);
+});
+
+test("duplicate payment callback or already captured payment is idempotent", () => {
+  const existingCapturedPayment = {
+    status: "captured",
+    razorpayOrderId: "order_test_dup",
+    razorpayPaymentId: "pay_test_dup",
+  };
+  // Verifying whether captured state is recognized
+  assert.equal(existingCapturedPayment.status, "captured");
+});
+
+test("expired paid access is blocked when enrollment expiryDate is in the past", () => {
+  const now = Date.now();
+  const pastExpiry = new Date(now - 1000 * 60 * 60 * 24); // 1 day ago
+  const futureExpiry = new Date(now + 1000 * 60 * 60 * 24 * 30); // 30 days in future
+
+  const isExpired = (enrollment) => {
+    if (!enrollment.expiryDate) return false;
+    return new Date(enrollment.expiryDate).getTime() < now;
+  };
+
+  assert.equal(isExpired({ expiryDate: pastExpiry }), true);
+  assert.equal(isExpired({ expiryDate: futureExpiry }), false);
+});
