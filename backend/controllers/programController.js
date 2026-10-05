@@ -32,6 +32,7 @@ import { getProgramTypeQueryValues } from "../utils/programTypeNormalization.js"
  */
 export const getPublicPrograms = async (req, res) => {
   try {
+    const isAdmin = req.user?.role === "admin";
     const programs = await Program.find({
       status: "Active",
       visibility: "Public",
@@ -42,7 +43,7 @@ export const getPublicPrograms = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    const visiblePrograms = programs.filter(isUserVisibleProgram);
+    const visiblePrograms = programs.filter((p) => isAdmin || isUserVisibleProgram(p));
     const readinessIds = await Blueprint.find({
       programId: { $in: visiblePrograms.map((p) => p._id) },
       blueprintType: { $in: ["day_0_readiness", "free_assessment"] },
@@ -53,7 +54,7 @@ export const getPublicPrograms = async (req, res) => {
     const formatted = visiblePrograms
       .map((p) => ({
         ...p,
-        courseIds: (p.courseIds || []).filter(isUserVisibleCourse),
+        courseIds: (p.courseIds || []).filter((c) => isAdmin || isUserVisibleCourse(c)),
         hasFreeAssessment: readinessSet.has(String(p._id)),
       }));
 
@@ -70,6 +71,7 @@ export const getPublicPrograms = async (req, res) => {
  */
 export const getProgramCatalog = async (req, res) => {
   try {
+    const isAdmin = req.user?.role === "admin";
     const programs = await Program.find({ status: "Active", visibility: "Public" })
       .select("_id name description programType duration durationDays pricingType programFee pricingPlans courseIds roadmapIds trackTemplateIds projectIds certificateTemplateIds")
       .populate("courseIds", "_id title description level courseType numTopics")
@@ -78,16 +80,16 @@ export const getProgramCatalog = async (req, res) => {
       .populate("projectIds", "_id title category duration_days status")
       .lean();
 
-    const visiblePrograms = programs.filter(isUserVisibleProgram);
+    const visiblePrograms = programs.filter((p) => isAdmin || isUserVisibleProgram(p));
 
     return res.json({
       success: true,
       programs: visiblePrograms
         .map((program) => ({
           ...program,
-          courseIds: (program.courseIds || []).filter(isUserVisibleCourse),
+          courseIds: (program.courseIds || []).filter((c) => isAdmin || isUserVisibleCourse(c)),
           accessType: program.pricingType === "Free" ? "free" : "trainer-led",
-          courseCount: (program.courseIds || []).filter(isUserVisibleCourse).length,
+          courseCount: (program.courseIds || []).filter((c) => isAdmin || isUserVisibleCourse(c)).length,
           roadmapCount: program.roadmapIds?.length || 0,
           trackCount: program.trackTemplateIds?.length || 0,
           projectCount: program.projectIds?.length || 0,
@@ -583,6 +585,7 @@ export const getAssignedPrograms = async (req, res) => {
  */
 export const getReadinessOptions = async (req, res) => {
   try {
+    const isAdmin = req.user?.role === "admin";
     const programs = await Program.find({
       programType: "Placement",
       status: "Active",
@@ -592,7 +595,7 @@ export const getReadinessOptions = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    const visiblePrograms = programs.filter(isUserVisibleProgram);
+    const visiblePrograms = programs.filter((p) => isAdmin || isUserVisibleProgram(p));
 
     if (!visiblePrograms.length) return res.json({ success: true, programs: [] });
 
