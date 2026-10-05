@@ -44,6 +44,7 @@ const CourseDetails = lazy(() => import('./pages/Learn/CourseDetails'))
 const CourseQuiz = lazy(() => import('./pages/Learn/CourseQuiz'))
 const CourseTopics = lazy(() => import('./pages/Learn/CourseTopics'))
 const ProgramPreview = lazy(() => import('./pages/Learn/ProgramPreview'))
+const PaymentStatus = lazy(() => import('./pages/Learn/PaymentStatus'))
 const LiveBatchDetails = lazy(() => import('./pages/Learn/LiveBatchDetails'))
 const AllInterviewQuestions = lazy(() => import('./pages/Learn/AllInterviewQuestions'))
 const PracticeHub = lazy(() => import('./pages/Learn/PracticeHub'))
@@ -341,6 +342,8 @@ function LayoutWrapper() {
           <Route path="/learn/courses/:courseId" element={<CourseDetails />} />
           <Route path="/learn/courses/:courseId/topics" element={<CourseTopics />} />
           <Route path="/learn/programs/:programId" element={<ProgramPreview />} />
+          <Route path="/payment-status" element={<PaymentStatus />} />
+          <Route path="/learn/payment-status" element={<PaymentStatus />} />
           <Route path="/learn/courses/:courseId/quiz" element={<CourseQuiz />} />
           <Route path="/learn/batches/:batchId" element={<LiveBatchDetails />} />
           <Route path="/learn/exercises" element={<Exercises />} />

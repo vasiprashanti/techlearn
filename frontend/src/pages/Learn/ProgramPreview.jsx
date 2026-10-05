@@ -159,18 +159,35 @@ export default function ProgramPreview() {
       onSuccess: (data) => {
         setIsPaying(false);
         setPaymentSuccess(true);
-        setPaymentMessage(`Payment of ₹${currentPrice} successful! Activating your enrollment in ${program.name}…`);
-        setTimeout(() => {
-          navigate(`/learn/program/${program._id}`);
-        }, 1500);
+        navigate("/payment-status", {
+          state: {
+            status: "success",
+            programId: program._id,
+            programName: program.name,
+            amount: currentPrice,
+            message: `Payment of ₹${currentPrice} successful! Your enrollment in ${program.name} is now active.`,
+          },
+        });
+      },
+      onPending: (data) => {
+        setIsPaying(false);
+        navigate("/payment-status", {
+          state: {
+            status: "pending",
+            programId: program._id,
+            programName: program.name,
+            amount: currentPrice,
+            message: data?.message || "Payment is pending confirmation. Your access will activate once verification completes.",
+          },
+        });
       },
       onFailure: (err) => {
         setIsPaying(false);
-        setPaymentMessage(
+        const errMsg =
           err?.response?.data?.message ||
           err?.message ||
-          "Payment was not completed. Please retry checkout."
-        );
+          "Payment was not completed. Please retry checkout.";
+        setPaymentMessage(errMsg);
       },
       onCancel: () => {
         setIsPaying(false);

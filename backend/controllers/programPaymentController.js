@@ -48,7 +48,7 @@ const DEFAULT_PRICING_PLANS = {
 const PLACEMENT_REFUND_POLICY = "Cancel anytime. Get refunded if you cancel within 5 days.";
 const SKILL_REFUND_POLICY = "No refunds or cancellations after purchase.";
 
-const getPricingPlan = async (program, planId, userId = null) => {
+export const getPricingPlan = async (program, planId, userId = null) => {
   const type = normalizeProgramType(program?.programType) === "Skill" ? "Skill" : "Placement";
   const hasConfiguredPlans = Array.isArray(program?.pricingPlans) && program.pricingPlans.length > 0;
   if (hasConfiguredPlans) return resolveConfiguredProgramPricingPlan(program, planId);
@@ -360,6 +360,9 @@ export const createPaymentOrder = async (req, res) => {
     const activeUnexpiredEnrollment = activeEnrollments.find((enrollment) => {
       const prog = enrollment.programId;
       if (!prog || prog.pricingType !== "Paid") return false;
+      if (enrollment.expiryDate) {
+        return new Date(enrollment.expiryDate).getTime() > now;
+      }
       const durationDays = Number(prog.durationDays) || parseDurationDays(prog.duration) || 30;
       const start = new Date(enrollment.individualStartDate || enrollment.assignedAt || enrollment.createdAt).getTime();
       const expiry = start + (durationDays * DAY_MS);

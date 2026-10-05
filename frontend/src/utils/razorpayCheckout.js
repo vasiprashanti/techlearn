@@ -31,6 +31,7 @@ export const initiateRazorpayPayment = async ({
   programType,
   user,
   onSuccess,
+  onPending,
   onFailure,
   onCancel,
 }) => {
@@ -82,12 +83,18 @@ export const initiateRazorpayPayment = async ({
 
           if (verifyRes.data?.success) {
             onSuccess?.(verifyRes.data);
+          } else if (verifyRes.data?.pending) {
+            onPending?.(verifyRes.data);
           } else {
             onFailure?.(new Error(verifyRes.data?.message || 'Server verification failed'));
           }
         } catch (err) {
           console.error('Payment verification failed:', err);
-          onFailure?.(err);
+          if (err?.response?.data?.pending) {
+            onPending?.(err.response.data);
+          } else {
+            onFailure?.(err);
+          }
         }
       },
       modal: {
