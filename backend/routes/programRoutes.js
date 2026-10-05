@@ -28,13 +28,13 @@ import { guestAssessmentRateLimiter } from "../middleware/guestRateLimitMiddlewa
 const router = express.Router();
 
 // Public / Guest-accessible endpoints
-router.get("/public", getPublicPrograms);
-router.get("/public/:programId", getPublicProgramPreview);
-router.get("/readiness-options", getReadinessOptions);
+router.get("/public", protectOptional, getPublicPrograms);
+router.get("/public/:programId", protectOptional, getPublicProgramPreview);
+router.get("/readiness-options", protectOptional, getReadinessOptions);
 router.post("/:programId/waitlist", guestAssessmentRateLimiter, protectOptional, joinProgramWaitlist);
 
 // Protected student-facing endpoints
-router.get("/catalog", getProgramCatalog);
+router.get("/catalog", protectOptional, getProgramCatalog);
 router.get("/recommendations", protect, getProgramRecommendations);
 router.get("/assigned", protect, getAssignedPrograms);
 router.post("/free-assessment/start", protectOptional, guestAssessmentRateLimiter, protect, startFreeAssessment);
