@@ -111,7 +111,7 @@ export default function Navbar() {
 
   const handleGetStartedClick = (e) => {
     e.preventDefault();
-    navigate('/onboarding?intent=placement');
+    navigate('/onboarding');
   };
 
   const handleLoginClick = (e) => {
