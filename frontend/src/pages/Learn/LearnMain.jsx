@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from "react-router-dom";
 import { Search, SlidersHorizontal, X } from "lucide-react";
-import { courseAPI, dataAdapters } from "../../services/api";
+import { courseAPI, dataAdapters, placementLearningAPI } from "../../services/api";
 import { programLearningAPI } from "../../services/programLearningApi";
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import JoinWaitlistModal from '../../components/Learn/JoinWaitlistModal';
 import ScrollProgress from '../../components/ScrollProgress';
 import { readCachedCourseDetails, writeCachedCourseDetails } from '../../utils/courseCache';
@@ -144,6 +145,9 @@ const LearnMain = () => {
   const navigate = useNavigate();
   const isDarkMode = theme === 'dark';
 
+  const { isAuthenticated } = useAuth();
+  const [placementLearning, setPlacementLearning] = useState(null);
+
   const [activeTab, setActiveTab] = useState('courses'); // 'courses' | 'programs'
   const [courseFilter, setCourseFilter] = useState('all'); // 'all' | 'free' | 'skill' | 'placement'
   const [programFilter, setProgramFilter] = useState('all'); // 'all' | 'free' | 'self-paced' | 'trainer-led'
@@ -242,6 +246,17 @@ const LearnMain = () => {
         if (programsRes.status === 'fulfilled' && Array.isArray(programsRes.value?.programs)) {
           setPublicPrograms(programsRes.value.programs);
         }
+
+        if (isAuthenticated) {
+          try {
+            const placementRes = await placementLearningAPI.getDashboard();
+            if (placementRes?.hasPlacementLearning) {
+              setPlacementLearning(placementRes);
+            }
+          } catch {
+            // Unenrolled or unauthorized for placement learning
+          }
+        }
       } catch (fetchError) {
         console.error('Error fetching learn catalog:', fetchError);
       } finally {
@@ -250,7 +265,7 @@ const LearnMain = () => {
     };
 
     fetchCoursesAndPrograms();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const prefetchCourseTopics = (course) => {
     const topicCourseId = getCourseTopicsId(course);
@@ -267,6 +282,24 @@ const LearnMain = () => {
   };
 
   const handleProgramClick = (program) => {
+    const progId = String(program._id || program.id || "");
+    const activeProgId = String(placementLearning?.program?.id || placementLearning?.program?._id || "");
+    
+    if (activeProgId && activeProgId === progId) {
+      const currentDay = placementLearning?.batch?.currentDay || placementLearning?.todayTopic?.day || 1;
+      if (currentDay <= 1) {
+        navigate("/dashboard");
+      } else {
+        const todayTopicHref = placementLearning?.todayTopic?.href || (
+          placementLearning?.course?.id
+            ? `/learn/courses/${placementLearning.course.id}/topics?day=${currentDay}`
+            : "/dashboard"
+        );
+        navigate(todayTopicHref);
+      }
+      return;
+    }
+
     if (program._id) {
       navigate(`/learn/programs/${program._id}`);
       return;
@@ -672,6 +705,12 @@ const LearnMain = () => {
                   const isFree = isFreeProgramItem(program);
                   const displayPrice = getProgramPriceLabel(program);
 
+                  const progId = String(program._id || program.id || "");
+                  const activeProgId = String(placementLearning?.program?.id || placementLearning?.program?._id || "");
+                  const isEnrolledInProg = Boolean(activeProgId && activeProgId === progId);
+                  const currentDay = placementLearning?.batch?.currentDay || placementLearning?.todayTopic?.day || 1;
+                  const isDay1 = currentDay <= 1;
+
                   const metaItems = program.metaTags || [
                     program.duration || `${program.durationDays || 30} Days`,
                     program.level || 'Roadmap',
@@ -722,14 +761,16 @@ const LearnMain = () => {
                           <div className="content-divider" />
 
                           <div className="card-footer">
-                            {isFree ? (
+                            {isEnrolledInProg ? (
+                              <div className="free-label" style={{ backgroundColor: "#89c638", color: "#02052e" }}>ENROLLED</div>
+                            ) : isFree ? (
                               <div className="free-label">FREE</div>
                             ) : (
                               <div className="price">{displayPrice}</div>
                             )}
 
                             <span className="start-link">
-                              View Program
+                              {isEnrolledInProg ? (isDay1 ? "Start Learning" : "Resume Learning") : "View Program"}
                               <span className="arrow">→</span>
                             </span>
                           </div>

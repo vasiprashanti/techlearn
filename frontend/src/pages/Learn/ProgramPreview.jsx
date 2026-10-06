@@ -121,11 +121,51 @@ export default function ProgramPreview() {
     ? program.learningGoals
     : [];
 
+  // Enrolled status & learning progression
+  const [placementLearning, setPlacementLearning] = useState(null);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (isAuthenticated) {
+      placementLearningAPI
+        .getDashboard()
+        .then((res) => {
+          if (!cancelled && res?.hasPlacementLearning) {
+            setPlacementLearning(res);
+            const activeProgId = String(res.program?.id || res.program?._id || "");
+            if (activeProgId === String(programId)) {
+              setIsEnrolled(true);
+            }
+          }
+        })
+        .catch(() => {});
+    } else {
+      setIsEnrolled(false);
+      setPlacementLearning(null);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, programId]);
+
+  const currentProgramDay = placementLearning?.batch?.currentDay || placementLearning?.todayTopic?.day || 1;
+  const isDay1 = currentProgramDay <= 1;
+
   // Determine pricing based on selected billing
   const pricingPlans = (program.pricingPlans || []).filter((plan) => plan.active !== false && Number(plan.price) > 0);
-  const selectedPlan = pricingPlans.find(
+  
+  // Find plan strictly matching the selected billing period
+  const matchingBillingPlan = pricingPlans.find(
     (p) => String(p.billingPeriod || "").toLowerCase() === selectedBilling.toLowerCase()
-  ) || pricingPlans[0] || null;
+  );
+
+  // If no explicit plan matches the selected billing, create or select the proper plan representation
+  const selectedPlan = matchingBillingPlan || (
+    selectedBilling.toLowerCase() === "annual"
+      ? (pricingPlans.find((p) => String(p.key || "").includes("annual") || !String(p.key || "").includes("monthly")) || pricingPlans[0] || null)
+      : (pricingPlans.find((p) => String(p.key || "").includes("monthly")) || pricingPlans[0] || null)
+  );
 
   let currentPrice = 0;
   if (selectedPlan && typeof selectedPlan.price === "number") {
@@ -144,6 +184,20 @@ export default function ProgramPreview() {
     }
 
     if (isPaying) return;
+
+    if (isEnrolled) {
+      if (isDay1) {
+        navigate("/dashboard");
+      } else {
+        const todayTopicHref = placementLearning?.todayTopic?.href || (
+          placementLearning?.course?.id
+            ? `/learn/courses/${placementLearning.course.id}/topics?day=${currentProgramDay}`
+            : "/dashboard"
+        );
+        navigate(todayTopicHref);
+      }
+      return;
+    }
 
     if (!isPaid) {
       if (!user?.onboardingCompleted && !user?.onboarding?.completed) {
@@ -177,18 +231,13 @@ export default function ProgramPreview() {
       planId: selectedPlan.key,
       programType: program.programType,
       user,
-      onSuccess: () => {
+      onSuccess: async () => {
         setIsPaying(false);
         setPaymentSuccess(true);
-        navigate("/payment-status", {
-          state: {
-            status: "success",
-            programId: program._id,
-            programName: program.name,
-            amount: currentPrice,
-            message: `Payment of ₹${currentPrice} successful! Your enrollment in ${program.name} is now active.`,
-          },
-        });
+        if (typeof refetchUserData === 'function') {
+          await refetchUserData();
+        }
+        navigate('/dashboard');
       },
       onPending: (data) => {
         setIsPaying(false);
@@ -347,6 +396,8 @@ export default function ProgramPreview() {
               <span>
                 {isPaying
                   ? "PROCESSING PAYMENT…"
+                  : isEnrolled
+                  ? (isDay1 ? "START LEARNING" : "RESUME LEARNING")
                   : isPaid
                   ? `PAY ₹${currentPrice} WITH RAZORPAY`
                   : "CREATE LEARNER PROFILE"}

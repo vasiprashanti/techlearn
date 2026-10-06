@@ -387,19 +387,29 @@ export default function Signup({
         console.warn('Could not read onboarding draft:', err);
       }
 
+      let contextualDraft = {};
+      try {
+        const contextualRaw = sessionStorage.getItem('techlearn-contextual-onboarding');
+        if (contextualRaw) contextualDraft = JSON.parse(contextualRaw);
+      } catch (err) {
+        console.warn('Could not read contextual onboarding draft:', err);
+      }
+
+      const mergedDraft = { ...draft, ...contextualDraft };
+
       const regPayload = {
         email: email.trim(),
         password,
         confirmPassword: password,
         fullName: email.split('@')[0],
-        learningGoal: draft.learningGoal || '',
-        targetRole: draft.targetRole || '',
-        targetRoleOther: draft.targetRoleOther || draft.otherTargetRole || '',
-        placementCategory: draft.placementCategory || '',
-        targetCompanies: draft.targetCompanies || [],
-        skills: draft.skills || [],
-        learningPath: draft.learningPath || '',
-        completeOnboarding: Boolean(draft.targetRole || draft.skills?.length),
+        learningGoal: mergedDraft.learningGoal || (mergedDraft.type === 'skill' ? 'Learn a Skill' : mergedDraft.type === 'job-ready' ? 'Get Job-Ready' : ''),
+        targetRole: mergedDraft.targetRole || mergedDraft.role || '',
+        targetRoleOther: mergedDraft.targetRoleOther || mergedDraft.otherTargetRole || '',
+        placementCategory: mergedDraft.placementCategory || mergedDraft.opportunityType || '',
+        targetCompanies: mergedDraft.targetCompanies || mergedDraft.companies || [],
+        skills: mergedDraft.skills || (mergedDraft.skill ? [mergedDraft.skill] : []),
+        learningPath: mergedDraft.learningPath || mergedDraft.learningPreference || '',
+        completeOnboarding: Boolean(mergedDraft.targetRole || mergedDraft.role || mergedDraft.skills?.length || mergedDraft.skill),
         emailVerificationToken: verificationToken,
       };
 

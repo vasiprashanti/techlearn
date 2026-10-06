@@ -185,9 +185,9 @@ const CourseDetails = () => {
         user,
         onSuccess: () => {
           setIsPaying(false);
-          setPaymentMessage("Payment confirmed. Opening your course…");
+          setPaymentMessage("Payment confirmed. Redirecting to your dashboard…");
           setCourseRefreshKey((current) => current + 1);
-          navigate(`/learn/courses/${courseId}/topics`);
+          navigate("/dashboard");
         },
         onFailure: (paymentError) => {
           setIsPaying(false);
