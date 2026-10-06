@@ -69,7 +69,7 @@ export const ENTITY_CONFIG = {
     model: Batch,
     fieldKey: "batchIds",
     labelField: "name",
-    selectFields: "_id name startDate expiryDate status programId programType programSelection collegeId collegeIds",
+    selectFields: "_id name startDate expiryDate status programId programType programSelection collegeId collegeIds allColleges",
   },
   students: {
     model: Student,
@@ -814,6 +814,7 @@ export const createProgram = async (req, res) => {
 
     let pricing = null;
     if (availability !== undefined
+      || pricingPlans !== undefined
       || billingOptions !== undefined
       || structuredFee !== undefined
       || trainerLedFee !== undefined
@@ -824,6 +825,7 @@ export const createProgram = async (req, res) => {
       || monthlyAccessDurationDays !== undefined
       || annualAccessDurationDays !== undefined) {
       pricing = buildProgramPricing({
+        pricingPlans,
         programType: normalizedProgramType,
         pricingType: pricingType || "Free",
         availability,
@@ -1111,6 +1113,7 @@ export const updateProgram = async (req, res) => {
     }
 
     const pricingConfigSubmitted = availability !== undefined
+      || pricingPlans !== undefined
       || billingOptions !== undefined
       || structuredFee !== undefined
       || trainerLedFee !== undefined
@@ -1123,6 +1126,7 @@ export const updateProgram = async (req, res) => {
     const hasSavedBillingOptions = Array.isArray(program.billingOptions) && program.billingOptions.length > 0;
     const pricing = pricingConfigSubmitted
       ? buildProgramPricing({
+          pricingPlans,
           programType: nextProgramType,
           pricingType: pricingType === undefined ? program.pricingType : pricingType,
           availability: availability === undefined ? program.availability : availability,
@@ -1449,7 +1453,7 @@ export const attachEntities = async (req, res) => {
           ...(selectedBatch?.collegeIds || []),
           ...(selectedBatch?.collegeIds?.length ? [] : [selectedBatch?.collegeId]),
         ].filter(Boolean).map((collegeId) => String(collegeId._id || collegeId));
-        if (selectedBatch && student.collegeId && batchCollegeIds.length && !batchCollegeIds.includes(String(student.collegeId))) {
+        if (selectedBatch && !selectedBatch.allColleges && batchCollegeIds.length && !batchCollegeIds.includes(String(student.collegeId || ''))) {
           return res.status(400).json({
             success: false,
             message: `Selected batch does not include the college for ${student.name || "one of the selected students"}.`,

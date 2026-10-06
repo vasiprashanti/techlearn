@@ -657,7 +657,7 @@ export const selectActiveProgram = async (req, res) => {
     if (!isProgramAccessibleToLearner({ program, enrollment, isAdmin: req.user.role === "admin" })) {
       return res.status(404).json({ success: false, message: "Program not found or inaccessible" });
     }
-    if (req.user.role !== "admin" && enrollment?.status === "Active" && enrollment.accessExpiresAt && new Date(enrollment.accessExpiresAt) < new Date()) {
+    if (req.user.role !== "admin" && enrollment?.accessExpiresAt && new Date(enrollment.accessExpiresAt) <= new Date()) {
       return res.status(403).json({ success: false, code: "PROGRAM_ACCESS_EXPIRED", message: "This Program access has expired. Contact an admin for help." });
     }
     if (req.user.role !== "admin" && program.pricingType === "Paid" && (!enrollment || enrollment.accessTier !== "Member")) {
@@ -755,7 +755,7 @@ export const getProgramDetailForStudent = async (req, res) => {
     if (req.user.role !== "admin" && program.pricingType === "Paid" && (!enrollment || enrollment.accessTier !== "Member")) {
       return res.status(403).json({ success: false, message: "Paid program access requires a verified enrollment" });
     }
-    if (req.user.role !== "admin" && enrollment?.status === "Active" && enrollment.accessExpiresAt && new Date(enrollment.accessExpiresAt) < new Date()) {
+    if (req.user.role !== "admin" && enrollment?.accessExpiresAt && new Date(enrollment.accessExpiresAt) <= new Date()) {
       return res.status(403).json({ success: false, code: "PROGRAM_ACCESS_EXPIRED", message: "This Program access has expired. Contact an admin for help." });
     }
 

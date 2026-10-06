@@ -1,4 +1,3 @@
-import Payment from "../models/Payment.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -39,21 +38,6 @@ export const resolveSafeLegacyIndividualStartDate = async ({ enrollment, user, s
   const userStartDate = validDate(user?.startDate);
   if (userStartDate && !sameCalendarAnchor(userStartDate, currentDate)) {
     candidates.push({ date: userStartDate, priority: 1, reason: "user_start_date" });
-  }
-
-  if (enrollment?.userId && enrollment?.programId) {
-    const payment = await Payment.findOne({
-      userId: enrollment.userId,
-      programId: enrollment.programId,
-      status: { $in: ["captured", "approved"] },
-    })
-      .sort({ paymentDate: 1, createdAt: 1 })
-      .select("paymentDate createdAt")
-      .lean();
-    const paymentDate = validDate(payment?.paymentDate || payment?.createdAt);
-    if (paymentDate && !sameCalendarAnchor(paymentDate, currentDate)) {
-      candidates.push({ date: paymentDate, priority: 2, reason: "captured_payment_date" });
-    }
   }
 
   candidates.sort((left, right) => left.priority - right.priority || left.date - right.date);

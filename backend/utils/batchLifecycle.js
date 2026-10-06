@@ -67,7 +67,7 @@ export const expireBatchIfNeeded = async (batchOrId) => {
     ),
     ProgramEnrollment.updateMany(
       { batchId, status: "Active" },
-      { $set: { status: "Paused" } }
+      { $set: { status: "Completed", completedAt: now } }
     ),
     StudentTrackAssignment.updateMany(
       { batchId, status: "Active" },

@@ -124,16 +124,16 @@ export const validateAndNormalizeProgramPhases = ({ programType, durationDays, p
   const isLegacySkillShape = programType === "Skill"
     && normalized.length === LEGACY_SKILL_PHASES.length
     && normalized.every((item, index) => item.phase === LEGACY_SKILL_PHASES[index]);
-  const requiredMinimumDays = isLegacySkillShape ? 2 : getMinimumDurationDays(programType);
+  const requiredMinimumDays = isLegacySkillShape ? 2 : Math.max(1, normalized.length);
   if (!Number.isInteger(totalDays) || totalDays < requiredMinimumDays) {
     return {
       error: `${programType} programs must be at least ${requiredMinimumDays} days long.`,
     };
   }
 
-  if (!isLegacySkillShape && (normalized.length !== expectedPhases.length || normalized.some((item, index) => item.phase !== expectedPhases[index]))) {
+  if (!normalized.length || new Set(normalized.map(item => item.phase)).size !== normalized.length) {
     return {
-      error: `${programType} programs must use these phases: ${expectedPhases.map((phase) => PROGRAM_PHASE_LABELS[phase]).join(", ")}.`,
+      error: 'Choose at least one phase and do not repeat a phase.',
     };
   }
 

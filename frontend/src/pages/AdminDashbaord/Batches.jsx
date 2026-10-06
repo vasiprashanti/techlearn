@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import ModernDatePicker from '../../components/AdminDashbaord/ModernDatePicker';
 import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
@@ -28,13 +27,6 @@ const BATCH_TYPES = ['All', 'Skill', 'Placement'];
 const STATUS_OPTIONS = ['All', 'Draft', 'Active', 'Completed', 'Archived'];
 const SCHEDULE_OPTIONS = ['Mon–Fri', 'Sat–Sun', 'Mon, Wed, Fri', 'Tue, Thu, Sat', 'Daily'];
 
-const getTodayIsoDate = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
 
 const getCreatedMonthLabel = (createdAtDate) => {
   if (!createdAtDate) return '';
@@ -146,9 +138,9 @@ const Batches = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [batches, setBatches] = useState(() => readAdminSessionCache('batches', emptyBatches));
   const [colleges, setColleges] = useState(() => readAdminSessionCache('batches-colleges', []));
-  const [trackTemplates, setTrackTemplates] = useState(() => readAdminSessionCache('batches-track-templates', []));
+  const [, setTrackTemplates] = useState(() => readAdminSessionCache('batches-track-templates', []));
   const [programs, setPrograms] = useState([]);
-  const [courses, setCourses] = useState([]);
+  const [, setCourses] = useState([]);
   const [isLoadingBatches, setIsLoadingBatches] = useState(() => !hasMeaningfulAdminData(readAdminSessionCache('batches', emptyBatches)));
   const [mounted, setMounted] = useState(false);
 
@@ -196,6 +188,7 @@ const Batches = () => {
     batchName: '',
     college: '',
     collegeIds: [],
+    allColleges: false,
     startDate: '',
     endDate: '',
     programType: 'Placement',
@@ -445,6 +438,7 @@ const Batches = () => {
       batchName: '',
       college: '',
       collegeIds: [],
+      allColleges: false,
       startDate: '',
       endDate: '',
       programType: 'Placement',
@@ -489,6 +483,7 @@ const Batches = () => {
       batchName: batch.name || '',
       college: batch.college || '',
       collegeIds,
+      allColleges: batch.allColleges === true,
       startDate: batch.startDateValue || '',
       endDate: selectedProgram
         ? (getProgramEndDate(batch.startDateValue || '', selectedProgram) || batch.expiryDateValue || '')
@@ -533,7 +528,7 @@ const Batches = () => {
       setCreateError('Batch name is required.');
       return;
     }
-    if (!createBatchForm.collegeIds || createBatchForm.collegeIds.length === 0) {
+    if (!createBatchForm.allColleges && (!createBatchForm.collegeIds || createBatchForm.collegeIds.length === 0)) {
       setCreateError('College is required.');
       return;
     }
@@ -566,6 +561,7 @@ const Batches = () => {
         name: createBatchForm.batchName.trim(),
         collegeId: createBatchForm.collegeIds[0],
         collegeIds: createBatchForm.collegeIds,
+        allColleges: createBatchForm.allColleges,
         startDate: createBatchForm.startDate,
         expiryDate: createBatchForm.endDate,
         programId: createBatchForm.programId,
@@ -737,15 +733,16 @@ const Batches = () => {
                     className="mt-1 w-full text-left px-3 py-2 text-sm font-medium rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] text-slate-800 dark:text-white outline-none flex items-center justify-between"
                   >
                     <span className="truncate">
-                      {createBatchForm.collegeIds && createBatchForm.collegeIds.length > 0
-                        ? colleges.find((c) => String(c.id) === String(createBatchForm.collegeIds[0]))?.name || '1 College Selected'
-                        : 'Select a College'}
+                      {createBatchForm.allColleges ? 'All Colleges' : createBatchForm.collegeIds.length > 0
+                        ? colleges.filter(college => createBatchForm.collegeIds.includes(String(college.id))).map(college => college.name).join(', ')
+                        : 'Select Colleges'}
                     </span>
                     <FiChevronDown className="w-4 h-4 ml-2 text-black/45 dark:text-white/60 shrink-0" />
                   </button>
 
                   {collegeDropdownOpen && (
-                    <div className="absolute left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-xl shadow-xl z-50 p-2 space-y-1">
+                    <div style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }} className="absolute left-0 right-0 mt-1 max-h-56 overflow-y-auto border border-black/10 dark:border-white/10 rounded-xl shadow-xl z-50 p-2 space-y-1">
+                      <label className="flex gap-2 px-2 py-2 text-sm"><input type="checkbox" checked={createBatchForm.allColleges} onChange={event => setCreateBatchForm(previous => ({ ...previous, allColleges: event.target.checked, collegeIds: event.target.checked ? [] : previous.collegeIds }))} />All Colleges</label>
                       <input
                         type="text"
                         value={collegeSearchInput}
@@ -766,10 +763,10 @@ const Batches = () => {
                               onClick={() => {
                                 setCreateBatchForm((prev) => ({
                                   ...prev,
-                                  collegeIds: [colId],
+                                  allColleges: false,
+                                  collegeIds: prev.collegeIds.includes(colId) ? prev.collegeIds.filter(id => id !== colId) : [...prev.collegeIds, colId],
                                   college: col.name,
                                 }));
-                                setCollegeDropdownOpen(false);
                               }}
                               className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${isSelected ? 'bg-[#3C83F6] text-white' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5'}`}
                             >
@@ -818,7 +815,7 @@ const Batches = () => {
                   </button>
 
                   {programDropdownOpen && (
-                    <div className="absolute left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-xl shadow-xl z-50 p-2 space-y-1">
+                    <div style={{ backgroundColor: isDarkMode ? "#0f1f43" : "#ffffff" }} className="absolute left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-xl shadow-xl z-50 p-2 space-y-1">
                       <input
                         type="text"
                         value={programSearchInput}

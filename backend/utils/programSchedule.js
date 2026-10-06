@@ -63,7 +63,7 @@ export const chooseProgramScheduleEnrollment = ({
     return active[0];
   }
 
-  return preferred || candidates.sort((a, b) => getEnrollmentTimestamp(b) - getEnrollmentTimestamp(a))[0];
+  return null;
 };
 
 const resolveLegacyBatchId = async ({ legacyBatchId, programId }) => {
@@ -223,7 +223,7 @@ export const assertProgramScheduleAccess = async ({ user, student, programId }) 
     throw error;
   }
 
-  if (enrollment.status === "Active" && enrollment.accessExpiresAt && new Date(enrollment.accessExpiresAt) < new Date()) {
+  if (enrollment.accessExpiresAt && new Date(enrollment.accessExpiresAt) <= new Date()) {
     const error = new Error("This Program access has expired. Contact an admin for help.");
     error.statusCode = 403;
     error.code = "PROGRAM_ACCESS_EXPIRED";

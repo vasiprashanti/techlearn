@@ -219,6 +219,51 @@ try {
   assert.equal(await Enrollment.countDocuments({ userId: concurrent.user._id, status: 'Active' }), 1);
   assert.equal(await Enrollment.countDocuments({ userId: concurrent.user._id }), 1);
   console.log('PASS: real free-enrollment API, idempotency, and concurrent one-active-Program enforcement');
+  const named = await create('QA Named Plans', resourcesA, { pricingType: 'Paid', pricingPlans: [
+    { key: 'annual-pass', title: 'Annual Pass', price: 2500, accessDuration: 1, accessDurationUnit: 'Years', availability: 'Structured' },
+    { key: 'monthly-pass', title: 'Monthly Pass', price: 250, accessDuration: 1, accessDurationUnit: 'Months', availability: 'Structured' },
+  ] });
+  const namedLearner = await makeLearner('NamedPlansLearner');
+  await upsertProgramEnrollment({ ...namedLearner, program: named, pricingPlan: named.pricingPlans[0].toObject(), individualStartDate: '2026-10-10', batchId: null, source: 'admin' });
+  let namedEnrollment = await Enrollment.findOne({ userId: namedLearner.user._id }).lean();
+  assert.equal(namedEnrollment.programExpiresAt.toISOString().slice(0, 10), '2026-11-09');
+  assert.equal(namedEnrollment.accessExpiresAt.toISOString().slice(0, 10), '2027-10-10');
+  await ok(`/api/admin/students/${namedLearner.student._id}/programs/${named._id}/start-date`, adminToken, { individualStartDate: '2026-10-24' }, 'PATCH');
+  namedEnrollment = await Enrollment.findOne({ userId: namedLearner.user._id }).lean();
+  assert.equal(namedEnrollment.programExpiresAt.toISOString().slice(0, 10), '2026-11-23');
+  assert.equal(namedEnrollment.accessExpiresAt.toISOString().slice(0, 10), '2027-10-24');
+  await ok(`/api/admin/programs/${named._id}`, adminToken, { pricingType: 'Paid', availability: 'Structured', pricingPlans: [
+    { key: 'annual-pass', title: 'Changed Annual', price: 3000, accessDuration: 2, accessDurationUnit: 'Years' },
+  ] }, 'PATCH');
+  assert.equal((await Enrollment.findOne({ userId: namedLearner.user._id }).lean()).pricingPlanSnapshot.title, 'Annual Pass');
+  await Enrollment.updateOne({ userId: namedLearner.user._id }, { $set: { status: 'Completed' } });
+  const namedToken = await login(namedLearner.user);
+  assert.equal((await call(`/api/programs/${named._id}`, namedToken)).status, 200);
+  await ok(`/api/programs/${programA._id}/free-enroll`, namedToken, {});
+  assert.equal(await Enrollment.countDocuments({ userId: namedLearner.user._id }), 2);
+  await Enrollment.updateOne({ userId: namedLearner.user._id, programId: named._id }, { $set: { accessExpiresAt: new Date('2020-01-01') } });
+  assert.equal((await call(`/api/programs/${named._id}`, namedToken)).status, 403);
+  const unassigned = await makeLearner('UnassignedCategoryLearner');
+  assert(!(await ok('/api/admin/students/global?tab=skill&month=all', adminToken)).data.items.some(row => row.id === String(unassigned.student._id)));
+  assert((await ok('/api/admin/students/global?tab=leads&month=all', adminToken)).data.items.some(row => row.id === String(unassigned.student._id)));
+  assert(!(await ok('/api/admin/students/global?tab=waitlist&month=all', adminToken)).data.items.some(row => row.id === String(unassigned.student._id)));
+  await mongoose.model('ProgramWaitlist').create({ userId: unassigned.user._id, programId: programA._id });
+  assert((await ok('/api/admin/students/global?tab=waitlist&month=all', adminToken)).data.items.some(row => row.id === String(unassigned.student._id)));
+  assert((await ok('/api/admin/students/global?tab=completed&month=all', adminToken)).data.items.some(row => row.id === String(namedLearner.student._id)));
+  const colleges = mongoose.model('College');
+  const collegeA = await colleges.create({ name: 'QA College A' });
+  const collegeB = await colleges.create({ name: 'QA College B' });
+  const createdBatch = await ok('/api/admin/batches', adminToken, { name: 'QA Multi College', collegeIds: [String(collegeA._id), String(collegeB._id), String(collegeA._id)], startDate: today, programId: String(programA._id), programType: 'Skill', releaseTime: '00:00', status: 'Draft' });
+  const batchId = createdBatch.data?._id || createdBatch.data?.id;
+  assert(batchId, JSON.stringify(createdBatch));
+  assert.equal((await Batch.findById(batchId)).collegeIds.length, 2);
+  assert.equal((await call(`/api/admin/students/${unassigned.student._id}`, adminToken, { batchId }, 'PUT')).status, 400);
+  await ok(`/api/admin/batches/${batchId}`, adminToken, { allColleges: true }, 'PUT');
+  assert.equal((await Batch.findById(batchId)).allColleges, true);
+  assert.equal((await Batch.findById(batchId)).collegeIds.length, 0);
+  await ok(`/api/admin/students/${unassigned.student._id}`, adminToken, { batchId }, 'PUT');
+  assert.equal(String((await Enrollment.findOne({ userId: unassigned.user._id })).batchId), String(batchId));
+  console.log('PASS: named plan CRUD, separate expiry dates, preserved purchased terms, Completed→new enrollment, expired history guard, and multi/all-college batch CRUD');
   console.log('DAY 1 ISOLATED DATABASE/API QA PASSED', JSON.stringify(fixtures));
   if (process.argv.includes('--serve')) {
     console.log('Local QA API remains available at http://127.0.0.1:5099 for browser verification.');

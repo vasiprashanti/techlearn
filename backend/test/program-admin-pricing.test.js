@@ -6,12 +6,44 @@ import {
   buildProgramPricing,
   normalizeProgramSelections,
   resolveConfiguredProgramPricingPlan,
+  getProgramAccessExpiryDate,
+  resolvePaidProgramPlan,
 } from "../utils/programPricing.js";
 import { matchProgramsForUser } from "../utils/programMatching.js";
 import {
   buildDefaultProgramPhases,
   validateAndNormalizeProgramPhases,
 } from "../utils/programPhases.js";
+
+test('named pricing plans validate, preserve identity and support calendar duration units', () => {
+  const pricing = buildProgramPricing({ programType: 'Skill', pricingType: 'Paid', availability: 'Structured', pricingPlans: [
+    { key: 'year-pass', title: 'Year Pass', price: 1234, accessDuration: 1, accessDurationUnit: 'Years' },
+    { key: 'month-pass', title: 'Month Pass', price: 199, accessDuration: 1, accessDurationUnit: 'Months' },
+  ] });
+  assert.equal(pricing.error, undefined);
+  assert.equal(pricing.pricingPlans[0].key, 'year-pass');
+  assert.equal(getProgramAccessExpiryDate('2026-10-10', 365, pricing.pricingPlans[0]).toISOString().slice(0, 10), '2027-10-10');
+  assert.equal(getProgramAccessExpiryDate('2026-01-31', 30, pricing.pricingPlans[1]).toISOString().slice(0, 10), '2026-02-28');
+  assert.equal(getProgramAccessExpiryDate('2024-02-29', 365, pricing.pricingPlans[0]).toISOString().slice(0, 10), '2025-02-28');
+  assert.ok(buildProgramPricing({ pricingType: 'Paid', availability: 'Structured', pricingPlans: [{ title: 'Invalid', price: 0, accessDuration: 1 }] }).error);
+});
+
+test('verified paid amount identifies one server-configured plan and rejects mismatch or ambiguity', () => {
+  const plan = { key: 'year', price: 1000, accessDurationDays: 365 };
+  assert.equal(resolvePaidProgramPlan({ program: { pricingPlans: [plan] }, amount: 1000 }), plan);
+  assert.equal(resolvePaidProgramPlan({ program: { pricingPlans: [plan] }, amount: 999 }), null);
+  assert.equal(resolvePaidProgramPlan({ program: { pricingPlans: [plan, { ...plan, key: 'other' }] }, amount: 1000 }), null);
+  assert.equal(resolvePaidProgramPlan({ program: { pricingPlans: [] }, snapshot: plan, amount: 1000 }), plan);
+  assert.equal(resolvePaidProgramPlan({ snapshot: plan, amount: -1 }), null);
+});
+
+test('editable phase subsets cover learning duration once and reject gaps, overlaps and duplicates', () => {
+  const phases = [{ phase: 'learning', startDay: 1, endDay: 7 }, { phase: 'revision', startDay: 8, endDay: 15 }, { phase: 'final_assessment', startDay: 16, endDay: 30 }];
+  assert.equal(validateAndNormalizeProgramPhases({ programType: 'Skill', durationDays: 30, phases }).error, undefined);
+  for (const bad of [phases.map((p, i) => i === 1 ? { ...p, startDay: 9 } : p), phases.map((p, i) => i === 1 ? { ...p, startDay: 7 } : p), phases.map((p, i) => i === 2 ? { ...p, endDay: 31 } : p), phases.map(p => ({ ...p, phase: 'learning' }))]) {
+    assert.ok(validateAndNormalizeProgramPhases({ programType: 'Skill', durationDays: 30, phases: bad }).error);
+  }
+});
 
 test("new Skill Programs use all five fixed phases and preserve the 30-day layout", () => {
   const phases = buildDefaultProgramPhases("Skill", 30);

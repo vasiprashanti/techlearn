@@ -951,9 +951,8 @@ export const getCourseById = async (req, res) => {
           }).select("programId batchId accessTier status accessExpiresAt").lean()
           : [];
         const enrollments = matchedEnrollments.filter((enrollment) =>
-          enrollment.status === "Completed"
-          || (String(enrollment._id) === String(newestActiveEnrollment?._id || "")
-            && (!enrollment.accessExpiresAt || new Date(enrollment.accessExpiresAt) >= new Date()))
+          (!enrollment.accessExpiresAt || new Date(enrollment.accessExpiresAt) > new Date())
+          && (enrollment.status === "Completed" || String(enrollment._id) === String(newestActiveEnrollment?._id || ""))
         );
 
         const batchResults = await Promise.all(
@@ -1038,9 +1037,8 @@ export const getCourseById = async (req, res) => {
               .lean()
             : null;
           const courseEnrollment = courseEnrollments.find((enrollment) =>
-            enrollment.status === "Completed"
-            || (String(enrollment._id) === String(newestActiveEnrollment?._id || "")
-              && (!enrollment.accessExpiresAt || new Date(enrollment.accessExpiresAt) >= new Date()))
+            (!enrollment.accessExpiresAt || new Date(enrollment.accessExpiresAt) > new Date())
+            && (enrollment.status === "Completed" || String(enrollment._id) === String(newestActiveEnrollment?._id || ""))
           ) || null;
           courseProgramId = courseEnrollment?.programId || null;
         }
