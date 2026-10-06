@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import ScrollProgress from "../../components/ScrollProgress";
 import LoadingScreen from "../../components/LoadingScreen";
 import { programLearningAPI } from "../../services/programLearningApi";
+import { placementLearningAPI } from "../../services/api";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
 import { useUser } from "../../context/UserContext";
@@ -40,6 +41,34 @@ export default function ProgramPreview() {
   const [isPaying, setIsPaying] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+
+  // Enrolled status & learning progression
+  const [placementLearning, setPlacementLearning] = useState(null);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (isAuthenticated) {
+      placementLearningAPI
+        .getDashboard()
+        .then((res) => {
+          if (!cancelled && res?.hasPlacementLearning) {
+            setPlacementLearning(res);
+            const activeProgId = String(res.program?.id || res.program?._id || "");
+            if (activeProgId === String(programId)) {
+              setIsEnrolled(true);
+            }
+          }
+        })
+        .catch(() => {});
+    } else {
+      setIsEnrolled(false);
+      setPlacementLearning(null);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, programId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -120,34 +149,6 @@ export default function ProgramPreview() {
   const learningGoals = Array.isArray(program.learningGoals) && program.learningGoals.length > 0
     ? program.learningGoals
     : [];
-
-  // Enrolled status & learning progression
-  const [placementLearning, setPlacementLearning] = useState(null);
-  const [isEnrolled, setIsEnrolled] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (isAuthenticated) {
-      placementLearningAPI
-        .getDashboard()
-        .then((res) => {
-          if (!cancelled && res?.hasPlacementLearning) {
-            setPlacementLearning(res);
-            const activeProgId = String(res.program?.id || res.program?._id || "");
-            if (activeProgId === String(programId)) {
-              setIsEnrolled(true);
-            }
-          }
-        })
-        .catch(() => {});
-    } else {
-      setIsEnrolled(false);
-      setPlacementLearning(null);
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated, programId]);
 
   const currentProgramDay = placementLearning?.batch?.currentDay || placementLearning?.todayTopic?.day || 1;
   const isDay1 = currentProgramDay <= 1;
