@@ -10,20 +10,7 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "build": "echo 'No build step required for Node.js backend'",
-    "test": "node --test test/program-regressions.test.js test/program-admin-pricing.test.js test/razorpay-verification.test.js",
-    "migrate:practice-questionbank": "node scripts/migrate-practice-questionbank-refs.js",
-    "reconcile:submission-indexes": "node scripts/reconcile-submission-indexes.js",
-    "validate:phase1": "node scripts/validate-phase1.js",
-    "validate:phase1:concurrency": "node scripts/validate-analytics-concurrency.js",
-    "validate:phase2": "node scripts/validate-phase2.js",
-    "validate:analytics-mix": "node scripts/validate-analytics-mix.js",
-    "validate:program": "node scripts/validate-program-entity.js",
-    "validate:program-runtime": "node scripts/validate-program-runtime.js",
-    "seed:roadmaps": "node scripts/seed-roadmaps.js",
-    "validate:roadmaps": "node scripts/validate-roadmaps.js",
-    "diagnose:programs": "node scripts/diagnose-program-data.js",
-    "reconcile:program-enrollment-dates": "node scripts/reconcile-program-enrollment-dates.js"
+    "build": "echo 'No build step required for Node.js backend'"
   },
   "keywords": [],
   "author": "",
