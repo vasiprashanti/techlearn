@@ -181,7 +181,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
   const effectiveProgramName = profileEnrollment.program?.name
     || studentDetails?.programName
     || studentDetails?.programSelection
-    || 'Placement Sprint';
+    || 'Not assigned';
   const profileSkills = canonicalProfile.skills || {};
 
   // Compute strong & weak topics from dayWiseHistoryTasksDetail

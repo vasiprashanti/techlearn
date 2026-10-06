@@ -434,8 +434,18 @@ export const enrollInFreeProgram = async (req, res) => {
     const existingEnrollment = await ProgramEnrollment.findOne({
       userId: req.user._id,
       programId: program._id,
-      status: { $in: ["Active", "Completed"] },
     }).lean();
+    const otherActiveEnrollment = await ProgramEnrollment.findOne({
+      userId: req.user._id,
+      status: "Active",
+      programId: { $ne: program._id },
+    }).select("_id").lean();
+    if (otherActiveEnrollment) {
+      return res.status(409).json({ success: false, code: "ACTIVE_PROGRAM_EXISTS", message: "You already have an active Program. Ask an admin to complete or switch it before enrolling in another." });
+    }
+    if (existingEnrollment && existingEnrollment.status !== "Active") {
+      return res.status(409).json({ success: false, code: "PROGRAM_ALREADY_ENDED", message: "This Program enrollment has ended. Choose another Program or ask an admin for help." });
+    }
     const existingBatchId = existingEnrollment
       && Object.prototype.hasOwnProperty.call(existingEnrollment, "batchId")
       ? existingEnrollment.batchId
@@ -449,7 +459,7 @@ export const enrollInFreeProgram = async (req, res) => {
       // an individual schedule. A schedule change is an explicit admin action.
       batchId: existingBatchId,
       accessTier: "Free",
-      source: "onboarding",
+      source: "user_enrollment",
     });
     await syncPrimaryProgramPointers({ user: req.user, student });
     invalidateDashboardCache(req.user._id);
@@ -461,13 +471,13 @@ export const enrollInFreeProgram = async (req, res) => {
         programId: program._id,
         scheduleType: enrollment?.batchId ? "batch" : "individual",
         batchId: enrollment?.batchId || null,
-        individualStartDate: enrollment?.individualStartDate || enrollment?.assignedAt || new Date(),
+        individualStartDate: enrollment?.individualStartDate || enrollment?.assignedAt || null,
       },
       program,
     });
   } catch (error) {
     console.error("Error enrolling in free program:", error);
-    return res.status(500).json({ success: false, message: error.message || "Failed to start free program." });
+    return res.status(error.statusCode || 500).json({ success: false, code: error.code, message: error.message || "Failed to start free program." });
   }
 };
 
@@ -488,6 +498,7 @@ export const getAssignedPrograms = async (req, res) => {
       userId,
       status: { $in: ["Active", "Completed"] },
     })
+      .sort({ assignedAt: -1, createdAt: -1 })
       .populate({
         path: "programId",
          select: "_id name description programType duration durationDays phases status visibility pricingType programFee pricingPlans courseIds roadmapIds trackTemplateIds projectIds certificateTemplateIds",
@@ -499,7 +510,13 @@ export const getAssignedPrograms = async (req, res) => {
       })
       .lean();
 
-    let assignedPrograms = enrollments
+    const activeEnrollments = enrollments.filter((enrollment) => enrollment.status === "Active");
+    const canonicalActiveEnrollment = activeEnrollments[0] || null;
+    const accessibleEnrollments = enrollments.filter((enrollment) => enrollment.status !== "Active"
+      || (String(enrollment._id) === String(canonicalActiveEnrollment?._id || "")
+        && (!enrollment.accessExpiresAt || new Date(enrollment.accessExpiresAt) >= new Date())));
+
+    const assignedPrograms = accessibleEnrollments
       .filter((enrollment) => enrollment.programId
         && isProgramAccessibleToLearner({
           program: enrollment.programId,
@@ -513,30 +530,9 @@ export const getAssignedPrograms = async (req, res) => {
         .map((enrollment) => [String(enrollment.programId?._id || enrollment.programId), enrollment])
     );
 
-    // Legacy fallback: if no ProgramEnrollment records, check user's direct programId
-    if (assignedPrograms.length === 0 && req.user.programId) {
-      const legacyProg = await Program.findOne({
-        _id: req.user.programId,
-        status: "Active",
-        visibility: "Public",
-      })
-        .populate("courseIds", "_id title level courseType numTopics")
-        .populate("roadmapIds", "_id title status")
-        .populate("projectIds", "_id title category duration_days status")
-        .lean();
-
-      if (legacyProg && (legacyProg.pricingType !== "Paid")) {
-        assignedPrograms = [legacyProg];
-      }
-    }
-
-    const preferredProgramId = String(req.user.programId || "");
-    const activeEnrollments = assignedPrograms.filter((program) =>
+    const activeProgramId = String(assignedPrograms.find((program) =>
       enrollmentByProgramId.get(String(program._id))?.status === "Active"
-    );
-    const activeProgramId = activeEnrollments.some((program) => String(program._id) === preferredProgramId)
-      ? preferredProgramId
-      : String(activeEnrollments[0]?._id || "");
+    )?._id || "");
 
     const formattedPrograms = assignedPrograms.map((p) => ({
       _id: p._id,
@@ -635,12 +631,22 @@ export const selectActiveProgram = async (req, res) => {
 
     // Verify active enrollment server-side
     const enrollment = await ProgramEnrollment.findOne({ userId, programId, status: "Active" });
-    const isLegacyMatch = String(req.user.programId) === String(programId);
-
-    if (!enrollment && !isLegacyMatch) {
+    if (!enrollment) {
       return res.status(403).json({
         success: false,
         message: "Forbidden: You do not have an active enrollment in this program",
+      });
+    }
+
+    const newestActiveEnrollment = await ProgramEnrollment.findOne({ userId, status: "Active" })
+      .sort({ assignedAt: -1, createdAt: -1 })
+      .select("_id")
+      .lean();
+    if (String(newestActiveEnrollment?._id || "") !== String(enrollment._id)) {
+      return res.status(409).json({
+        success: false,
+        code: "ANOTHER_PROGRAM_ACTIVE",
+        message: "Only your current active Program can be selected. Ask an admin to switch your enrollment if needed.",
       });
     }
 
@@ -650,6 +656,9 @@ export const selectActiveProgram = async (req, res) => {
     }
     if (!isProgramAccessibleToLearner({ program, enrollment, isAdmin: req.user.role === "admin" })) {
       return res.status(404).json({ success: false, message: "Program not found or inaccessible" });
+    }
+    if (req.user.role !== "admin" && enrollment?.status === "Active" && enrollment.accessExpiresAt && new Date(enrollment.accessExpiresAt) < new Date()) {
+      return res.status(403).json({ success: false, code: "PROGRAM_ACCESS_EXPIRED", message: "This Program access has expired. Contact an admin for help." });
     }
     if (req.user.role !== "admin" && program.pricingType === "Paid" && (!enrollment || enrollment.accessTier !== "Member")) {
       return res.status(403).json({ success: false, message: "Paid program access requires a verified enrollment" });
@@ -701,10 +710,21 @@ export const getProgramDetailForStudent = async (req, res) => {
         programId,
         status: { $in: ["Active", "Completed"] },
       }).lean();
+      if (enrollment?.status === "Active") {
+        const newestActiveEnrollment = await ProgramEnrollment.findOne({ userId, status: "Active" })
+          .sort({ assignedAt: -1, createdAt: -1 })
+          .select("_id")
+          .lean();
+        if (String(newestActiveEnrollment?._id || "") !== String(enrollment._id)) {
+          return res.status(403).json({
+            success: false,
+            code: "PROGRAM_NOT_CURRENT",
+            message: "This Program is not the learner's current active enrollment.",
+          });
+        }
+      }
       const isEnrolled = Boolean(enrollment);
-      const isLegacy = String(req.user.programId) === String(programId);
-
-      if (!isEnrolled && !isLegacy) {
+      if (!isEnrolled) {
         return res.status(403).json({
           success: false,
           message: "Forbidden: You do not have access to this program",
@@ -734,6 +754,9 @@ export const getProgramDetailForStudent = async (req, res) => {
     }
     if (req.user.role !== "admin" && program.pricingType === "Paid" && (!enrollment || enrollment.accessTier !== "Member")) {
       return res.status(403).json({ success: false, message: "Paid program access requires a verified enrollment" });
+    }
+    if (req.user.role !== "admin" && enrollment?.status === "Active" && enrollment.accessExpiresAt && new Date(enrollment.accessExpiresAt) < new Date()) {
+      return res.status(403).json({ success: false, code: "PROGRAM_ACCESS_EXPIRED", message: "This Program access has expired. Contact an admin for help." });
     }
 
     res.json({

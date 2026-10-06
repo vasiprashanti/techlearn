@@ -18,6 +18,8 @@ export const buildProgramPricing = ({
   annualTrainerLedFee,
   structuredFee,
   trainerLedFee,
+  monthlyAccessDurationDays = 30,
+  annualAccessDurationDays = 365,
 }) => {
   if (!PROGRAM_AVAILABILITIES.includes(availability)) {
     return { error: "Choose Structured, Trainer-Led, or Both for program availability." };
@@ -51,6 +53,16 @@ export const buildProgramPricing = ({
   }
   if (selectedBillingOptions.length === 0) {
     return { error: "Select at least one billing option: Monthly or Annual." };
+  }
+
+  const accessDurations = {
+    Monthly: Number(monthlyAccessDurationDays),
+    Annual: Number(annualAccessDurationDays),
+  };
+  for (const billingPeriod of selectedBillingOptions) {
+    if (!Number.isInteger(accessDurations[billingPeriod]) || accessDurations[billingPeriod] < 1) {
+      return { error: `${billingPeriod} access duration must be a positive whole number of days.` };
+    }
   }
 
   const needsStructured = availability === "Structured" || availability === "Both";
@@ -102,6 +114,7 @@ export const buildProgramPricing = ({
         title: `${modality} Program — ${billingPeriod}`,
         price: normalizedFee,
         billingPeriod,
+        accessDurationDays: accessDurations[billingPeriod],
         availability: modality,
         benefits: [],
         active: true,
@@ -147,4 +160,29 @@ export const resolveConfiguredProgramPricingPlan = (program, planId) => {
   return requestedKey
     ? plans.find((plan) => String(plan?.key || '').trim().toLocaleLowerCase() === requestedKey) || null
     : plans[0] || null;
+};
+
+export const getProgramAccessExpiryDate = (startDate, accessDurationDays) => {
+  const start = startDate instanceof Date ? new Date(startDate) : new Date(startDate);
+  const days = Number(accessDurationDays);
+  if (!startDate || Number.isNaN(start.getTime()) || !Number.isInteger(days) || days < 1) return null;
+  return new Date(start.getTime() + (days * 24 * 60 * 60 * 1000));
+};
+
+export const resolveProgramAccessDurationDays = (enrollment = {}) => {
+  const explicitDuration = Number(
+    enrollment.accessDurationDays || enrollment.pricingPlanSnapshot?.accessDurationDays
+  );
+  if (Number.isInteger(explicitDuration) && explicitDuration > 0) return explicitDuration;
+
+  const start = enrollment.individualStartDate ? new Date(enrollment.individualStartDate) : null;
+  const expiry = enrollment.accessExpiresAt ? new Date(enrollment.accessExpiresAt) : null;
+  if (start && expiry && !Number.isNaN(start.getTime()) && !Number.isNaN(expiry.getTime()) && expiry >= start) {
+    return Math.floor((Date.UTC(expiry.getUTCFullYear(), expiry.getUTCMonth(), expiry.getUTCDate())
+      - Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate())) / (24 * 60 * 60 * 1000));
+  }
+
+  if (enrollment.billingPeriod === "Monthly") return 30;
+  if (enrollment.billingPeriod === "Annual") return 365;
+  return null;
 };

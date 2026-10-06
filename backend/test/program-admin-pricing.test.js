@@ -232,3 +232,20 @@ test("Program matching includes the separately configured manual company field",
 test("Program matching selections trim and deduplicate values case-insensitively", () => {
   assert.deepEqual(normalizeProgramSelections([" Java ", "java", "React", "", null]), ["Java", "React"]);
 });
+
+test("C recommendations do not match incidental letters, C++, or C#", async () => {
+  const originalFind = Program.find;
+  const catalog = ["C", "Python", "C++", "C#"].map((skill) => ({
+    _id: skill, name: `${skill} Program`, description: "Practical coding description",
+    programType: "Skill", status: "Active", visibility: "Public",
+    pricingType: "Free", durationDays: 30, skillTags: [skill], courseIds: [],
+  }));
+  Program.find = () => ({ populate() { return this; }, lean: async () => catalog });
+  try {
+    const matched = await matchProgramsForUser({ learningGoal: "Learn a Skill", skills: ["C"] });
+    assert.deepEqual(matched.map((program) => program._id), ["C"]);
+    assert.deepEqual(await matchProgramsForUser({ learningGoal: "Learn a Skill", skills: ["Rust"] }), []);
+  } finally {
+    Program.find = originalFind;
+  }
+});

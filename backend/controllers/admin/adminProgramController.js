@@ -270,17 +270,10 @@ const getProgramDayNumber = (startDate, now = new Date()) => {
   return Math.max(0, Math.floor(todaySerial - startSerial) + 1);
 };
 
-const getProgramExpiryDate = (startDate, durationDays) => {
-  const start = toDate(startDate);
-  if (!start || !durationDays) return null;
-  return new Date(start.getTime() + ((durationDays - 1) * DAY_IN_MILLISECONDS));
-};
-
 const getOriginalProgramStartDate = (student, enrollment) =>
   toDate(
     enrollment?.individualStartDate
       || enrollment?.assignedAt
-      || student?.createdAt
   );
 
 const getEffectiveScheduleStartDate = (student, enrollment) =>
@@ -344,11 +337,11 @@ const formatActivityResult = (activity) => {
 
 const getProgramStatus = ({ enrollment, expiryDate, now = new Date() }) => {
   if (enrollment?.status === "Completed") return "Completed";
-  if (enrollment?.status === "Paused") return "Expired";
+  if (enrollment?.status === "Paused") return "Paused";
   const todaySerial = getIstDateSerial(now);
   const expirySerial = getIstDateSerial(expiryDate);
   if (todaySerial !== null && expirySerial !== null && expirySerial < todaySerial) return "Expired";
-  return "Active";
+  return enrollment ? "Active" : "—";
 };
 
 const getStoredAccuracy = (enrollment) => {
@@ -363,6 +356,11 @@ const normalizePricingPlans = (value) => (Array.isArray(value)
       key: String(plan?.key || `plan-${index + 1}`).trim(),
       title: String(plan?.title || plan?.name || `Plan ${index + 1}`).trim(),
       price: Number(plan?.price),
+      billingPeriod: ["Monthly", "Annual"].includes(plan?.billingPeriod) ? plan.billingPeriod : null,
+      availability: ["Structured", "Trainer-Led"].includes(plan?.availability) ? plan.availability : null,
+      accessDurationDays: Number.isInteger(Number(plan?.accessDurationDays)) && Number(plan.accessDurationDays) > 0
+        ? Number(plan.accessDurationDays)
+        : (plan?.billingPeriod === "Monthly" ? 30 : plan?.billingPeriod === "Annual" ? 365 : null),
       benefits: Array.isArray(plan?.benefits)
         ? plan.benefits.map((benefit) => String(benefit || "").trim()).filter(Boolean)
         : [],
@@ -485,8 +483,8 @@ const buildProgramMonitoringData = async ({ program, enrollments, students }) =>
     const enrollment = enrollmentByStudentId.get(studentId) || null;
     const programStartDate = getOriginalProgramStartDate(student, enrollment);
     const scheduleStartDate = getEffectiveScheduleStartDate(student, enrollment);
-    const programExpiryDate = getProgramExpiryDate(programStartDate, durationDays);
-    const scheduleExpiryDate = getProgramExpiryDate(scheduleStartDate, durationDays);
+    const programExpiryDate = enrollment?.batchId?.expiryDate || enrollment?.accessExpiresAt || null;
+    const scheduleExpiryDate = programExpiryDate;
     const dayNumber = getProgramDayNumber(scheduleStartDate, now);
     const userId = getIdString(enrollment?.userId) || getIdString(student.userId);
     const emailKey = String(student.email || "").trim().toLowerCase();
@@ -544,10 +542,9 @@ const buildProgramMonitoringData = async ({ program, enrollments, students }) =>
     };
   });
 
-  const everEnrolledStudentIds = new Set([
-    ...currentStudentIds,
-    ...enrollments.map((enrollment) => getIdString(enrollment.studentId)).filter(Boolean),
-  ]);
+  const everEnrolledStudentIds = new Set(
+    enrollments.map((enrollment) => getIdString(enrollment.studentId)).filter(Boolean)
+  );
   const currentEnrolled = studentMonitoringRows.filter((student) =>
     isCurrentMonthInIndia(student.programStartDate, now)
       && ["Active", "Completed"].includes(student.programStatus)
@@ -648,22 +645,17 @@ export const listPrograms = async (req, res) => {
       .populate("courseIds", ENTITY_CONFIG.courses.selectFields)
       .lean();
 
-    const programIds = rawPrograms.map((p) => p._id);
-    const enrollments = await ProgramEnrollment.find({ programId: { $in: programIds } })
-      .select('programId studentId')
-      .lean();
-    const enrolledStudentsByProgram = new Map();
-    enrollments.forEach((e) => {
-      const pid = e.programId?.toString();
-      if (!pid) return;
-      if (!enrolledStudentsByProgram.has(pid)) enrolledStudentsByProgram.set(pid, new Set());
-      if (e.studentId) enrolledStudentsByProgram.get(pid).add(e.studentId.toString());
-    });
+    const enrollmentGroups = rawPrograms.length
+      ? await ProgramEnrollment.aggregate([
+          { $match: { programId: { $in: rawPrograms.map((program) => program._id) } } },
+          { $group: { _id: "$programId", studentIds: { $addToSet: "$studentId" } } },
+        ])
+      : [];
+    const enrollmentCountByProgramId = new Map(enrollmentGroups.map((group) => [
+      String(group._id), (group.studentIds || []).filter(Boolean).length,
+    ]));
 
-    const programs = rawPrograms.map((p) => {
-      const enrolledSet = enrolledStudentsByProgram.get(p._id.toString()) || new Set();
-      (p.studentIds || []).forEach((sId) => enrolledSet.add(sId.toString()));
-      return {
+    const programs = rawPrograms.map((p) => ({
       _id: p._id,
       name: p.name,
       description: p.description,
@@ -692,7 +684,7 @@ export const listPrograms = async (req, res) => {
       targetRoles: p.targetRoles || [],
       courseIds: p.courseIds || [],
       primaryCourseId: p.primaryCourseId || null,
-      studentCount: enrolledSet.size,
+      studentCount: enrollmentCountByProgramId.get(String(p._id)) || 0,
       batchCount: Array.isArray(p.batchIds) ? p.batchIds.length : 0,
       courseCount: Array.isArray(p.courseIds) ? p.courseIds.length : 0,
       roadmapCount: Array.isArray(p.roadmapIds) ? p.roadmapIds.length : 0,
@@ -701,7 +693,7 @@ export const listPrograms = async (req, res) => {
       projectCount: Array.isArray(p.projectIds) ? p.projectIds.length : 0,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
-    };});
+    }));
 
     res.json({
       success: true,
@@ -747,6 +739,8 @@ export const createProgram = async (req, res) => {
       annualTrainerLedFee,
       programFee,
       pricingPlans,
+      monthlyAccessDurationDays,
+      annualAccessDurationDays,
       learningGoals,
       placementCategories,
       targetCompanies,
@@ -826,7 +820,9 @@ export const createProgram = async (req, res) => {
       || monthlyStructuredFee !== undefined
       || monthlyTrainerLedFee !== undefined
       || annualStructuredFee !== undefined
-      || annualTrainerLedFee !== undefined) {
+      || annualTrainerLedFee !== undefined
+      || monthlyAccessDurationDays !== undefined
+      || annualAccessDurationDays !== undefined) {
       pricing = buildProgramPricing({
         programType: normalizedProgramType,
         pricingType: pricingType || "Free",
@@ -838,6 +834,8 @@ export const createProgram = async (req, res) => {
         monthlyTrainerLedFee,
         annualStructuredFee,
         annualTrainerLedFee,
+        monthlyAccessDurationDays,
+        annualAccessDurationDays,
       });
       if (pricing.error) return res.status(400).json({ success: false, message: pricing.error });
     }
@@ -925,14 +923,6 @@ export const getProgramById = async (req, res) => {
 
     const program = await Program.findById(programId)
       .populate("batchIds", ENTITY_CONFIG.batches.selectFields)
-      .populate({
-        path: "studentIds",
-        select: ENTITY_CONFIG.students.selectFields,
-        populate: {
-          path: "batchId",
-          select: "_id name startDate expiryDate releaseTime",
-        },
-      })
       .populate("courseIds", ENTITY_CONFIG.courses.selectFields)
       .populate("roadmapIds", ENTITY_CONFIG.roadmaps.selectFields)
       .populate("trackTemplateIds", ENTITY_CONFIG["track-templates"].selectFields)
@@ -950,47 +940,29 @@ export const getProgramById = async (req, res) => {
     const [enrollments, blueprintCount] = await Promise.all([
       ProgramEnrollment.find({ programId })
         .sort({ assignedAt: -1, createdAt: -1 })
+        .populate("studentId", ENTITY_CONFIG.students.selectFields)
         .populate("batchId", "_id name startDate expiryDate releaseTime")
         .lean(),
       Blueprint.countDocuments({ programId }),
     ]);
 
-    const enrollmentByStudentId = new Map();
-    enrollments.forEach((enrollment) => {
-      const studentId = enrollment.studentId?.toString();
-      if (studentId && !enrollmentByStudentId.has(studentId)) {
-        enrollmentByStudentId.set(studentId, enrollment);
-      }
+    const orderedEnrollments = [...enrollments].sort((left, right) => {
+      const statusRank = { Active: 0, Completed: 1, Paused: 2 };
+      return (statusRank[left.status] ?? 3) - (statusRank[right.status] ?? 3)
+        || new Date(right.assignedAt || right.createdAt || 0) - new Date(left.assignedAt || left.createdAt || 0);
     });
 
-    const existingStudentIds = new Set((program.studentIds || []).map((s) => s._id?.toString()).filter(Boolean));
-    const missingStudentIds = enrollments
-      .map((e) => e.studentId?.toString())
-      .filter((id) => id && !existingStudentIds.has(id));
-
-    let allStudents = [...(program.studentIds || [])];
-    if (missingStudentIds.length > 0) {
-      const extraStudents = await Student.find({ _id: { $in: missingStudentIds } })
-        .select(ENTITY_CONFIG.students.selectFields)
-        .populate({
-          path: 'batchId',
-          select: '_id name startDate expiryDate releaseTime',
-        })
-        .lean();
-      allStudents.push(...extraStudents);
-
-      await Program.findByIdAndUpdate(programId, {
-        $addToSet: { studentIds: { $each: missingStudentIds } },
-      });
-    }
-
-    const baseStudents = allStudents.map((student) => ({
-      ...student,
-      enrollment: enrollmentByStudentId.get(student._id?.toString()) || null,
-    }));
+    const seenStudentIds = new Set();
+    const baseStudents = orderedEnrollments.flatMap((enrollment) => {
+      const student = enrollment.studentId;
+      const studentId = getIdString(student);
+      if (!student || typeof student !== "object" || !studentId || seenStudentIds.has(studentId)) return [];
+      seenStudentIds.add(studentId);
+      return [{ ...student, enrollment }];
+    });
     const monitoringData = await buildProgramMonitoringData({
       program,
-      enrollments,
+      enrollments: orderedEnrollments,
       students: baseStudents,
     });
     const programWithEnrollments = {
@@ -1062,6 +1034,8 @@ export const updateProgram = async (req, res) => {
       annualTrainerLedFee,
       programFee,
       pricingPlans,
+      monthlyAccessDurationDays,
+      annualAccessDurationDays,
       learningGoals,
       placementCategories,
       targetCompanies,
@@ -1143,7 +1117,9 @@ export const updateProgram = async (req, res) => {
       || monthlyStructuredFee !== undefined
       || monthlyTrainerLedFee !== undefined
       || annualStructuredFee !== undefined
-      || annualTrainerLedFee !== undefined;
+      || annualTrainerLedFee !== undefined
+      || monthlyAccessDurationDays !== undefined
+      || annualAccessDurationDays !== undefined;
     const hasSavedBillingOptions = Array.isArray(program.billingOptions) && program.billingOptions.length > 0;
     const pricing = pricingConfigSubmitted
       ? buildProgramPricing({
@@ -1167,6 +1143,12 @@ export const updateProgram = async (req, res) => {
           annualTrainerLedFee: annualTrainerLedFee === undefined
             ? (hasSavedBillingOptions ? program.annualTrainerLedFee : undefined)
             : annualTrainerLedFee,
+          monthlyAccessDurationDays: monthlyAccessDurationDays === undefined
+            ? (program.pricingPlans?.find((plan) => plan.billingPeriod === "Monthly")?.accessDurationDays || 30)
+            : monthlyAccessDurationDays,
+          annualAccessDurationDays: annualAccessDurationDays === undefined
+            ? (program.pricingPlans?.find((plan) => plan.billingPeriod === "Annual")?.accessDurationDays || 365)
+            : annualAccessDurationDays,
         })
       : null;
     if (pricing?.error) return res.status(400).json({ success: false, message: pricing.error });

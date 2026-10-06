@@ -12,7 +12,6 @@ import {
 } from "../utils/programSchedule.js";
 import { getTopicDayNumber } from "../utils/courseTopicSchedule.js";
 import { resolveProgramPrimaryCourseId } from "../utils/programPrimaryCourse.js";
-import { getProgramTypeQueryValues } from "../utils/programTypeNormalization.js";
 
 const buildTopicPayload = (topic, index, currentDay, courseId, unlockAll = false) => {
   const day = getTopicDayNumber(topic, index);
@@ -77,25 +76,11 @@ export const getPlacementLearningDashboard = async (req, res) => {
 
     let program = schedule.programId ? await Program.findById(schedule.programId).lean() : null;
 
-    if (!program && student.programSelection) {
-      const programTypeValues = getProgramTypeQueryValues(student.programSelection);
-      if (programTypeValues.length) {
-        program = await Program.findOne({ programType: { $in: programTypeValues }, status: "Active" }).sort({ createdAt: -1 }).lean();
-      }
-    }
-
     // A concrete Program owns the learner's course sequence. Batch-level
     // course fields remain a compatibility fallback for legacy batches only.
     let targetCourseId = resolveProgramPrimaryCourseId(program)
       || (!schedule.programId ? batch?.attachedCourse : null)
       || null;
-
-    if (!targetCourseId && !program) {
-      const fallbackCourse = await Course.findOne({ status: "Active" }).sort({ createdAt: -1 }).lean();
-      if (fallbackCourse) {
-        targetCourseId = fallbackCourse._id;
-      }
-    }
 
     if (!targetCourseId) {
       return res.status(200).json({

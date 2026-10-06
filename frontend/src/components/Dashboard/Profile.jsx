@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { 
   User, Mail, Lock, Camera,
   X, CheckCircle, Settings,
@@ -197,7 +197,7 @@ const Profile = () => {
                       {displayUser?.role === 'admin' ? 'ADMIN ACCOUNT' : 'STUDENT ACCOUNT'}
                     </span>
                     <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-0.5 text-[8px] uppercase tracking-widest text-blue-600 dark:text-blue-400 font-extrabold">
-                      {profileEnrollment.program?.name || displayUser?.programSelection || "Placement Sprint"}
+                      {profileEnrollment.program?.name || "No active program"}
                     </span>
                     <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[8px] uppercase tracking-widest text-amber-600 dark:text-amber-400 font-extrabold">
                       {Number(xp || 0).toLocaleString()} XP
@@ -368,7 +368,7 @@ const Profile = () => {
                   <div className="py-1.5 flex items-center justify-between gap-3">
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Program Selection</span>
                     <span className="font-bold text-blue-600 dark:text-blue-400">
-                      {profileEnrollment.program?.name || displayUser?.programSelection || "Not assigned"}
+                      {profileEnrollment.program?.name || "Not assigned"}
                     </span>
                   </div>
                 </div>

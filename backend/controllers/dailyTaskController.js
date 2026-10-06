@@ -15,7 +15,6 @@ import {
   resolveProgramSchedule,
 } from "../utils/programSchedule.js";
 import { parseDurationDays } from "../utils/programPhases.js";
-import { getProgramTypeQueryValues } from "../utils/programTypeNormalization.js";
 
 const getISTDateParts = (date) => {
   const d = new Date(date);
@@ -33,16 +32,10 @@ const endOfDay = (date = new Date()) => {
   return new Date(utcTime - 5.5 * 60 * 60 * 1000);
 };
 
-const resolveTrackTemplateForStudent = async (student, batch, programId) => {
+const resolveTrackTemplateForStudent = async (batch, programId) => {
   let program = null;
   if (programId) {
     program = await Program.findById(programId).lean();
-  }
-  if (!program && student.programSelection) {
-    const programTypeValues = getProgramTypeQueryValues(student.programSelection);
-    if (programTypeValues.length) {
-      program = await Program.findOne({ programType: { $in: programTypeValues }, status: "Active" }).sort({ createdAt: -1 }).lean();
-    }
   }
 
   // A concrete Program owns its Daily Task track. Do not let a legacy batch
@@ -70,7 +63,7 @@ const resolveTrackTemplateForStudent = async (student, batch, programId) => {
     if (trackTemplate) return trackTemplate;
   }
 
-  return TrackTemplate.findOne({ trackType: "Daily Task", status: "Active" }).sort({ createdAt: -1 });
+  return null;
 };
 
 const resolveProgramDurationDays = async (programId) => {
@@ -123,7 +116,7 @@ export const getTodayDailyTasks = async (req, res) => {
     }
 
     // 2. Resolve Daily Task template track
-    const trackTemplate = await resolveTrackTemplateForStudent(student, batch, schedule.programId);
+    const trackTemplate = await resolveTrackTemplateForStudent(batch, schedule.programId);
     if (!trackTemplate || trackTemplate.trackType !== "Daily Task") {
       return res.status(200).json({
         success: true,
@@ -371,7 +364,7 @@ export const submitDailyTask = async (req, res) => {
       return res.status(403).json({ success: false, message: "This batch is currently not active." });
     }
 
-    const trackTemplate = await resolveTrackTemplateForStudent(student, batch, schedule.programId);
+    const trackTemplate = await resolveTrackTemplateForStudent(batch, schedule.programId);
     if (!trackTemplate) {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }

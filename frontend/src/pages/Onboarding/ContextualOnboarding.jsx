@@ -1858,7 +1858,6 @@ export default function ContextualOnboarding() {
       placementTimeline: "",
       skills: intent === "skill" && selectedSkill ? [selectedSkill] : [],
       learningPath: selectedPlan === "free_assessment" ? "Free" : "Member",
-      programSelection: intent === "skill" ? "Full Stack Project Program" : "Placement Sprint",
       personalizedDetail: selectedSkillLevel || selectedLearningOutcome || "",
       onboardingIntent: intent,
       onboardingAnswers: {

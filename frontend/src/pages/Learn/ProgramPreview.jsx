@@ -5,6 +5,7 @@ import LoadingScreen from "../../components/LoadingScreen";
 import { programLearningAPI } from "../../services/programLearningApi";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
+import { useUser } from "../../context/UserContext";
 import { useAuthModalContext } from "../../context/AuthModalContext";
 import { initiateRazorpayPayment } from "../../utils/razorpayCheckout";
 import "../../styles/courseDetails.css";
@@ -24,6 +25,7 @@ const formatPhaseName = (phaseKey) => {
 export default function ProgramPreview() {
   const { theme } = useTheme();
   const { user, isAuthenticated } = useAuth();
+  const { refetchUserData } = useUser();
   const { openLogin } = useAuthModalContext();
   const { programId } = useParams();
   const navigate = useNavigate();
@@ -120,7 +122,7 @@ export default function ProgramPreview() {
     : [];
 
   // Determine pricing based on selected billing
-  const pricingPlans = program.pricingPlans || [];
+  const pricingPlans = (program.pricingPlans || []).filter((plan) => plan.active !== false && Number(plan.price) > 0);
   const selectedPlan = pricingPlans.find(
     (p) => String(p.billingPeriod || "").toLowerCase() === selectedBilling.toLowerCase()
   ) || pricingPlans[0] || null;
@@ -135,12 +137,7 @@ export default function ProgramPreview() {
   }
 
   // Handle Checkout / Payment
-  const handlePayment = () => {
-    if (!isPaid) {
-      navigate(`/onboarding?intent=${intent}`);
-      return;
-    }
-
+  const handlePayment = async () => {
     if (!isAuthenticated) {
       openLogin();
       return;
@@ -148,15 +145,39 @@ export default function ProgramPreview() {
 
     if (isPaying) return;
 
+    if (!isPaid) {
+      if (!user?.onboardingCompleted && !user?.onboarding?.completed) {
+        navigate(`/onboarding?intent=${intent}`, { state: { programId: program._id, intent } });
+        return;
+      }
+      setIsPaying(true);
+      setPaymentMessage("");
+      try {
+        await programLearningAPI.enrollFreeProgram(program._id);
+        await refetchUserData();
+        navigate('/dashboard');
+      } catch (error) {
+        setPaymentMessage(error.message || 'Could not enroll in this Program.');
+      } finally {
+        setIsPaying(false);
+      }
+      return;
+    }
+
+    if (!selectedPlan) {
+      setPaymentMessage('This Program has no available pricing plan.');
+      return;
+    }
+
     setIsPaying(true);
     setPaymentMessage("");
 
     initiateRazorpayPayment({
       programId: program._id,
-      planId: selectedPlan?.key || (selectedBilling === "Annual" ? "annual" : "monthly"),
+      planId: selectedPlan.key,
       programType: program.programType,
       user,
-      onSuccess: (data) => {
+      onSuccess: () => {
         setIsPaying(false);
         setPaymentSuccess(true);
         navigate("/payment-status", {

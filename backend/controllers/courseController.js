@@ -106,7 +106,7 @@ const getActiveProgramLinksForCourses = async (courseIds) => {
   const ids = (courseIds || []).filter(Boolean);
   if (!ids.length) return [];
   return Program.find({ courseIds: { $in: ids }, status: "Active" })
-    .select("_id courseIds pricingType visibility +accessTier")
+    .select("_id courseIds status pricingType visibility +accessTier")
     .lean();
 };
 
@@ -928,6 +928,12 @@ export const getCourseById = async (req, res) => {
           req.user._id ? { userId: req.user._id } : null,
           student?._id ? { studentId: student._id } : null,
         ].filter(Boolean);
+        const newestActiveEnrollment = identifiers.length
+          ? await ProgramEnrollment.findOne({ status: "Active", $or: identifiers })
+            .sort({ assignedAt: -1, createdAt: -1 })
+            .select("_id")
+            .lean()
+          : null;
 
         const enrollmentAccessConditions = [];
         if (linkedProgramIds.length > 0) {
@@ -937,13 +943,18 @@ export const getCourseById = async (req, res) => {
           enrollmentAccessConditions.push({ batchId: { $in: assignedBatchIds } });
         }
 
-        const enrollments = identifiers.length && enrollmentAccessConditions.length
+        const matchedEnrollments = identifiers.length && enrollmentAccessConditions.length
           ? await ProgramEnrollment.find({
               status: { $in: ["Active", "Completed"] },
               $or: identifiers,
               $and: [{ $or: enrollmentAccessConditions }],
-            }).select("programId batchId accessTier status").lean()
+          }).select("programId batchId accessTier status accessExpiresAt").lean()
           : [];
+        const enrollments = matchedEnrollments.filter((enrollment) =>
+          enrollment.status === "Completed"
+          || (String(enrollment._id) === String(newestActiveEnrollment?._id || "")
+            && (!enrollment.accessExpiresAt || new Date(enrollment.accessExpiresAt) >= new Date()))
+        );
 
         const batchResults = await Promise.all(
           assignedBatchIds.map((id) => Batch.findById(id).lean().then((assignedBatch) => (
@@ -981,11 +992,7 @@ export const getCourseById = async (req, res) => {
         }) || Boolean(
           student?.batchId
           && activeBatchIds.has(String(student.batchId))
-          && (() => {
-            const assignedBatch = accessibleBatchById.get(String(student.batchId));
-            return !assignedBatch?.programId
-              || String(assignedBatch.programId) === String(student.programId || req.user.programId || "");
-          })()
+          && !accessibleBatchById.get(String(student.batchId))?.programId
         );
         const hasProgramAccess = enrollments.some((enrollment) => {
           const linkedProgram = linkedPrograms.find((candidate) => String(candidate._id) === String(enrollment.programId));
@@ -1017,17 +1024,25 @@ export const getCourseById = async (req, res) => {
             req.user._id ? { userId: req.user._id } : null,
             student?._id ? { studentId: student._id } : null,
           ].filter(Boolean);
-          const courseEnrollment = identifiers.length
-            ? await ProgramEnrollment.findOne({
+          const courseEnrollments = identifiers.length
+            ? await ProgramEnrollment.find({
                 status: { $in: ["Active", "Completed"] },
                 programId: { $in: linkedProgramIds },
                 $or: identifiers,
-              }).sort({ assignedAt: -1, createdAt: -1 }).select("programId").lean()
+              }).sort({ assignedAt: -1, createdAt: -1 }).select("programId status assignedAt createdAt accessExpiresAt").lean()
+            : [];
+          const newestActiveEnrollment = identifiers.length
+            ? await ProgramEnrollment.findOne({ status: "Active", $or: identifiers })
+              .sort({ assignedAt: -1, createdAt: -1 })
+              .select("_id")
+              .lean()
             : null;
+          const courseEnrollment = courseEnrollments.find((enrollment) =>
+            enrollment.status === "Completed"
+            || (String(enrollment._id) === String(newestActiveEnrollment?._id || "")
+              && (!enrollment.accessExpiresAt || new Date(enrollment.accessExpiresAt) >= new Date()))
+          ) || null;
           courseProgramId = courseEnrollment?.programId || null;
-        }
-        if (!courseProgramId && student?.programId && linkedProgramIds.includes(String(student.programId))) {
-          courseProgramId = student.programId;
         }
 
         // ProgramEnrollment is the source of truth, so a valid user-only

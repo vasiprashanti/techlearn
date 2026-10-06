@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 import StudentReportModal from '../../components/AdminDashbaord/StudentReportModal';
@@ -28,15 +27,15 @@ const searchRoutes = [
   { id: "reports", title: "Reports", category: "Operations" },
 ];
 
-const getCurrentMonthValue = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-};
-
-const getCurrentMonthLabel = () => {
-  const now = new Date();
-  return now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-};
+const getRecentMonthOptions = (count = 12) => Array.from({ length: count }, (_, index) => {
+  const date = new Date();
+  date.setDate(1);
+  date.setMonth(date.getMonth() - index);
+  return {
+    value: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+    label: date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+  };
+});
 
 const getTodayIsoDate = () => {
   const now = new Date();
@@ -100,10 +99,8 @@ const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInput
 
 export default function Students() {
   const { theme } = useTheme();
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
   // Active View & Filter states
   const [activeTab, setActiveTab] = useState('all');
@@ -119,8 +116,8 @@ export default function Students() {
       console.error('Failed to update student payment:', err);
       loadGlobalStudents();
     }
-  }; // enrolled | leads | skill | exploring
-  const [monthFilter, setMonthFilter] = useState(() => getCurrentMonthValue()); // YYYY-MM or 'all'
+  };
+  const [monthFilter, setMonthFilter] = useState('all'); // YYYY-MM or 'all'
   const [accessFilter, setAccessFilter] = useState('all'); // all | paid | college | free
   const [statusFilter, setStatusFilter] = useState('all'); // all | active | completed | expired
   const [programFilter, setProgramFilter] = useState('');
@@ -151,7 +148,7 @@ export default function Students() {
   const [editingStudentId, setEditingStudentId] = useState(null);
   const [formError, setFormError] = useState('');
   const [isSavingStudent, setIsSavingStudent] = useState(false);
-  const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', programId: '', track: '', programSelection: 'Placement Sprint', status: 'Active', individualStartDate: getTodayIsoDate() });
+  const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', programId: '', track: '', programSelection: '', status: 'Active', enrollmentStatus: 'Active', individualStartDate: getTodayIsoDate() });
 
   const isDarkMode = theme === 'dark';
   const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
@@ -180,8 +177,6 @@ export default function Students() {
       setIsLoading(false);
     }
   }, [activeTab, monthFilter, accessFilter, statusFilter, programFilter, collegeFilter, tableSearch]);
-
-  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     loadGlobalStudents();
@@ -300,7 +295,7 @@ export default function Students() {
   const openAddStudent = () => {
     setEditingStudentId(null);
     setFormError('');
-    setStudentForm({ name: '', email: '', collegeId: filterOptions.colleges[0]?._id || '', batchId: '', programId: filterOptions.programs[0]?._id || '', track: '', programSelection: 'Placement', status: 'Active', individualStartDate: getTodayIsoDate() });
+    setStudentForm({ name: '', email: '', collegeId: '', batchId: '', programId: '', track: '', programSelection: '', status: 'Active', enrollmentStatus: 'Active', individualStartDate: getTodayIsoDate() });
     setIsAddFormOpen(true);
   };
 
@@ -311,12 +306,15 @@ export default function Students() {
       name: student.name || '',
       email: student.email || '',
       collegeId: student.collegeId || '',
-      batchId: student.batchId || '',
-      programId: student.programId || '',
+      batchId: student.activeBatchId || student.batchId || '',
+      programId: student.activeProgramId || student.programId || '',
       track: student.track || '',
-      programSelection: student.programSelection || 'Placement',
-      status: student.status || 'Active',
-      individualStartDate: student.batchId ? '' : (student.individualStartDate || student.scheduleStartDate || ''),
+      programSelection: student.programSelection || '',
+      status: student.accountStatus || 'Active',
+      enrollmentStatus: student.activeEnrollmentStatus || student.enrollmentStatus || 'Active',
+      individualStartDate: (student.activeProgramId || student.programId)
+        ? (student.activeIndividualStartDate || student.individualStartDate || student.scheduleStartDate || '')
+        : '',
     });
     setIsAddFormOpen(true);
   };
@@ -515,7 +513,7 @@ export default function Students() {
               </button>
             </div>
             
-            <form onSubmit={handleSaveStudent} className="p-6 space-y-3.5 text-xs sm:text-sm">
+            <form onSubmit={handleSaveStudent} className="max-h-[80vh] overflow-y-auto p-6 space-y-3.5 text-xs sm:text-sm">
               <div>
                 <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Student Name*</label>
                 <input
@@ -542,13 +540,13 @@ export default function Students() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">College*</label>
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">College</label>
                   <select
                     value={studentForm.collegeId}
                     onChange={(e) => setStudentForm({ ...studentForm, collegeId: e.target.value })}
                     className={studentFormInputClass}
                   >
-                    <option value="" className={dropdownOptionClass}>Select College</option>
+                    <option value="" className={dropdownOptionClass}>Other / no college</option>
                     {filterOptions.colleges.map((c) => (
                       <option key={c._id} value={c._id} className={dropdownOptionClass}>{c.name}</option>
                     ))}
@@ -556,7 +554,7 @@ export default function Students() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Status</label>
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Account Status</label>
                   <select
                     value={studentForm.status}
                     onChange={(e) => setStudentForm({ ...studentForm, status: e.target.value })}
@@ -570,7 +568,37 @@ export default function Students() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Individual start date</label>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Current Program</label>
+                <select
+                  value={studentForm.programId}
+                  onChange={(e) => setStudentForm({ ...studentForm, programId: e.target.value, enrollmentStatus: 'Active' })}
+                  className={studentFormInputClass}
+                >
+                  <option value="" className={dropdownOptionClass}>No active program</option>
+                  {filterOptions.programs.filter((program) => program.status !== 'Archived').map((program) => (
+                    <option key={program._id} value={program._id} className={dropdownOptionClass}>{program.name}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">Changing this updates the active enrollment and preserves the previous enrollment in history.</p>
+              </div>
+
+              {editingStudentId && studentForm.programId && (
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Program Enrollment Status</label>
+                  <select
+                    value={studentForm.enrollmentStatus}
+                    onChange={(e) => setStudentForm({ ...studentForm, enrollmentStatus: e.target.value })}
+                    className={studentFormInputClass}
+                  >
+                    <option value="Active" className={dropdownOptionClass}>Active</option>
+                    <option value="Completed" className={dropdownOptionClass}>Completed</option>
+                    <option value="Paused" className={dropdownOptionClass}>Paused</option>
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Program Start Date</label>
                 <input
                   type="date"
                   value={studentForm.individualStartDate || ''}
@@ -834,10 +862,10 @@ export default function Students() {
                       onChange={(e) => setMonthFilter(e.target.value)}
                       className="appearance-none w-full h-8 rounded-xl bg-transparent px-2.5 pr-7 text-xs font-semibold text-slate-800 dark:text-white outline-none cursor-pointer"
                     >
-                      <option className={dropdownOptionClass} value={getCurrentMonthValue()}>Current Month ({getCurrentMonthLabel().slice(0, 3)})</option>
                       <option className={dropdownOptionClass} value="all">All Time</option>
-                      <option className={dropdownOptionClass} value="2026-07">July 2026</option>
-                      <option className={dropdownOptionClass} value="2026-06">June 2026</option>
+                      {getRecentMonthOptions().map((month) => (
+                        <option className={dropdownOptionClass} key={month.value} value={month.value}>{month.label}</option>
+                      ))}
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
                   </div>
@@ -888,6 +916,7 @@ export default function Students() {
                       <option className={dropdownOptionClass} value="all">Status: All</option>
                       <option className={dropdownOptionClass} value="active">Active</option>
                       <option className={dropdownOptionClass} value="completed">Completed</option>
+                      <option className={dropdownOptionClass} value="paused">Paused</option>
                       <option className={dropdownOptionClass} value="expired">Expired</option>
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
@@ -903,6 +932,7 @@ export default function Students() {
                       className="appearance-none w-full h-8 rounded-xl bg-transparent px-2.5 pr-7 text-xs font-semibold text-slate-800 dark:text-white outline-none cursor-pointer truncate"
                     >
                       <option className={dropdownOptionClass} value="">All Colleges</option>
+                      <option className={dropdownOptionClass} value="other">Other / no college</option>
                       {filterOptions.colleges.map((c) => (
                         <option className={dropdownOptionClass} key={c._id} value={c._id}>{c.name}</option>
                       ))}
@@ -967,7 +997,7 @@ export default function Students() {
                           <th className="py-2.5 px-3 max-w-[220px]">Student</th>
                           <th className="py-2.5 px-3">College</th>
                           <th className="py-2.5 px-3">Payment</th>
-                          <th className="py-2.5 px-3">Skill Program</th>
+                          <th className="py-2.5 px-3">Current Program</th>
                           <th className="py-2.5 px-3 whitespace-nowrap">Enrolled On</th>
                           <th className="py-2.5 px-3">Status</th>
                           <th className="py-2.5 px-3 text-right">Actions</th>
@@ -1058,9 +1088,7 @@ export default function Students() {
                                   </div>
                                 </td>
                                 <td className="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                                  {student.programs.length > 0 ? (
-                                    student.programs.length === 1 ? student.programs[0] : `${student.programs.length} Programs`
-                                  ) : 'Placement Sprint'}
+                                  {student.currentProgram || '—'}
                                 </td>
                                 <td className="py-2.5 px-3 text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                   {formatDateValue(student.enrolledOn)}
@@ -1068,7 +1096,7 @@ export default function Students() {
                                 <td className="py-2.5 px-3">
                                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                     student.status === 'Active' ? 'bg-[#16a34a] text-white' :
-                                    student.status === 'Completed' ? 'bg-[#efe6d2] text-[#d17d00] dark:bg-[#4f4228] dark:text-[#fcd34d]' :
+                                    ['Completed', 'Paused'].includes(student.status) ? 'bg-[#efe6d2] text-[#d17d00] dark:bg-[#4f4228] dark:text-[#fcd34d]' :
                                     'bg-rose-100 text-rose-800 dark:bg-rose-500/10 dark:text-rose-400'
                                   }`}>
                                     {student.status}
@@ -1139,7 +1167,7 @@ export default function Students() {
                                   </div>
                                 </td>
                                 <td className="py-2.5 px-4 font-semibold text-slate-700 dark:text-slate-300">
-                                  {student.programs.find(p => p.toLowerCase().includes('skill')) || 'Java Full Stack Skill'}
+                                  {student.currentProgram || '—'}
                                 </td>
                                 <td className="py-2.5 px-4 text-[11px] text-slate-500 dark:text-slate-400">
                                   {formatDateValue(student.enrolledOn)}

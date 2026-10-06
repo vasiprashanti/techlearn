@@ -81,8 +81,9 @@ export const UserProvider = ({ children }) => {
   // Calculate total XP by summing categories based on user's programSelection
   const calculateTotalXP = (courseXP, exerciseXP, projectXP, programSelection) => {
     let total = 0;
-    const isProjectOnly = programSelection === "Full Stack Project Program";
-    const isPlacementOnly = programSelection === "Placement Sprint";
+    const normalizedProgramSelection = String(programSelection || "").trim().toLowerCase();
+    const isProjectOnly = normalizedProgramSelection === "full stack project program";
+    const isPlacementOnly = ["placement", "placement program", "placement sprint"].includes(normalizedProgramSelection);
     // If Both (or undefined/other), include all categories.
     // If Placement Sprint, exclude projectXP.
     // If Full Stack Project Program, exclude placement/course/exercise XP.
@@ -127,7 +128,7 @@ export const UserProvider = ({ children }) => {
       localStorage.setItem('userData', JSON.stringify(updatedUser));
     }
 
-    const programSelection = data.user?.programSelection || user?.programSelection || "Placement Sprint";
+    const programSelection = data.user?.programSelection || user?.programSelection || "";
     const totalXP = calculateTotalXP(data.courseXP, data.exerciseXP, data.projectXP, programSelection);
     setXp(totalXP);
 

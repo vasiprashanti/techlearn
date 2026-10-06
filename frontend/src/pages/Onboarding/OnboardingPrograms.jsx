@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion as Motion } from 'framer-motion';
-import { Sparkles, Target, ArrowDown, ShieldCheck, Check, RefreshCw } from 'lucide-react';
+import { Target, ArrowDown, ShieldCheck, Check, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -25,6 +25,8 @@ export default function OnboardingPrograms() {
   const [configuredPricingPlans, setConfiguredPricingPlans] = useState([]);
   const [catalogPrograms, setCatalogPrograms] = useState([]);
   const [recommendedPrograms, setRecommendedPrograms] = useState([]);
+  const [programsLoading, setProgramsLoading] = useState(true);
+  const [enrollmentError, setEnrollmentError] = useState('');
 
   const storedUserData = (() => {
     try {
@@ -41,82 +43,76 @@ export default function OnboardingPrograms() {
     ...locationState,
   };
 
-  const goal = String(currentUser?.learningGoal || 'Get Job-Ready').trim().toLowerCase();
-  const isPlacement = ['get placed', 'get job-ready', 'get job ready', 'placement'].includes(goal) || !goal;
-
-  const targetRole = currentUser?.targetRole || 'Software Developer';
-  const selectedCatalogProgram = catalogPrograms.find((program) => String(program._id) === String(currentUser?.programId))
-    || recommendedPrograms[0]
-    || catalogPrograms.find((program) => (
-      program.programType === (isPlacement ? 'Placement' : 'Skill')
-      && program.pricingType === (currentUser?.learningPath === 'Free' ? 'Free' : 'Paid')
-    ));
-  const selectedProgramId = currentUser?.programId
-    || selectedCatalogProgram?._id
-    || null;
-
-  const userSkills = Array.isArray(currentUser?.skills) && currentUser.skills.length > 0 
-    ? currentUser.skills 
-    : (currentUser?.skill ? [currentUser.skill] : ['Java']);
+  const goal = String(currentUser?.learningGoal || '').trim().toLowerCase();
+  const programOptions = [...recommendedPrograms, ...catalogPrograms]
+    .filter((program, index, programs) => programs.findIndex((candidate) => String(candidate._id) === String(program._id)) === index);
+  const selectedCatalogProgram = currentUser?.programId
+    ? programOptions.find((program) => String(program._id) === String(currentUser.programId)) || null
+    : recommendedPrograms[0] || null;
+  const selectedProgramId = selectedCatalogProgram?._id || null;
+  const programType = String(selectedCatalogProgram?.programType || '').toLowerCase();
+  const isPlacement = programType === 'placement'
+    || (!selectedCatalogProgram && ['get placed', 'get job-ready', 'get job ready', 'placement'].includes(goal));
+  const targetRole = currentUser?.targetRole || '';
+  const userSkills = Array.isArray(currentUser?.skills) && currentUser.skills.length > 0
+    ? currentUser.skills
+    : (currentUser?.skill ? [currentUser.skill] : []);
   const displaySkills = userSkills.join(', ');
 
   const [showExitModal, setShowExitModal] = useState(false);
 
   useEffect(() => {
-    if (currentUser?.programId) return undefined;
     let mounted = true;
-    API.get('/api/programs/catalog')
-      .then((response) => {
-        if (mounted) setCatalogPrograms(response.data?.programs || []);
-      })
-      .catch(() => {
-        if (mounted) setCatalogPrograms([]);
-      });
-    return () => { mounted = false; };
-  }, [currentUser?.programId]);
-
-  useEffect(() => {
-    if (currentUser?.programId) return undefined;
-    let mounted = true;
-    API.get('/api/programs/recommendations')
-      .then((response) => {
-        if (mounted) setRecommendedPrograms(response.data?.programs || []);
-      })
-      .catch(() => {
-        if (mounted) setRecommendedPrograms([]);
-      });
-    return () => { mounted = false; };
-  }, [currentUser?.programId]);
-
-  useEffect(() => {
-    if (!selectedProgramId) {
-      setConfiguredPricingPlans([]);
-      return undefined;
-    }
-    if (!currentUser?.programId && selectedCatalogProgram) {
-      setConfiguredPricingPlans(selectedCatalogProgram.pricingPlans || []);
-      return undefined;
-    }
-    let mounted = true;
-    API.get(`/api/programs/${selectedProgramId}`)
-      .then((response) => {
-        if (mounted) setConfiguredPricingPlans(response.data?.program?.pricingPlans || []);
-      })
-      .catch(() => {
-        if (mounted) setConfiguredPricingPlans([]);
+    Promise.allSettled([
+      API.get('/api/programs/catalog'),
+      API.get('/api/programs/recommendations'),
+    ]).then(([catalogResult, recommendationsResult]) => {
+      if (!mounted) return;
+      setCatalogPrograms(catalogResult.status === 'fulfilled' ? catalogResult.value.data?.programs || [] : []);
+      setRecommendedPrograms(recommendationsResult.status === 'fulfilled' ? recommendationsResult.value.data?.programs || [] : []);
+      setProgramsLoading(false);
     });
     return () => { mounted = false; };
-  }, [selectedProgramId, currentUser?.programId, selectedCatalogProgram]);
+  }, []);
+
+  useEffect(() => {
+    setConfiguredPricingPlans(selectedCatalogProgram?.pricingPlans || []);
+  }, [selectedCatalogProgram]);
 
   const handleEnrollNow = async (planId) => {
-    if (loading) return;
+    if (loading || !selectedProgramId) return;
+    setEnrollmentError('');
+    if (!localStorage.getItem('token')) {
+      navigate('/signup', { state: { ...locationState, programId: selectedProgramId } });
+      return;
+    }
     setSelectedPlanId(planId);
     setLoading(true);
+
+    if (selectedCatalogProgram.pricingType === 'Free') {
+      try {
+        await API.post(`/api/programs/${selectedProgramId}/free-enroll`);
+        if (typeof refetchUserData === 'function') await refetchUserData();
+        navigate('/dashboard');
+      } catch (error) {
+        setEnrollmentError(error.response?.data?.message || error.message || 'Could not start this free Program.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    const configuredPlan = configuredPricingPlans.find((plan) => plan.key === planId && plan.active !== false);
+    if (!configuredPlan || Number(configuredPlan.price) <= 0) {
+      setEnrollmentError('This Program has no valid paid plan configured. Please contact support.');
+      setLoading(false);
+      return;
+    }
 
     initiateRazorpayPayment({
       planId,
       programId: selectedProgramId,
-      programType: isPlacement ? 'Placement' : 'Skill',
+      programType: selectedCatalogProgram.programType,
       user: currentUser,
       onSuccess: async (resData) => {
         console.log('Payment successful & verified:', resData);
@@ -153,108 +149,34 @@ export default function OnboardingPrograms() {
     });
   };
 
-  // Annual Placement plans. The server resolves the final amount from the
-  // selected program's admin-configured pricingPlans.
-  const placementPlans = [
-    {
-      id: 'placement-basic',
-      title: 'Placement Program',
-      price: '₹799',
-      subtitle: '90 Days Total Access',
-      badge: 'MOST POPULAR',
-      highlight: true,
-      icon: Sparkles,
+  const freeProgram = selectedCatalogProgram?.pricingType === 'Free';
+  const plans = freeProgram
+    ? [{
+      id: 'free',
+      title: selectedCatalogProgram.name,
+      price: 'Free',
+      subtitle: selectedCatalogProgram.duration || 'Program access',
+      features: [],
       color: 'border-[#a3e635] bg-[#f7fee7]/60 dark:bg-[#1a2e05]/40 shadow-xl shadow-[#a3e635]/15 ring-2 ring-[#a3e635]',
       btnStyle: 'bg-[#a3e635] text-black font-extrabold hover:bg-[#86efac] shadow-lg shadow-[#a3e635]/25',
-      features: [
-        `30-Day Structured Placement Program for ${targetRole}`,
-        '60 additional days of platform access (90 days total)',
-        'Daily learning tasks & structured progression',
-        'Interactive coding challenges & assessments',
-        'Company-wise interview preparation',
-        'Placement readiness & mock prep'
-      ],
-      refundNotice: 'Cancel anytime. Get refunded if you cancel within 5 days.',
-    },
-    {
-      id: 'placement-pro',
-      title: 'Placement Program Pro',
-      price: '₹999',
-      subtitle: '120 Days Total Access',
-      badge: 'BEST VALUE',
-      highlight: false,
-      icon: Sparkles,
-      color: 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/30 shadow-xl shadow-blue-500/10',
-      btnStyle: 'bg-[#3c83f6] text-white font-extrabold hover:bg-blue-600 shadow-lg shadow-blue-500/25',
-      features: [
-        `30-Day Structured Placement Program for ${targetRole}`,
-        '90 additional days of platform access (120 days total)',
-        'Same core 30-day program + extended practice',
-        'Daily learning, tasks & challenges',
-        'Company-wise preparation & assessments',
-        'Longer period to prepare post-program'
-      ],
-      refundNotice: 'Cancel anytime. Get refunded if you cancel within 5 days.',
-    }
-  ];
-
-  // Skill plans.
-  const skillPlans = [
-    {
-      id: 'skill-basic',
-      title: 'Skill Program',
-      price: '₹499',
-      subtitle: '30 Days Access',
-      badge: 'STANDARD',
-      highlight: true,
-      icon: Sparkles,
-      color: 'border-[#a3e635] bg-[#f7fee7]/60 dark:bg-[#1a2e05]/40 shadow-xl shadow-[#a3e635]/15 ring-2 ring-[#a3e635]',
-      btnStyle: 'bg-[#a3e635] text-black font-extrabold hover:bg-[#86efac] shadow-lg shadow-[#a3e635]/25',
-      features: [
-        `Full 30-Day ${displaySkills} Program`,
-        'Complete learning roadmap & course content',
-        'Daily tasks & coding challenges',
-        'Practice questions & notes',
-        'Recorded videos + 1 live doubt session',
-      ],
-      refundNotice: 'No refunds or cancellations after purchase.',
-    },
-    {
-      id: 'skill-returning',
-      title: 'Skill Program (Returning Learner)',
-      price: '₹199',
-      subtitle: '30 Days Access (Special Loyalty Offer)',
-      badge: 'RETURNING LEARNER',
-      highlight: false,
-      icon: Sparkles,
-      color: 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/30 shadow-xl shadow-blue-500/10',
-      btnStyle: 'bg-[#3c83f6] text-white font-extrabold hover:bg-blue-600 shadow-lg shadow-blue-500/25',
-      features: [
-        `Full 30-Day ${displaySkills} learning program`,
-        'Complete learning roadmap & course content',
-        'Daily tasks & coding challenges',
-        'Exclusive returning learner pricing',
-      ],
-      refundNotice: 'No refunds or cancellations after purchase.',
-    }
-  ];
-
-  const configuredPlans = configuredPricingPlans
-    .filter((plan) => plan.active !== false)
-    .map((plan, index) => {
-      const fallback = (isPlacement ? placementPlans : skillPlans)[index] || placementPlans[0];
-      return {
-        ...fallback,
-        id: plan.key || fallback.id,
-        title: plan.title || fallback.title,
-        price: `₹${Number(plan.price || 0).toLocaleString('en-IN')}`,
-        subtitle: plan.billingPeriod
-          ? [plan.billingPeriod, plan.availability].filter(Boolean).join(' · ')
-          : fallback.subtitle,
-        features: Array.isArray(plan.benefits) && plan.benefits.length ? plan.benefits : fallback.features,
-      };
-    });
-  const plans = configuredPlans.length ? configuredPlans : (isPlacement ? placementPlans : skillPlans);
+      actionLabel: 'START FREE PROGRAM',
+    }]
+    : configuredPricingPlans
+      .filter((plan) => plan.active !== false && plan.key && Number(plan.price) > 0)
+      .map((plan, index) => ({
+        id: plan.key,
+        title: plan.title || selectedCatalogProgram?.name || 'Program Plan',
+        price: `₹${Number(plan.price).toLocaleString('en-IN')}`,
+        subtitle: [plan.billingPeriod, plan.availability].filter(Boolean).join(' · ') || selectedCatalogProgram?.duration || '',
+        features: Array.isArray(plan.benefits) ? plan.benefits : [],
+        color: index === 0
+          ? 'border-[#a3e635] bg-[#f7fee7]/60 dark:bg-[#1a2e05]/40 shadow-xl shadow-[#a3e635]/15 ring-2 ring-[#a3e635]'
+          : 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/30 shadow-xl shadow-blue-500/10',
+        btnStyle: index === 0
+          ? 'bg-[#a3e635] text-black font-extrabold hover:bg-[#86efac] shadow-lg shadow-[#a3e635]/25'
+          : 'bg-[#3c83f6] text-white font-extrabold hover:bg-blue-600 shadow-lg shadow-blue-500/25',
+        actionLabel: 'ENROLL NOW',
+      }));
 
   const handleCheckPricing = (e) => {
     e.preventDefault();
@@ -321,7 +243,7 @@ export default function OnboardingPrograms() {
               {isPlacement ? 'Target Role:' : 'Selected Skill(s):'}
             </span>
             <span className="font-semibold text-[#3c83f6] dark:text-[#60a5fa]">
-              {isPlacement ? targetRole : displaySkills}
+              {isPlacement ? (targetRole || 'Not selected') : (displaySkills || 'Not selected')}
             </span>
           </Motion.div>
 
@@ -341,11 +263,14 @@ export default function OnboardingPrograms() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mt-6 max-w-xl text-base leading-relaxed text-slate-700 dark:text-slate-300 sm:text-lg"
           >
-            Based on your onboarding preferences, we matched you with the following learning
-            programs. Choose your plan to complete enrollment.
+            {selectedCatalogProgram
+              ? `Based on your onboarding preferences, we matched you with ${selectedCatalogProgram.name}. Choose an available plan to continue.`
+              : 'We could not find a Program that matches your saved preferences. Update your preferences or contact the team for help.'}
           </Motion.p>
 
-          {selectedCatalogProgram && (
+          {programsLoading ? (
+            <p className="mt-5 text-sm text-slate-600 dark:text-slate-300" role="status">Checking available Programs…</p>
+          ) : selectedCatalogProgram ? (
             <Motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -360,9 +285,13 @@ export default function OnboardingPrograms() {
                 {selectedCatalogProgram.description || `${selectedCatalogProgram.programType} learning path matched to your profile.`}
               </p>
             </Motion.div>
+          ) : (
+            <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-sm text-slate-700 dark:text-slate-200" role="status">
+              No matching public Program is currently available. We won’t show or enroll you in an unrelated Program.
+            </div>
           )}
 
-          <Motion.div
+          {selectedCatalogProgram && <Motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
@@ -373,18 +302,18 @@ export default function OnboardingPrograms() {
               {isPlacement ? (
                 <>
                   Your selected target role (
-                  <span className="font-semibold text-slate-900 dark:text-white">{targetRole}</span>) will
+                  <span className="font-semibold text-slate-900 dark:text-white">{targetRole || 'your selected role'}</span>) will
                   personalize your daily tasks, challenges &amp; learning content.
                 </>
               ) : (
                 <>
                   Your selected skill(s) (
-                  <span className="font-semibold text-slate-900 dark:text-white">{displaySkills}</span>) will
+                  <span className="font-semibold text-slate-900 dark:text-white">{displaySkills || 'your selected skills'}</span>) will
                   personalize your learning path, practice questions &amp; course content.
                 </>
               )}
             </p>
-          </Motion.div>
+          </Motion.div>}
 
           <Motion.div
             initial={{ opacity: 0, y: 15 }}
@@ -414,9 +343,21 @@ export default function OnboardingPrograms() {
               Choose Your Plan
             </h2>
             <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xl mx-auto">
-              Select the plan that fits your preparation goals. Upgrades are available anytime.
+              Available plans and access terms are configured for this Program.
             </p>
           </div>
+
+          {enrollmentError && (
+            <div className="mx-auto max-w-2xl rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300" role="alert">
+              {enrollmentError}
+            </div>
+          )}
+
+          {!programsLoading && selectedCatalogProgram && !plans.length && (
+            <div className="mx-auto max-w-2xl rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-slate-700 dark:text-slate-200" role="status">
+              This Program has no active pricing plans configured. Please contact the team; no placeholder prices are shown.
+            </div>
+          )}
 
           <div className={`grid grid-cols-1 ${plans.length > 1 ? 'md:grid-cols-2 max-w-4xl mx-auto' : 'max-w-md mx-auto'} gap-6 pt-0 md:pt-2`}>
             {plans.map((plan) => {
@@ -455,14 +396,16 @@ export default function OnboardingPrograms() {
                       </span>
                     </div>
 
-                    <ul className="space-y-2.5 pt-1">
-                      {plan.features.map((feat, i) => (
-                        <li key={i} className="flex items-start gap-2.5 text-xs text-slate-600 dark:text-slate-300">
-                          <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                          <span className="leading-snug">{feat}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    {plan.features.length > 0 && (
+                      <ul className="space-y-2.5 pt-1">
+                        {plan.features.map((feat, i) => (
+                          <li key={i} className="flex items-start gap-2.5 text-xs text-slate-600 dark:text-slate-300">
+                            <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                            <span className="leading-snug">{feat}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
 
                   <div className="pt-6 space-y-3 text-center">
@@ -478,7 +421,7 @@ export default function OnboardingPrograms() {
                           <span>PROCESSING...</span>
                         </>
                       ) : (
-                        <span>ENROLL NOW</span>
+                        <span>{plan.actionLabel}</span>
                       )}
                     </button>
 

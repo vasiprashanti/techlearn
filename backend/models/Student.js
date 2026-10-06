@@ -12,7 +12,7 @@ const studentSchema = new mongoose.Schema(
     collegeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "College",
-      required: true,
+      default: null,
     },
 
     batchId: {
@@ -63,8 +63,8 @@ const studentSchema = new mongoose.Schema(
     },
     programSelection: {
       type: String,
-      enum: ["Skill", "Placement", "skill", "placement", "Placement Sprint", "Full Stack Project Program", "Both"],
-      default: "Placement",
+      enum: ["", "Skill", "Placement", "skill", "placement", "Placement Sprint", "Full Stack Project Program", "Both"],
+      default: "",
     },
 
     learningGoal: {

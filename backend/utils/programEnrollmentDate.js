@@ -56,11 +56,6 @@ export const resolveSafeLegacyIndividualStartDate = async ({ enrollment, user, s
     }
   }
 
-  const studentCreatedDate = validDate(student?.createdAt);
-  if (studentCreatedDate && !sameCalendarAnchor(studentCreatedDate, currentDate)) {
-    candidates.push({ date: studentCreatedDate, priority: 3, reason: "student_created_date" });
-  }
-
   candidates.sort((left, right) => left.priority - right.priority || left.date - right.date);
   const selected = candidates[0];
   return selected

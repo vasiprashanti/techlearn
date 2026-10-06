@@ -12,7 +12,6 @@ import mongoose from "mongoose";
 import { updateStudentStreak } from "../utils/streakUtil.js";
 import { resolveDashboardProgramAccess } from "../utils/dashboardProgramAccess.js";
 import { buildUnifiedProfile } from "../utils/userProfile.js";
-import { getProgramTypeQueryValues } from "../utils/programTypeNormalization.js";
 
 const DASHBOARD_CACHE_TTL_MS = 30 * 1000;
 const dashboardCache = new Map();
@@ -90,7 +89,7 @@ const buildDashboardUserPayload = (user, linkedStudent, programAccess = null) =>
     degree: linkedStudent?.degree || user?.degree || "",
     branch: linkedStudent?.branch || user?.branch || "",
     graduationYear: linkedStudent?.graduationYear || user?.graduationYear || null,
-    programSelection: linkedStudent?.programSelection || user?.programSelection || "Placement Sprint",
+    programSelection: linkedStudent?.programSelection || user?.programSelection || "",
     // Only expose a program pointer when the enrollment has been verified.
     // The legacy User/Student pointers remain available in the database for
     // migration compatibility, but they are not access grants.
@@ -186,7 +185,6 @@ export const getDashboardData = async (req, res) => {
       studentBatchId: linkedStudent?.batchId || null,
     });
 
-    const selectedProgram = linkedStudent?.programSelection || user?.programSelection;
     const directProgramId = programAccess?.programId || null;
     let program = directProgramId
       ? await Program.findOne({ _id: directProgramId, status: { $ne: "Archived" } })
@@ -197,25 +195,6 @@ export const getDashboardData = async (req, res) => {
           .populate("projectIds", "_id title category duration_days status")
           .lean()
       : null;
-
-    // Backfill resource delivery for older accounts that predate programId.
-    if (!program && selectedProgram && selectedProgram !== "Both") {
-      const programTypeValues = getProgramTypeQueryValues(selectedProgram);
-      if (programTypeValues.length) {
-        program = await Program.findOne({
-          programType: { $in: programTypeValues },
-          status: "Active",
-          visibility: "Public",
-        })
-          .sort({ createdAt: -1 })
-          .populate("courseIds", "_id title description level courseType numTopics")
-          .populate("roadmapIds", "_id title status")
-          .populate("trackTemplateIds", "_id name trackType status")
-          .populate("certificateTemplateIds", "_id name status")
-          .populate("projectIds", "_id title category duration_days status")
-          .lean();
-      }
-    }
 
     const programPayload = program
       ? {

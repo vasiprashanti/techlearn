@@ -11,6 +11,7 @@ import {
   FiFolder,
   FiUsers,
   FiEye,
+  FiEdit2,
   FiX,
   FiChevronLeft,
   FiChevronRight,
@@ -39,16 +40,6 @@ const PHASE_LABELS = {
 
 const PLACEMENT_CATEGORIES = ['On-Campus', 'Off-Campus', 'Both'];
 const LEARNING_GOALS = ['Get Placed', 'Learn New Skills', 'Exploring TechLearn'];
-
-const getDefaultPricingPlans = (programType) => programType === 'Skill'
-  ? [
-      { key: 'skill-basic', title: 'Skill Program', price: '399', benefitsText: 'Recorded videos, 1 live doubt session' },
-      { key: 'skill-pro', title: 'Skill Program Pro', price: '699', benefitsText: 'Recorded videos, 1 live doubt session' },
-    ]
-  : [
-      { key: 'placement-basic', title: 'Placement Program', price: '799', benefitsText: 'Recorded videos, Live sessions' },
-      { key: 'placement-pro', title: 'Placement Program Pro', price: '1199', benefitsText: 'Recorded videos, Live sessions' },
-    ];
 
 const SKILL_TAG_OPTIONS = [
   'Java',
@@ -116,6 +107,16 @@ const parseDurationDays = (value) => {
 const getMinimumDurationDays = () => 5;
 
 const normalizeSearchString = (str) => String(str || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+const uniqueOptions = (values) => {
+  const seen = new Set();
+  return (Array.isArray(values) ? values : []).filter((value) => {
+    const key = normalizeSearchString(value);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
 
 const validatePhaseCoverage = (phases, totalDays) => {
   if (!totalDays || totalDays <= 0) return { valid: false, message: 'Duration must be greater than 0.' };
@@ -250,14 +251,12 @@ export default function Programs() {
     pricingType: 'Free',
     availability: 'Structured',
     billingOptions: [],
-    monthlyStructuredFee: '0',
-    monthlyTrainerLedFee: '0',
-    annualStructuredFee: '0',
-    annualTrainerLedFee: '0',
-    programFee: '0',
-    pricingPlans: getDefaultPricingPlans('Placement'),
-    learningGoalsText: '',
-    placementCategory: 'Both',
+    monthlyStructuredFee: '',
+    monthlyTrainerLedFee: '',
+    annualStructuredFee: '',
+    annualTrainerLedFee: '',
+    monthlyAccessDurationDays: '30',
+    annualAccessDurationDays: '365',
     targetCompanies: [],
     skillTags: [],
     targetRoles: [],
@@ -354,13 +353,6 @@ export default function Programs() {
         ...prev,
         programType: value,
         phases: getDefaultPhases(value, prev.durationDays),
-        placementCategory: value === 'Placement' ? prev.placementCategory : 'Both',
-        pricingPlans: getDefaultPricingPlans(value),
-        learningGoalsText: prev.learningGoalsText === 'Get Placed' && value === 'Skill'
-          ? 'Learn New Skills'
-          : prev.learningGoalsText === 'Learn New Skills' && value === 'Placement'
-            ? 'Get Placed'
-            : prev.learningGoalsText,
       }));
       return;
     }
@@ -383,15 +375,6 @@ export default function Programs() {
       ...prev,
       phases: prev.phases.map((phase, phaseIndex) => (
         phaseIndex === index ? { ...phase, [field]: value } : phase
-      )),
-    }));
-  };
-
-  const handlePricingPlanChange = (index, field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      pricingPlans: prev.pricingPlans.map((plan, planIndex) => (
-        planIndex === index ? { ...plan, [field]: value } : plan
       )),
     }));
   };
@@ -486,14 +469,12 @@ export default function Programs() {
       pricingType: 'Free',
       availability: 'Structured',
       billingOptions: [],
-      monthlyStructuredFee: '0',
-      monthlyTrainerLedFee: '0',
-      annualStructuredFee: '0',
-      annualTrainerLedFee: '0',
-      programFee: '0',
-      pricingPlans: [],
-      learningGoalsText: '',
-      placementCategory: 'Both',
+      monthlyStructuredFee: '',
+      monthlyTrainerLedFee: '',
+      annualStructuredFee: '',
+      annualTrainerLedFee: '',
+      monthlyAccessDurationDays: '30',
+      annualAccessDurationDays: '365',
       targetCompanies: [],
       skillTags: [],
       targetRoles: [],
@@ -517,29 +498,41 @@ export default function Programs() {
     const existingRoles = Array.isArray(program.targetRoles)
       ? program.targetRoles
       : parseCommaString(program.targetRolesText || '');
+    const savedPlans = Array.isArray(program.pricingPlans) ? program.pricingPlans : [];
+    const availability = program.availability || 'Structured';
+    const hasSavedBillingOptions = Array.isArray(program.billingOptions) && program.billingOptions.length > 0;
+    const billingOptions = hasSavedBillingOptions
+      ? program.billingOptions
+      : [...new Set(savedPlans.map((plan) => plan.billingPeriod).filter(Boolean))];
+    if (!billingOptions.length && program.pricingType === 'Paid') billingOptions.push('Annual');
+    const firstPlanFee = savedPlans[0]?.price ?? program.programFee;
+    const secondPlanFee = savedPlans[1]?.price;
+    const learningDurationDays = program.durationDays || parseDurationDays(program.duration) || 30;
+    const durationUnit = String(program.duration || '').toLowerCase().includes('week') ? 'Weeks' : 'Days';
     setFormData({
       name: program.name || '',
       description: program.description || '',
       programType: getProgramType(program.programType),
-      durationDays: String(program.durationDays || parseDurationDays(program.duration) || 30),
-      durationUnit: String(program.duration || '').toLowerCase().includes('week') ? 'Weeks' : 'Days',
+      durationDays: String(durationUnit === 'Weeks' ? learningDurationDays / 7 : learningDurationDays),
+      durationUnit,
       phases: normalizePhases(program.phases, getProgramType(program.programType), program.durationDays || parseDurationDays(program.duration) || 30),
       status: program.status || 'Draft',
       visibility: program.visibility || 'Public',
       pricingType: program.pricingType || 'Free',
-      availability: program.availability || 'Structured',
-      billingOptions: Array.isArray(program.billingOptions) ? program.billingOptions : [],
-      monthlyStructuredFee: String(program.monthlyStructuredFee || 0),
-      monthlyTrainerLedFee: String(program.monthlyTrainerLedFee || 0),
-      annualStructuredFee: String(program.annualStructuredFee || 0),
-      annualTrainerLedFee: String(program.annualTrainerLedFee || 0),
-      programFee: String(program.programFee || 0),
-      pricingPlans: [],
-      learningGoalsText: '',
-      placementCategory: 'Both',
-      targetCompanies: Array.isArray(program.targetCompanies) ? program.targetCompanies : [],
-      skillTags: Array.isArray(program.skillTags) ? program.skillTags : [],
-      targetRoles: existingRoles,
+      availability,
+      billingOptions,
+      monthlyStructuredFee: String(program.monthlyStructuredFee ?? ''),
+      monthlyTrainerLedFee: String(program.monthlyTrainerLedFee ?? ''),
+      annualStructuredFee: String(program.annualStructuredFee ?? (!hasSavedBillingOptions && availability !== 'Trainer-Led' ? program.structuredFee ?? firstPlanFee : '') ?? ''),
+      annualTrainerLedFee: String(program.annualTrainerLedFee ?? (!hasSavedBillingOptions && availability !== 'Structured' ? program.trainerLedFee ?? (secondPlanFee || firstPlanFee) : '') ?? ''),
+      monthlyAccessDurationDays: String(savedPlans.find((plan) => plan.billingPeriod === 'Monthly')?.accessDurationDays || 30),
+      annualAccessDurationDays: String(savedPlans.find((plan) => plan.billingPeriod === 'Annual')?.accessDurationDays || 365),
+      targetCompanies: uniqueOptions(program.targetCompanies || []),
+      company: program.company || '',
+      skillTags: uniqueOptions(program.skillTags || []),
+      targetRoles: uniqueOptions(existingRoles),
+      courseIds: (program.courseIds || []).map((course) => String(course?._id || course)),
+      primaryCourseId: String(program.primaryCourseId?._id || program.primaryCourseId || ''),
     });
     setSkillSearch('');
     setOtherSkillDraft('');
@@ -600,6 +593,30 @@ export default function Programs() {
         setModalError('Enter a valid fee for every selected billing and delivery option.');
         return;
       }
+
+      const feeFields = [
+        ['Monthly', 'Structured', 'monthlyStructuredFee'],
+        ['Monthly', 'Trainer-Led', 'monthlyTrainerLedFee'],
+        ['Annual', 'Structured', 'annualStructuredFee'],
+        ['Annual', 'Trainer-Led', 'annualTrainerLedFee'],
+      ];
+      for (const [billingPeriod, availabilityType, fieldName] of feeFields) {
+        const periodSelected = formData.billingOptions.includes(billingPeriod);
+        const availabilitySelected = formData.availability === 'Both' || formData.availability === availabilityType;
+        if (periodSelected && availabilitySelected
+          && (!Number.isFinite(Number(formData[fieldName])) || Number(formData[fieldName]) <= 0)) {
+          setModalError(`${billingPeriod} ${availabilityType} Fee must be a number greater than zero.`);
+          return;
+        }
+      }
+      for (const billingPeriod of formData.billingOptions) {
+        const fieldName = `${billingPeriod.toLowerCase()}AccessDurationDays`;
+        const duration = Number(formData[fieldName]);
+        if (!Number.isInteger(duration) || duration < 1) {
+          setModalError(`${billingPeriod} access duration must be a positive whole number of days.`);
+          return;
+        }
+      }
     }
 
     try {
@@ -615,14 +632,12 @@ export default function Programs() {
         pricingType: formData.pricingType,
         availability: formData.availability,
         billingOptions: formData.pricingType === 'Paid' ? formData.billingOptions : [],
-        monthlyStructuredFee: Number(formData.monthlyStructuredFee) || 0,
-        monthlyTrainerLedFee: Number(formData.monthlyTrainerLedFee) || 0,
-        annualStructuredFee: Number(formData.annualStructuredFee) || 0,
-        annualTrainerLedFee: Number(formData.annualTrainerLedFee) || 0,
-        programFee: formData.pricingType === 'Paid' ? Number(formData.monthlyStructuredFee || formData.monthlyTrainerLedFee || formData.annualStructuredFee || formData.annualTrainerLedFee) : 0,
-        pricingPlans: [],
-        learningGoals: [],
-        placementCategories: [],
+        monthlyStructuredFee: formData.monthlyStructuredFee === '' ? null : Number(formData.monthlyStructuredFee),
+        monthlyTrainerLedFee: formData.monthlyTrainerLedFee === '' ? null : Number(formData.monthlyTrainerLedFee),
+        annualStructuredFee: formData.annualStructuredFee === '' ? null : Number(formData.annualStructuredFee),
+        annualTrainerLedFee: formData.annualTrainerLedFee === '' ? null : Number(formData.annualTrainerLedFee),
+        monthlyAccessDurationDays: Number(formData.monthlyAccessDurationDays),
+        annualAccessDurationDays: Number(formData.annualAccessDurationDays),
         targetCompanies: formData.targetCompanies,
         skillTags: formData.skillTags,
         targetRoles: Array.isArray(formData.targetRoles) ? formData.targetRoles : parseCommaString(formData.targetRolesText || ''),
@@ -659,13 +674,6 @@ export default function Programs() {
     }
   };
 
-  const handleAddTargetRole = () => {
-    const role = targetRoleDraft.trim().replace(/,$/, '');
-    if (!role) return;
-    setFormData((prev) => ({ ...prev, targetRolesText: [...new Set([...parseCommaString(prev.targetRolesText), role])].join(', ') }));
-    setTargetRoleDraft('');
-  };
-
   const handleStatusChange = async (program, status) => {
     if (!status || status === program.status) return;
     try {
@@ -687,7 +695,7 @@ export default function Programs() {
 
   const programFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
-  const activeCount = programs.filter(p => p.status === 'Published').length;
+  const activeCount = programs.filter(p => ['Published', 'Active'].includes(p.status)).length;
   const draftCount = programs.filter(p => p.status === 'Draft').length;
   const totalStudents = programs.reduce((sum, p) => sum + (p.studentCount || 0), 0);
 
@@ -996,6 +1004,21 @@ export default function Programs() {
                     </div>
                   )}
                 </div>
+
+                {formData.pricingType === 'Paid' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {formData.billingOptions.map((period) => (
+                      <label key={period} className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        {period} Access Duration (days)*
+                        <input type="number" min="1" step="1" required
+                          name={period === 'Monthly' ? 'monthlyAccessDurationDays' : 'annualAccessDurationDays'}
+                          value={period === 'Monthly' ? formData.monthlyAccessDurationDays : formData.annualAccessDurationDays}
+                          onChange={handleFormChange} className={programFormInputClass} />
+                      </label>
+                    ))}
+                    <p className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400">Purchased access starts on the enrollment date and is independent of learning duration.</p>
+                  </div>
+                )}
 
                 {/* ── VISIBILITY ── */}
                 <div className="pt-1">
@@ -1414,6 +1437,26 @@ export default function Programs() {
                         )}
                       </div>
                     </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {formData.billingOptions.map((billingPeriod) => {
+                        const fieldName = `${billingPeriod.toLowerCase()}AccessDurationDays`;
+                        return (
+                          <label key={fieldName} className="block">
+                            <span className="admin-micro-label text-black/45 dark:text-white/45">{billingPeriod} plan access duration (days)*</span>
+                            <input
+                              type="number"
+                              name={fieldName}
+                              min="1"
+                              step="1"
+                              required
+                              value={formData[fieldName]}
+                              onChange={handleFormChange}
+                              className={programFormInputClass}
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
 
@@ -1737,7 +1780,7 @@ export default function Programs() {
                           <td className="px-3.5 py-3.5 text-center whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">{getProgramType(program.programType)}</td>
                           <td className="px-3.5 py-3.5 text-center whitespace-nowrap" onClick={(event) => event.stopPropagation()}><div className="inline-block relative"><select value={program.status === 'Active' ? 'Published' : program.status} onChange={(event) => handleStatusChange(program, event.target.value)} className={`appearance-none pr-6 px-2.5 py-1 rounded-lg text-[11px] font-semibold border outline-none cursor-pointer transition ${program.status === 'Published' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800' : program.status === 'Draft' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700'}`}><option value="Published">Published</option><option value="Draft">Draft</option><option value="Archived">Archived</option></select><FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 opacity-60" /></div></td>
                           <td className="px-3.5 py-3.5 text-center whitespace-nowrap"><span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">{program.studentCount || 0}</span></td>
-                          <td className="px-3.5 py-3.5 text-center whitespace-nowrap" onClick={(event) => event.stopPropagation()}><div className="flex items-center justify-center gap-1.5"><button aria-label={`View ${program.name}`} onClick={() => navigate(`/programs/${program._id}`)} className="p-1.5 rounded-lg text-slate-400 hover:text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/10 transition"><FiEye className="w-3.5 h-3.5" /></button><button aria-label={`Delete ${program.name}`} onClick={() => setProgramToDelete(program)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition"><FiTrash2 className="w-3.5 h-3.5" /></button></div></td>
+                          <td className="px-3.5 py-3.5 text-center whitespace-nowrap" onClick={(event) => event.stopPropagation()}><div className="flex items-center justify-center gap-1.5"><button aria-label={`View ${program.name}`} onClick={() => navigate(`/programs/${program._id}`)} className="p-1.5 rounded-lg text-slate-400 hover:text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/10 transition"><FiEye className="w-3.5 h-3.5" /></button><button aria-label={`Edit ${program.name}`} onClick={(event) => handleOpenEditModal(program, event)} className="p-1.5 rounded-lg text-slate-400 hover:text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/10 transition"><FiEdit2 className="w-3.5 h-3.5" /></button><button aria-label={`Delete ${program.name}`} onClick={() => setProgramToDelete(program)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition"><FiTrash2 className="w-3.5 h-3.5" /></button></div></td>
                         </tr>
                       ))}
                     </tbody>

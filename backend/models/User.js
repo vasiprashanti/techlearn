@@ -43,6 +43,7 @@ const userSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    programEnrollmentRevision: { type: Number, default: 0 },
     startDate: {
       type: Date,
       default: null,
@@ -114,8 +115,8 @@ const userSchema = new mongoose.Schema(
     },
     programSelection: {
       type: String,
-      enum: ["Skill", "Placement", "skill", "placement", "Placement Sprint", "Full Stack Project Program", "Both"],
-      default: "Placement",
+      enum: ["", "Skill", "Placement", "skill", "placement", "Placement Sprint", "Full Stack Project Program", "Both"],
+      default: "",
     },
     placementReadiness: {
       type: String,

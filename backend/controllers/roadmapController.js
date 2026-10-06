@@ -638,37 +638,6 @@ export const getCurrentUserRoadmap = async (req, res) => {
       });
     }
 
-    // Legacy fallback for programs created before roadmapIds were attached.
-    const programSelection = program?.programType
-      || student?.programSelection
-      || batch?.programSelection
-      || req.user?.programSelection
-      || "Placement Sprint";
-    const searchTitles = programSelection === "Placement Sprint"
-      ? ["Placement Sprint"]
-      : programSelection === "Full Stack Project Program"
-        ? ["Full Stack Project Program", "Project Sprint"]
-        : programSelection === "Both"
-          ? ["Placement Sprint", "Project Sprint", "Full Stack Project Program"]
-          : [programSelection];
-
-    for (const title of searchTitles) {
-      const defaultRoadmap = await Roadmap.findOne({
-        title: { $regex: new RegExp(`^${escapeRegex(title)}$`, "i") },
-        status: "Active",
-      }).sort({ updatedAt: -1 }).lean();
-      if (defaultRoadmap && isRoadmapEligibleForViewer({ roadmap: defaultRoadmap, user: req.user, student, schedule })) {
-        return res.status(200).json({
-          success: true,
-          data: {
-            ...formatRoadmap(defaultRoadmap),
-            scheduleType: schedule?.scheduleType || "individual",
-            programId: schedule?.programId || null,
-          },
-        });
-      }
-    }
-
     return res.status(200).json({ success: true, data: null });
   } catch (error) {
     console.error("getCurrentUserRoadmap error:", error);
