@@ -830,7 +830,7 @@ export default function Dashboard() {
                             >
                               Go to Daily challenge <ChevronRight className="w-3 h-3" />
                             </button>
-                            {hasPlacementLearning && placementLearning?.todayTopic && (
+                            {hasPlacementLearning && (placementLearning?.todayTopic || placementLearning?.course?.id) && (
                               <button
                                 onClick={() => navigate(todayNotesHref)}
                                 className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
@@ -1182,7 +1182,7 @@ export default function Dashboard() {
                   <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">
                     {hasPlacementLearning ? 'Recent Activity' : 'Recent Activity & Exercises'}
                   </h3>
-                  {hasPlacementLearning && placementLearning?.todayTopic ? (
+                  {hasPlacementLearning && (placementLearning?.todayTopic || placementLearning?.course?.id) ? (
                     <button onClick={() => navigate(todayNotesHref)} className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-blue-400 hover:underline">
                       Today's Notes
                     </button>

@@ -24,6 +24,23 @@ export const navigateUserByProgram = (user, navigate, options = {}) => {
     return;
   }
 
+  // Check if learner has a pending contextual onboarding recommendation
+  try {
+    const contextualData = JSON.parse(sessionStorage.getItem('techlearn-contextual-onboarding') || 'null');
+    if (contextualData && typeof contextualData === 'object') {
+      if (contextualData.programId) {
+        navigate('/onboarding/programs', { state: contextualData });
+        return;
+      }
+      if (contextualData.courseId) {
+        navigate(`/learn/courses/${contextualData.courseId}`, { state: contextualData });
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not read contextual onboarding for navigation:', err);
+  }
+
   // Incomplete accounts must resume the shared onboarding flow. Pricing and
   // program selection are only available after the profile is complete.
   if (options.isNewSignup || !user.onboardingCompleted) {

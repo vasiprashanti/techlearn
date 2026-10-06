@@ -36,8 +36,17 @@ export default function OnboardingPrograms() {
     }
   })();
 
+  const storedOnboardingData = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('techlearn-contextual-onboarding')) || {};
+    } catch {
+      return {};
+    }
+  })();
+
   const currentUser = {
     ...storedUserData,
+    ...storedOnboardingData,
     ...authUser,
     ...contextUser,
     ...locationState,
@@ -48,7 +57,7 @@ export default function OnboardingPrograms() {
     .filter((program, index, programs) => programs.findIndex((candidate) => String(candidate._id) === String(program._id)) === index);
   const selectedCatalogProgram = currentUser?.programId
     ? programOptions.find((program) => String(program._id) === String(currentUser.programId)) || null
-    : recommendedPrograms[0] || null;
+    : (recommendedPrograms[0] || catalogPrograms[0] || null);
   const selectedProgramId = selectedCatalogProgram?._id || null;
   const programType = String(selectedCatalogProgram?.programType || '').toLowerCase();
   const isPlacement = programType === 'placement'
