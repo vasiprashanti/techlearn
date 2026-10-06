@@ -167,12 +167,12 @@ const getDefaultPhases = (programType, value) => {
 
 const normalizePhases = (phases, programType, durationDays) => {
   const defaults = getDefaultPhases(programType, durationDays);
-  if (!Array.isArray(phases) || phases.length !== defaults.length) return defaults;
+  if (!Array.isArray(phases) || !phases.length) return defaults;
 
-  return defaults.map((fallback, index) => ({
-    phase: fallback.phase,
-    startDay: String(phases[index]?.startDay ?? fallback.startDay),
-    endDay: String(phases[index]?.endDay ?? fallback.endDay),
+  return phases.map((phase) => ({
+    phase: phase.phase,
+    startDay: String(phase.startDay),
+    endDay: String(phase.endDay),
   }));
 };
 
@@ -247,6 +247,8 @@ export default function Programs() {
     durationUnit: 'Days',
     phases: getDefaultPhases('Placement', 30),
     status: 'Draft',
+    pricingPlans: [],
+    placementCategories: ['Both'],
     visibility: 'Public',
     pricingType: 'Free',
     availability: 'Structured',
@@ -276,6 +278,7 @@ export default function Programs() {
           skills: fetchedSkills.length ? fetchedSkills : SKILL_TAG_OPTIONS,
           companies: fetchedCompanies.length ? fetchedCompanies : TARGET_COMPANY_OPTIONS,
           roles: fetchedRoles.length ? fetchedRoles : TARGET_ROLE_OPTIONS,
+          courses: response.courses || [],
         });
       }
     }).catch(() => {
@@ -352,7 +355,7 @@ export default function Programs() {
       setFormData((prev) => ({
         ...prev,
         programType: value,
-        phases: getDefaultPhases(value, prev.durationDays),
+        phases: prev.phases,
       }));
       return;
     }
@@ -365,6 +368,10 @@ export default function Programs() {
         next.phases = getDefaultPhases(prev.programType, totalDurationDays);
         return next;
       });
+      return;
+    }
+    if (name === 'availability') {
+      setFormData(previous => ({ ...previous, availability: value, pricingPlans: previous.pricingPlans.map(plan => ({ ...plan, availability: value === 'Both' ? plan.availability : value })) }));
       return;
     }
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -465,6 +472,8 @@ export default function Programs() {
       durationUnit: 'Days',
       phases: getDefaultPhases('Placement', 30),
       status: 'Draft',
+      pricingPlans: [],
+      placementCategories: ['Both'],
       visibility: 'Public',
       pricingType: 'Free',
       availability: 'Structured',
@@ -516,7 +525,9 @@ export default function Programs() {
       durationDays: String(durationUnit === 'Weeks' ? learningDurationDays / 7 : learningDurationDays),
       durationUnit,
       phases: normalizePhases(program.phases, getProgramType(program.programType), program.durationDays || parseDurationDays(program.duration) || 30),
-      status: program.status || 'Draft',
+      status: program.status === 'Active' ? 'Published' : (program.status || 'Draft'),
+      pricingPlans: (savedPlans.length ? savedPlans : program.pricingType === 'Paid' && Number(program.programFee) > 0 ? [{ key: 'legacy-single', title: 'Program Access', price: program.programFee, accessDurationDays: 365 }] : []).map(plan => ({ ...plan, availability: plan.availability || (availability === 'Both' ? 'Structured' : availability), accessDuration: plan.accessDuration || plan.accessDurationDays || 365, accessDurationUnit: plan.accessDurationUnit || 'Days' })),
+      placementCategories: program.placementCategories?.length ? program.placementCategories : ['Both'],
       visibility: program.visibility || 'Public',
       pricingType: program.pricingType || 'Free',
       availability,
@@ -556,12 +567,12 @@ export default function Programs() {
 
     if (!formData.name.trim()) { setModalError('Program name is required'); return; }
     if (!finalType) { setModalError('Program type is required'); return; }
-    if (!Number.isInteger(durationDays) || durationDays < getMinimumDurationDays(finalType)) {
-      setModalError(`${finalType} programs must be at least ${getMinimumDurationDays(finalType)} days long.`);
+    if (!Number.isInteger(durationDays) || durationDays < 1) {
+      setModalError('Learning duration must be a positive whole number of days.');
       return;
     }
-    if (!formData.phases.length || formData.phases.length !== PHASE_TYPES_BY_PROGRAM_TYPE[finalType].length) {
-      setModalError('Configure every phase before saving the program.');
+    if (!formData.phases.length) {
+      setModalError('Configure phases before saving the program.');
       return;
     }
     let expectedStartDay = 1;
@@ -581,44 +592,10 @@ export default function Programs() {
       setModalError(`Phases must cover exactly days 1 through ${durationDays}.`);
       return;
     }
-    if (formData.pricingType === 'Paid') {
-      if (!formData.billingOptions.length) { setModalError('Select at least one billing option for Paid programs.'); return; }
-      const availabilityFields = {
-        Structured: ['monthlyStructuredFee', 'annualStructuredFee'],
-        'Trainer-Led': ['monthlyTrainerLedFee', 'annualTrainerLedFee'],
-        Both: ['monthlyStructuredFee', 'monthlyTrainerLedFee', 'annualStructuredFee', 'annualTrainerLedFee'],
-      }[formData.availability] || [];
-      const requiredFields = availabilityFields.filter((field) => field.startsWith('monthly') ? formData.billingOptions.includes('Monthly') : formData.billingOptions.includes('Annual'));
-      if (requiredFields.some((field) => !Number.isFinite(Number(formData[field])) || Number(formData[field]) < 0)) {
-        setModalError('Enter a valid fee for every selected billing and delivery option.');
-        return;
-      }
-
-      const feeFields = [
-        ['Monthly', 'Structured', 'monthlyStructuredFee'],
-        ['Monthly', 'Trainer-Led', 'monthlyTrainerLedFee'],
-        ['Annual', 'Structured', 'annualStructuredFee'],
-        ['Annual', 'Trainer-Led', 'annualTrainerLedFee'],
-      ];
-      for (const [billingPeriod, availabilityType, fieldName] of feeFields) {
-        const periodSelected = formData.billingOptions.includes(billingPeriod);
-        const availabilitySelected = formData.availability === 'Both' || formData.availability === availabilityType;
-        if (periodSelected && availabilitySelected
-          && (!Number.isFinite(Number(formData[fieldName])) || Number(formData[fieldName]) <= 0)) {
-          setModalError(`${billingPeriod} ${availabilityType} Fee must be a number greater than zero.`);
-          return;
-        }
-      }
-      for (const billingPeriod of formData.billingOptions) {
-        const fieldName = `${billingPeriod.toLowerCase()}AccessDurationDays`;
-        const duration = Number(formData[fieldName]);
-        if (!Number.isInteger(duration) || duration < 1) {
-          setModalError(`${billingPeriod} access duration must be a positive whole number of days.`);
-          return;
-        }
-      }
+    if (formData.pricingType === 'Paid' && (!formData.pricingPlans.length || formData.pricingPlans.some(plan => !plan.title.trim() || !Number.isFinite(Number(plan.price)) || Number(plan.price) <= 0 || !Number.isInteger(Number(plan.accessDuration)) || Number(plan.accessDuration) < 1))) {
+      setModalError('Add a named plan with a positive price and whole-number access duration.');
+      return;
     }
-
     try {
       setSaving(true);
       const payload = {
@@ -628,6 +605,12 @@ export default function Programs() {
         duration: `${formData.durationDays} ${formData.durationUnit}`,
         durationDays,
         phases,
+        status: formData.status,
+        company: formData.company || '',
+        courseIds: formData.courseIds || [],
+        primaryCourseId: formData.primaryCourseId || null,
+        pricingPlans: formData.pricingType === 'Paid' ? formData.pricingPlans.map(plan => ({ ...plan, price: Number(plan.price), accessDuration: Number(plan.accessDuration) })) : [],
+        placementCategories: finalType === 'Placement' ? formData.placementCategories : [],
         visibility: formData.visibility,
         pricingType: formData.pricingType,
         availability: formData.availability,
@@ -908,119 +891,24 @@ export default function Programs() {
                     </div>
                   </div>
 
-                  {formData.pricingType === 'Paid' && (
-                    <div className="rounded-xl border border-black/10 dark:border-white/15 bg-black/[0.02] dark:bg-white/[0.03] p-4 space-y-3">
-                      <div>
-                        <label className="admin-micro-label text-black/45 dark:text-white/45">Billing Options* (Select at least one)</label>
-                        <div className="flex gap-4 text-sm font-medium text-slate-700 dark:text-slate-200 mt-1">
-                          {['Monthly', 'Annual'].map((option) => (
-                            <label key={option} className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={formData.billingOptions.includes(option)}
-                                onChange={() =>
-                                  setFormData((current) => ({
-                                    ...current,
-                                    billingOptions: current.billingOptions.includes(option)
-                                      ? current.billingOptions.filter((item) => item !== option)
-                                      : [...current.billingOptions, option],
-                                  }))
-                                }
-                                className="h-4 w-4 rounded border-black/20 text-[#3C83F6] focus:ring-[#3C83F6]"
-                              />
-                              {option}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Conditional Fee Fields */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-black/5 dark:border-white/5">
-                        {formData.billingOptions.includes('Monthly') && (formData.availability === 'Structured' || formData.availability === 'Both') && (
-                          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            Monthly Structured Fee (₹)*
-                            <input
-                              type="number"
-                              min="0"
-                              step="1"
-                              required
-                              name="monthlyStructuredFee"
-                              value={formData.monthlyStructuredFee}
-                              onChange={handleFormChange}
-                              placeholder="e.g. 499"
-                              className={programFormInputClass}
-                            />
-                          </label>
-                        )}
-                        {formData.billingOptions.includes('Monthly') && (formData.availability === 'Trainer-Led' || formData.availability === 'Both') && (
-                          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            Monthly Trainer-Led Fee (₹)*
-                            <input
-                              type="number"
-                              min="0"
-                              step="1"
-                              required
-                              name="monthlyTrainerLedFee"
-                              value={formData.monthlyTrainerLedFee}
-                              onChange={handleFormChange}
-                              placeholder="e.g. 999"
-                              className={programFormInputClass}
-                            />
-                          </label>
-                        )}
-                        {formData.billingOptions.includes('Annual') && (formData.availability === 'Structured' || formData.availability === 'Both') && (
-                          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            Annual Structured Fee (₹)*
-                            <input
-                              type="number"
-                              min="0"
-                              step="1"
-                              required
-                              name="annualStructuredFee"
-                              value={formData.annualStructuredFee}
-                              onChange={handleFormChange}
-                              placeholder="e.g. 4999"
-                              className={programFormInputClass}
-                            />
-                          </label>
-                        )}
-                        {formData.billingOptions.includes('Annual') && (formData.availability === 'Trainer-Led' || formData.availability === 'Both') && (
-                          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            Annual Trainer-Led Fee (₹)*
-                            <input
-                              type="number"
-                              min="0"
-                              step="1"
-                              required
-                              name="annualTrainerLedFee"
-                              value={formData.annualTrainerLedFee}
-                              onChange={handleFormChange}
-                              placeholder="e.g. 9999"
-                              className={programFormInputClass}
-                            />
-                          </label>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                {formData.pricingType === 'Paid' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {formData.billingOptions.map((period) => (
-                      <label key={period} className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        {period} Access Duration (days)*
-                        <input type="number" min="1" step="1" required
-                          name={period === 'Monthly' ? 'monthlyAccessDurationDays' : 'annualAccessDurationDays'}
-                          value={period === 'Monthly' ? formData.monthlyAccessDurationDays : formData.annualAccessDurationDays}
-                          onChange={handleFormChange} className={programFormInputClass} />
-                      </label>
-                    ))}
-                    <p className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400">Purchased access starts on the enrollment date and is independent of learning duration.</p>
-                  </div>
-                )}
-
                 {/* ── VISIBILITY ── */}
+                {formData.pricingType === 'Paid' && <section className="space-y-3 rounded-xl border border-black/10 dark:border-white/15 p-3">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Plan access begins on the Program Start Date, independently of learning duration.</p>
+                  {formData.pricingPlans.map((plan, index) => {
+                    const updatePlan = (field, value) => setFormData(previous => ({ ...previous, pricingPlans: previous.pricingPlans.map((item, i) => i === index ? { ...item, [field]: value } : item) }));
+                    return <div key={plan.key} className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl border border-black/10 dark:border-white/15 p-3">
+                      <label>Plan Name*<input required value={plan.title} onChange={event => updatePlan('title', event.target.value)} className={programFormInputClass} /></label>
+                      <label>Price (₹)*<input required type="number" min="0.01" step="0.01" value={plan.price} onChange={event => updatePlan('price', event.target.value)} className={programFormInputClass} /></label>
+                      <label>Access Duration*<input required type="number" min="1" step="1" value={plan.accessDuration} onChange={event => updatePlan('accessDuration', event.target.value)} className={programFormInputClass} /></label>
+                      <label>Access Duration Unit*<select value={plan.accessDurationUnit} onChange={event => updatePlan('accessDurationUnit', event.target.value)} className={programFormInputClass}>{['Days', 'Months', 'Years'].map(unit => <option key={unit} className={dropdownOptionClass}>{unit}</option>)}</select></label>
+                      <label>Learning Mode*<select value={plan.availability} onChange={event => updatePlan('availability', event.target.value)} className={programFormInputClass}>{(formData.availability === 'Both' ? ['Structured', 'Trainer-Led'] : [formData.availability]).map(mode => <option key={mode} className={dropdownOptionClass}>{mode}</option>)}</select></label>
+                      <button type="button" onClick={() => setFormData(previous => ({ ...previous, pricingPlans: previous.pricingPlans.filter((_, i) => i !== index) }))} className="text-sm text-red-500">Remove Plan</button>
+                    </div>;
+                  })}
+                  <button type="button" className="text-sm font-semibold text-[#3C83F6]" onClick={() => setFormData(previous => ({ ...previous, pricingPlans: [...previous.pricingPlans, { key: 'plan-' + crypto.randomUUID(), title: '', price: '', accessDuration: 1, accessDurationUnit: 'Months', availability: previous.availability === 'Trainer-Led' ? 'Trainer-Led' : 'Structured', active: true }] }))}>+ Add Plan</button>
+                </section>}
                 <div className="pt-1">
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Visibility*</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
@@ -1170,6 +1058,9 @@ export default function Programs() {
                 </div>
 
                 {/* ── PLACEMENT TARGETING (Placement only) ── */}
+                <label className="block">Company (manual, optional)
+                  <input name="company" value={formData.company || ''} onChange={handleFormChange} className={programFormInputClass} />
+                </label>
                 {formData.programType === 'Placement' && (
                   <div className="rounded-xl border border-blue-500/20 bg-blue-500/[0.03] dark:border-blue-400/20 dark:bg-blue-400/[0.03] p-4 space-y-4">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff]">Placement Targeting</p>
@@ -1437,30 +1328,25 @@ export default function Programs() {
                         )}
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      {formData.billingOptions.map((billingPeriod) => {
-                        const fieldName = `${billingPeriod.toLowerCase()}AccessDurationDays`;
-                        return (
-                          <label key={fieldName} className="block">
-                            <span className="admin-micro-label text-black/45 dark:text-white/45">{billingPeriod} plan access duration (days)*</span>
-                            <input
-                              type="number"
-                              name={fieldName}
-                              min="1"
-                              step="1"
-                              required
-                              value={formData[fieldName]}
-                              onChange={handleFormChange}
-                              className={programFormInputClass}
-                            />
-                          </label>
-                        );
-                      })}
-                    </div>
+                    <label className="block">Opportunity Type
+                      <select value={formData.placementCategories?.[0] || "Both"} onChange={event => setFormData(previous => ({ ...previous, placementCategories: [event.target.value] }))} className={programFormInputClass}>
+                        {["On-Campus", "Off-Campus", "Both"].map(value => <option key={value} className={dropdownOptionClass}>{value}</option>)}
+                      </select>
+                    </label>
                   </div>
                 )}
 
                 {/* ── PROGRAM STRUCTURE: LEARNING PHASES (End of Form) ── */}
+                <label className="block">Program Status*
+                  <select name="status" value={formData.status} onChange={handleFormChange} className={programFormInputClass}>
+                    {['Draft', 'Published', 'Archived'].map(value => <option key={value} className={dropdownOptionClass}>{value}</option>)}
+                  </select>
+                </label>
+                <label className="block">Attach Courses
+                  <select multiple value={formData.courseIds || []} onChange={event => setFormData(previous => ({ ...previous, courseIds: Array.from(event.target.selectedOptions, option => option.value), primaryCourseId: '' }))} className={programFormInputClass}>
+                    {(programOptions.courses || []).map(course => <option key={course._id} value={String(course._id)} className={dropdownOptionClass}>{course.title}</option>)}
+                  </select>
+                </label>
                 {(() => {
                   const formDurationDays = (Number(formData.durationDays) || 0) * (formData.durationUnit === 'Weeks' ? 7 : 1);
                   const phaseValidation = validatePhaseCoverage(formData.phases, formDurationDays);
@@ -1489,6 +1375,7 @@ export default function Programs() {
                               <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Phase</span>
                               <div className="flex h-10 items-center rounded-lg border border-black/10 bg-white/70 px-3 text-xs font-semibold text-slate-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-white">
                                 {PHASE_LABELS[phase.phase] || phase.phase}
+                                <button type="button" aria-label={`Remove ${PHASE_LABELS[phase.phase]}`} onClick={() => setFormData(previous => ({ ...previous, phases: previous.phases.filter((_, i) => i !== index) }))} className="ml-2 text-red-500">×</button>
                               </div>
                             </div>
                             <label className="block">
@@ -1517,6 +1404,14 @@ export default function Programs() {
                         ))}
                       </div>
 
+                      <div className={`text-xs flex items-center gap-1.5 font-medium ${
+                        phaseValidation.valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+                      }`}>
+                        <select aria-label="Add Phase" value="" onChange={event => { if (event.target.value) setFormData(previous => ({ ...previous, phases: [...previous.phases, { phase: event.target.value, startDay: String(Number(previous.phases.at(-1)?.endDay || 0) + 1), endDay: String(formDurationDays) }] })); }} className={programFormInputClass}>
+                          <option className={dropdownOptionClass} value="">+ Add Phase</option>
+                          {PHASE_TYPES_BY_PROGRAM_TYPE[formData.programType].filter(type => !formData.phases.some(phase => phase.phase === type)).map(type => <option key={type} value={type} className={dropdownOptionClass}>{PHASE_LABELS[type]}</option>)}
+                        </select>
+                      </div>
                       <div className={`text-xs flex items-center gap-1.5 font-medium ${
                         phaseValidation.valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
                       }`}>

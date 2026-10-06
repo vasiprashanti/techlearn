@@ -612,6 +612,17 @@ export default function Students() {
               </div>
 
               {formError && <p className="text-xs text-rose-500">{formError}</p>}
+              {editingStudentId && (() => {
+                const enrollment = studentsData.items.find(student => String(student.id) === String(editingStudentId));
+                if (!enrollment) return null;
+                return <dl className="grid grid-cols-2 gap-2 rounded-xl border border-black/10 dark:border-white/15 p-3 text-xs">
+                  <dt>Program Expiry</dt><dd>{formatDateValue(enrollment.programExpiresAt)}</dd>
+                  <dt>Pricing Plan</dt><dd>{enrollment.pricingPlan?.title || 'Free / No plan'}</dd>
+                  <dt>Plan Expiry</dt><dd>{formatDateValue(enrollment.planExpiresAt)}</dd>
+                  <dt>Access Duration</dt><dd>{enrollment.pricingPlan?.accessDuration ? `${enrollment.pricingPlan.accessDuration} ${enrollment.pricingPlan.accessDurationUnit}` : enrollment.accessDurationDays ? `${enrollment.accessDurationDays} Days` : '—'}</dd>
+                  <dt>Access Validity</dt><dd>{enrollment.enrollmentId ? enrollment.accessValid ? 'Valid' : 'Expired' : 'No enrollment'}</dd>
+                </dl>;
+              })()}
 
               <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-black/5 dark:border-white/5">
                 <button
@@ -786,6 +797,7 @@ export default function Students() {
                 <FiCompass className="w-3.5 h-3.5" />
                 Exploring
               </button>
+              {['placement', 'completed', 'waitlist'].map(tab => <button key={tab} onClick={() => setActiveTab(tab)} className={`px-3 py-2 text-xs font-bold border-b-2 whitespace-nowrap ${activeTab === tab ? 'border-[#3C83F6] text-[#3C83F6]' : 'border-transparent text-slate-500 dark:text-slate-400'}`}>{tab[0].toUpperCase() + tab.slice(1)}</button>)}
             </div>
 
             {activeTab === 'leads' && stats.leadFeedbackReasonCounts?.length > 0 && (
@@ -956,7 +968,7 @@ export default function Students() {
                   <table className="w-full text-left text-xs border-collapse">
                     
                     {/* TAB Headers */}
-                    {(activeTab === 'all' || activeTab === 'enrolled') && (
+                    {(['all', 'enrolled', 'placement', 'completed', 'waitlist'].includes(activeTab)) && (
                       <thead className="sticky top-0 z-10 bg-slate-100/90 dark:bg-[#0b1736]/90 backdrop-blur-md">
                         <tr className="border-b border-black/10 dark:border-white/10 text-[10px] font-bold text-black/40 dark:text-white/40 uppercase tracking-wider whitespace-nowrap">
                           <th className="py-2.5 px-3 w-8"></th>
@@ -1062,7 +1074,7 @@ export default function Students() {
                             </td>
 
                             {/* ENROLLED / ALL TAB COLUMNS */}
-                            {(activeTab === 'all' || activeTab === 'enrolled') && (
+                            {(['all', 'enrolled', 'placement', 'completed', 'waitlist'].includes(activeTab)) && (
                               <>
                                 <td className="py-2.5 px-3 font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                   {student.college}

@@ -17,6 +17,8 @@ const pricingPlanSchema = new mongoose.Schema(
     price: { type: Number, required: true, min: 0 },
     billingPeriod: { type: String, enum: ["Monthly", "Annual"], default: null },
     accessDurationDays: { type: Number, min: 1, default: null },
+    accessDuration: { type: Number, min: 1, default: null },
+    accessDurationUnit: { type: String, enum: ['Days', 'Months', 'Years'], default: 'Days' },
     availability: { type: String, enum: ["Structured", "Trainer-Led"], default: null },
     benefits: { type: [String], default: [] },
     active: { type: Boolean, default: true },

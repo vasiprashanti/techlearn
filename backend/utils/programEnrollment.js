@@ -29,10 +29,12 @@ const getProgramResourceIds = (program, key) => getReferenceIds(
   Array.isArray(program?.[key]) ? program[key] : []
 );
 
-const getProgramExpiryDate = (startDate, program) => {
+export const getProgramExpiryDate = (startDate, program) => {
   const start = new Date(startDate);
   const durationDays = Number(program?.durationDays) || parseDurationDays(program?.duration);
   if (Number.isNaN(start.getTime()) || !Number.isInteger(durationDays) || durationDays < 1) return null;
+  // Batch expiry remains its inclusive final learning day for compatibility.
+  // Enrollment.programExpiresAt is stored separately as Start + Duration.
   return new Date(start.getTime() + ((durationDays - 1) * DAY_IN_MILLISECONDS));
 };
 
@@ -454,7 +456,8 @@ export const upsertProgramEnrollment = async ({
           }
         : null)
     : null;
-  const rawPlanSnapshot = pricingPlan || existing?.pricingPlanSnapshot || defaultPaidPlan;
+  const selectedSnapshot = pricingPlan || existing?.pricingPlanSnapshot || defaultPaidPlan;
+  const rawPlanSnapshot = typeof selectedSnapshot?.toObject === 'function' ? selectedSnapshot.toObject() : selectedSnapshot;
   const accessDurationDays = resolveProgramAccessDurationDays({
     accessDurationDays: rawPlanSnapshot?.accessDurationDays || existing?.accessDurationDays,
     pricingPlanSnapshot: rawPlanSnapshot || existing?.pricingPlanSnapshot,
@@ -469,13 +472,14 @@ export const upsertProgramEnrollment = async ({
           || (rawPlanSnapshot.billingPeriod === "Monthly" ? 30 : 365),
       }
     : null;
-  const enrollmentStartDate = explicitIndividualStartDate
+  const enrollmentBatch = resolvedBatchId ? await Batch.findById(resolvedBatchId).session(session).lean() : null;
+  const enrollmentStartDate = enrollmentBatch?.startDate || explicitIndividualStartDate
     || existing?.individualStartDate
     || existing?.assignedAt
     || now;
-  const accessExpiresAt = resolvedBatchId
-    ? null
-    : getProgramAccessExpiryDate(enrollmentStartDate, accessDurationDays);
+  const accessExpiresAt = getProgramAccessExpiryDate(enrollmentStartDate, accessDurationDays, resolvedPlanSnapshot || {});
+  const programDurationDays = existing?.programDurationDays || program.durationDays || parseDurationDays(program.duration);
+  const programExpiresAt = getProgramAccessExpiryDate(enrollmentStartDate, programDurationDays);
 
   const resolvedStartDate = explicitIndividualStartDate
     || existing?.individualStartDate
@@ -495,14 +499,16 @@ export const upsertProgramEnrollment = async ({
       completedAt: status === "Completed" ? (existing?.completedAt || now) : null,
       accessTier: getAccessTier(program, accessTier),
       batchId: resolvedBatchId || null,
+      programDurationDays,
+      programExpiresAt,
       ...(calculatedExpiryDate ? { expiryDate: calculatedExpiryDate } : {}),
-      individualStartDate: enrollmentStartDate,
+      individualStartDate: explicitIndividualStartDate || existing?.individualStartDate || enrollmentStartDate,
       ...(resolvedPlanSnapshot ? {
         pricingPlanSnapshot: resolvedPlanSnapshot,
         billingPeriod: resolvedPlanSnapshot.billingPeriod || null,
         accessDurationDays,
       } : accessDurationDays ? { accessDurationDays } : {}),
-      ...(resolvedBatchId ? { accessExpiresAt: null } : accessDurationDays ? { accessExpiresAt } : {}),
+      ...(accessDurationDays ? { accessExpiresAt } : {}),
       ...(individualStartDateSource ? { individualStartDateSource } : {}),
     },
     $setOnInsert: {

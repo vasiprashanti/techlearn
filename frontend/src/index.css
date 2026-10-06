@@ -3886,6 +3886,16 @@ body .admin-dashboard-typography.dark .course-form-modal.course-form-modal.cours
 }
 
 .program-selection-hidden input[type="checkbox"] { visibility: hidden; }
+.admin-dashboard-typography select option,
+.admin-dashboard-typography select optgroup {
+  background-color: #ffffff;
+  color: #1e293b;
+}
+.dark .admin-dashboard-typography select option,
+.dark .admin-dashboard-typography select optgroup {
+  background-color: #0f1f43;
+  color: #ffffff;
+}
 .program-selection-hidden th:first-child,
 .program-selection-hidden td:first-child {
   width: 0 !important;

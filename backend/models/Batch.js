@@ -25,6 +25,7 @@ const batchSchema = new mongoose.Schema(
       default: [],
       index: true,
     },
+    allColleges: { type: Boolean, default: false },
     name: {
       type: String,
       required: true,

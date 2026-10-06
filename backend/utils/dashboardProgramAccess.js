@@ -103,10 +103,11 @@ export const resolveDashboardProgramAccess = async ({
   });
 
   for (const enrollment of orderedEnrollments) {
+    if (enrollment.status !== 'Active') continue;
     const programId = getIdString(enrollment.programId);
     const program = programById.get(programId);
     if (!program) continue;
-    if (enrollment.status === "Active" && enrollment.accessExpiresAt && new Date(enrollment.accessExpiresAt) < new Date()) continue;
+    if (enrollment.accessExpiresAt && new Date(enrollment.accessExpiresAt) <= new Date()) continue;
 
     // Paid access is a server-side entitlement. A stale or malformed
     // enrollment with a Free tier must not put a paid program on Dashboard.

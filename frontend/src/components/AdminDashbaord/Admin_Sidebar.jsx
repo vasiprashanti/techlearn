@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion as Motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext";
@@ -61,6 +61,15 @@ const SCROLL_KEY = 'sidebar-scroll';
 export const OPEN_ADMIN_SIDEBAR_EVENT = 'admin-sidebar:open-mobile';
 
 const Sidebar = ({ showMobileMenuButton = true }) => {
+  useEffect(() => {
+    const openDatePicker = event => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement) || input.type !== 'date' || input.disabled || input.readOnly) return;
+      try { input.showPicker?.(); } catch { /* Keep the native date input usable in unsupported browsers. */ }
+    };
+    document.addEventListener('click', openDatePicker);
+    return () => document.removeEventListener('click', openDatePicker);
+  }, []);
   const { theme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const desktopNavRef = useRef(null);
@@ -166,14 +175,14 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
               className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
             />
-            <motion.div
+            <Motion.div
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
@@ -202,7 +211,7 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
               <div className="flex-1 overflow-y-auto px-4 pb-6 scrollbar-hide">
                 {renderNavLinks(() => setMobileMenuOpen(false))}
               </div>
-            </motion.div>
+            </Motion.div>
           </>
         )}
       </AnimatePresence>

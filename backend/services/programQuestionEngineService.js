@@ -173,9 +173,8 @@ export const getProgramLearningContext = async ({
   if (
     !isAdmin
     && program.pricingType === "Paid"
-    && enrollment?.expiryDate
-    && new Date(enrollment.expiryDate).getTime() < now.getTime()
-    && enrollment.status !== "Completed"
+    && enrollment?.accessExpiresAt
+    && new Date(enrollment.accessExpiresAt).getTime() <= now.getTime()
   ) {
     const error = new Error("Your paid access for this program has expired.");
     error.statusCode = 403;

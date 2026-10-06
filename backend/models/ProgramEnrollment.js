@@ -51,6 +51,8 @@ const programEnrollmentSchema = new mongoose.Schema(
     },
     billingPeriod: { type: String, enum: ["Monthly", "Annual", null], default: null },
     accessDurationDays: { type: Number, min: 1, default: null },
+    programDurationDays: { type: Number, min: 1, default: null },
+    programExpiresAt: { type: Date, default: null },
     accessExpiresAt: { type: Date, default: null, index: true },
     pricingPlanSnapshot: { type: mongoose.Schema.Types.Mixed, default: null },
     assignedAt: {

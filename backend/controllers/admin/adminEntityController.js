@@ -22,6 +22,8 @@ import StudentTrackAssignment from "../../models/StudentTrackAssignment.js";
 import ProgramEnrollment from "../../models/ProgramEnrollment.js";
 import Payment from "../../models/Payment.js";
 import PricingExitFeedback from "../../models/PricingExitFeedback.js";
+import ProgramWaitlist from "../../models/ProgramWaitlist.js";
+import ProgramWaitlistLead from "../../models/ProgramWaitlistLead.js";
 import { writeAuditLog } from "../../utils/auditLogger.js";
 import { assertObjectId, formatDateLabel } from "./adminCommon.js";
 import {
@@ -32,6 +34,7 @@ import {
   upsertProgramEnrollment,
   assignProgramToBatch,
   removeProgramFromBatch,
+  getProgramExpiryDate,
 } from "../../utils/programEnrollment.js";
 import { expireAllActiveBatches, expireBatchIfNeeded, isBatchExpired } from "../../utils/batchLifecycle.js";
 import { buildUnifiedProfile } from "../../utils/userProfile.js";
@@ -691,7 +694,8 @@ export const listBatches = async (req, res) => {
       return {
         id: batch._id,
         name: batch.name,
-        college: batch.collegeIds && batch.collegeIds.filter(Boolean).length > 0
+        allColleges: batch.allColleges === true,
+        college: batch.allColleges ? "All Colleges" : batch.collegeIds && batch.collegeIds.filter(Boolean).length > 0
           ? batch.collegeIds.filter(Boolean).map((c) => c.name || "Unknown College").join(", ")
           : (batch.collegeId?.name || "Unknown College"),
         collegeIds: (batch.collegeIds || []).filter(Boolean).map((c) => String(c._id || c)),
@@ -762,8 +766,9 @@ export const createBatchAdmin = async (req, res) => {
         ? null
         : Number(batchSize);
     
-    const resolvedCollegeIds = Array.isArray(collegeIds) ? collegeIds : (collegeId ? [collegeId] : []);
-    if (resolvedCollegeIds.length === 0 || !name || !startDate) {
+    const allColleges = req.body.allColleges === true;
+    const resolvedCollegeIds = allColleges ? [] : [...new Set(Array.isArray(collegeIds) ? collegeIds : (collegeId ? [collegeId] : []))];
+    if ((!allColleges && resolvedCollegeIds.length === 0) || !name || !startDate) {
       return res.status(400).json({ success: false, message: "collegeIds, name, and startDate are required." });
     }
     for (const id of resolvedCollegeIds) {
@@ -839,6 +844,7 @@ export const createBatchAdmin = async (req, res) => {
             {
               collegeId: resolvedCollegeIds[0],
               collegeIds: resolvedCollegeIds,
+              allColleges,
               name: name.trim(),
               startDate,
               expiryDate: resolvedExpiryDate,
@@ -2711,11 +2717,12 @@ todayXp = todayChallengeXp + todayTaskXp;
         id: batch._id,
         name: batch.name,
         collegeId: batch.collegeId?._id || null,
+        allColleges: batch.allColleges === true,
         collegeIds: (batch.collegeIds || []).filter(Boolean).map((c) => String(c._id || c)),
         collegesList: batch.collegeIds && batch.collegeIds.filter(Boolean).length > 0
           ? batch.collegeIds.filter(Boolean).map((c) => c.name || "Unknown College")
           : (batch.collegeId?.name ? [batch.collegeId.name] : []),
-        college: batch.collegeIds && batch.collegeIds.filter(Boolean).length > 0
+        college: batch.allColleges ? "All Colleges" : batch.collegeIds && batch.collegeIds.filter(Boolean).length > 0
           ? batch.collegeIds.filter(Boolean).map((c) => c.name || "Unknown College").join(", ")
           : (batch.collegeId?.name || "Unknown College"),
         assignedTrack: batch.assignedTrackTemplate?.name || batch.assignedTrack || "",
@@ -2990,14 +2997,18 @@ export const updateBatchAdmin = async (req, res) => {
       }
     }
 
-    if (req.body.collegeIds) {
+    if (req.body.allColleges !== undefined) update.allColleges = req.body.allColleges === true;
+    if (req.body.allColleges === true) {
+      update.collegeIds = [];
+      update.collegeId = null;
+    } else if (req.body.collegeIds) {
       if (!Array.isArray(req.body.collegeIds) || req.body.collegeIds.length === 0) {
         return res.status(400).json({ success: false, message: "collegeIds must be a non-empty array." });
       }
       for (const id of req.body.collegeIds) {
         if (!assertObjectId(id, "collegeIds", res)) return;
       }
-      update.collegeIds = req.body.collegeIds;
+      update.collegeIds = [...new Set(req.body.collegeIds)];
       update.collegeId = req.body.collegeIds[0];
     } else if (req.body.collegeId) {
       if (!assertObjectId(req.body.collegeId, "collegeId", res)) return;
@@ -3416,7 +3427,7 @@ export const createStudentAdmin = async (req, res) => {
       const batchCollegeIds = (batch.collegeIds?.length ? batch.collegeIds : [batch.collegeId])
         .filter(Boolean)
         .map((id) => String(id));
-      if (collegeId && batchCollegeIds.length > 0 && !batchCollegeIds.includes(String(collegeId))) {
+      if (!batch.allColleges && batchCollegeIds.length > 0 && !batchCollegeIds.includes(String(collegeId || ''))) {
         return res.status(400).json({
           success: false,
           message: "The student's college must be one of the colleges assigned to this batch.",
@@ -3754,7 +3765,7 @@ export const updateStudentAdmin = async (req, res) => {
       const batchCollegeIds = (batch.collegeIds?.length ? batch.collegeIds : [batch.collegeId])
         .filter(Boolean)
         .map((id) => String(id));
-      if (batchCollegeIds.length > 0 && !batchCollegeIds.includes(String(nextCollegeId))) {
+      if (!batch.allColleges && batchCollegeIds.length > 0 && !batchCollegeIds.includes(String(nextCollegeId || ''))) {
         return res.status(400).json({
           success: false,
           message: "The student's college must be one of the colleges assigned to this batch.",
@@ -3968,10 +3979,16 @@ export const updateStudentProgramStartDateAdmin = async (req, res) => {
     const accessDurationDays = resolveProgramAccessDurationDays(enrollment);
     enrollment.individualStartDate = parsedDate;
     enrollment.individualStartDateSource = "explicit_admin";
+    const enrolledProgram = await Program.findById(programId).select('durationDays duration').lean();
+    const learningDays = enrollment.programDurationDays || enrolledProgram?.durationDays;
+    if (learningDays) {
+      enrollment.programDurationDays = learningDays;
+      enrollment.programExpiresAt = getProgramAccessExpiryDate(parsedDate, learningDays);
+    }
     enrollment.source = "admin";
     if (accessDurationDays) {
       enrollment.accessDurationDays = accessDurationDays;
-      enrollment.accessExpiresAt = getProgramAccessExpiryDate(parsedDate, accessDurationDays);
+      enrollment.accessExpiresAt = getProgramAccessExpiryDate(parsedDate, accessDurationDays, enrollment.pricingPlanSnapshot || {});
       enrollment.expiryDate = enrollment.accessExpiresAt;
     }
     await enrollment.save();
@@ -4120,7 +4137,7 @@ export const getGlobalStudentsAdmin = async (req, res) => {
     const limit = Math.min(100, Math.max(5, Number.parseInt(req.query.limit, 10) || 25));
 
     // Fetch all reference data needed for dynamic classification and filters
-    const [allColleges, allPrograms, allEnrollments, allPayments, allExitFeedbacks, allUsers] = await Promise.all([
+    const [allColleges, allPrograms, allEnrollments, allPayments, allExitFeedbacks, allUsers, waitlistRecords, waitlistLeads] = await Promise.all([
       College.find().select("_id name").lean(),
       Program.find().select("_id name programType duration durationDays status").lean(),
       ProgramEnrollment.find()
@@ -4130,6 +4147,8 @@ export const getGlobalStudentsAdmin = async (req, res) => {
       Payment.find().sort({ createdAt: -1 }).lean(),
       PricingExitFeedback.find().sort({ createdAt: -1 }).lean(),
       User.find().select("_id email collegeName customCollege goal targetRole targetCompanies onboardingCompleted onboardingCompletedAt createdAt").lean(),
+      ProgramWaitlist.find({ status: { $in: ['Waiting', 'Contacted'] } }).lean(),
+      ProgramWaitlistLead.find({ status: { $in: ['Waitlisted', 'Contacted'] } }).lean(),
     ]);
 
     const collegeMap = new Map(allColleges.map((c) => [String(c._id), c.name]));
@@ -4274,10 +4293,7 @@ export const getGlobalStudentsAdmin = async (req, res) => {
       const enrolledOnStr = enrolledOnDate?.toISOString().slice(0, 10) || "";
 
       // Status
-      let statusStr = primaryEnrollment?.status || student.status || "Active";
-      if (primaryEnrollment?.status === "Active" && scheduleExpiryDate && new Date(scheduleExpiryDate) < now) {
-        statusStr = "Expired";
-      }
+      const statusStr = primaryEnrollment?.status || student.status || "Active";
 
       // Active this month means the learner's schedule overlaps the current
       // calendar month, even when the learner enrolled in a prior month.
@@ -4298,11 +4314,7 @@ export const getGlobalStudentsAdmin = async (req, res) => {
       }
 
       // Skill Relationship
-      const hasSkillProgram =
-        (currentEnrollment?.programId?.programType === "Skill" || primaryEnrollment?.programId?.programType === "Skill" ||
-          student.primaryTrack?.toLowerCase().includes("skill") ||
-          userEnrollments.some((e) => e.programId?.programType === "Skill")) ||
-        false;
+      const hasSkillProgram = currentEnrollment?.programId?.programType === "Skill";
 
       // Classification Flags
       const goal = user?.goal || student.learningGoal || "";
@@ -4329,6 +4341,7 @@ export const getGlobalStudentsAdmin = async (req, res) => {
         name: student.name,
         email: student.email,
         studentIdStr: student.rollNo || String(student._id).slice(-6),
+        createdAt: student.createdAt,
         college: collegeName,
         access: accessType,
         payment: paymentStatusByUser.get(uId) || paymentStatusByUser.get(sId) || (accessType === "Paid" ? "Paid" : "Pending"),
@@ -4352,6 +4365,16 @@ export const getGlobalStudentsAdmin = async (req, res) => {
         enrolledOn: enrolledOnDate,
         enrolledOnStr,
         status: statusStr,
+        programStatus: primaryEnrollment?.status || null,
+        programExpiresAt: primaryEnrollment?.programExpiresAt || null,
+        planExpiresAt: primaryEnrollment?.accessExpiresAt || null,
+        pricingPlan: primaryEnrollment?.pricingPlanSnapshot || null,
+        accessDurationDays: primaryEnrollment?.accessDurationDays || null,
+        accessValid: !primaryEnrollment?.accessExpiresAt || new Date(primaryEnrollment.accessExpiresAt) > now,
+        hasPlacement: currentEnrollment?.programId?.programType === 'Placement',
+        hasCompleted: userEnrollments.some(enrollment => enrollment.status === 'Completed'),
+        isWaitlisted: waitlistRecords.some(record => String(record.userId) === uId)
+          || waitlistLeads.some(record => String(record.userId || '') === uId || record.email === email),
         lastActive: student.lastActiveAt || enrolledOnDate,
         // Lead specific fields
         goal: goal || (isExploring ? "Just Exploring" : "Get Placed"),
@@ -4377,6 +4400,9 @@ export const getGlobalStudentsAdmin = async (req, res) => {
       if (tab === "enrolled") return s.isEnrolled;
       if (tab === "leads") return s.isLead;
       if (tab === "skill") return s.hasSkill;
+      if (tab === "placement") return s.hasPlacement;
+      if (tab === "completed") return s.hasCompleted;
+      if (tab === "waitlist") return s.isWaitlisted;
       if (tab === "exploring") return s.isExploring;
       return true;
     });
@@ -4384,8 +4410,8 @@ export const getGlobalStudentsAdmin = async (req, res) => {
     // Apply Month Filter
     if (month && month !== "all") {
       tabStudents = tabStudents.filter((s) => {
-        if (!s.enrolledOn) return false;
-        const d = new Date(s.enrolledOn);
+        if (!s.enrolledOn && !s.createdAt) return false;
+        const d = new Date(s.enrolledOn || s.createdAt);
         if (Number.isNaN(d.getTime())) return false;
         const studentMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
         return studentMonth === month;
@@ -4597,7 +4623,14 @@ export const bulkUploadStudentsAdmin = async (req, res) => {
 
     const college = collegeId ? await College.findById(collegeId).lean() : null;
     const batch = batchId ? await Batch.findById(batchId).lean() : null;
-    const program = programId ? await Program.findById(programId).lean() : null;
+    const program = (programId || batch?.programId) ? await Program.findById(programId || batch.programId).lean() : null;
+    if (batch?.programId && programId && String(batch.programId) !== String(programId)) {
+      return res.status(400).json({ success: false, message: 'The selected Program must match the batch Program.' });
+    }
+    const allowedCollegeIds = (batch?.collegeIds?.length ? batch.collegeIds : [batch?.collegeId]).filter(Boolean).map(String);
+    if (batch && !batch.allColleges && allowedCollegeIds.length && !allowedCollegeIds.includes(String(college?._id || ''))) {
+      return res.status(400).json({ success: false, message: 'The selected college is not eligible for this batch.' });
+    }
 
     for (let i = 0; i < students.length; i++) {
       const item = students[i];

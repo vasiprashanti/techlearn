@@ -9,7 +9,7 @@ import Student from "../models/Student.js";
 import PricingExitFeedback from "../models/PricingExitFeedback.js";
 import { upsertProgramEnrollment, syncPrimaryProgramPointers } from "../utils/programEnrollment.js";
 import { normalizeProgramType } from "../utils/programTypeNormalization.js";
-import { resolveConfiguredProgramPricingPlan } from "../utils/programPricing.js";
+import { resolveConfiguredProgramPricingPlan, resolvePaidProgramPlan } from "../utils/programPricing.js";
 import {
   isCapturedPaymentForRecord,
   isPaymentForRecord,
@@ -64,6 +64,12 @@ const activateProgramEnrollmentForPayment = async ({ payment, user, student }) =
 
   const program = await Program.findById(payment.programId);
   if (!program) throw new Error("The Program associated with this payment no longer exists.");
+  const verifiedPlan = resolvePaidProgramPlan({ program, snapshot: payment.pricingPlanSnapshot, amount: payment.amount });
+  if (!verifiedPlan) {
+    const error = new Error('Payment amount does not identify a valid purchased plan. Enrollment requires verification.');
+    error.statusCode = 400;
+    throw error;
+  }
 
   const otherActiveEnrollment = await ProgramEnrollment.findOne({
     userId: payment.userId,
@@ -87,7 +93,7 @@ const activateProgramEnrollmentForPayment = async ({ payment, user, student }) =
     student: resolvedStudent,
     program,
     accessTier: "Member",
-    pricingPlan: payment.pricingPlanSnapshot,
+    pricingPlan: verifiedPlan,
     source: "payment",
   });
   if (!enrollment) throw new Error("Program enrollment could not be activated.");
@@ -381,6 +387,8 @@ export const createPaymentOrder = async (req, res) => {
         price: amount,
         billingPeriod: selectedPlan.billingPeriod || null,
         accessDurationDays: Number(selectedPlan.accessDurationDays) || null,
+        accessDuration: selectedPlan.accessDuration || null,
+        accessDurationUnit: selectedPlan.accessDurationUnit || 'Days',
         availability: selectedPlan.availability || null,
       },
       programType,
