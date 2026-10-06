@@ -36,6 +36,10 @@ const paymentSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    pricingPlanSnapshot: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
     programType: {
       type: String,
       enum: ["Placement", "Skill"],

@@ -380,7 +380,7 @@ const BatchDetails = () => {
         startDate: batch.startDateValue,
         expiryDate: batch.expiryDateValue,
         batchSize: batch.batchSize,
-        programSelection: batch.programSelection || 'Placement Sprint',
+        programSelection: batch.programSelection || '',
         assignedTrackTemplateIds: batch.assignedTrackTemplateIds || [],
         attachedCourse: nextCourseId || null,
       });
@@ -405,7 +405,7 @@ const BatchDetails = () => {
         startDate: batch.startDateValue,
         expiryDate: batch.expiryDateValue,
         batchSize: batch.batchSize,
-        programSelection: batch.programSelection || 'Placement Sprint',
+        programSelection: batch.programSelection || '',
         assignedTrackTemplateIds: batch.assignedTrackTemplateIds || [],
         primaryCourseId: newPrimaryId || null,
       });

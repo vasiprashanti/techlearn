@@ -213,9 +213,9 @@ export const registerUser = async (req, res) => {
     const collegeNameText = (collegeName || "").trim();
     let college = null;
     if (shouldCompleteOnboarding) {
-      const resolvedCollegeName = collegeNameText || "TechLearn College";
-      college = await College.findOne({ name: { $regex: new RegExp(`^${escapeRegex(resolvedCollegeName)}$`, "i") } });
-      if (!college) {
+      const resolvedCollegeName = collegeNameText;
+      if (resolvedCollegeName) college = await College.findOne({ name: { $regex: new RegExp(`^${escapeRegex(resolvedCollegeName)}$`, "i") } });
+      if (resolvedCollegeName && !college) {
         college = await College.create({
           name: resolvedCollegeName,
           code: resolvedCollegeName.replace(/[^a-z0-9]/gi, "").slice(0, 8).toUpperCase() || "TLC",
@@ -280,7 +280,7 @@ export const registerUser = async (req, res) => {
         placementTimeline: placementTimeline || "",
         learningPath: learningPath || "",
         personalizedDetail: personalizedDetail || "",
-        programSelection: programSelection || "Placement Sprint",
+        programSelection: programSelection || "",
         placementReadiness: placementReadiness || "",
         dailyCommitment: dailyCommitment || "",
         declarationAccepted: declarationAccepted || false,
@@ -327,7 +327,7 @@ export const registerUser = async (req, res) => {
     if (student) {
       // Link the existing student profile to the new user account
       student.userId = targetUser._id;
-      student.collegeId = student.collegeId || college?._id;
+      student.collegeId = student.collegeId || college?._id || null;
       // Imported enrollment data remains authoritative. Only fill missing
       // profile fields; never overwrite an imported batch or program.
       student.programSelection = student.programSelection || targetUser.programSelection;
@@ -348,7 +348,7 @@ export const registerUser = async (req, res) => {
     } else {
       // Create matching Student record
       student = await Student.create({
-        collegeId: college._id,
+        collegeId: college?._id || null,
         userId: targetUser._id,
         name: `${trimmedFirstName} ${trimmedLastName}`.trim().replace(/\.$/, ""),
         email: emailCheck,
@@ -568,7 +568,6 @@ const saveProfileState = async ({ req, completeOnboarding }) => {
   if (student?.degree && !user.degree) user.degree = student.degree;
   if (student?.branch && !user.branch) user.branch = student.branch;
   if (student?.graduationYear && !user.graduationYear) user.graduationYear = student.graduationYear;
-  if (student?.programId && !user.programId) user.programId = student.programId;
   if (student?.batchId && !user.batchId) user.batchId = student.batchId;
 
   if (skills !== undefined) user.skills = Array.isArray(skills) ? skills : [];

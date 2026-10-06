@@ -47,8 +47,6 @@ const getBatch = ({ user, student, enrollment }) => {
 
 const getProgram = ({ user, student, enrollment }) => {
   if (enrollment?.programId && typeof enrollment.programId === "object") return enrollment.programId;
-  if (student?.programId && typeof student.programId === "object") return student.programId;
-  if (user?.programId && typeof user.programId === "object") return user.programId;
   return null;
 };
 
@@ -75,10 +73,12 @@ export const buildUnifiedProfile = ({ user = {}, student = null, enrollment = nu
   const placementTimeline = preferStudent(student?.placementTimeline, user?.placementTimeline);
   const scheduleType = enrollment
     ? (Object.prototype.hasOwnProperty.call(enrollment, "batchId") && enrollment.batchId ? "batch" : "individual")
-    : (batch ? "batch" : "individual");
-  const startDate = scheduleType === "batch"
-    ? batch?.startDate || user?.startDate || null
-    : enrollment?.individualStartDate || enrollment?.assignedAt || user?.startDate || student?.createdAt || user?.createdAt || null;
+    : null;
+  const startDate = !enrollment
+    ? null
+    : scheduleType === "batch"
+      ? batch?.startDate || null
+      : enrollment.individualStartDate || enrollment.assignedAt || null;
 
   return {
     account: {
@@ -108,7 +108,7 @@ export const buildUnifiedProfile = ({ user = {}, student = null, enrollment = nu
         : null,
       scheduleType,
       startDate,
-      status: enrollment?.status || (profileComplete ? "Active" : null),
+      status: enrollment?.status || null,
       accessTier: enrollment?.accessTier || null,
     },
     goals: {
@@ -182,11 +182,16 @@ export const findActiveProgramEnrollment = async ({ userId, studentId, programId
   };
   if (programId) query.programId = programId;
 
-  return ProgramEnrollment.findOne(query)
+  const enrollments = await ProgramEnrollment.find(query)
     .sort({ assignedAt: -1, createdAt: -1 })
     .populate("programId", "name programType duration durationDays status visibility pricingType programFee")
     .populate("batchId", "name startDate expiryDate status")
     .lean();
+  const statusRank = { Active: 0, Completed: 1 };
+  return enrollments.sort((left, right) =>
+    (statusRank[left.status] ?? 2) - (statusRank[right.status] ?? 2)
+    || new Date(right.assignedAt || right.createdAt || 0) - new Date(left.assignedAt || left.createdAt || 0)
+  )[0] || null;
 };
 
 export const getUnifiedProfileForUser = async (userOrId) => {
@@ -201,7 +206,6 @@ export const getUnifiedProfileForUser = async (userOrId) => {
   const enrollment = await findActiveProgramEnrollment({
     userId: user._id,
     studentId: student?._id,
-    programId: user.programId || student?.programId?._id || student?.programId || null,
   });
 
   return {
@@ -222,25 +226,18 @@ export const ensureStudentForUser = async ({ user, student = null, collegeModel 
   if (!user?._id || !user.email) return student;
   if (student) return student;
 
-  let college = await findCollegeForName(collegeModel, user.collegeName);
-  if (!college) {
-    college = await collegeModel.create({
-      name: String(user.collegeName || "TechLearn College").trim(),
-      code: String(user.collegeName || "TechLearn College").replace(/[^a-z0-9]/gi, "").slice(0, 8).toUpperCase() || "TLC",
-      status: "Active",
-    });
-  }
+  const college = await findCollegeForName(collegeModel, user.collegeName);
 
   return Student.create({
-    collegeId: college._id,
+    collegeId: college?._id || null,
     userId: user._id,
     name: [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || user.email.split("@")[0],
     email: String(user.email).trim().toLowerCase(),
     degree: user.degree || "",
     branch: user.branch || "",
     graduationYear: user.graduationYear || null,
-    programId: user.programId || null,
-    programSelection: user.programSelection || "Placement Sprint",
+    programId: null,
+    programSelection: user.programSelection || "",
     learningGoal: user.learningGoal || "",
     skills: normalizeList(user.skills),
     targetRole: user.targetRole || "",

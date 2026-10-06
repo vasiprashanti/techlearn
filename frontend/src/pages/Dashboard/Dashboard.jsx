@@ -93,7 +93,6 @@ export default function Dashboard() {
   const [dailyTasks, setDailyTasks] = useState([]);
   const [tasksLoaded, setTasksLoaded] = useState(false);
   const [isFullyCompleted, setIsFullyCompleted] = useState(false);
-  const [taskProgress, setTaskProgress] = useState(0);
   
   // Student project states
   const [hasActiveProject, setHasActiveProject] = useState(false);
@@ -248,7 +247,6 @@ export default function Dashboard() {
           }));
           setDailyTasks(list);
           setIsFullyCompleted(payload.data.isFullyCompleted);
-          setTaskProgress(payload.data.progressPercent);
 
           if (!payload.data.isFullyCompleted && payload.data.dayNumber) {
             const seenKey = `daily-task-completed-seen-day-${payload.data.dayNumber}`;
@@ -389,9 +387,6 @@ export default function Dashboard() {
   };
 
 
-  const completedTasks = dailyTasks.filter(t => t.completed).length;
-  const totalTasks = dailyTasks.length;
-
   const [streak, setStreak] = useState(0);
   const [isSelectingAvatar, setIsSelectingAvatar] = useState(false);
   const [pendingAvatar, setPendingAvatar] = useState(null);
@@ -441,7 +436,6 @@ export default function Dashboard() {
     recentExercises,
     progress: contextProgress,
     isReady,
-    latestDailyChallenge,
     refetchUserData,
   } = useUser();
 
@@ -507,7 +501,9 @@ export default function Dashboard() {
           if (!cancelled && stats?.streak !== undefined) {
             setStreak(stats.streak);
           }
-        } catch {}
+        } catch {
+          // Dashboard stats are optional; retain the previous streak value.
+        }
       };
 
       loadLeaderboard();
@@ -545,14 +541,9 @@ export default function Dashboard() {
     rawPhotoUrl = rawPhotoUrl.replace('/avatar', '/nobackgroundavatar');
   }
   const photoUrl = rawPhotoUrl;
-  const rawProgram = displayUser?.programSelection || "Placement Sprint";
-  const formattedProgram = rawProgram === "Both" 
-    ? "Placement & Project Program" 
-    : rawProgram;
-
   const collegeName = displayUser?.collegeName && displayUser.collegeName !== "TechLearn Student"
     ? displayUser.collegeName
-    : formattedProgram;
+    : "Not assigned";
 
   const todayFormatted = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
@@ -572,15 +563,7 @@ export default function Dashboard() {
     !leaderboardLoading &&
     (!leaderboardEntries.length || leaderboardEntries.every((entry) => Number(entry.totalXp || 0) === 0));
 
-  const userProgramSelection = displayUser?.programSelection || user?.programSelection || projectData?.dashboardMode || (() => {
-    try {
-      return JSON.parse(localStorage.getItem("userData") || "{}").programSelection || "";
-    } catch {
-      return "";
-    }
-  })();
-
-  const isProjectSprintUser = userProgramSelection === "Full Stack Project Program" || projectData?.dashboardMode === "project";
+  const isProjectSprintUser = Boolean(hasActiveProject && projectData?.dashboardMode === "project");
 
   const projectStats = hasActiveProject && projectData?.project ? [
     { title: 'Project XP', value: (projectData.projectXpEarned || 0).toLocaleString(), icon: <PixelStar /> },
@@ -608,16 +591,6 @@ export default function Dashboard() {
       icon: <PixelFlame />,
     },
   ];
-
-  const dailyChallenge = {
-    title: 'Daily Challenge',
-    xpReward: activeChallenge?.xpReward || activeChallenge?.points || 0,
-    timeEstimate: activeChallenge?.durationMinutes ? `${activeChallenge.durationMinutes} mins` : '--',
-    prompt:
-      activeChallenge?.description ||
-      activeChallenge?.summary ||
-      "Gear up for today's algorithmic puzzle. Submit your solution within the time limit to earn bonus XP and maintain your streak.",
-  };
 
   const featuredLeaderboard = leaderboardEntries.length
     ? leaderboardEntries.slice(0, 5).map((entry) => ({

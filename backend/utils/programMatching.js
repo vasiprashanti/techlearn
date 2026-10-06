@@ -6,6 +6,12 @@ const escapeRegex = (value = "") =>
 
 const normalizeString = (str = "") => String(str).trim().toLowerCase();
 
+// Short skills such as C must not match every word containing that letter
+// (or different languages such as C++ and C#).
+const containsSkill = (text, skill) => new RegExp(
+  `(?:^|[^a-z0-9+#])${escapeRegex(skill)}(?=$|[^a-z0-9+#])`, "i"
+).test(normalizeString(text));
+
 const normalizeArray = (arr = []) =>
   (Array.isArray(arr) ? arr : [])
     .map((item) => normalizeString(item))
@@ -112,19 +118,22 @@ export const matchProgramsForUser = async (onboardingData = {}) => {
       const isSkillType = progType === "skill";
       if (!isSkillType) continue;
 
-      if (userSkills.length > 0) {
+      if (userSkills.length === 0) {
+        // The onboarding goal itself is an intentional Program Type match.
+        // Once the learner selects skills, however, do not return unrelated
+        // Skill Programs just because their broad type matches.
+        score += 10;
+      } else {
         const matchingSkills = userSkills.filter(
           (s) =>
             progSkills.includes(s) ||
-            progName.includes(s) ||
-            progDesc.includes(s) ||
-            (program.courseIds && program.courseIds.some((c) => normalizeString(c.title).includes(s)))
+            containsSkill(progName, s) ||
+            containsSkill(progDesc, s) ||
+            (program.courseIds && program.courseIds.some((c) => containsSkill(c.title, s)))
         );
         if (matchingSkills.length > 0) {
           score += (isSkillType ? 10 : 5) + matchingSkills.length * 10;
         }
-      } else if (isSkillType) {
-        score += 10;
       }
     } else if (userGoal === "exploring techlearn" || userGoal === "exploring") {
       // General or Exploration Program (Only intentionally configured general programs)
@@ -139,16 +148,17 @@ export const matchProgramsForUser = async (onboardingData = {}) => {
         score += 20;
       }
     } else {
-      // Fallback matching logic for legacy goals / empty goal
-      if (progName.includes("placement sprint") || progType.includes("placement")) {
-        score += 5;
-      }
+      // Unknown or incomplete goals must not receive an arbitrary Program.
+      continue;
     }
 
-    // Default minimum baseline score for active & public programs
-    if (score === 0) {
-      score = 1;
+    // A type match alone is not enough when the learner supplied specific
+    // placement interests. Keep only Programs that match at least one of them.
+    if (userGoal === "placement") {
+      const hasPlacementPreferences = Boolean(userCategory || userRole || userCompanies.length);
+      if (hasPlacementPreferences && score <= 10) continue;
     }
+    if (score <= 0) continue;
 
     scoredCandidates.push({ program, score });
   }

@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Program from "../models/Program.js";
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import User from "../models/User.js";
@@ -6,10 +7,10 @@ import Batch from "../models/Batch.js";
 import Course from "../models/Course.js";
 import TrackTemplate from "../models/TrackTemplate.js";
 import ProgramReadinessLead from "../models/ProgramReadinessLead.js";
-import { matchProgramsForUser } from "./programMatching.js";
 import { parseDurationDays } from "./programPhases.js";
 import { resolveProgramPrimaryCourseId } from "./programPrimaryCourse.js";
 import { getProgramTypeQueryValues, normalizeProgramType } from "./programTypeNormalization.js";
+import { getProgramAccessExpiryDate, resolveProgramAccessDurationDays } from "./programPricing.js";
 
 const normalizeSelection = (selection) => String(selection || "").trim();
 
@@ -75,7 +76,7 @@ const getEnrollmentIdentifiers = ({ userId, studentId }) => [
   studentId ? { studentId } : null,
 ].filter(Boolean);
 
-const pauseOtherActiveProgramEnrollments = async ({ userId, studentId, programId }) => {
+const pauseOtherActiveProgramEnrollments = async ({ userId, studentId, programId, session = null }) => {
   const identifiers = getEnrollmentIdentifiers({ userId, studentId });
   if (!identifiers.length || !programId) return [];
 
@@ -85,13 +86,15 @@ const pauseOtherActiveProgramEnrollments = async ({ userId, studentId, programId
     $or: identifiers,
   })
     .select("_id programId")
+    .session(session)
     .lean();
 
   if (!otherEnrollments.length) return [];
 
   await ProgramEnrollment.updateMany(
     { _id: { $in: otherEnrollments.map((enrollment) => enrollment._id) } },
-    { $set: { status: "Paused" } }
+    { $set: { status: "Paused" } },
+    { session }
   );
 
   const previousProgramIds = [
@@ -105,7 +108,8 @@ const pauseOtherActiveProgramEnrollments = async ({ userId, studentId, programId
   if (studentId && previousProgramIds.length) {
     await Program.updateMany(
       { _id: { $in: previousProgramIds } },
-      { $pull: { studentIds: studentId } }
+      { $pull: { studentIds: studentId } },
+      { session }
     );
   }
 
@@ -366,13 +370,39 @@ export const upsertProgramEnrollment = async ({
   accessTier,
   individualStartDate,
   expiryDate,
+  pricingPlan,
+  status = "Active",
   source = "admin",
+  session = null,
 }) => {
   const userId = getId(user);
   const studentId = getId(student);
   const resolvedProgramId = getId(program) || getId(programId);
 
   if (!userId || !studentId || !resolvedProgramId) return null;
+  if (!["Active", "Completed", "Paused"].includes(status)) {
+    throw new Error("Enrollment status must be Active, Completed, or Paused.");
+  }
+
+  // Serialize enrollment changes through the learner row. MongoDB retries a
+  // concurrent transaction, which then sees the committed active enrollment.
+  if (!session) {
+    return mongoose.connection.transaction(async (transactionSession) => {
+      await User.updateOne({ _id: userId }, { $inc: { programEnrollmentRevision: 1 } }, { session: transactionSession });
+      return upsertProgramEnrollment({ user, student, program, programId, batchId, accessTier,
+        individualStartDate, expiryDate, pricingPlan, status, source, session: transactionSession });
+    });
+  }
+  if (status === "Active" && ["user_enrollment", "payment"].includes(source)) {
+    const otherActive = await ProgramEnrollment.findOne({ userId, status: "Active", programId: { $ne: resolvedProgramId } })
+      .session(session).lean();
+    if (otherActive) {
+      const error = new Error("You already have an active Program. Ask an admin to complete or switch it before enrolling in another.");
+      error.statusCode = 409;
+      error.code = "ACTIVE_PROGRAM_EXISTS";
+      throw error;
+    }
+  }
 
   const now = new Date();
   const explicitIndividualStartDate = individualStartDate
@@ -384,7 +414,7 @@ export const upsertProgramEnrollment = async ({
   const existing = await ProgramEnrollment.findOne({
     userId,
     programId: resolvedProgramId,
-  }).lean();
+  }).session(session).lean();
 
   // Callers that do not specify a schedule (for example, payment
   // confirmation) must preserve an existing batch schedule. A legacy batch
@@ -411,26 +441,68 @@ export const upsertProgramEnrollment = async ({
       ? "explicit_admin"
       : source === "payment" ? "explicit_payment" : "explicit")
     : null;
+  const defaultPaidPlan = !existing && program?.pricingType === "Paid"
+    ? (program.pricingPlans || []).find((plan) => plan?.active !== false)
+      || (Number(program.programFee) > 0
+        ? {
+            key: "legacy-single",
+            title: "Program Access",
+            price: Number(program.programFee),
+            billingPeriod: "Annual",
+            accessDurationDays: 365,
+            availability: program.availability || "Structured",
+          }
+        : null)
+    : null;
+  const rawPlanSnapshot = pricingPlan || existing?.pricingPlanSnapshot || defaultPaidPlan;
+  const accessDurationDays = resolveProgramAccessDurationDays({
+    accessDurationDays: rawPlanSnapshot?.accessDurationDays || existing?.accessDurationDays,
+    pricingPlanSnapshot: rawPlanSnapshot || existing?.pricingPlanSnapshot,
+    billingPeriod: rawPlanSnapshot?.billingPeriod || existing?.billingPeriod,
+    individualStartDate: existing?.individualStartDate,
+    accessExpiresAt: existing?.accessExpiresAt,
+  });
+  const resolvedPlanSnapshot = rawPlanSnapshot
+    ? {
+        ...rawPlanSnapshot,
+        accessDurationDays: accessDurationDays
+          || (rawPlanSnapshot.billingPeriod === "Monthly" ? 30 : 365),
+      }
+    : null;
+  const enrollmentStartDate = explicitIndividualStartDate
+    || existing?.individualStartDate
+    || existing?.assignedAt
+    || now;
+  const accessExpiresAt = resolvedBatchId
+    ? null
+    : getProgramAccessExpiryDate(enrollmentStartDate, accessDurationDays);
 
   const resolvedStartDate = explicitIndividualStartDate
     || existing?.individualStartDate
     || existing?.assignedAt
     || now;
   const explicitExpiryDate = expiryDate ? new Date(expiryDate) : null;
-  const calculatedExpiryDate = explicitExpiryDate && !Number.isNaN(explicitExpiryDate.getTime())
+  const calculatedExpiryDate = accessExpiresAt || (explicitExpiryDate && !Number.isNaN(explicitExpiryDate.getTime())
     ? explicitExpiryDate
-    : getProgramExpiryDate(resolvedStartDate, program);
+    : getProgramExpiryDate(resolvedStartDate, program));
 
   const update = {
     $set: {
       userId,
       studentId,
       programId: resolvedProgramId,
-      status: "Active",
+      status,
+      completedAt: status === "Completed" ? (existing?.completedAt || now) : null,
       accessTier: getAccessTier(program, accessTier),
       batchId: resolvedBatchId || null,
-      individualStartDate: resolvedStartDate,
       ...(calculatedExpiryDate ? { expiryDate: calculatedExpiryDate } : {}),
+      individualStartDate: enrollmentStartDate,
+      ...(resolvedPlanSnapshot ? {
+        pricingPlanSnapshot: resolvedPlanSnapshot,
+        billingPeriod: resolvedPlanSnapshot.billingPeriod || null,
+        accessDurationDays,
+      } : accessDurationDays ? { accessDurationDays } : {}),
+      ...(resolvedBatchId ? { accessExpiresAt: null } : accessDurationDays ? { accessExpiresAt } : {}),
       ...(individualStartDateSource ? { individualStartDateSource } : {}),
     },
     $setOnInsert: {
@@ -446,17 +518,20 @@ export const upsertProgramEnrollment = async ({
   const enrollment = await ProgramEnrollment.findOneAndUpdate(
     { userId, programId: resolvedProgramId },
     update,
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, new: true, setDefaultsOnInsert: true, session }
   );
 
   // A learner may have only one active Program. Keep older enrollments for
   // history, but pause them and remove their learner-facing Program links as
   // soon as the new enrollment has been written successfully.
-  await pauseOtherActiveProgramEnrollments({
-    userId,
-    studentId,
-    programId: resolvedProgramId,
-  });
+  if (status === "Active") {
+    await pauseOtherActiveProgramEnrollments({
+      userId,
+      studentId,
+      programId: resolvedProgramId,
+      session,
+    });
+  }
 
   await Program.updateOne(
     { _id: resolvedProgramId },
@@ -465,7 +540,8 @@ export const upsertProgramEnrollment = async ({
         studentIds: studentId,
         ...(resolvedBatchId ? { batchIds: resolvedBatchId } : {}),
       },
-    }
+    },
+    { session }
   );
 
   // A completed Day 0 assessment becomes a converted lead only when the
@@ -482,7 +558,8 @@ export const upsertProgramEnrollment = async ({
         status: "Converted",
         convertedAt: now,
       },
-    }
+    },
+    { session }
   );
 
   return enrollment;
@@ -553,11 +630,7 @@ export const syncPrimaryProgramPointers = async ({ user, student }) => {
     .lean();
 
   const primaryProgramId = activeEnrollment?.programId || null;
-  const hasEnrollmentBatch = activeEnrollment
-    && Object.prototype.hasOwnProperty.call(activeEnrollment, "batchId");
-  const batchPatch = hasEnrollmentBatch
-    ? { batchId: getId(activeEnrollment.batchId) }
-    : {};
+  const batchPatch = { batchId: getId(activeEnrollment?.batchId) };
   if (userId) await User.updateOne({ _id: userId }, { $set: { programId: primaryProgramId, ...batchPatch } });
   if (studentId) await Student.updateOne({ _id: studentId }, { $set: { programId: primaryProgramId, ...batchPatch } });
 
@@ -578,72 +651,26 @@ export const syncProgramEnrollment = async ({
   source = "onboarding",
 }) => {
   if (!user || !student) return null;
+  // Recommendations and onboarding profile sync are not enrollment actions.
+  // Only an explicit user enroll, admin assignment, or verified payment may
+  // create a ProgramEnrollment.
+  if (source === "onboarding") return [];
 
-  const requestedLearningPath = String(
-    onboardingData.learningPath || user.learningPath || ""
-  ).trim();
+  const requestedLearningPath = String(onboardingData.learningPath || user.learningPath || "").trim();
+  if (!programId) return [];
 
-  // Build complete onboarding answers from user object or passed payload
-  const fullOnboardingData = {
-    learningGoal: onboardingData.learningGoal || user.learningGoal || "",
-    placementCategory: onboardingData.placementCategory || user.placementCategory || "",
-    targetCompanies: onboardingData.targetCompanies || user.targetCompanies || [],
-    skills: onboardingData.skills || user.skills || [],
-    targetRole: onboardingData.targetRole || user.targetRole || "",
-    learningPath: requestedLearningPath || "Free",
-  };
-
-  // An explicitly assigned Program from the admin flow is authoritative.
-  // Only fall back to onboarding matching when no concrete program was set.
-  let matchedPrograms = [];
-  if (programId) {
-    const explicitlyAssignedProgram = await Program.findOne({
-      _id: programId,
-      status: "Active",
-      visibility: "Public",
-    }).lean();
-    if (explicitlyAssignedProgram) matchedPrograms = [explicitlyAssignedProgram];
-  }
-
-  // Run server-side Program matching resolver
-  if (matchedPrograms.length === 0) {
-    matchedPrograms = await matchProgramsForUser(fullOnboardingData);
-  }
-
-  // If no program matched via metadata resolver, fallback to legacy programSelection matching
-  if (!matchedPrograms || matchedPrograms.length === 0) {
-    const legacyProgram = await resolveProgramForSelection(programSelection || user.programSelection);
-    if (legacyProgram) {
-      matchedPrograms = [legacyProgram];
-    }
-  }
+  // Recommendations are discovery only. This synchronizer may materialize
+  // only a concrete Program ID supplied by an explicit assignment/enrollment.
+  const explicitlyAssignedProgram = await Program.findById(programId).lean();
+  const matchedPrograms = explicitlyAssignedProgram && explicitlyAssignedProgram.status === "Active"
+    ? [explicitlyAssignedProgram]
+    : [];
 
   if (!matchedPrograms || matchedPrograms.length === 0) {
     return [];
   }
 
-  // Matching can return several recommendations, but enrollment is a single
-  // current learning path. The catalog/recommendation endpoints may still
-  // return multiple options; this synchronizer activates only the best match.
-  matchedPrograms = matchedPrograms.slice(0, 1);
-
-  // If user is on Free tier, pause any previous enrollments for Paid / Member-only programs
-  // Do not infer a Free choice for legacy accounts that never stored a
-  // learning path. In particular, login synchronization must not pause a
-  // previously paid enrollment just because this field is absent.
   const isFreeTier = requestedLearningPath.toLowerCase() === "free";
-  if (source === "onboarding" && isFreeTier) {
-    const paidProgramIds = await Program.find({
-      pricingType: "Paid",
-    }).distinct("_id");
-
-    if (paidProgramIds.length > 0) {
-      await ProgramEnrollment.updateMany(
-        { userId: user._id, programId: { $in: paidProgramIds }, status: "Active" },
-        { $set: { status: "Paused" } }
-      );
-    }
-  }
 
   const enrolledPrograms = [];
 

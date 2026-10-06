@@ -115,9 +115,9 @@ export const getPublicLeaderboard = async (req, res) => {
 
     const allRows = learners.map((learner) => {
       const progress = progressByUserId.get(String(learner._id)) || {};
-      const userProgram = learner.programSelection || "Placement Sprint";
-      const isProjectOnly = userProgram === "Full Stack Project Program";
-      const isPlacementOnly = userProgram === "Placement Sprint";
+      const userProgram = String(learner.programSelection || "").trim().toLowerCase();
+      const isProjectOnly = userProgram === "full stack project program";
+      const isPlacementOnly = ["placement", "placement program", "placement sprint"].includes(userProgram);
       const courseXp = isProjectOnly ? 0 : sumMapValues(progress.courseXP);
       const exerciseXp = isProjectOnly ? 0 : sumMapValues(progress.exerciseXP);
       const projectXp = isPlacementOnly ? 0 : sumMapValues(progress.projectXP);

@@ -68,11 +68,10 @@ export const getActiveProject = async (req, res) => {
   try {
     const result = await getStudentActiveAssignment(req.user._id);
     if (!result || !result.assignment) {
-      const studentProgram = result?.student?.programSelection || req.user?.programSelection || "Placement Sprint";
       return res.status(200).json({
         success: true,
         hasActiveProject: false,
-        dashboardMode: studentProgram === "Full Stack Project Program" ? "project" : "placement",
+        dashboardMode: "default",
       });
     }
 

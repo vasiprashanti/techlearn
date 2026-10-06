@@ -42,7 +42,8 @@ export const isBatchExpired = (batch, now = new Date()) => {
  * closes before its Program is complete remains paused and access is revoked.
  */
 export const expireBatchIfNeeded = async (batchOrId) => {
-  const batch = batchOrId?._id
+  // Mongoose ObjectIds expose an `_id` getter too; they are not Batch docs.
+  const batch = batchOrId?._id && typeof batchOrId.status === "string"
     ? batchOrId
     : await Batch.findById(batchOrId).select("_id status expiryDate name").lean();
 

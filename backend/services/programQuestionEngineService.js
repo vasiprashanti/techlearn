@@ -143,12 +143,20 @@ export const getProgramLearningContext = async ({
     throw error;
   }
 
-  const legacyEnrollment =
-    !enrollment &&
-    (getIdString(userRecord?.programId) === String(programId) || getIdString(student?.programId) === String(programId));
-  const isEnrolled = Boolean(enrollment || legacyEnrollment);
+  // Cached profile pointers are not enrollments or paid entitlements.
+  const isEnrolled = Boolean(enrollment);
+  if (!isAdmin && enrollment?.status === "Active") {
+    const currentEnrollment = await ProgramEnrollment.findOne({
+      userId: getId(userRecord || user), status: "Active",
+    }).sort({ assignedAt: -1, createdAt: -1 }).select("_id").lean();
+    if (getIdString(currentEnrollment) !== getIdString(enrollment)) {
+      const error = new Error("This Program is not your current active enrollment.");
+      error.statusCode = 403;
+      throw error;
+    }
+  }
 
-  if (!isEnrolled && !allowUnenrolled && !isAdmin) {
+  if (!isEnrolled && (!allowUnenrolled || program.programType !== "Placement") && !isAdmin) {
     const error = new Error("You do not have an active enrollment in this program.");
     error.statusCode = 403;
     throw error;

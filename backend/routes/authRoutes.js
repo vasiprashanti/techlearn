@@ -98,7 +98,7 @@ const mapUserToStudentCohort = async (user) => {
 
   const scheduleStartDate = schedule.scheduleType === "batch" && batch
     ? batch.startDate
-    : schedule.individualStartDate;
+    : schedule.enrollment?.individualStartDate || null;
   if (scheduleStartDate && (!user.startDate || new Date(user.startDate).getTime() !== new Date(scheduleStartDate).getTime())) {
     user.startDate = scheduleStartDate;
     changed = true;
@@ -142,9 +142,9 @@ const formatAuthUser = (user, student = null, batch = null, schedule = null) => 
     enrollment: schedule
       ? {
           batchId: schedule.scheduleType === "batch" ? schedule.batchId || batch || null : null,
-          programId: schedule.programId || user.programId || student?.programId || null,
+          programId: schedule.programId || null,
           individualStartDate: schedule.individualStartDate || null,
-          status: isProfileComplete ? "Active" : null,
+          status: schedule.enrollment?.status || null,
         }
       : null,
   });
@@ -161,10 +161,10 @@ const formatAuthUser = (user, student = null, batch = null, schedule = null) => 
     isClub: user.isClub,
     batchId: schedule ? schedule.batchId || null : (user.batchId || student?.batchId?._id || student?.batchId || null),
     startDate: schedule?.scheduleType === "batch"
-      ? batch?.startDate || user.startDate || null
-      : schedule?.individualStartDate || user.startDate || null,
+      ? batch?.startDate || null
+      : schedule?.enrollment?.individualStartDate || null,
     programSelection: user.programSelection,
-    programId: user.programId || student?.programId || null,
+    programId: schedule?.programId || null,
     scheduleType: schedule?.scheduleType || ((user.batchId || student?.batchId || batch?._id) ? "batch" : "individual"),
     isEnrolledStudent: !!student || user.isClub || Boolean(user.batchId) || Boolean(schedule?.programId),
     targetRole: student?.targetRole || user.targetRole || student?.otherTargetRole || user.otherTargetRole || "",
@@ -339,7 +339,7 @@ router.post("/google", async function googleLogin(req, res) {
           graduationYear: graduationYear || null,
           learningGoal: learningGoal || "",
           personalizedDetail: personalizedDetail || "",
-          programSelection: programSelection || "Placement Sprint",
+          programSelection: programSelection || "",
           placementReadiness: placementReadiness || "",
           dailyCommitment: dailyCommitment || "",
         });

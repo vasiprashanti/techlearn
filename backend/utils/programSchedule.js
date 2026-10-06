@@ -40,10 +40,16 @@ export const chooseProgramScheduleEnrollment = ({
   const eligible = (enrollments || []).filter((enrollment) =>
     ["Active", "Completed"].includes(enrollment?.status)
   );
+  const activeEnrollments = eligible
+    .filter((enrollment) => enrollment.status === "Active")
+    .sort((a, b) => getEnrollmentTimestamp(b) - getEnrollmentTimestamp(a));
+  const canonicalActiveEnrollment = activeEnrollments[0] || null;
   const requestedId = getId(requestedProgramId);
-  const candidates = requestedId
+  const candidates = (requestedId
     ? eligible.filter((enrollment) => String(getId(enrollment.programId)) === String(requestedId))
-    : eligible;
+    : eligible)
+    .filter((enrollment) => enrollment.status !== "Active"
+      || String(getId(enrollment)) === String(getId(canonicalActiveEnrollment)));
   if (!candidates.length) return null;
 
   const preferredId = getId(preferredProgramId);
@@ -54,8 +60,7 @@ export const chooseProgramScheduleEnrollment = ({
 
   const active = candidates.filter((enrollment) => enrollment.status === "Active");
   if (active.length) {
-    return (preferred?.status === "Active" ? preferred : null)
-      || active.sort((a, b) => getEnrollmentTimestamp(b) - getEnrollmentTimestamp(a))[0];
+    return active[0];
   }
 
   return preferred || candidates.sort((a, b) => getEnrollmentTimestamp(b) - getEnrollmentTimestamp(a))[0];
@@ -68,7 +73,7 @@ const resolveLegacyBatchId = async ({ legacyBatchId, programId }) => {
   if (!batch) return null;
 
   const batchProgramId = getId(batch.programId);
-  if (batchProgramId && programId && String(batchProgramId) !== String(programId)) {
+  if (batchProgramId && (!programId || String(batchProgramId) !== String(programId))) {
     return null;
   }
 
@@ -96,7 +101,6 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
     ? await ProgramEnrollment.find({
         status: { $in: ["Active", "Completed"] },
         $or: identifiers,
-        ...(requestedId ? { programId: requestedId } : {}),
       })
         .sort({ assignedAt: -1, createdAt: -1 })
         .lean()
@@ -106,7 +110,7 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
     preferredProgramId,
     requestedProgramId: requestedId,
   });
-  const programId = requestedId || getId(enrollment?.programId) || preferredProgramId;
+  const programId = getId(enrollment?.programId) || null;
 
   const legacyBatchPointer = getId(student?.batchId) || getId(user?.batchId) || null;
   if (enrollment) {
@@ -141,12 +145,7 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
       user: userRecord || user,
       student: studentRecord || student,
     });
-    const individualStartDate = getValidDate(
-      reconciled.date,
-      resolvedEnrollment.assignedAt,
-      student?.createdAt,
-      user?.createdAt
-    );
+    const individualStartDate = getValidDate(reconciled.date, resolvedEnrollment.assignedAt);
 
     return {
       programId: getId(enrollment.programId) || programId,
@@ -167,11 +166,11 @@ export const resolveProgramSchedule = async ({ user, student, programId: request
     : { expired: false };
 
   return {
-    programId,
+    programId: null,
     enrollment: null,
     batchId: legacyBatchId,
     scheduleType: legacyBatchId ? "batch" : "individual",
-    individualStartDate: getValidDate(student?.createdAt, user?.createdAt),
+    individualStartDate: null,
     batchExpired: Boolean(lifecycle.expired),
     isCompleted: false,
   };
@@ -215,12 +214,19 @@ export const assertProgramScheduleAccess = async ({ user, student, programId }) 
         programId: resolvedProgramId,
         status: { $in: ["Active", "Completed"] },
         $or: identifiers,
-      }).select("_id batchId accessTier status").lean()
+      }).select("_id batchId accessTier status accessExpiresAt").lean()
     : null;
 
-  if (!isProgramAccessibleToLearner({ program, enrollment })) {
+  if (!enrollment || !isProgramAccessibleToLearner({ program, enrollment })) {
     const error = new Error("This program is not available.");
     error.statusCode = 403;
+    throw error;
+  }
+
+  if (enrollment.status === "Active" && enrollment.accessExpiresAt && new Date(enrollment.accessExpiresAt) < new Date()) {
+    const error = new Error("This Program access has expired. Contact an admin for help.");
+    error.statusCode = 403;
+    error.code = "PROGRAM_ACCESS_EXPIRED";
     throw error;
   }
 

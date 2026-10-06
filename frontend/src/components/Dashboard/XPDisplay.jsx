@@ -18,9 +18,10 @@ const XPDisplay = ({ points = 0, loading = false, error = null }) => {
 
     try {
       const data = await progressAPI.getUserProgress();
-      const programSelection = user?.programSelection || "Placement Sprint";
-      const isProjectOnly = programSelection === "Full Stack Project Program";
-      const isPlacementOnly = programSelection === "Placement Sprint";
+      const programSelection = user?.programSelection || "";
+      const normalizedProgramSelection = String(programSelection || "").trim().toLowerCase();
+      const isProjectOnly = normalizedProgramSelection === "full stack project program";
+      const isPlacementOnly = ["placement", "placement program", "placement sprint"].includes(normalizedProgramSelection);
 
       const courseXP = isProjectOnly ? 0 : (data.courseXP ? Object.values(data.courseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0);
       const exerciseXP = isProjectOnly ? 0 : (data.exerciseXP ? Object.values(data.exerciseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0);
@@ -31,7 +32,7 @@ const XPDisplay = ({ points = 0, loading = false, error = null }) => {
         loading: false,
         error: null
       });
-    } catch (err) {
+    } catch {
       setXpData({
         points: 0,
         loading: false,

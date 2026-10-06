@@ -26,11 +26,7 @@ export const getEffectiveEnrollmentBatchId = ({
     : getId(studentBatchId) || getId(userBatchId)
 );
 
-/**
- * Prefer the user's selected primary program, then the newest accessible
- * enrollment. A stale primary pointer can therefore never outrank a valid
- * enrollment, and an unrelated active program is still a safe fallback.
- */
+/** Resolve the newest active enrollment, while retaining completed history. */
 export const orderAccessibleProgramEnrollments = ({
   enrollments = [],
   accessibleProgramIds = [],
@@ -38,12 +34,21 @@ export const orderAccessibleProgramEnrollments = ({
 } = {}) => {
   const accessible = new Set(accessibleProgramIds.map((id) => String(id)));
   const preferred = getIdString(preferredProgramId);
+  const activeEnrollments = enrollments
+    .filter((enrollment) => enrollment.status === "Active")
+    .sort((left, right) => new Date(right.assignedAt || right.createdAt || 0) - new Date(left.assignedAt || left.createdAt || 0));
+  const canonicalActiveEnrollmentId = getIdString(activeEnrollments[0]);
 
   return enrollments
     .filter((enrollment) => accessible.has(getIdString(enrollment.programId)))
+    .filter((enrollment) => enrollment.status !== "Active"
+      || getIdString(enrollment) === canonicalActiveEnrollmentId)
     .sort((left, right) => {
-      const leftPreferred = preferred && getIdString(left.programId) === preferred;
-      const rightPreferred = preferred && getIdString(right.programId) === preferred;
+      const leftStatusRank = left.status === "Active" ? 0 : 1;
+      const rightStatusRank = right.status === "Active" ? 0 : 1;
+      if (leftStatusRank !== rightStatusRank) return leftStatusRank - rightStatusRank;
+      const leftPreferred = left.status !== "Active" && preferred && getIdString(left.programId) === preferred;
+      const rightPreferred = right.status !== "Active" && preferred && getIdString(right.programId) === preferred;
       if (leftPreferred !== rightPreferred) return leftPreferred ? -1 : 1;
 
       const leftDate = new Date(left.assignedAt || left.createdAt || 0).getTime();
@@ -54,8 +59,8 @@ export const orderAccessibleProgramEnrollments = ({
 
 /**
  * Resolve the program that may be shown as the learner's dashboard entry
- * point. ProgramEnrollment is the source of truth; User.programId and
- * Student.programId are only used to choose among verified enrollments.
+ * point. ProgramEnrollment is the source of truth; stale User/Student
+ * pointers never determine which Program is active.
  */
 export const resolveDashboardProgramAccess = async ({
   userId,
@@ -101,6 +106,7 @@ export const resolveDashboardProgramAccess = async ({
     const programId = getIdString(enrollment.programId);
     const program = programById.get(programId);
     if (!program) continue;
+    if (enrollment.status === "Active" && enrollment.accessExpiresAt && new Date(enrollment.accessExpiresAt) < new Date()) continue;
 
     // Paid access is a server-side entitlement. A stale or malformed
     // enrollment with a Free tier must not put a paid program on Dashboard.

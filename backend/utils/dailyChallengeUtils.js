@@ -14,7 +14,6 @@ import {
   resolveProgramSchedule,
 } from "./programSchedule.js";
 import { parseDurationDays } from "./programPhases.js";
-import { getProgramTypeQueryValues } from "./programTypeNormalization.js";
 
 export const DAILY_CHALLENGE_RULES = {
   timerLimitMinutes: 60,
@@ -174,7 +173,14 @@ export const resolveChallengeStudent = async ({ user, email, allowGuestFallback 
     student = await Student.findOne({ email: normalizedEmail });
   }
 
-  if (!student && allowGuestFallback && normalizedEmail) {
+  // A demo student is never a substitute for an authenticated learner's
+  // profile. Otherwise a newly registered learner could silently inherit the
+  // demo college/batch just by opening Daily Challenge.
+  if (user && student?.isGuest && String(student.userId || "") !== String(user._id)) {
+    student = null;
+  }
+
+  if (!student && allowGuestFallback && !user && normalizedEmail) {
     student = await ensureGuestStudent(normalizedEmail);
   }
 
@@ -197,17 +203,9 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
   const normalizedTrackType = requestedTrackType ? normalizeTrackType(requestedTrackType) : "";
 
   if (user || email) {
-    studentContext = await resolveChallengeStudent({ user, email, allowGuestFallback: true });
+    studentContext = await resolveChallengeStudent({ user, email, allowGuestFallback: !user });
   } else {
     studentContext = { student: null, studentEmail: "", accessSource: "guest" };
-  }
-
-  // Block access if student/user is assigned to Project Sprint only
-  const studentProgram = studentContext.student?.programSelection || user?.programSelection;
-  if (studentProgram === "Full Stack Project Program") {
-    const error = new Error("Daily Challenge access is not enabled for accounts assigned to Project Sprint. Only Placement Sprint or Both are allowed.");
-    error.statusCode = 403;
-    throw error;
   }
 
   const schedule = studentContext.student
@@ -229,7 +227,7 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
 
   const batch = schedule.batchId
     ? await Batch.findById(schedule.batchId)
-    : (studentContext.student ? null : await ensureDemoBatch());
+    : (!user && (!studentContext.student || studentContext.student.isGuest) ? await ensureDemoBatch() : null);
 
   if (schedule.batchExpired && !isCompleted) {
     const error = new Error("This batch has ended and program access has been revoked.");
@@ -253,13 +251,6 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
   let program = schedule.programId
     ? await Program.findById(schedule.programId).lean()
     : null;
-  if (!program && studentProgram) {
-    const programTypeValues = getProgramTypeQueryValues(studentProgram);
-    if (programTypeValues.length) {
-      program = await Program.findOne({ programType: { $in: programTypeValues }, status: "Active" }).sort({ createdAt: -1 }).lean();
-    }
-  }
-
   let trackTemplate = null;
   // Program-owned Daily Challenge content is authoritative. A batch track
   // is only a legacy fallback for batches that have no concrete Program.
@@ -290,11 +281,12 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     }
   }
 
-  if (!trackTemplate && !schedule.programId) {
-    trackTemplate = await TrackTemplate.findOne({ trackType: "Daily Challenge", status: "Active" }).sort({ createdAt: -1 });
+  const individualStartDate = batch ? null : (schedule.individualStartDate || schedule.enrollment?.assignedAt || null);
+  if (!batch && !individualStartDate) {
+    const error = new Error("No individual Program start date is configured.");
+    error.statusCode = 403;
+    throw error;
   }
-
-  const individualStartDate = batch ? null : (schedule.individualStartDate || studentContext.student?.createdAt || user?.createdAt || new Date());
   const dayNumber = calculateCurrentDayNumber(
     batch,
     trackTemplate,
@@ -451,7 +443,8 @@ export const upsertDailyChallengeRound = async ({
   durationMinutes,
   individualStartDate,
 }) => {
-  const anchorDate = batch?.startDate || individualStartDate || new Date();
+  const anchorDate = batch?.startDate || individualStartDate;
+  if (!anchorDate) throw new Error("A batch or individual Program start date is required to schedule a Daily Challenge.");
   const dateStr = new Date(anchorDate).toISOString().slice(0, 10).replace(/[^0-9]/g, "");
   const linkId = batch?._id
     ? `daily-${batch._id}-${String(track.trackType || "track").toLowerCase()}-day-${dayNumber}-${dateStr}`

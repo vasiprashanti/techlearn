@@ -49,6 +49,10 @@ const programEnrollmentSchema = new mongoose.Schema(
       enum: ["Free", "Member"],
       default: "Free",
     },
+    billingPeriod: { type: String, enum: ["Monthly", "Annual", null], default: null },
+    accessDurationDays: { type: Number, min: 1, default: null },
+    accessExpiresAt: { type: Date, default: null, index: true },
+    pricingPlanSnapshot: { type: mongoose.Schema.Types.Mixed, default: null },
     assignedAt: {
       type: Date,
       default: Date.now,
@@ -60,7 +64,7 @@ const programEnrollmentSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
-    // Configured expiry date based on the program duration
+    // Access expiry for paid individual enrollments; cohort schedule end for batches.
     expiryDate: {
       type: Date,
       default: null,
@@ -76,7 +80,7 @@ const programEnrollmentSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ["onboarding", "admin", "admin_bulk", "payment", "preference_update"],
+      enum: ["onboarding", "user_enrollment", "admin", "admin_bulk", "payment", "preference_update"],
       default: "onboarding",
     },
   },

@@ -3,11 +3,15 @@ import assert from "node:assert/strict";
 import mongoose from "mongoose";
 import Student from "../models/Student.js";
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
+import Batch from "../models/Batch.js";
+import { expireBatchIfNeeded } from "../utils/batchLifecycle.js";
 import { calculateCurrentDayNumber } from "../utils/trackAssignmentSchedule.js";
 import { getTopicDayNumber } from "../utils/courseTopicSchedule.js";
 import { resolveProgramPrimaryCourseId, isProgramPrimaryCourseMappingValid } from "../utils/programPrimaryCourse.js";
 import { getProgramTypeQueryValues, normalizeProgramType } from "../utils/programTypeNormalization.js";
 import { upsertProgramEnrollment } from "../utils/programEnrollment.js";
+import { getProgramAccessExpiryDate, resolveProgramAccessDurationDays } from "../utils/programPricing.js";
+import { resolveSafeLegacyIndividualStartDate } from "../utils/programEnrollmentDate.js";
 import { isProgramAccessibleToLearner, isUserVisibleProgram } from "../utils/programVisibility.js";
 import {
   buildPublicCourseConditions,
@@ -23,6 +27,26 @@ import { requireProgramLearning } from "../middleware/authMiddleware.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const id = () => new mongoose.Types.ObjectId();
+
+test("batch lifecycle resolves ObjectIds as IDs, not populated Batch documents", async () => {
+  const batchId = id();
+  const originalFindById = Batch.findById;
+  let requestedId;
+  Batch.findById = (value) => {
+    requestedId = value;
+    return { select() { return this; }, lean: async () => ({
+      _id: batchId, status: "Active", expiryDate: new Date(Date.now() + 86400000),
+    }) };
+  };
+  try {
+    const result = await expireBatchIfNeeded(batchId);
+    assert.equal(String(requestedId), String(batchId));
+    assert.equal(result.batch.status, "Active");
+    assert.equal(result.expired, false);
+  } finally {
+    Batch.findById = originalFindById;
+  }
+});
 
 test("daily tracks use Program duration instead of a malformed one-day template", () => {
   const start = new Date("2026-08-01T00:00:00.000Z");
@@ -113,6 +137,69 @@ test("schedule resolution prefers an active enrollment over a stale completed po
   assert.equal(String(selected.programId), String(activeProgramId));
 });
 
+test("schedule resolution chooses only the newest active Program when legacy data has duplicates", () => {
+  const olderProgramId = id();
+  const newestProgramId = id();
+  const selected = chooseProgramScheduleEnrollment({
+    preferredProgramId: olderProgramId,
+    enrollments: [
+      { _id: id(), programId: olderProgramId, status: "Active", assignedAt: new Date("2026-08-01") },
+      { _id: id(), programId: newestProgramId, status: "Active", assignedAt: new Date("2026-09-01") },
+    ],
+  });
+
+  assert.equal(String(selected.programId), String(newestProgramId));
+});
+
+test("access expiry is calculated from the selected plan duration, not Program learning duration", () => {
+  const enrollmentStart = new Date("2026-10-05T00:00:00.000Z");
+  const monthlyExpiry = getProgramAccessExpiryDate(enrollmentStart, 30);
+  const annualExpiry = getProgramAccessExpiryDate(enrollmentStart, 365);
+
+  assert.equal(monthlyExpiry.toISOString(), "2026-11-04T00:00:00.000Z");
+  assert.equal(annualExpiry.toISOString(), "2027-10-05T00:00:00.000Z");
+  assert.equal(getProgramAccessExpiryDate(enrollmentStart, 0), null);
+});
+
+test("changing an enrollment start date keeps its purchased access duration", () => {
+  const originalStart = new Date("2026-10-05T00:00:00.000Z");
+  const originalExpiry = getProgramAccessExpiryDate(originalStart, 30);
+  const enrollment = {
+    individualStartDate: originalStart,
+    accessExpiresAt: originalExpiry,
+    pricingPlanSnapshot: { billingPeriod: "Monthly", accessDurationDays: 30 },
+  };
+
+  assert.equal(resolveProgramAccessDurationDays(enrollment), 30);
+  assert.equal(
+    getProgramAccessExpiryDate(new Date("2026-10-24T00:00:00.000Z"), resolveProgramAccessDurationDays(enrollment)).toISOString(),
+    "2026-11-23T00:00:00.000Z",
+  );
+  assert.equal(resolveProgramAccessDurationDays({
+    individualStartDate: originalStart,
+    accessExpiresAt: getProgramAccessExpiryDate(originalStart, 365),
+  }), 365);
+});
+
+test("legacy date repair never substitutes the Student account creation date", async () => {
+  const accountCreated = new Date("2026-07-01T00:00:00.000Z");
+  const enrollmentCreated = new Date("2026-10-05T00:00:00.000Z");
+  const result = await resolveSafeLegacyIndividualStartDate({
+    enrollment: {
+      individualStartDate: enrollmentCreated,
+      individualStartDateSource: "legacy_inferred",
+      createdAt: enrollmentCreated,
+      assignedAt: enrollmentCreated,
+    },
+    user: {},
+    student: { createdAt: accountCreated },
+  });
+
+  assert.equal(result.reconciled, false);
+  assert.equal(result.reason, "no_authoritative_candidate");
+  assert.equal(result.date.toISOString(), enrollmentCreated.toISOString());
+});
+
 test("specific completed Program resources still resolve when a Program ID is requested", () => {
   const activeProgramId = id();
   const completedProgramId = id();
@@ -138,9 +225,10 @@ test("individual enrollment with an explicit start date does not duplicate its s
   const leadModel = (await import("../models/ProgramReadinessLead.js")).default;
   let capturedUpdate;
 
-  enrollmentModel.findOne = () => ({ lean: async () => null });
+  enrollmentModel.findOne = () => ({ session() { return this; }, lean: async () => null });
   const originalFind = enrollmentModel.find;
   enrollmentModel.find = () => ({
+    session() { return this; },
     select() {
       return this;
     },
@@ -158,6 +246,7 @@ test("individual enrollment with an explicit start date does not duplicate its s
       user: { _id: id() },
       student: { _id: id() },
       program: { _id: id(), pricingType: "Free" },
+      session: {},
       batchId: null,
       individualStartDate: "2026-08-07T00:00:00.000Z",
       source: "admin",

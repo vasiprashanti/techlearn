@@ -6,12 +6,10 @@ import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import Course from "../models/Course.js";
 import Topic from "../models/Topic.js";
 import Student from "../models/Student.js";
-import College from "../models/College.js";
 import PricingExitFeedback from "../models/PricingExitFeedback.js";
 import { upsertProgramEnrollment, syncPrimaryProgramPointers } from "../utils/programEnrollment.js";
 import { normalizeProgramType } from "../utils/programTypeNormalization.js";
 import { resolveConfiguredProgramPricingPlan } from "../utils/programPricing.js";
-import { parseDurationDays } from "../utils/programPhases.js";
 import {
   isCapturedPaymentForRecord,
   isPaymentForRecord,
@@ -34,45 +32,31 @@ const getRazorpayInstance = () => {
   return new Razorpay({ key_id, key_secret });
 };
 
-const DEFAULT_PRICING_PLANS = {
-  Placement: [
-    { key: "placement-basic", title: "Placement Program", price: 799 },
-    { key: "placement-pro", title: "Placement Program Pro", price: 999 },
-  ],
-  Skill: [
-    { key: "skill-basic", title: "Skill Program", price: 499 },
-    { key: "skill-pro", title: "Skill Program Pro", price: 499 },
-  ],
-};
-
 const PLACEMENT_REFUND_POLICY = "Cancel anytime. Get refunded if you cancel within 5 days.";
 const SKILL_REFUND_POLICY = "No refunds or cancellations after purchase.";
 
-export const getPricingPlan = async (program, planId, userId = null) => {
-  const type = normalizeProgramType(program?.programType) === "Skill" ? "Skill" : "Placement";
-  const hasConfiguredPlans = Array.isArray(program?.pricingPlans) && program.pricingPlans.length > 0;
-  if (hasConfiguredPlans) return resolveConfiguredProgramPricingPlan(program, planId);
-  
-  if (type === "Skill" && userId) {
-    const hasPreviousCapturedPayment = await Payment.exists({
-      userId,
-      status: { $in: ["captured", "approved"] },
-    });
-    const skillPrice = hasPreviousCapturedPayment ? 199 : 499;
-    const requested = String(planId || "").toLowerCase();
-    const title = requested.includes("pro") ? "Skill Program Pro" : "Skill Program";
+export const getPricingPlan = (program, planId) => {
+  const configured = resolveConfiguredProgramPricingPlan(program, planId);
+  if (configured) {
+    const plan = typeof configured.toObject === "function" ? configured.toObject() : configured;
     return {
-      key: requested.includes("pro") ? "skill-pro" : "skill-basic",
-      title,
-      price: skillPrice,
+      ...plan,
+      accessDurationDays: Number(plan.accessDurationDays)
+        || (plan.billingPeriod === "Monthly" ? 30 : plan.billingPeriod === "Annual" ? 365 : null),
     };
   }
-
-  const defaults = DEFAULT_PRICING_PLANS[type];
-  const requested = String(planId || "").toLowerCase();
-  return requested
-    ? defaults.find((plan) => String(plan.key || "").toLowerCase() === requested) || null
-    : defaults[0] || null;
+  if (String(planId || "") === "legacy-single" && Number(program?.programFee) > 0) {
+    return {
+      key: "legacy-single",
+      title: `${program.name || "Program"} access`,
+      price: Number(program.programFee),
+      billingPeriod: "Annual",
+      accessDurationDays: 365,
+      availability: program.availability || null,
+      active: true,
+    };
+  }
+  return null;
 };
 
 const activateProgramEnrollmentForPayment = async ({ payment, user, student }) => {
@@ -80,6 +64,17 @@ const activateProgramEnrollmentForPayment = async ({ payment, user, student }) =
 
   const program = await Program.findById(payment.programId);
   if (!program) throw new Error("The Program associated with this payment no longer exists.");
+
+  const otherActiveEnrollment = await ProgramEnrollment.findOne({
+    userId: payment.userId,
+    status: "Active",
+    programId: { $ne: program._id },
+  }).select("_id programId").lean();
+  if (otherActiveEnrollment) {
+    const conflict = new Error("You already have an active Program. Ask an admin to complete or switch it before enrolling in another.");
+    conflict.statusCode = 409;
+    throw conflict;
+  }
 
   const resolvedStudent = student
     || (payment.studentId ? await Student.findById(payment.studentId) : null)
@@ -92,6 +87,7 @@ const activateProgramEnrollmentForPayment = async ({ payment, user, student }) =
     student: resolvedStudent,
     program,
     accessTier: "Member",
+    pricingPlan: payment.pricingPlanSnapshot,
     source: "payment",
   });
   if (!enrollment) throw new Error("Program enrollment could not be activated.");
@@ -116,20 +112,13 @@ const getOrCreateStudentForUser = async (user) => {
   }
 
   if (!student) {
-    let collegeId = user.collegeId || user.college;
-    if (!collegeId || !mongoose.Types.ObjectId.isValid(collegeId)) {
-      let defaultCollege = await College.findOne();
-      if (!defaultCollege) {
-        defaultCollege = await College.create({ name: "Default College" });
-      }
-      collegeId = defaultCollege._id;
-    }
-
     student = await Student.create({
       userId: user._id,
       name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.username || "Student",
       email: user.email || `user_${user._id}@techlearn.com`,
-      collegeId,
+      collegeId: mongoose.Types.ObjectId.isValid(String(user.collegeId || user.college || ""))
+        ? (user.collegeId || user.college)
+        : null,
       status: "Active",
     });
   }
@@ -143,7 +132,11 @@ const getOrCreateStudentForUser = async (user) => {
  */
 export const checkPaymentEligibility = async (req, res) => {
   try {
-    const { programId, planId, programType: requestedType } = req.query;
+    const { programId, planId } = req.query;
+
+    if (!programId || !planId) {
+      return res.status(400).json({ success: false, message: "programId and planId are required." });
+    }
 
     let program = null;
     if (programId) {
@@ -161,7 +154,7 @@ export const checkPaymentEligibility = async (req, res) => {
       }
     }
 
-    const type = normalizeProgramType(program?.programType || requestedType) || "Placement";
+    const type = normalizeProgramType(program?.programType);
 
     const plan = await getPricingPlan(program, planId, req.user?._id || null);
     if (!plan || !Number.isFinite(Number(plan.price)) || Number(plan.price) <= 0) {
@@ -190,7 +183,7 @@ export const checkPaymentEligibility = async (req, res) => {
 export const createPaymentOrder = async (req, res) => {
   try {
     const user = req.user;
-    const { courseId, programId, planId, programType: requestedProgramType } = req.body;
+    const { courseId, programId, planId } = req.body;
 
     if (courseId && programId) {
       return res.status(400).json({ success: false, message: "Choose either a Course or a Program for checkout." });
@@ -310,8 +303,8 @@ export const createPaymentOrder = async (req, res) => {
       });
     }
 
-    if (!programId && !planId) {
-      return res.status(400).json({ success: false, message: "programId or planId is required" });
+    if (!programId || !planId) {
+      return res.status(400).json({ success: false, message: "programId and planId are required." });
     }
 
     let program = null;
@@ -329,64 +322,28 @@ export const createPaymentOrder = async (req, res) => {
       }
     }
 
-    // Fallback program lookup by type if specific ID not provided
-    let rawType = program?.programType || requestedProgramType || "";
-    let programType = normalizeProgramType(rawType) || "Placement";
-
-    if (!program) {
-      program = await Program.findOne({
-        programType,
-        status: "Active",
-        visibility: "Public",
-        pricingType: "Paid",
-      });
-    }
+    const programType = normalizeProgramType(program?.programType);
 
     if (!program || program.pricingType !== "Paid") {
       return res.status(400).json({ success: false, message: "A paid program is required for checkout." });
     }
 
-    // Enforce one active paid program rule: a learner can have only one
-    // active paid program enrollment at a time. While active, block purchasing
-    // or switching to another paid program until it expires.
-    const activeEnrollments = await ProgramEnrollment.find({
-      userId: user._id,
-      status: "Active",
-      accessTier: "Member",
-    }).populate("programId", "name pricingType duration durationDays").lean();
-
-    const now = Date.now();
-    const DAY_MS = 24 * 60 * 60 * 1000;
-    const activeUnexpiredEnrollment = activeEnrollments.find((enrollment) => {
-      const prog = enrollment.programId;
-      if (!prog || prog.pricingType !== "Paid") return false;
-      if (enrollment.expiryDate) {
-        return new Date(enrollment.expiryDate).getTime() > now;
-      }
-      const durationDays = Number(prog.durationDays) || parseDurationDays(prog.duration) || 30;
-      const start = new Date(enrollment.individualStartDate || enrollment.assignedAt || enrollment.createdAt).getTime();
-      const expiry = start + (durationDays * DAY_MS);
-      return expiry > now;
-    });
-
-    if (activeUnexpiredEnrollment) {
-      const activeProgramName = activeUnexpiredEnrollment.programId?.name || "current program";
-      return res.status(409).json({
-        success: false,
-        activeProgramBlocked: true,
-        message: `You already have an active paid enrollment in "${activeProgramName}". You cannot purchase or switch to another paid program until your current enrollment expires.`,
-      });
-    }
-
-    // Only use a plan explicitly defined by this Program (or the legacy
-    // program-type defaults when the Program has no custom pricing plans).
-    const selectedPlan = await getPricingPlan(program, planId, user._id);
+    const selectedPlan = getPricingPlan(program, planId);
     if (!selectedPlan || !Number.isFinite(Number(selectedPlan.price)) || Number(selectedPlan.price) <= 0) {
       return res.status(400).json({ success: false, message: "The selected pricing plan is unavailable." });
     }
     const amount = Number(selectedPlan.price);
     const planName = selectedPlan.title;
     const refundPolicy = programType === "Placement" ? PLACEMENT_REFUND_POLICY : SKILL_REFUND_POLICY;
+
+    const otherActiveEnrollment = await ProgramEnrollment.findOne({
+      userId: user._id,
+      status: "Active",
+      programId: { $ne: program._id },
+    }).select("_id").lean();
+    if (otherActiveEnrollment) {
+      return res.status(409).json({ success: false, code: "ACTIVE_PROGRAM_EXISTS", message: "You already have an active Program. Ask an admin to complete or switch it before enrolling in another." });
+    }
 
     const currency = "INR";
     const receipt = `rcpt_${user._id}_${Date.now()}`;
@@ -418,6 +375,14 @@ export const createPaymentOrder = async (req, res) => {
       programId: program._id,
       paymentPurpose: "ProgramEnrollment",
       plan: planName,
+      pricingPlanSnapshot: {
+        key: String(selectedPlan.key || planId),
+        title: planName,
+        price: amount,
+        billingPeriod: selectedPlan.billingPeriod || null,
+        accessDurationDays: Number(selectedPlan.accessDurationDays) || null,
+        availability: selectedPlan.availability || null,
+      },
       programType,
       amount,
       currency,
@@ -464,6 +429,17 @@ export const verifyPayment = async (req, res) => {
     }
     if (String(payment.userId) !== String(user._id)) {
       return res.status(403).json({ success: false, message: "You do not own this payment." });
+    }
+
+    if (payment.programId) {
+      const activeEnrollment = await ProgramEnrollment.findOne({
+        userId: user._id,
+        status: "Active",
+        programId: { $ne: payment.programId },
+      }).select("_id").lean();
+      if (activeEnrollment) {
+        return res.status(409).json({ success: false, code: "ACTIVE_PROGRAM_EXISTS", message: "You already have an active Program. Ask an admin to complete or switch it before enrolling in another." });
+      }
     }
 
     const isCoursePurchase = isCoursePurchasePayment(payment);
@@ -576,7 +552,7 @@ export const verifyPayment = async (req, res) => {
     });
   } catch (error) {
     console.error("verifyPayment error:", error);
-    res.status(500).json({ success: false, message: "Payment verification failed." });
+    res.status(error.statusCode || 500).json({ success: false, message: error.message || "Payment verification failed." });
   }
 };
 
