@@ -1098,6 +1098,12 @@ export default function Students() {
                                     </select>
                                     <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 opacity-60" />
                                   </div>
+                                  {(student.pricingPlan?.price || student.access === 'Paid') && (
+                                    <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                      {student.pricingPlan?.price ? `₹${student.pricingPlan.price}` : ''}
+                                      {student.pricingPlan?.title ? ` • ${student.pricingPlan.title}` : ''}
+                                    </div>
+                                  )}
                                 </td>
                                 <td className="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                   {student.currentProgram || '—'}

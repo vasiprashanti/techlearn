@@ -31,19 +31,29 @@ export const getProgramPriceLabel = (program) => {
       }))
       .filter((plan) => plan.price !== null)
     : [];
-  const pricesByBillingPeriod = new Map();
-  configuredPlanPrices.forEach(({ billingPeriod, price }) => {
-    if (!['Monthly', 'Annual'].includes(billingPeriod)) return;
-    pricesByBillingPeriod.set(
-      billingPeriod,
-      Math.min(pricesByBillingPeriod.get(billingPeriod) ?? Infinity, price),
-    );
-  });
-  if (pricesByBillingPeriod.size > 0) {
-    return [...pricesByBillingPeriod.entries()]
-      .map(([billingPeriod, price]) => `${billingPeriod} ₹${price.toLocaleString('en-IN')}`)
-      .join(' · ');
+  const isMonthly = (bp) => String(bp || '').toLowerCase() === 'monthly';
+  const isAnnual = (bp) => String(bp || '').toLowerCase() === 'annual';
+
+  const monthlyPrice = configuredPlanPrices.find(p => isMonthly(p.billingPeriod))?.price
+    ?? parsePositivePrice(program?.monthlyStructuredFee)
+    ?? parsePositivePrice(program?.monthlyTrainerLedFee);
+
+  const annualPrice = configuredPlanPrices.find(p => isAnnual(p.billingPeriod))?.price
+    ?? parsePositivePrice(program?.annualStructuredFee)
+    ?? parsePositivePrice(program?.annualTrainerLedFee);
+
+  if (monthlyPrice !== null && annualPrice !== null) {
+    return `From ₹${monthlyPrice.toLocaleString('en-IN')}`;
   }
+
+  if (monthlyPrice !== null) {
+    return `From ₹${monthlyPrice.toLocaleString('en-IN')}`;
+  }
+
+  if (annualPrice !== null) {
+    return `From ₹${annualPrice.toLocaleString('en-IN')}`;
+  }
+
   const fallbackPrice = [
     program?.structuredFee,
     program?.trainerLedFee,
@@ -52,6 +62,7 @@ export const getProgramPriceLabel = (program) => {
   ]
     .map(parsePositivePrice)
     .find((price) => price !== null);
+
   const prices = configuredPlanPrices.length > 0
     ? configuredPlanPrices.map((plan) => plan.price)
     : fallbackPrice === undefined ? [] : [fallbackPrice];
@@ -60,7 +71,7 @@ export const getProgramPriceLabel = (program) => {
 
   const lowestPrice = Math.min(...prices);
   const priceLabel = `₹${lowestPrice.toLocaleString("en-IN")}`;
-  return prices.some((price) => price !== lowestPrice)
+  return prices.length > 1
     ? `From ${priceLabel}`
     : priceLabel;
 };

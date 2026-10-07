@@ -74,7 +74,7 @@ export default function Signup({
         onClose();
       } else {
         const storedUser = user || JSON.parse(localStorage.getItem('userData') || 'null');
-        navigateUserByProgram(storedUser, navigate, { replace: true });
+        handlePostAuthNavigation(storedUser, { replace: true });
       }
     }
   }, [authLoading, isAuthenticated, user, navigate, onClose]);
@@ -98,6 +98,44 @@ export default function Signup({
     const rawBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
     const cleanBase = rawBase.replace(/\/+$/, '');
     return cleanBase.endsWith('/api') ? cleanBase : `${cleanBase}/api`;
+  };
+
+  const handlePostAuthNavigation = (authenticatedUser, options = {}) => {
+    // 1. If explicit state from location or contextual onboarding exists, prioritize it
+    const locationState = location.state;
+    if (locationState && typeof locationState === 'object') {
+      if (locationState.programId) {
+        navigate('/onboarding/programs', { state: locationState });
+        return true;
+      }
+      if (locationState.courseId) {
+        navigate(`/learn/courses/${locationState.courseId}`, { state: locationState });
+        return true;
+      }
+      if (locationState.redirectTo) {
+        navigate(locationState.redirectTo, { state: locationState });
+        return true;
+      }
+    }
+
+    try {
+      const contextualData = JSON.parse(sessionStorage.getItem('techlearn-contextual-onboarding') || 'null');
+      if (contextualData && typeof contextualData === 'object') {
+        if (contextualData.programId) {
+          navigate('/onboarding/programs', { state: contextualData });
+          return true;
+        }
+        if (contextualData.courseId) {
+          navigate(`/learn/courses/${contextualData.courseId}`, { state: contextualData });
+          return true;
+        }
+      }
+    } catch (err) {
+      console.warn('Could not read contextual onboarding for post-auth navigation:', err);
+    }
+
+    navigateUserByProgram(authenticatedUser, navigate, options);
+    return true;
   };
 
   const handlePendingAssessmentIfPresent = async () => {
@@ -165,7 +203,7 @@ export default function Signup({
         }
 
         handleClose();
-        navigateUserByProgram(data.user, navigate);
+        handlePostAuthNavigation(data.user);
       } else {
         setStatusMsg({
           text: data.message || 'Google sign-in succeeded, but backend verification failed.',
@@ -227,7 +265,7 @@ export default function Signup({
           }
 
           handleClose();
-          navigateUserByProgram(data.user, navigate);
+          handlePostAuthNavigation(data.user);
         } else {
           setStatusMsg({
             text: data.message || 'Invalid email or password.',
@@ -436,7 +474,7 @@ export default function Signup({
         }
 
         handleClose();
-        navigateUserByProgram(regData.user, navigate);
+        handlePostAuthNavigation(regData.user);
       } else {
         setOtpError(regData.message || 'Account creation failed. Please check your details.');
       }

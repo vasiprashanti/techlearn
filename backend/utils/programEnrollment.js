@@ -458,18 +458,18 @@ export const upsertProgramEnrollment = async ({
     : null;
   const selectedSnapshot = pricingPlan || existing?.pricingPlanSnapshot || defaultPaidPlan;
   const rawPlanSnapshot = typeof selectedSnapshot?.toObject === 'function' ? selectedSnapshot.toObject() : selectedSnapshot;
+  const programDurationDays = existing?.programDurationDays || program?.durationDays || parseDurationDays(program?.duration) || 30;
   const accessDurationDays = resolveProgramAccessDurationDays({
     accessDurationDays: rawPlanSnapshot?.accessDurationDays || existing?.accessDurationDays,
     pricingPlanSnapshot: rawPlanSnapshot || existing?.pricingPlanSnapshot,
     billingPeriod: rawPlanSnapshot?.billingPeriod || existing?.billingPeriod,
     individualStartDate: existing?.individualStartDate,
     accessExpiresAt: existing?.accessExpiresAt,
-  });
+  }, programDurationDays);
   const resolvedPlanSnapshot = rawPlanSnapshot
     ? {
         ...rawPlanSnapshot,
-        accessDurationDays: accessDurationDays
-          || (rawPlanSnapshot.billingPeriod === "Monthly" ? 30 : 365),
+        accessDurationDays,
       }
     : null;
   const enrollmentBatch = resolvedBatchId ? await Batch.findById(resolvedBatchId).session(session).lean() : null;
@@ -478,7 +478,6 @@ export const upsertProgramEnrollment = async ({
     || existing?.assignedAt
     || now;
   const accessExpiresAt = getProgramAccessExpiryDate(enrollmentStartDate, accessDurationDays, resolvedPlanSnapshot || {});
-  const programDurationDays = existing?.programDurationDays || program.durationDays || parseDurationDays(program.duration);
   const programExpiresAt = getProgramAccessExpiryDate(enrollmentStartDate, programDurationDays);
 
   const resolvedStartDate = explicitIndividualStartDate

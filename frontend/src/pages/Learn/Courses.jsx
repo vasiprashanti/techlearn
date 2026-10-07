@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from "react-router-dom";
 import { Clock, Calendar, ArrowRight, ArrowLeft, Code } from "lucide-react";
-import { courseAPI, dataAdapters } from "../../services/api";
+import { courseAPI, placementLearningAPI, dataAdapters } from "../../services/api";
 import { programLearningAPI } from "../../services/programLearningApi";
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import JoinWaitlistModal from '../../components/Learn/JoinWaitlistModal';
 import { readCachedCourseDetails, writeCachedCourseDetails } from '../../utils/courseCache';
 import {
@@ -154,8 +155,10 @@ export default function Courses() {
     Advanced: 'bg-[#efe5ff] text-[#7551a6] border border-[#ddcbff]',
   };
 
+  const { isAuthenticated } = useAuth();
   const [coursesData, setCoursesData] = useState(cachedCourses || []);
   const [publicPrograms, setPublicPrograms] = useState([]);
+  const [placementLearning, setPlacementLearning] = useState(null);
   const [loading, setLoading] = useState(!cachedCourses);
 
   const mockCoursesData = [
@@ -223,11 +226,47 @@ export default function Courses() {
     fetchCoursesAndPrograms();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    let cancelled = false;
+    if (isAuthenticated) {
+      placementLearningAPI
+        .getDashboard()
+        .then((res) => {
+          if (!cancelled && res?.hasPlacementLearning) {
+            setPlacementLearning(res);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  const enrolledProgramId = String(
+    placementLearning?.program?.id || placementLearning?.program?._id || ''
+  );
+  const isEnrolledDay1 = Number(placementLearning?.batch?.currentDay || 1) <= 1;
+
   const handleJoinWaitlistClick = (program) => {
     setSelectedWaitlistProgram(program);
   };
 
   const handleProgramAction = (program) => {
+    const progId = String(program._id || program.id || '');
+    if (enrolledProgramId && enrolledProgramId === progId) {
+      if (isEnrolledDay1) {
+        navigate('/dashboard');
+      } else if (placementLearning?.todayTopic?.href) {
+        navigate(placementLearning.todayTopic.href);
+      } else if (placementLearning?.attachedCourse?._id) {
+        navigate(`/learn/courses/${placementLearning.attachedCourse._id}/topics?day=${placementLearning?.batch?.currentDay || 1}`);
+      } else {
+        navigate('/dashboard');
+      }
+      return;
+    }
+
     if (program._id) {
       navigate(`/learn/programs/${program._id}`);
       return;
@@ -721,14 +760,23 @@ export default function Courses() {
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleProgramAction(program)}
-                          className="w-full py-2.5 sm:py-3 flex items-center justify-center gap-2 rounded-xl bg-[#00113b] text-white text-xs sm:text-sm font-bold shadow-sm transition hover:bg-[#001b5c] dark:!bg-[#bceaff] dark:!text-[#020b23] dark:hover:!bg-[#daf0fa] cursor-pointer"
-                        >
-                          <span>Explore Program</span>
-                          <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        </button>
+                        {(() => {
+                          const isThisEnrolled = enrolledProgramId && enrolledProgramId === String(program._id || program.id || '');
+                          const buttonLabel = isThisEnrolled
+                            ? (isEnrolledDay1 ? "Start Learning" : "Resume Learning")
+                            : "Explore Program";
+
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => handleProgramAction(program)}
+                              className="w-full py-2.5 sm:py-3 flex items-center justify-center gap-2 rounded-xl bg-[#00113b] text-white text-xs sm:text-sm font-bold shadow-sm transition hover:bg-[#001b5c] dark:!bg-[#bceaff] dark:!text-[#020b23] dark:hover:!bg-[#daf0fa] cursor-pointer"
+                            >
+                              <span>{buttonLabel}</span>
+                              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </button>
+                          );
+                        })()}
                       </div>
                     </CarouselItem>
                   ))}

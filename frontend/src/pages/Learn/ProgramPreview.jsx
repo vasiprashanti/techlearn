@@ -85,11 +85,32 @@ export default function ProgramPreview() {
           }
           setProgram(prog);
 
-          // Initialize selected billing based on available options
-          if (prog.billingOptions?.length > 0) {
-            setSelectedBilling(prog.billingOptions[0]);
-          } else if (prog.pricingPlans?.length > 0) {
-            setSelectedBilling(prog.pricingPlans[0].billingPeriod || "Monthly");
+          // Initialize selected billing strictly based on configured pricing options
+          const configuredPlans = (prog.pricingPlans || []).filter((plan) => plan.active !== false && Number(plan.price) > 0);
+          const hasMonthly = configuredPlans.some((p) => {
+            const period = String(p.billingPeriod || "").toLowerCase();
+            const unit = String(p.accessDurationUnit || "").toLowerCase();
+            const key = String(p.key || "").toLowerCase();
+            const title = String(p.title || "").toLowerCase();
+            return period === "monthly" || unit === "months" || key.includes("month") || title.includes("month");
+          }) || (prog.billingOptions?.includes("Monthly") && (prog.monthlyStructuredFee || prog.monthlyTrainerLedFee));
+
+          const hasAnnual = configuredPlans.some((p) => {
+            const period = String(p.billingPeriod || "").toLowerCase();
+            const unit = String(p.accessDurationUnit || "").toLowerCase();
+            const key = String(p.key || "").toLowerCase();
+            const title = String(p.title || "").toLowerCase();
+            return period === "annual" || unit === "years" || key.includes("annual") || key.includes("year") || title.includes("annual") || title.includes("year");
+          }) || (prog.billingOptions?.includes("Annual") && (prog.annualStructuredFee || prog.annualTrainerLedFee));
+
+          if (hasMonthly && hasAnnual) {
+            setSelectedBilling("Monthly");
+          } else if (hasMonthly) {
+            setSelectedBilling("Monthly");
+          } else if (hasAnnual) {
+            setSelectedBilling("Annual");
+          } else if (configuredPlans.length > 0) {
+            setSelectedBilling(configuredPlans[0].billingPeriod || "Monthly");
           }
         }
       })
@@ -153,7 +174,7 @@ export default function ProgramPreview() {
   const currentProgramDay = placementLearning?.batch?.currentDay || placementLearning?.todayTopic?.day || 1;
   const isDay1 = currentProgramDay <= 1;
 
-  // Determine pricing based on selected billing
+  // Determine pricing strictly based on configured pricing options
   const pricingPlans = (program.pricingPlans || []).filter((plan) => plan.active !== false && Number(plan.price) > 0);
   
   // Helper to test if a plan is Monthly
@@ -177,28 +198,44 @@ export default function ProgramPreview() {
   const monthlyPlanCandidate = pricingPlans.find(isMonthlyPlan) || null;
   const annualPlanCandidate = pricingPlans.find(isAnnualPlan) || null;
 
-  // Find plan strictly or semantically matching the selected billing period
-  const selectedPlan = selectedBilling.toLowerCase() === "monthly"
-    ? (monthlyPlanCandidate || pricingPlans[0] || null)
-    : (annualPlanCandidate || pricingPlans[1] || pricingPlans[0] || null);
-
   const monthlyDisplayPrice = monthlyPlanCandidate?.price 
     ?? program.monthlyStructuredFee 
     ?? program.monthlyTrainerLedFee 
-    ?? (pricingPlans[0] ? pricingPlans[0].price : null);
+    ?? null;
 
   const annualDisplayPrice = annualPlanCandidate?.price 
     ?? program.annualStructuredFee 
     ?? program.annualTrainerLedFee 
-    ?? (pricingPlans[1] ? pricingPlans[1].price : (pricingPlans[0] ? pricingPlans[0].price : null));
+    ?? null;
 
+  // An option is truly available only if a fee or active plan exists for that period
+  const hasMonthlyOption = monthlyPlanCandidate !== null || (Number(monthlyDisplayPrice) > 0);
+  const hasAnnualOption = annualPlanCandidate !== null || (Number(annualDisplayPrice) > 0);
+
+  // If selectedBilling is invalid or points to an unavailable option, normalize it
+  const effectiveBilling = (selectedBilling === "Monthly" && hasMonthlyOption)
+    ? "Monthly"
+    : (selectedBilling === "Annual" && hasAnnualOption)
+    ? "Annual"
+    : (hasMonthlyOption ? "Monthly" : (hasAnnualOption ? "Annual" : (pricingPlans[0]?.billingPeriod || "Monthly")));
+
+  // Find plan strictly matching the active billing period, falling back to configured pricing plans
+  const selectedPlan = (effectiveBilling.toLowerCase() === "monthly"
+    ? monthlyPlanCandidate
+    : annualPlanCandidate) || pricingPlans[0] || null;
+
+  // Resolve current active price strictly for the effective billing
   let currentPrice = 0;
   if (selectedPlan && typeof selectedPlan.price === "number") {
     currentPrice = selectedPlan.price;
-  } else if (selectedBilling === "Monthly") {
-    currentPrice = monthlyDisplayPrice ?? program.programFee ?? 0;
+  } else if (effectiveBilling === "Monthly" && monthlyDisplayPrice !== null) {
+    currentPrice = Number(monthlyDisplayPrice);
+  } else if (effectiveBilling === "Annual" && annualDisplayPrice !== null) {
+    currentPrice = Number(annualDisplayPrice);
+  } else if (pricingPlans.length > 0 && typeof pricingPlans[0].price === "number") {
+    currentPrice = pricingPlans[0].price;
   } else {
-    currentPrice = annualDisplayPrice ?? program.programFee ?? 0;
+    currentPrice = Number(program.programFee) || 0;
   }
 
   // Handle Checkout / Payment
@@ -335,13 +372,13 @@ export default function ProgramPreview() {
               <div className="meta-item">
                 <span className="meta-label">Access</span>
                 <span className="meta-value">
-                  {isPaid ? `₹${currentPrice} (${selectedBilling})` : "Free"}
+                  {isPaid ? `₹${currentPrice} (${effectiveBilling})` : "Free"}
                 </span>
               </div>
             </div>
 
-            {/* BILLING SELECTION (Only for Paid programs) */}
-            {isPaid && (
+            {/* BILLING SELECTION (Only when BOTH Monthly and Annual are configured) */}
+            {isPaid && hasMonthlyOption && hasAnnualOption && (
               <div className="mt-4 mb-3">
                 <p className="text-[10px] font-bold uppercase tracking-wider opacity-60 mb-2 font-mono">
                   SELECT BILLING OPTION:
@@ -354,7 +391,7 @@ export default function ProgramPreview() {
                       setPaymentMessage("");
                     }}
                     className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-                      selectedBilling === "Monthly"
+                      effectiveBilling === "Monthly"
                         ? "bg-[#3c83f6] text-white shadow"
                         : "opacity-70 hover:opacity-100"
                     }`}
@@ -368,7 +405,7 @@ export default function ProgramPreview() {
                       setPaymentMessage("");
                     }}
                     className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-                      selectedBilling === "Annual"
+                      effectiveBilling === "Annual"
                         ? "bg-[#3c83f6] text-white shadow"
                         : "opacity-70 hover:opacity-100"
                     }`}
@@ -481,7 +518,7 @@ export default function ProgramPreview() {
                 <div className="code-line">
                   <span className="code-number">04</span>
                   <span>
-                    &nbsp;&nbsp;billing: <span className="code-accent">"{selectedBilling}"</span>,
+                    &nbsp;&nbsp;billing: <span className="code-accent">"{effectiveBilling}"</span>,
                   </span>
                 </div>
 
