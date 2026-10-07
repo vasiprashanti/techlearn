@@ -141,10 +141,25 @@ const buildStudentTableRow = (student, program) => {
   const isPaid = student?.programAccess
     ? student.programAccess === 'Paid'
     : enrollment?.accessTier === 'Member' || program?.pricingType === 'Paid';
-  const fee = Number(program?.programFee);
-  const feeLabel = Number.isFinite(fee) && fee > 0 ? ` ₹${fee.toLocaleString('en-IN')}` : '';
-  const configuredPlan = String(student?.programPlan || '').trim();
-  const planBase = configuredPlan || (isPaid
+  const paidAmount = Number(
+    enrollment?.pricingPlanSnapshot?.price ??
+    enrollment?.pricingPlan?.price ??
+    student?.pricingPlan?.price ??
+    student?.paidAmount ??
+    student?.amount
+  );
+  const fallbackFee = Number(program?.programFee);
+  const effectiveFee = Number.isFinite(paidAmount) && paidAmount > 0
+    ? paidAmount
+    : (Number.isFinite(fallbackFee) && fallbackFee > 0 ? fallbackFee : null);
+  const feeLabel = effectiveFee ? ` ₹${effectiveFee.toLocaleString('en-IN')}` : '';
+
+  const planTitle = enrollment?.pricingPlanSnapshot?.title
+    || enrollment?.pricingPlan?.title
+    || student?.pricingPlan?.title
+    || String(student?.programPlan || '').trim();
+
+  const planBase = planTitle || (isPaid
     ? 'Paid'
     : (totalDays ? `${totalDays}-Day Trial` : 'Free Access'));
 

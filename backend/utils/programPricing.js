@@ -43,8 +43,7 @@ export const buildProgramPricing = ({
   }
   if (pricingType !== "Paid") return { error: "Pricing must be Free or Paid." };
 
-  if (submittedPlans !== undefined) {
-    if (!Array.isArray(submittedPlans) || !submittedPlans.length) return { error: "Add at least one paid pricing plan." };
+  if (Array.isArray(submittedPlans) && submittedPlans.length > 0) {
     const keys = new Set();
     const plans = [];
     for (const [index, input] of submittedPlans.entries()) {
@@ -253,11 +252,32 @@ export const getProgramAccessExpiryDate = (startDate, accessDurationDays, plan =
   return new Date(start.getTime() + (days * 24 * 60 * 60 * 1000));
 };
 
-export const resolveProgramAccessDurationDays = (enrollment = {}) => {
+export const resolveProgramAccessDurationDays = (enrollment = {}, programDurationDays = null) => {
   const explicitDuration = Number(
     enrollment.accessDurationDays || enrollment.pricingPlanSnapshot?.accessDurationDays
   );
-  if (Number.isInteger(explicitDuration) && explicitDuration > 0) return explicitDuration;
+  const progDays = Number(programDurationDays) > 0 ? Number(programDurationDays) : 0;
+  const billingPeriod = String(
+    enrollment.billingPeriod ||
+    enrollment.pricingPlanSnapshot?.billingPeriod ||
+    ""
+  ).toLowerCase();
+
+  // If a billing period is known, enforce the required duration formula:
+  // Monthly: MAX(programDuration, 30 days)
+  // Annual: MAX(programDuration, 365 days)
+  if (billingPeriod === "monthly") {
+    const baseMonthly = explicitDuration > 0 ? explicitDuration : 30;
+    return Math.max(progDays, Math.max(baseMonthly, 30));
+  }
+  if (billingPeriod === "annual") {
+    const baseAnnual = explicitDuration > 0 ? explicitDuration : 365;
+    return Math.max(progDays, Math.max(baseAnnual, 365));
+  }
+
+  if (Number.isInteger(explicitDuration) && explicitDuration > 0) {
+    return explicitDuration;
+  }
 
   const start = enrollment.individualStartDate ? new Date(enrollment.individualStartDate) : null;
   const expiry = enrollment.accessExpiresAt ? new Date(enrollment.accessExpiresAt) : null;
@@ -266,7 +286,5 @@ export const resolveProgramAccessDurationDays = (enrollment = {}) => {
       - Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate())) / (24 * 60 * 60 * 1000));
   }
 
-  if (enrollment.billingPeriod === "Monthly") return 30;
-  if (enrollment.billingPeriod === "Annual") return 365;
-  return null;
+  return progDays > 0 ? progDays : 30;
 };

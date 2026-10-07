@@ -505,7 +505,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
   min-height: 25px;
 }
 
@@ -520,14 +520,16 @@
 }
 
 .learn-page-container .price {
-  font-size: 23px;
+  font-size: 17px;
   font-weight: 800;
   color: var(--accent);
-  letter-spacing: -.7px;
-  white-space: nowrap;
-  line-height: 1;
+  letter-spacing: -.4px;
+  line-height: 1.2;
   display: inline-flex;
   align-items: center;
+  flex: 1;
+  min-width: 0;
+  white-space: normal;
 }
 
 .learn-page-container .free-label {
@@ -550,13 +552,14 @@
 .learn-page-container .start-link {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   color: var(--accent);
   text-decoration: none;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: -.1px;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: color .25s ease, gap .35s cubic-bezier(.22,1,.36,1);
 }
 
