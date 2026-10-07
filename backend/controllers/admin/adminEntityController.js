@@ -4164,21 +4164,22 @@ export const getGlobalStudentsAdmin = async (req, res) => {
     });
 
     // Map paid payments: userId -> boolean/list
-    const paidUsersSet = new Set(allPayments.filter((p) => ["captured", "approved"].includes(p.status)).map((p) => String(p.userId)));
+    const paidUsersSet = new Set(allPayments.filter((p) => ["captured", "approved"].includes(p.status)).flatMap((p) => [String(p.userId || ""), String(p.studentId || "")].filter(Boolean)));
 
     // Map payment status: userId or studentId -> Paid | Pending | Failed
     const paymentStatusByUser = new Map();
     allPayments.forEach((p) => {
-      const uKey = String(p.userId || p.studentId || "");
-      if (uKey && !paymentStatusByUser.has(uKey)) {
+      const keys = [p.userId ? String(p.userId) : null, p.studentId ? String(p.studentId) : null].filter(Boolean);
+      keys.forEach((key) => {
+        const current = paymentStatusByUser.get(key);
         if (["captured", "approved"].includes(p.status)) {
-          paymentStatusByUser.set(uKey, "Paid");
-        } else if (["failed", "rejected"].includes(p.status)) {
-          paymentStatusByUser.set(uKey, "Failed");
-        } else if (["pending", "created"].includes(p.status)) {
-          paymentStatusByUser.set(uKey, "Pending");
+          paymentStatusByUser.set(key, "Paid");
+        } else if (!current && ["pending", "created"].includes(p.status)) {
+          paymentStatusByUser.set(key, "Pending");
+        } else if (!current && ["failed", "rejected"].includes(p.status)) {
+          paymentStatusByUser.set(key, "Failed");
         }
-      }
+      });
     });
 
     // Map pricing exit feedback by student/user ID

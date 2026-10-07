@@ -609,7 +609,21 @@ export default function Programs() {
         company: formData.company || '',
         courseIds: formData.courseIds || [],
         primaryCourseId: formData.primaryCourseId || null,
-        pricingPlans: formData.pricingType === 'Paid' ? formData.pricingPlans.map(plan => ({ ...plan, price: Number(plan.price), accessDuration: Number(plan.accessDuration) })) : [],
+        pricingPlans: formData.pricingType === 'Paid' ? formData.pricingPlans.map(plan => {
+          const duration = Number(plan.accessDuration);
+          const unit = plan.accessDurationUnit || 'Days';
+          const multiplier = { Days: 1, Months: 30, Years: 365 }[unit] || 1;
+          const accessDurationDays = Number.isInteger(duration) && duration > 0 ? duration * multiplier : 365;
+          const billingPeriod = unit === 'Months' ? 'Monthly' : unit === 'Years' ? 'Annual' : (plan.billingPeriod || null);
+          return {
+            ...plan,
+            price: Number(plan.price),
+            accessDuration: duration,
+            accessDurationUnit: unit,
+            accessDurationDays,
+            billingPeriod,
+          };
+        }) : [],
         placementCategories: finalType === 'Placement' ? formData.placementCategories : [],
         visibility: formData.visibility,
         pricingType: formData.pricingType,
