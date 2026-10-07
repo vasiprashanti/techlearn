@@ -39,10 +39,17 @@ export const getPricingPlan = (program, planId) => {
   const configured = resolveConfiguredProgramPricingPlan(program, planId);
   if (configured) {
     const plan = typeof configured.toObject === "function" ? configured.toObject() : configured;
+    const dur = Number(plan.accessDuration);
+    const unit = plan.accessDurationUnit || "Days";
+    const multiplier = { Days: 1, Months: 30, Years: 365 }[unit] || 1;
+    const computedDays = Number.isInteger(dur) && dur > 0 ? dur * multiplier : null;
+
     return {
       ...plan,
       accessDurationDays: Number(plan.accessDurationDays)
-        || (plan.billingPeriod === "Monthly" ? 30 : plan.billingPeriod === "Annual" ? 365 : null),
+        || computedDays
+        || (plan.billingPeriod === "Monthly" ? 30 : plan.billingPeriod === "Annual" ? 365 : 365),
+      billingPeriod: plan.billingPeriod || (unit === "Months" ? "Monthly" : unit === "Years" ? "Annual" : null),
     };
   }
   if (String(planId || "") === "legacy-single" && Number(program?.programFee) > 0) {

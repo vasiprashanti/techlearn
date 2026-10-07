@@ -352,20 +352,32 @@ const getStoredAccuracy = (enrollment) => {
 
 const normalizePricingPlans = (value) => (Array.isArray(value)
   ? value
-    .map((plan, index) => ({
-      key: String(plan?.key || `plan-${index + 1}`).trim(),
-      title: String(plan?.title || plan?.name || `Plan ${index + 1}`).trim(),
-      price: Number(plan?.price),
-      billingPeriod: ["Monthly", "Annual"].includes(plan?.billingPeriod) ? plan.billingPeriod : null,
-      availability: ["Structured", "Trainer-Led"].includes(plan?.availability) ? plan.availability : null,
-      accessDurationDays: Number.isInteger(Number(plan?.accessDurationDays)) && Number(plan.accessDurationDays) > 0
-        ? Number(plan.accessDurationDays)
-        : (plan?.billingPeriod === "Monthly" ? 30 : plan?.billingPeriod === "Annual" ? 365 : null),
-      benefits: Array.isArray(plan?.benefits)
-        ? plan.benefits.map((benefit) => String(benefit || "").trim()).filter(Boolean)
-        : [],
-      active: plan?.active !== false,
-    }))
+    .map((plan, index) => {
+      const unit = plan?.accessDurationUnit || "Days";
+      const dur = Number(plan?.accessDuration);
+      const mult = { Days: 1, Months: 30, Years: 365 }[unit] || 1;
+      const computedDays = Number.isInteger(dur) && dur > 0 ? dur * mult : null;
+      const billingPeriod = ["Monthly", "Annual"].includes(plan?.billingPeriod)
+        ? plan.billingPeriod
+        : (unit === "Months" ? "Monthly" : unit === "Years" ? "Annual" : null);
+
+      return {
+        key: String(plan?.key || `plan-${index + 1}`).trim(),
+        title: String(plan?.title || plan?.name || `Plan ${index + 1}`).trim(),
+        price: Number(plan?.price),
+        billingPeriod,
+        availability: ["Structured", "Trainer-Led"].includes(plan?.availability) ? plan.availability : null,
+        accessDuration: Number.isInteger(dur) && dur > 0 ? dur : null,
+        accessDurationUnit: unit,
+        accessDurationDays: Number.isInteger(Number(plan?.accessDurationDays)) && Number(plan.accessDurationDays) > 0
+          ? Number(plan.accessDurationDays)
+          : (computedDays || (billingPeriod === "Monthly" ? 30 : billingPeriod === "Annual" ? 365 : 365)),
+        benefits: Array.isArray(plan?.benefits)
+          ? plan.benefits.map((benefit) => String(benefit || "").trim()).filter(Boolean)
+          : [],
+        active: plan?.active !== false,
+      };
+    })
     .filter((plan) => plan.key && plan.title && Number.isFinite(plan.price) && plan.price >= 0)
   : []);
 

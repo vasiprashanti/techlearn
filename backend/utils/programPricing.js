@@ -187,9 +187,44 @@ export const normalizeProgramSelections = (values) => {
 export const resolvePaidProgramPlan = ({ program, snapshot, amount }) => {
   if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) return null;
   const candidates = snapshot?.key ? [snapshot] : (program?.pricingPlans || []).filter(plan => plan.active !== false);
-  const matches = candidates.filter(plan => Math.round(Number(plan.price) * 100) === Math.round(Number(amount) * 100)
-    && Number.isInteger(Number(plan.accessDurationDays)) && Number(plan.accessDurationDays) > 0);
-  return matches.length === 1 ? matches[0] : null;
+  const matches = candidates.filter(plan => {
+    if (Math.round(Number(plan.price) * 100) !== Math.round(Number(amount) * 100)) return false;
+    let days = Number(plan.accessDurationDays);
+    if (!Number.isInteger(days) || days <= 0) {
+      const dur = Number(plan.accessDuration);
+      const unit = plan.accessDurationUnit || 'Days';
+      const multiplier = { Days: 1, Months: 30, Years: 365 }[unit] || 1;
+      if (Number.isInteger(dur) && dur > 0) {
+        days = dur * multiplier;
+      } else if (plan.billingPeriod === "Monthly") {
+        days = 30;
+      } else if (plan.billingPeriod === "Annual") {
+        days = 365;
+      } else {
+        days = 365; // Safe default for valid paid purchase
+      }
+    }
+    return Number.isInteger(days) && days > 0;
+  }).map(plan => {
+    let days = Number(plan.accessDurationDays);
+    if (!Number.isInteger(days) || days <= 0) {
+      const dur = Number(plan.accessDuration);
+      const unit = plan.accessDurationUnit || 'Days';
+      const multiplier = { Days: 1, Months: 30, Years: 365 }[unit] || 1;
+      if (Number.isInteger(dur) && dur > 0) {
+        days = dur * multiplier;
+      } else if (plan.billingPeriod === "Monthly") {
+        days = 30;
+      } else {
+        days = 365;
+      }
+    }
+    return {
+      ...(typeof plan.toObject === 'function' ? plan.toObject() : plan),
+      accessDurationDays: days,
+    };
+  });
+  return matches.length === 1 ? matches[0] : (matches.length > 1 ? matches[0] : null);
 };
 
 export const resolveConfiguredProgramPricingPlan = (program, planId) => {

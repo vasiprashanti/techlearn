@@ -156,25 +156,49 @@ export default function ProgramPreview() {
   // Determine pricing based on selected billing
   const pricingPlans = (program.pricingPlans || []).filter((plan) => plan.active !== false && Number(plan.price) > 0);
   
-  // Find plan strictly matching the selected billing period
-  const matchingBillingPlan = pricingPlans.find(
-    (p) => String(p.billingPeriod || "").toLowerCase() === selectedBilling.toLowerCase()
-  );
+  // Helper to test if a plan is Monthly
+  const isMonthlyPlan = (p) => {
+    const period = String(p.billingPeriod || "").toLowerCase();
+    const unit = String(p.accessDurationUnit || "").toLowerCase();
+    const key = String(p.key || "").toLowerCase();
+    const title = String(p.title || "").toLowerCase();
+    return period === "monthly" || unit === "months" || key.includes("month") || title.includes("month");
+  };
 
-  // If no explicit plan matches the selected billing, create or select the proper plan representation
-  const selectedPlan = matchingBillingPlan || (
-    selectedBilling.toLowerCase() === "annual"
-      ? (pricingPlans.find((p) => String(p.key || "").includes("annual") || !String(p.key || "").includes("monthly")) || pricingPlans[0] || null)
-      : (pricingPlans.find((p) => String(p.key || "").includes("monthly")) || pricingPlans[0] || null)
-  );
+  // Helper to test if a plan is Annual
+  const isAnnualPlan = (p) => {
+    const period = String(p.billingPeriod || "").toLowerCase();
+    const unit = String(p.accessDurationUnit || "").toLowerCase();
+    const key = String(p.key || "").toLowerCase();
+    const title = String(p.title || "").toLowerCase();
+    return period === "annual" || unit === "years" || key.includes("annual") || key.includes("year") || title.includes("annual") || title.includes("year");
+  };
+
+  const monthlyPlanCandidate = pricingPlans.find(isMonthlyPlan) || null;
+  const annualPlanCandidate = pricingPlans.find(isAnnualPlan) || null;
+
+  // Find plan strictly or semantically matching the selected billing period
+  const selectedPlan = selectedBilling.toLowerCase() === "monthly"
+    ? (monthlyPlanCandidate || pricingPlans[0] || null)
+    : (annualPlanCandidate || pricingPlans[1] || pricingPlans[0] || null);
+
+  const monthlyDisplayPrice = monthlyPlanCandidate?.price 
+    ?? program.monthlyStructuredFee 
+    ?? program.monthlyTrainerLedFee 
+    ?? (pricingPlans[0] ? pricingPlans[0].price : null);
+
+  const annualDisplayPrice = annualPlanCandidate?.price 
+    ?? program.annualStructuredFee 
+    ?? program.annualTrainerLedFee 
+    ?? (pricingPlans[1] ? pricingPlans[1].price : (pricingPlans[0] ? pricingPlans[0].price : null));
 
   let currentPrice = 0;
   if (selectedPlan && typeof selectedPlan.price === "number") {
     currentPrice = selectedPlan.price;
   } else if (selectedBilling === "Monthly") {
-    currentPrice = program.monthlyStructuredFee ?? program.monthlyTrainerLedFee ?? program.programFee ?? 0;
+    currentPrice = monthlyDisplayPrice ?? program.programFee ?? 0;
   } else {
-    currentPrice = program.annualStructuredFee ?? program.annualTrainerLedFee ?? program.programFee ?? 0;
+    currentPrice = annualDisplayPrice ?? program.programFee ?? 0;
   }
 
   // Handle Checkout / Payment
@@ -335,7 +359,7 @@ export default function ProgramPreview() {
                         : "opacity-70 hover:opacity-100"
                     }`}
                   >
-                    Pay Monthly {program.monthlyStructuredFee ? `(₹${program.monthlyStructuredFee})` : ""}
+                    Pay Monthly {monthlyDisplayPrice ? `(₹${monthlyDisplayPrice})` : ""}
                   </button>
                   <button
                     type="button"
@@ -349,7 +373,7 @@ export default function ProgramPreview() {
                         : "opacity-70 hover:opacity-100"
                     }`}
                   >
-                    Pay Annually {program.annualStructuredFee ? `(₹${program.annualStructuredFee})` : ""}
+                    Pay Annually {annualDisplayPrice ? `(₹${annualDisplayPrice})` : ""}
                   </button>
                 </div>
               </div>
