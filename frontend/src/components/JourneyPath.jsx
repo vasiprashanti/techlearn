@@ -3,10 +3,10 @@ import './JourneyPath.css'
 
 const MILESTONES = [
   { progress: 0, x: 0, y: 350, label: 'TODAY', position: 'below' },
-  { progress: 0.25, x: 650, y: 350, label: 'WEEK 1', position: 'above' },
-  { progress: 0.5, x: 1080, y: 270, label: 'WEEK 2', position: 'below' },
-  { progress: 0.75, x: 1450, y: 190, label: 'WEEK 3', position: 'above' },
-  { progress: 1, x: 1600, y: 90, label: 'WEEK 4', position: 'above' }
+  { progress: 0.25, x: 650, y: 350, label: 'STEP 1', position: 'above' },
+  { progress: 0.5, x: 1080, y: 270, label: 'STEP 2', position: 'below' },
+  { progress: 0.75, x: 1450, y: 190, label: 'STEP 3', position: 'above' },
+  { progress: 1, x: 1600, y: 90, label: 'STEP 4', position: 'above' }
 ]
 
 const PATH_D = `
@@ -37,25 +37,25 @@ const STAGES = [
   },
   {
     max: 0.375,
-    step: 'WEEK 1',
+    step: 'STEP 1',
     title: 'CORE SKILLS',
     text: 'Build your fundamentals while solving problems and getting feedback along the way.'
   },
   {
     max: 0.625,
-    step: 'WEEK 2',
+    step: 'STEP 2',
     title: 'BUILDING SKILLS',
     text: 'Take on harder problems and start connecting concepts on your own.'
   },
   {
     max: 0.875,
-    step: 'WEEK 3',
+    step: 'STEP 3',
     title: 'APPLYING SKILLS',
     text: "Work through realistic challenges that require you to combine what you've learned."
   },
   {
     max: Infinity,
-    step: 'WEEK 4',
+    step: 'STEP 4',
     title: 'REAL-WORLD READY',
     text: "Build, practice, and test yourself so you know what you can do and what's next."
   }

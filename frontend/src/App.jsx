@@ -4,7 +4,7 @@ import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ScrollToTop from './components/ScrollToTop'
 import ExternalLinkHandler from './components/ExternalLinkHandler'
-import { ThemeProvider, useTheme } from './context/ThemeContext'
+import { ThemeProvider, useTheme, DashboardThemeBoundary } from './context/ThemeContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { AuthModalProvider } from './context/AuthModalContext'
 import { UserProvider } from './context/UserContext'
@@ -254,8 +254,12 @@ function LayoutWrapper() {
                      !isDashboardRoute &&
                      !isStudentSidebarRoute;
 
+  const dashboardSurface = isDashboardRoute || isStudentSidebarRoute;
+  const SurfaceTheme = dashboardSurface ? DashboardThemeBoundary : PassThrough;
+
   return (
-    <div className="relative z-10 flex flex-col min-h-screen">
+    <SurfaceTheme>
+    <div className={`relative z-10 flex flex-col min-h-screen ${dashboardSurface ? 'dashboard-page-shell dark' : ''}`}>
       {location.pathname.startsWith('/onboarding') && (
         <div
           className="fixed left-0 top-0 z-[100] h-[72px] w-full"
@@ -445,8 +449,11 @@ function LayoutWrapper() {
         {showFooter && <Footer />}
       </Suspense>
     </div>
+    </SurfaceTheme>
   );
 }
+
+function PassThrough({ children }) { return children; }
 
 export default function App() {
   return (

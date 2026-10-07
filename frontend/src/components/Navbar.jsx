@@ -3,12 +3,10 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Moon, Sun, User } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { useAuthModalContext } from '../context/AuthModalContext';
 
 export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const { isAuthenticated, user, logout } = useAuth();
-  const { openLogin } = useAuthModalContext();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -16,6 +14,7 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [sectionBackground, setSectionBackground] = useState(null);
 
   const accountRef = useRef(null);
   const mobileMenuRef = useRef(null);
@@ -33,7 +32,7 @@ export default function Navbar() {
       // In Dark mode, determine if current section is dark or light.
       // Dark sections in light mode (e.g. Hero, Pricing, and in dark mode: Hero, Journey, Pricing)
       // Light sections (Problem #problem, Results #results, FAQs #faqs, CTA #start-program)
-      const darkSectionSelectors = '#start, .tl-hero, #pricing, .tl-pricing-section' + (isDarkMode ? ', #journey, .journey-scroll' : '');
+      const darkSectionSelectors = '#start, .tl-hero, #pricing, .tl-pricing-section, footer' + (isDarkMode ? ', #journey, .journey-scroll' : '');
       const darkSections = document.querySelectorAll(darkSectionSelectors);
       let isOverDark = false;
 
@@ -44,6 +43,12 @@ export default function Navbar() {
           isOverDark = true;
         }
       });
+      const currentSection = [...document.querySelectorAll('.tl-landing > section, footer')].find(section => {
+        const rect = section.getBoundingClientRect();
+        return rect.top <= 65 && rect.bottom >= 35;
+      });
+      const sectionColor = currentSection ? getComputedStyle(currentSection).backgroundColor : null;
+      setSectionBackground(sectionColor && sectionColor !== 'rgba(0, 0, 0, 0)' ? sectionColor : null);
 
       // If we are not on the landing page (no sections found), fallback to current theme
       const hasSections = document.querySelectorAll('#start, #problem, #journey, #results, #pricing, #faqs, #start-program').length > 0;
@@ -125,7 +130,7 @@ export default function Navbar() {
   const userAvatar = user?.photoUrl || user?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}&backgroundColor=04103d,3c83f6,1e293b`;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-transparent" style={{ background: 'transparent' }}>
+    <header className="fixed top-0 left-0 right-0 z-50" style={{ background: sectionBackground || (isDarkNav ? '#01071e' : '#d8eef5') }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -140,7 +145,7 @@ export default function Navbar() {
           --text-hover: #00113b;
           --muted: rgba(0, 17, 59, 0.6);
           --border: rgba(0, 17, 59, 0.12);
-          --dropdown-bg: rgba(255, 255, 255, 0.98);
+          --dropdown-bg: #ffffff;
           --dropdown-border: rgba(0, 17, 59, 0.12);
           --dropdown-shadow: 0 20px 60px rgba(0, 17, 59, 0.15);
           --dropdown-action-bg: rgba(0, 17, 59, 0.04);
@@ -164,7 +169,7 @@ export default function Navbar() {
           --text-hover: #ffffff;
           --muted: rgba(255, 255, 255, 0.65);
           --border: rgba(255, 255, 255, 0.12);
-          --dropdown-bg: rgba(4, 16, 61, 0.98);
+          --dropdown-bg: #01071e;
           --dropdown-border: rgba(255, 255, 255, 0.12);
           --dropdown-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
           --dropdown-action-bg: rgba(255, 255, 255, 0.04);

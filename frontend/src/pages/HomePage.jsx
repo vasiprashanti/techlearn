@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Moon, Sun } from 'lucide-react'
-import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import FreeAssessmentModal from '../components/Learn/FreeAssessmentModal'
 import JourneyPath from '../components/JourneyPath'
@@ -103,8 +101,6 @@ const faqsData = [
 ]
 
 const HomePage = () => {
-  const { theme, toggleTheme } = useTheme()
-  const isDarkMode = theme === 'dark'
 
   // Code line animation state
   const codeFieldRef = useRef(null)
@@ -119,13 +115,11 @@ const HomePage = () => {
   const [typingText, setTypingText] = useState("")
 
   // Auth state & user dropdown
-  const { user, isAuthenticated, logout } = useAuth()
+  const { isAuthenticated } = useAuth()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const userMenuRef = useRef(null)
 
   // Navbar sticky scroll state
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [isOverDarkSection, setIsOverDarkSection] = useState(false)
   const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false)
   const resultsSectionRef = useRef(null)
   const faqListRef = useRef(null)
@@ -152,25 +146,6 @@ const HomePage = () => {
     }
   }, [isUserMenuOpen])
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY
-      setIsScrolled(scrollY > 20)
-
-      if (resultsSectionRef.current) {
-        const rect = resultsSectionRef.current.getBoundingClientRect()
-        // Navbar is at top 0-84px; detect if results section overlaps top viewport
-        if (rect.top <= 65 && rect.bottom >= 45) {
-          setIsOverDarkSection(true)
-        } else {
-          setIsOverDarkSection(false)
-        }
-      }
-    }
-    window.addEventListener("scroll", handleScroll, { passive: true })
-    handleScroll()
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
 
   useEffect(() => {
     const node = faqListRef.current
@@ -458,9 +433,6 @@ const HomePage = () => {
             <h2 className="tl-faq-title">
               Questions? we got <em>you</em>.
             </h2>
-            <p className="tl-faq-subtitle">
-              These are just the most asked ones so far, feel free to reach out anytime!
-            </p>
           </div>
 
           <div className="tl-faq-list" ref={faqListRef}>
@@ -475,17 +447,23 @@ const HomePage = () => {
                   <button
                     className="tl-faq-question"
                     type="button"
+                    aria-expanded={isOpen}
+                    aria-controls={`faq-answer-${idx}`}
                     onClick={() => toggleFaq(idx)}
                   >
                     <span>{faq.question}</span>
-                    <span className="tl-faq-plus">+</span>
+                    <span className="tl-faq-plus" aria-hidden="true">{isOpen ? '−' : '+'}</span>
                   </button>
-                  <div className="tl-faq-answer">
+                  <div className="tl-faq-answer" id={`faq-answer-${idx}`} aria-hidden={!isOpen}>
                     {faq.answer}
                   </div>
                 </div>
               )
             })}
+          </div>
+          <div className="tl-faq-contact">
+            <p className="tl-faq-subtitle">These are just the most asked ones so far, feel free to reach out anytime!</p>
+            <Link to="/contact" className="tl-primary-button">Contact Us</Link>
           </div>
         </div>
       </section>

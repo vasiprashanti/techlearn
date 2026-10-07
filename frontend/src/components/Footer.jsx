@@ -4,7 +4,7 @@ const Footer = () => {
   return (
     <footer className="bg-[#00113b] text-white text-center pt-16 px-8 pb-0 w-full relative z-10 overflow-hidden">
       {/* Top Section with Centered Columns */}
-      <div className="pb-56 flex flex-col items-center">
+      <div className="pb-36 md:pb-56 flex flex-col items-center">
         <div className="w-full max-w-5xl flex flex-col md:flex-row justify-center items-center md:items-start md:space-x-32 text-center md:text-left space-y-8 md:space-y-0">
           {/* CONNECT Section */}
           <div className="flex-1 w-full">
@@ -49,7 +49,7 @@ const Footer = () => {
             <ul className="space-y-2">
               <li>
                 <Link
-                  to="learn/courses"
+                  to="/learn/courses"
                   className="text-gray-300 hover:text-white text-base transition-colors duration-300"
                 >
                   Free Courses
@@ -57,10 +57,10 @@ const Footer = () => {
               </li>
               <li>
                 <Link
-                  to="/careers"
+                  to="/free-assessment/setup"
                   className="text-gray-300 hover:text-white text-base transition-colors duration-300"
                 >
-                  Careers
+                  Free Interview Assessment
                 </Link>
               </li>
               <li>
@@ -108,12 +108,12 @@ const Footer = () => {
       </div>
 
       {/* Bottom Logo Section - Full width on desktop, contained on mobile */}
-      <div className="absolute bottom-0 left-0 w-full pointer-events-none select-none px-4 sm:px-0">
+      <div className="absolute bottom-6 md:bottom-0 left-0 w-full pointer-events-none select-none px-4 sm:px-0">
         <img
           src="/logo-no-bg-small.webp"
           alt="TechLearn Solutions"
           loading="eager"
-          className="w-full max-w-full h-12 object-contain sm:h-32 md:h-56 sm:object-cover object-bottom"
+          className="w-full max-w-full h-24 object-contain sm:h-32 md:h-56 sm:object-cover object-bottom"
           draggable="false"
         />
       </div>

@@ -3303,7 +3303,7 @@ body .admin-dashboard-typography.dark .course-form-modal.course-form-modal.cours
 }
 
 .tl-faq-item {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.55);
   border-radius: 14px;
   border: 1px solid rgba(4, 16, 61, 0.1);
   box-shadow: 0 4px 20px rgba(4, 16, 61, 0.04);
@@ -3352,7 +3352,7 @@ body .admin-dashboard-typography.dark .course-form-modal.course-form-modal.cours
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid rgba(4, 16, 61, 0.2);
+  border: 0;
   border-radius: 50%;
   font-size: 16px;
   font-weight: 400;
@@ -3361,9 +3361,7 @@ body .admin-dashboard-typography.dark .course-form-modal.course-form-modal.cours
 }
 
 .tl-faq-item.open .tl-faq-plus {
-  transform: rotate(45deg);
-  background: #b9ec77;
-  border-color: #b9ec77;
+  background: transparent;
   color: #04103d;
 }
 
@@ -3813,13 +3811,13 @@ body .admin-dashboard-typography.dark .course-form-modal.course-form-modal.cours
   }
   .tl-faq-question {
     min-height: 55px;
-    padding: 12px 4px;
+    padding: 12px 16px;
     font-size: 12px;
     gap: 15px;
   }
   .tl-faq-answer {
-    padding-left: 4px;
-    padding-right: 4px;
+    padding-left: 16px;
+    padding-right: 16px;
     font-size: 11px;
   }
   .tl-faq-plus {
@@ -3884,6 +3882,30 @@ body .admin-dashboard-typography.dark .course-form-modal.course-form-modal.cours
     font-size: 11px;
   }
 }
+
+.tl-faq-contact {
+  margin-top: 28px;
+  text-align: center;
+}
+.tl-faq-contact .tl-primary-button { margin-top: 18px; }
+
+/* One route-level surface covers loading, empty, and normal dashboard pages.
+   Cards retain their own surfaces; only full-page backgrounds are normalized. */
+.dashboard-page-shell,
+.dashboard-page-shell > main,
+.dashboard-page-shell > main > div,
+.dashboard-page-shell > main > div > .fixed.inset-0 {
+  background: #01071e !important;
+  background-image: none !important;
+}
+.dashboard-page-shell { color: #f1f5f9; }
+.dashboard-page-shell.dark [class~="dark:text-white"] { color: #fff !important; }
+.dashboard-page-shell.dark [class~="dark:text-slate-100"],
+.dashboard-page-shell.dark [class~="dark:text-gray-100"] { color: #f1f5f9 !important; }
+.dashboard-page-shell.dark [class~="dark:text-slate-300"],
+.dashboard-page-shell.dark [class~="dark:text-gray-300"] { color: #cbd5e1 !important; }
+.dashboard-page-shell.dark [class~="dark:text-slate-400"],
+.dashboard-page-shell.dark [class~="dark:text-gray-400"] { color: #94a3b8 !important; }
 
 .program-selection-hidden input[type="checkbox"] { visibility: hidden; }
 .admin-dashboard-typography select option,

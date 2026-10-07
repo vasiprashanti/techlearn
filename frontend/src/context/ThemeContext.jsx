@@ -10,6 +10,13 @@ export const useTheme = () => {
   return context
 }
 
+// Dashboard surfaces have a fixed dark palette, without changing the visitor's
+// saved theme preference or the appearance of the rest of the website.
+export const DashboardThemeBoundary = ({ children }) => {
+  const parent = useTheme()
+  return <ThemeContext.Provider value={{ ...parent, theme: 'dark', isDark: true }}>{children}</ThemeContext.Provider>
+}
+
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
