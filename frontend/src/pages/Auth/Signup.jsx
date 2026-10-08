@@ -1065,30 +1065,34 @@ export default function Signup({
 
         @media (max-width: 950px) {
           .tl-auth-shell {
-            height: 100dvh;
             min-height: 100dvh;
+            height: auto;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             padding: 0;
             padding-top: 72px;
-            align-items: stretch;
+            padding-bottom: 32px;
+            align-items: flex-start;
           }
 
           .tl-auth-page {
             grid-template-columns: 1fr;
-            max-width: 520px;
             width: 100%;
-            max-width: none;
-            height: calc(100dvh - 72px);
-            max-height: calc(100dvh - 72px);
+            max-width: 520px;
+            height: auto;
+            max-height: none;
             min-height: 0;
             display: flex;
             flex-direction: column;
             row-gap: 0;
+            margin: 0 auto;
           }
 
           .tl-visual-side {
             align-items: center;
-            flex: 0 0 30vh;
-            height: 30vh;
+            flex: 0 0 auto;
+            height: auto;
+            max-height: 24vh;
             padding: 0;
             overflow: hidden;
           }
@@ -1096,7 +1100,7 @@ export default function Signup({
           .tl-product-preview {
             width: 100%;
             max-width: none;
-            height: 30vh;
+            height: 24vh;
             display: flex;
             justify-content: center;
             transform: none;
@@ -1115,9 +1119,8 @@ export default function Signup({
             max-width: 520px;
             flex: 1 1 auto;
             min-height: 0;
-            overflow: hidden;
-            padding: 16px 24px;
-            zoom: 1;
+            overflow: visible;
+            padding: 16px 24px 32px;
             justify-self: center;
           }
 
@@ -1141,7 +1144,7 @@ export default function Signup({
 
         @media (max-width: 560px) {
           .tl-auth-page {
-            row-gap: 30px;
+            row-gap: 16px;
           }
 
           .tl-auth-logo-link {
@@ -1160,25 +1163,25 @@ export default function Signup({
 
           .tl-product-preview {
             transform: none;
+            height: auto;
+            max-height: 180px;
           }
 
           .tl-product-image {
             border-radius: 12px;
-            width: 90%;
+            width: calc(100% - 32px);
+            max-height: 180px;
           }
 
           .tl-visual-side {
-            flex-basis: 20vh;
-            height: 20vh;
-          }
-
-          .tl-product-preview {
-            height: 20vh;
+            flex-basis: auto;
+            height: auto;
+            max-height: none;
+            padding: 0 16px;
           }
 
           .tl-form-side {
-            padding: 10px 16px;
-            zoom: 1;
+            padding: 12px 16px 40px;
           }
 
           .tl-auth-title {
@@ -1190,7 +1193,7 @@ export default function Signup({
             padding: 18px 16px;
           }
           .tl-field { margin-bottom: 10px; }
-          .tl-input { height: 40px; }
+          .tl-input { height: 42px; }
         }
 
         @media (max-width: 600px) {
