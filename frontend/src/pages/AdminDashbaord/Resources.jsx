@@ -16,7 +16,6 @@ import {
   FiClock,
   FiUpload,
   FiX,
-  FiFileText,
   FiChevronDown,
 } from "react-icons/fi";
 
@@ -548,21 +547,21 @@ export default function Resources() {
           {/* Filter Bar & Tabs */}
           <section className="space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
-              {/* Target Role Tabs (matching Course Delivery Type tabs) */}
-              <div className="flex border-b border-black/10 dark:border-white/10 gap-2 overflow-x-auto minimal-scrollbar max-w-full pb-0.5">
-                {["All", ...TARGET_ROLES].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-3 sm:px-4 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
-                      activeTab === tab
-                        ? "border-[#3C83F6] text-[#3C83F6] dark:text-blue-400"
-                        : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
+              {/* Target Role Dropdown */}
+              <div className="relative inline-block w-full sm:w-56 shrink-0">
+                <select
+                  value={activeTab}
+                  onChange={(e) => setActiveTab(e.target.value)}
+                  className="w-full appearance-none h-9 pl-3.5 pr-8 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 text-slate-800 dark:text-white outline-none cursor-pointer focus:ring-2 focus:ring-[#3C83F6]/30 transition shadow-2xs"
+                >
+                  <option value="All" className="dark:bg-[#0f1f43]">All Roles</option>
+                  {TARGET_ROLES.map((role) => (
+                    <option key={role} value={role} className="dark:bg-[#0f1f43]">
+                      {role}
+                    </option>
+                  ))}
+                </select>
+                <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
               </div>
 
               {/* Status Filter Pills & Search Bar (matching Courses & Hiring) */}
@@ -610,7 +609,7 @@ export default function Resources() {
               </div>
             ) : (
               <div className="overflow-x-auto w-full bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl shadow-xs minimal-scrollbar">
-                <table className="w-full min-w-[980px] border-collapse">
+                <table className="w-full min-w-[760px] border-collapse">
                   <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-[#0b1736] shadow-xs">
                     <tr className="border-b border-black/5 dark:border-white/10 select-none">
                       <th className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-14 whitespace-nowrap">
@@ -643,9 +642,6 @@ export default function Resources() {
                       >
                         Status {sortField === "status" && (sortDirection === "asc" ? "▲" : "▼")}
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-black/45 dark:text-white/50 min-w-[180px] whitespace-nowrap">
-                        Eligible Branches
-                      </th>
                       <th
                         className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-32 cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap"
                         onClick={() => toggleSort("createdAt")}
@@ -668,18 +664,13 @@ export default function Resources() {
 
                         {/* Roadmap Title */}
                         <td className="px-4 py-3.5 font-semibold text-slate-800 dark:text-white">
-                          <div className="flex items-center gap-2 max-w-[260px]">
-                            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
-                              <FiFileText className="w-4 h-4" />
-                            </div>
-                            <div className="min-w-0">
-                              <span className="truncate block font-semibold hover:text-blue-600 transition-colors" title={roadmap.title}>
-                                {roadmap.title || "Untitled Roadmap"}
-                              </span>
-                              <span className="text-[10px] text-slate-400 block font-normal">
-                                {roadmap.roadmapId || "Legacy ID"}
-                              </span>
-                            </div>
+                          <div className="min-w-0 max-w-[280px]">
+                            <span className="truncate block font-semibold hover:text-blue-600 transition-colors" title={roadmap.title}>
+                              {roadmap.title || "Untitled Roadmap"}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block font-normal">
+                              {roadmap.roadmapId || "Legacy ID"}
+                            </span>
                           </div>
                         </td>
 
@@ -751,30 +742,7 @@ export default function Resources() {
                           </div>
                         </td>
 
-                        {/* Branches */}
-                        <td className="px-4 py-3.5">
-                          <div className="flex flex-wrap gap-1 max-w-[200px]">
-                            {roadmap.branches && roadmap.branches.length > 0 ? (
-                              roadmap.branches.slice(0, 3).map((branch) => (
-                                <span
-                                  key={branch}
-                                  className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                                >
-                                  {branch}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
-                                All Branches
-                              </span>
-                            )}
-                            {roadmap.branches && roadmap.branches.length > 3 && (
-                              <span className="text-[10px] text-slate-400 font-medium">
-                                +{roadmap.branches.length - 3}
-                              </span>
-                            )}
-                          </div>
-                        </td>
+
 
                         {/* Created Date */}
                         <td className="px-3.5 py-3.5 text-center text-slate-500 dark:text-slate-400 whitespace-nowrap">
