@@ -3889,23 +3889,23 @@ body .admin-dashboard-typography.dark .course-form-modal.course-form-modal.cours
 }
 .tl-faq-contact .tl-primary-button { margin-top: 18px; }
 
-/* One route-level surface covers loading, empty, and normal dashboard pages.
+/* One route-level surface covers loading, empty, and normal dashboard pages in dark mode.
    Cards retain their own surfaces; only full-page backgrounds are normalized. */
-.dashboard-page-shell,
-.dashboard-page-shell > main,
-.dashboard-page-shell > main > div,
-.dashboard-page-shell > main > div > .fixed.inset-0 {
+.dark .dashboard-page-shell,
+.dark .dashboard-page-shell > main,
+.dark .dashboard-page-shell > main > div,
+.dark .dashboard-page-shell > main > div > .fixed.inset-0 {
   background: #01071e !important;
   background-image: none !important;
 }
-.dashboard-page-shell { color: #f1f5f9; }
-.dashboard-page-shell.dark [class~="dark:text-white"] { color: #fff !important; }
-.dashboard-page-shell.dark [class~="dark:text-slate-100"],
-.dashboard-page-shell.dark [class~="dark:text-gray-100"] { color: #f1f5f9 !important; }
-.dashboard-page-shell.dark [class~="dark:text-slate-300"],
-.dashboard-page-shell.dark [class~="dark:text-gray-300"] { color: #cbd5e1 !important; }
-.dashboard-page-shell.dark [class~="dark:text-slate-400"],
-.dashboard-page-shell.dark [class~="dark:text-gray-400"] { color: #94a3b8 !important; }
+.dark .dashboard-page-shell { color: #f1f5f9; }
+.dark .dashboard-page-shell [class~="dark:text-white"] { color: #fff !important; }
+.dark .dashboard-page-shell [class~="dark:text-slate-100"],
+.dark .dashboard-page-shell [class~="dark:text-gray-100"] { color: #f1f5f9 !important; }
+.dark .dashboard-page-shell [class~="dark:text-slate-300"],
+.dark .dashboard-page-shell [class~="dark:text-gray-300"] { color: #cbd5e1 !important; }
+.dark .dashboard-page-shell [class~="dark:text-slate-400"],
+.dark .dashboard-page-shell [class~="dark:text-gray-400"] { color: #94a3b8 !important; }
 
 .program-selection-hidden input[type="checkbox"] { visibility: hidden; }
 .admin-dashboard-typography select option,
