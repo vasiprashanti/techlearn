@@ -145,8 +145,18 @@ const LearnMain = () => {
   const navigate = useNavigate();
   const isDarkMode = theme === 'dark';
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [placementLearning, setPlacementLearning] = useState(null);
+  const [enrolledProgramIds, setEnrolledProgramIds] = useState(() => {
+    try {
+      const stored = localStorage.getItem('userData');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.programId) return new Set([String(parsed.programId)]);
+      }
+    } catch {}
+    return new Set();
+  });
 
   const [activeTab, setActiveTab] = useState('courses'); // 'courses' | 'programs'
   const [courseFilter, setCourseFilter] = useState('all'); // 'all' | 'free' | 'skill' | 'placement'
@@ -247,11 +257,35 @@ const LearnMain = () => {
           setPublicPrograms(programsRes.value.programs);
         }
 
-        if (isAuthenticated) {
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+        if (isAuthenticated || token) {
           try {
-            const placementRes = await placementLearningAPI.getDashboard();
-            if (placementRes?.hasPlacementLearning) {
-              setPlacementLearning(placementRes);
+            const [placementRes, assignedRes] = await Promise.allSettled([
+              placementLearningAPI.getDashboard(),
+              programLearningAPI.getAssignedPrograms(),
+            ]);
+
+            const idSet = new Set();
+            if (placementRes.status === 'fulfilled' && placementRes.value?.hasPlacementLearning) {
+              setPlacementLearning(placementRes.value);
+              const pId = placementRes.value.program?.id || placementRes.value.program?._id;
+              if (pId) idSet.add(String(pId));
+            }
+
+            if (assignedRes.status === 'fulfilled' && Array.isArray(assignedRes.value?.programs)) {
+              assignedRes.value.programs.forEach((prog) => {
+                if (prog?._id || prog?.id) {
+                  idSet.add(String(prog._id || prog.id));
+                }
+              });
+            }
+
+            if (user?.programId) {
+              idSet.add(String(user.programId));
+            }
+
+            if (idSet.size > 0) {
+              setEnrolledProgramIds(idSet);
             }
           } catch {
             // Unenrolled or unauthorized for placement learning
@@ -265,7 +299,7 @@ const LearnMain = () => {
     };
 
     fetchCoursesAndPrograms();
-  }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.programId]);
 
   const prefetchCourseTopics = (course) => {
     const topicCourseId = getCourseTopicsId(course);
@@ -284,18 +318,23 @@ const LearnMain = () => {
   const handleProgramClick = (program) => {
     const progId = String(program._id || program.id || "");
     const activeProgId = String(placementLearning?.program?.id || placementLearning?.program?._id || "");
+    const isEnrolledInProg = Boolean((activeProgId && activeProgId === progId) || enrolledProgramIds.has(progId));
     
-    if (activeProgId && activeProgId === progId) {
-      const currentDay = placementLearning?.batch?.currentDay || placementLearning?.todayTopic?.day || 1;
-      if (currentDay <= 1) {
-        navigate("/dashboard");
+    if (isEnrolledInProg) {
+      if (activeProgId === progId) {
+        const currentDay = placementLearning?.batch?.currentDay || placementLearning?.todayTopic?.day || 1;
+        if (currentDay <= 1) {
+          navigate("/dashboard");
+        } else {
+          const todayTopicHref = placementLearning?.todayTopic?.href || (
+            placementLearning?.course?.id
+              ? `/learn/courses/${placementLearning.course.id}/topics?day=${currentDay}`
+              : "/dashboard"
+          );
+          navigate(todayTopicHref);
+        }
       } else {
-        const todayTopicHref = placementLearning?.todayTopic?.href || (
-          placementLearning?.course?.id
-            ? `/learn/courses/${placementLearning.course.id}/topics?day=${currentDay}`
-            : "/dashboard"
-        );
-        navigate(todayTopicHref);
+        navigate("/dashboard");
       }
       return;
     }
@@ -707,7 +746,7 @@ const LearnMain = () => {
 
                   const progId = String(program._id || program.id || "");
                   const activeProgId = String(placementLearning?.program?.id || placementLearning?.program?._id || "");
-                  const isEnrolledInProg = Boolean(activeProgId && activeProgId === progId);
+                  const isEnrolledInProg = Boolean((activeProgId && activeProgId === progId) || enrolledProgramIds.has(progId));
                   const currentDay = placementLearning?.batch?.currentDay || placementLearning?.todayTopic?.day || 1;
                   const isDay1 = currentDay <= 1;
 

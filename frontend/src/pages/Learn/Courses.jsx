@@ -155,10 +155,20 @@ export default function Courses() {
     Advanced: 'bg-[#efe5ff] text-[#7551a6] border border-[#ddcbff]',
   };
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [coursesData, setCoursesData] = useState(cachedCourses || []);
   const [publicPrograms, setPublicPrograms] = useState([]);
   const [placementLearning, setPlacementLearning] = useState(null);
+  const [enrolledProgramIds, setEnrolledProgramIds] = useState(() => {
+    try {
+      const stored = localStorage.getItem('userData');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.programId) return new Set([String(parsed.programId)]);
+      }
+    } catch {}
+    return new Set();
+  });
   const [loading, setLoading] = useState(!cachedCourses);
 
   const mockCoursesData = [
@@ -228,20 +238,41 @@ export default function Courses() {
 
   useEffect(() => {
     let cancelled = false;
-    if (isAuthenticated) {
-      placementLearningAPI
-        .getDashboard()
-        .then((res) => {
-          if (!cancelled && res?.hasPlacementLearning) {
-            setPlacementLearning(res);
-          }
-        })
-        .catch(() => {});
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    if (isAuthenticated || token) {
+      Promise.allSettled([
+        placementLearningAPI.getDashboard(),
+        programLearningAPI.getAssignedPrograms(),
+      ]).then(([placementRes, assignedRes]) => {
+        if (cancelled) return;
+        const idSet = new Set();
+        if (placementRes.status === 'fulfilled' && placementRes.value?.hasPlacementLearning) {
+          setPlacementLearning(placementRes.value);
+          const pId = placementRes.value.program?.id || placementRes.value.program?._id;
+          if (pId) idSet.add(String(pId));
+        }
+
+        if (assignedRes.status === 'fulfilled' && Array.isArray(assignedRes.value?.programs)) {
+          assignedRes.value.programs.forEach((prog) => {
+            if (prog?._id || prog?.id) {
+              idSet.add(String(prog._id || prog.id));
+            }
+          });
+        }
+
+        if (user?.programId) {
+          idSet.add(String(user.programId));
+        }
+
+        if (idSet.size > 0) {
+          setEnrolledProgramIds(idSet);
+        }
+      }).catch(() => {});
     }
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.programId]);
 
   const enrolledProgramId = String(
     placementLearning?.program?.id || placementLearning?.program?._id || ''
@@ -254,13 +285,18 @@ export default function Courses() {
 
   const handleProgramAction = (program) => {
     const progId = String(program._id || program.id || '');
-    if (enrolledProgramId && enrolledProgramId === progId) {
-      if (isEnrolledDay1) {
-        navigate('/dashboard');
-      } else if (placementLearning?.todayTopic?.href) {
-        navigate(placementLearning.todayTopic.href);
-      } else if (placementLearning?.attachedCourse?._id) {
-        navigate(`/learn/courses/${placementLearning.attachedCourse._id}/topics?day=${placementLearning?.batch?.currentDay || 1}`);
+    const isThisEnrolled = Boolean((enrolledProgramId && enrolledProgramId === progId) || enrolledProgramIds.has(progId));
+    if (isThisEnrolled) {
+      if (enrolledProgramId === progId) {
+        if (isEnrolledDay1) {
+          navigate('/dashboard');
+        } else if (placementLearning?.todayTopic?.href) {
+          navigate(placementLearning.todayTopic.href);
+        } else if (placementLearning?.attachedCourse?._id) {
+          navigate(`/learn/courses/${placementLearning.attachedCourse._id}/topics?day=${placementLearning?.batch?.currentDay || 1}`);
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         navigate('/dashboard');
       }
@@ -761,7 +797,8 @@ export default function Courses() {
                         </div>
 
                         {(() => {
-                          const isThisEnrolled = enrolledProgramId && enrolledProgramId === String(program._id || program.id || '');
+                          const progId = String(program._id || program.id || '');
+                          const isThisEnrolled = Boolean((enrolledProgramId && enrolledProgramId === progId) || enrolledProgramIds.has(progId));
                           const buttonLabel = isThisEnrolled
                             ? (isEnrolledDay1 ? "Start Learning" : "Resume Learning")
                             : "Explore Program";

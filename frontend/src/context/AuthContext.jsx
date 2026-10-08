@@ -37,14 +37,34 @@ const authAPI = {
   },
 };
 
-// Initial state
-const initialState = {
-  user: null,
-  token: null,
-  isAuthenticated: false,
-  isLoading: true,
-  error: null,
+// Read initial session synchronously to prevent race conditions on page refresh
+const getInitialAuthState = () => {
+  try {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('userData');
+    if (token && userData) {
+      const user = JSON.parse(userData);
+      return {
+        user,
+        token,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      };
+    }
+  } catch (e) {
+    console.error('Failed to parse initial auth state:', e);
+  }
+  return {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+  };
 };
+
+const initialState = getInitialAuthState();
 
 // Action types
 const AUTH_ACTIONS = {

@@ -26,6 +26,7 @@ const request = async (path, options = {}) => {
 export const programLearningAPI = {
   getPublicPrograms: () => request('/programs/public'),
   getPublicProgramPreview: (programId) => request('/programs/public/' + programId),
+  getAssignedPrograms: () => request('/programs/assigned'),
   enrollFreeProgram: (programId) => request('/programs/' + programId + '/free-enroll', { method: 'POST' }),
   getReadinessOptions: () => request('/programs/readiness-options'),
   joinWaitlist: (programId, leadData) => request('/programs/' + programId + '/waitlist', {
