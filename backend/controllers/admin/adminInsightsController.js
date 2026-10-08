@@ -154,9 +154,35 @@ const buildDashboardResponse = async () => {
   };
 };
 
+let cachedDashboardResponse = null;
+let cachedDashboardResponseTime = 0;
+const DASHBOARD_CACHE_TTL_MS = 30 * 1000;
+
+export const invalidateAdminDashboardCache = () => {
+  cachedDashboardResponse = null;
+  cachedDashboardResponseTime = 0;
+};
+
+let cachedAnalyticsResponse = null;
+let cachedAnalyticsResponseTime = 0;
+const ANALYTICS_CACHE_TTL_MS = 30 * 1000;
+
+export const invalidateAdminAnalyticsCache = () => {
+  cachedAnalyticsResponse = null;
+  cachedAnalyticsResponseTime = 0;
+};
+
 export const getDashboardPage = async (req, res) => {
   try {
+    const now = Date.now();
+    if (cachedDashboardResponse && (now - cachedDashboardResponseTime < DASHBOARD_CACHE_TTL_MS)) {
+      return res.status(200).json({ success: true, data: cachedDashboardResponse });
+    }
+
     const data = await buildDashboardResponse();
+    cachedDashboardResponse = data;
+    cachedDashboardResponseTime = Date.now();
+
     return res.status(200).json({ success: true, data });
   } catch (error) {
     console.error("getDashboardPage error:", error);
@@ -166,6 +192,11 @@ export const getDashboardPage = async (req, res) => {
 
 export const getAnalyticsPage = async (req, res) => {
   try {
+    const now = Date.now();
+    if (cachedAnalyticsResponse && (now - cachedAnalyticsResponseTime < ANALYTICS_CACHE_TTL_MS)) {
+      return res.status(200).json({ success: true, data: cachedAnalyticsResponse });
+    }
+
     const metrics = await computeAdminMetrics();
     const categoryMap = Object.fromEntries(
       metrics.categoryCounts.map((item) => [String(item._id), item])
@@ -255,6 +286,9 @@ export const getAnalyticsPage = async (req, res) => {
       },
       categories,
     };
+
+    cachedAnalyticsResponse = data;
+    cachedAnalyticsResponseTime = Date.now();
 
     return res.status(200).json({ success: true, data });
   } catch (error) {
