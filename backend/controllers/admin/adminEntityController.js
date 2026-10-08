@@ -25,7 +25,7 @@ import PricingExitFeedback from "../../models/PricingExitFeedback.js";
 import ProgramWaitlist from "../../models/ProgramWaitlist.js";
 import ProgramWaitlistLead from "../../models/ProgramWaitlistLead.js";
 import { writeAuditLog } from "../../utils/auditLogger.js";
-import { assertObjectId, formatDateLabel } from "./adminCommon.js";
+import { assertObjectId, formatDateLabel, invalidateAdminMetricsCache } from "./adminCommon.js";
 import {
   resolveProgramForSelection,
   setBatchScheduleForStudent,
@@ -3542,6 +3542,9 @@ export const createStudentAdmin = async (req, res) => {
       actor: req.user,
     });
 
+    invalidateGlobalStudentsCache();
+    invalidateAdminMetricsCache();
+
     return res.status(201).json({ success: true, data: student });
   } catch (error) {
     console.error("createStudentAdmin error:", error);
@@ -3943,6 +3946,9 @@ export const updateStudentAdmin = async (req, res) => {
       actor: req.user,
     });
 
+    invalidateGlobalStudentsCache();
+    invalidateAdminMetricsCache();
+
     return res.status(200).json({ success: true, data: student });
   } catch (error) {
     console.error("updateStudentAdmin error:", error);
@@ -4016,6 +4022,9 @@ export const updateStudentProgramStartDateAdmin = async (req, res) => {
       await User.updateOne({ _id: user._id }, { $set: { startDate: parsedDate } });
     }
     if (user) invalidateDashboardCache(user._id);
+
+    invalidateGlobalStudentsCache();
+    invalidateAdminMetricsCache();
 
     return res.json({
       success: true,
@@ -4140,6 +4149,295 @@ export const removeStudentFromBatchAdmin = async (req, res) => {
 };
 
 
+let cachedGlobalStudentsData = null;
+let cachedGlobalStudentsTime = 0;
+const GLOBAL_STUDENTS_CACHE_TTL_MS = 30 * 1000; // 30 seconds
+
+export const invalidateGlobalStudentsCache = () => {
+  cachedGlobalStudentsData = null;
+  cachedGlobalStudentsTime = 0;
+};
+
+const loadGlobalStudentsData = async () => {
+  const nowTime = Date.now();
+  if (cachedGlobalStudentsData && (nowTime - cachedGlobalStudentsTime < GLOBAL_STUDENTS_CACHE_TTL_MS)) {
+    return cachedGlobalStudentsData;
+  }
+
+  // Fetch all reference data needed for dynamic classification and filters
+  const [allColleges, allPrograms, allEnrollments, allPayments, allExitFeedbacks, allUsers, waitlistRecords, waitlistLeads] = await Promise.all([
+    College.find().select("_id name").lean(),
+    Program.find().select("_id name programType duration durationDays status").lean(),
+    ProgramEnrollment.find()
+      .select("userId studentId programId batchId status individualStartDate assignedAt createdAt programExpiresAt accessExpiresAt pricingPlanSnapshot accessDurationDays accessTier")
+      .populate("programId", "name programType duration durationDays")
+      .populate("batchId", "name startDate expiryDate status")
+      .lean(),
+    Payment.find().select("userId studentId status createdAt").sort({ createdAt: -1 }).lean(),
+    PricingExitFeedback.find().select("userId studentId reason customReason createdAt").sort({ createdAt: -1 }).lean(),
+    User.find().select("_id email collegeName customCollege goal targetRole targetCompanies onboardingCompleted onboardingCompletedAt createdAt").lean(),
+    ProgramWaitlist.find({ status: { $in: ['Waiting', 'Contacted'] } }).select("userId").lean(),
+    ProgramWaitlistLead.find({ status: { $in: ['Waitlisted', 'Contacted'] } }).select("userId email").lean(),
+  ]);
+
+  const collegeMap = new Map(allColleges.map((c) => [String(c._id), c.name]));
+  const userMapByEmail = new Map(allUsers.map((u) => [String(u.email || "").toLowerCase(), u]));
+  const userMapById = new Map(allUsers.map((u) => [String(u._id), u]));
+
+  // Map user enrollments: userId -> array of enrollments
+  const enrollmentsByUser = new Map();
+  allEnrollments.forEach((e) => {
+    const uKey = String(e.userId || e.studentId || "");
+    if (!enrollmentsByUser.has(uKey)) enrollmentsByUser.set(uKey, []);
+    enrollmentsByUser.get(uKey).push(e);
+  });
+
+  // Map payment status: userId or studentId -> Paid | Pending | Failed
+  const paymentStatusByUser = new Map();
+  allPayments.forEach((p) => {
+    const keys = [p.userId ? String(p.userId) : null, p.studentId ? String(p.studentId) : null].filter(Boolean);
+    keys.forEach((key) => {
+      const current = paymentStatusByUser.get(key);
+      if (["captured", "approved"].includes(p.status)) {
+        paymentStatusByUser.set(key, "Paid");
+      } else if (!current && ["pending", "created"].includes(p.status)) {
+        paymentStatusByUser.set(key, "Pending");
+      } else if (!current && ["failed", "rejected"].includes(p.status)) {
+        paymentStatusByUser.set(key, "Failed");
+      }
+    });
+  });
+
+  // Map pricing exit feedback by student/user ID
+  const exitFeedbackMap = new Map();
+  const exitFeedbackCountMap = new Map();
+  const exitFeedbackReasonCounts = new Map();
+  allExitFeedbacks.forEach((fb) => {
+    const reason = fb.customReason || fb.reason || "Viewed pricing — didn't enroll";
+    const normalizedReason = String(reason).trim();
+    if (normalizedReason) {
+      exitFeedbackReasonCounts.set(
+        normalizedReason,
+        (exitFeedbackReasonCounts.get(normalizedReason) || 0) + 1,
+      );
+    }
+
+    const keys = [fb.userId, fb.studentId]
+      .filter(Boolean)
+      .map((value) => String(value));
+    keys.forEach((key) => {
+      exitFeedbackCountMap.set(key, (exitFeedbackCountMap.get(key) || 0) + 1);
+      if (!exitFeedbackMap.has(key)) {
+        exitFeedbackMap.set(key, reason);
+      }
+    });
+  });
+
+  // Pre-index waitlist users & emails for O(1) set lookups
+  const waitlistUserIds = new Set([
+    ...waitlistRecords.map((r) => String(r.userId || "")).filter(Boolean),
+    ...waitlistLeads.map((r) => String(r.userId || "")).filter(Boolean),
+  ]);
+  const waitlistEmails = new Set(
+    waitlistLeads.map((r) => String(r.email || "").toLowerCase()).filter(Boolean)
+  );
+
+  // Query all students with selective projections
+  const allStudents = await Student.find()
+    .select("name email rollNo createdAt status collegeId batchId programId lastActiveAt learningGoal targetRole otherTargetRole targetCompanies testsTaken programSelection userId")
+    .populate("collegeId", "name")
+    .populate("batchId", "name startDate expiryDate status")
+    .populate("programId", "name programType")
+    .lean();
+
+  // Map stats metrics dynamically
+  let totalEnrolled = 0;
+  let activeThisMonth = 0;
+  let collegeCount = 0;
+  let individualCount = 0;
+  let completedCount = 0;
+
+  const now = new Date();
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  // Process & Classify Students
+  const processedStudents = allStudents.map((student) => {
+    const sId = String(student._id);
+    const email = String(student.email || "").toLowerCase();
+    const user = userMapByEmail.get(email) || (student.userId ? userMapById.get(String(student.userId)) : null);
+    const uId = user ? String(user._id) : sId;
+
+    const userEnrollments = enrollmentsByUser.get(uId) || enrollmentsByUser.get(sId) || [];
+    const orderedEnrollments = [...userEnrollments].sort((a, b) => {
+      const statusRank = { Active: 0, Completed: 1, Paused: 2 };
+      return (statusRank[a.status] ?? 3) - (statusRank[b.status] ?? 3)
+        || new Date(b.assignedAt || b.createdAt || 0).getTime() - new Date(a.assignedAt || a.createdAt || 0).getTime();
+    });
+    const currentEnrollment = orderedEnrollments.find((enrollment) => enrollment.status === "Active") || null;
+    const primaryEnrollment = currentEnrollment || orderedEnrollments[0] || null;
+    const hasPaidEnrollment = currentEnrollment?.accessTier === "Member";
+
+    const hasCollegeBatch = Boolean(currentEnrollment?.batchId);
+    const hasProgramEnrollment = userEnrollments.length > 0;
+    const isEnrolled = hasProgramEnrollment;
+
+    // Access tier computation
+    let accessType = "Free";
+    if (hasPaidEnrollment) {
+      accessType = "Paid";
+    } else if (hasCollegeBatch) {
+      accessType = "College";
+    }
+
+    // College Name Resolution
+    let collegeName = "Other";
+    if (student.collegeId?.name) {
+      collegeName = student.collegeId.name;
+    } else if (student.collegeId && collegeMap.has(String(student.collegeId))) {
+      collegeName = collegeMap.get(String(student.collegeId));
+    } else if (user?.collegeName && user.collegeName.toLowerCase() !== "other") {
+      collegeName = user.collegeName;
+    } else if (user?.customCollege) {
+      collegeName = user.customCollege;
+    }
+
+    // Programs associated with student
+    const programNamesList = [];
+    userEnrollments.forEach((e) => {
+      if (e.programId?.name && !programNamesList.includes(e.programId.name)) {
+        programNamesList.push(e.programId.name);
+      }
+    });
+    const primaryProgramId = primaryEnrollment?.programId?._id || primaryEnrollment?.programId || null;
+    const scheduleStartDate = primaryEnrollment?.batchId?.startDate
+      || primaryEnrollment?.individualStartDate
+      || primaryEnrollment?.assignedAt
+      || null;
+    const scheduleExpiryDate = primaryEnrollment?.batchId?.expiryDate
+      || primaryEnrollment?.accessExpiresAt
+      || null;
+
+    const parsedScheduleStartDate = scheduleStartDate ? new Date(scheduleStartDate) : null;
+    const enrolledOnDate = parsedScheduleStartDate && !Number.isNaN(parsedScheduleStartDate.getTime())
+      ? parsedScheduleStartDate
+      : null;
+    const enrolledOnStr = enrolledOnDate?.toISOString().slice(0, 10) || "";
+
+    const statusStr = primaryEnrollment?.status || student.status || "Active";
+
+    const scheduleStart = scheduleStartDate ? new Date(scheduleStartDate) : null;
+    const scheduleExpiry = scheduleExpiryDate ? new Date(scheduleExpiryDate) : null;
+    const isActiveThisMonth = Boolean(currentEnrollment && scheduleStart && !Number.isNaN(scheduleStart.getTime()))
+      && statusStr === "Active"
+      && scheduleStart <= currentMonthEnd
+      && (!scheduleExpiry || scheduleExpiry >= currentMonthStart);
+
+    if (isEnrolled) {
+      totalEnrolled++;
+      if (isActiveThisMonth) activeThisMonth++;
+      if (accessType === "College") collegeCount++;
+      else individualCount++;
+      if (statusStr === "Completed") completedCount++;
+    }
+
+    const hasSkillProgram = currentEnrollment?.programId?.programType === "Skill";
+
+    const goal = user?.goal || student.learningGoal || "";
+    const isExploring =
+      goal.toLowerCase().includes("exploring") ||
+      (student.programSelection || "").toLowerCase().includes("exploring");
+
+    const isLead = !isEnrolled && !isExploring && (user?.onboardingCompleted || Boolean(student.targetRole || goal));
+
+    let leadSource = "Signup / Onboarding";
+    const exitReason = exitFeedbackMap.get(uId) || exitFeedbackMap.get(sId);
+    const exitFeedbackCount = exitFeedbackCountMap.get(uId) || exitFeedbackCountMap.get(sId) || 0;
+    if (exitReason) {
+      leadSource = "Viewed Pricing";
+    } else if (student.testsTaken && student.testsTaken > 0) {
+      leadSource = "Placement Readiness Assessment";
+    } else if (programNamesList.length > 0) {
+      leadSource = "Free Program";
+    }
+
+    return {
+      id: student._id,
+      name: student.name,
+      email: student.email,
+      studentIdStr: student.rollNo || String(student._id).slice(-6),
+      createdAt: student.createdAt,
+      college: collegeName,
+      access: accessType,
+      payment: paymentStatusByUser.get(uId) || paymentStatusByUser.get(sId) || (accessType === "Paid" ? "Paid" : "Pending"),
+      programs: programNamesList,
+      currentProgram: currentEnrollment?.programId?.name || "",
+      activeProgramId: currentEnrollment?.programId?._id || currentEnrollment?.programId || null,
+      activeEnrollmentStatus: currentEnrollment?.status || null,
+      activeBatchId: currentEnrollment?.batchId?._id || currentEnrollment?.batchId || null,
+      activeIndividualStartDate: currentEnrollment?.individualStartDate || null,
+      latestEnrollmentAt: currentEnrollment?.assignedAt || currentEnrollment?.createdAt
+        || primaryEnrollment?.assignedAt || primaryEnrollment?.createdAt || student.createdAt || null,
+      programId: primaryProgramId || null,
+      enrollmentId: primaryEnrollment?._id || null,
+      enrollmentStatus: primaryEnrollment?.status || null,
+      accountStatus: student.status || "Active",
+      batchId: primaryEnrollment?.batchId?._id || primaryEnrollment?.batchId || null,
+      individualStartDate: primaryEnrollment?.individualStartDate || null,
+      scheduleStartDate,
+      scheduleExpiryDate,
+      collegeId: student.collegeId?._id || student.collegeId || null,
+      enrolledOn: enrolledOnDate,
+      enrolledOnStr,
+      status: statusStr,
+      programStatus: primaryEnrollment?.status || null,
+      programExpiresAt: primaryEnrollment?.programExpiresAt || null,
+      planExpiresAt: primaryEnrollment?.accessExpiresAt || null,
+      pricingPlan: primaryEnrollment?.pricingPlanSnapshot || null,
+      accessDurationDays: primaryEnrollment?.accessDurationDays || null,
+      accessValid: !primaryEnrollment?.accessExpiresAt || new Date(primaryEnrollment.accessExpiresAt) > now,
+      hasPlacement: currentEnrollment?.programId?.programType === 'Placement',
+      hasCompleted: userEnrollments.some(enrollment => enrollment.status === 'Completed'),
+      isWaitlisted: waitlistUserIds.has(uId) || (Boolean(email) && waitlistEmails.has(email)),
+      lastActive: student.lastActiveAt || enrolledOnDate,
+      goal: goal || (isExploring ? "Just Exploring" : "Get Placed"),
+      targetRole: student.targetRole || user?.targetRole || student.otherTargetRole || "",
+      targetCompanies: student.targetCompanies || user?.targetCompanies || [],
+      source: leadSource,
+      pricingExitReason: exitReason || null,
+      pricingExitFeedbackCount: exitFeedbackCount,
+      lastActivity: student.lastActiveAt ? "Assessment completed" : "Onboarding completed",
+      hasSkill: hasSkillProgram,
+      skillAccess: hasPaidEnrollment ? "Paid" : "Free",
+      isEnrolled,
+      isLead,
+      isExploring,
+    };
+  });
+
+  const payload = {
+    processedStudents,
+    stats: {
+      totalEnrolled,
+      activeThisMonth,
+      collegeCount,
+      individualCount,
+      completedCount,
+      leadFeedbackReasonCounts: Array.from(exitFeedbackReasonCounts.entries())
+        .map(([reason, count]) => ({ reason, count }))
+        .sort((a, b) => b.count - a.count),
+    },
+    filterOptions: {
+      colleges: allColleges,
+      programs: allPrograms,
+    },
+  };
+
+  cachedGlobalStudentsData = payload;
+  cachedGlobalStudentsTime = Date.now();
+  return payload;
+};
+
 export const getGlobalStudentsAdmin = async (req, res) => {
   try {
     const tab = String(req.query.tab || "all").toLowerCase();
@@ -4152,264 +4450,9 @@ export const getGlobalStudentsAdmin = async (req, res) => {
     const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
     const limit = Math.min(100, Math.max(5, Number.parseInt(req.query.limit, 10) || 25));
 
-    // Fetch all reference data needed for dynamic classification and filters
-    const [allColleges, allPrograms, allEnrollments, allPayments, allExitFeedbacks, allUsers, waitlistRecords, waitlistLeads] = await Promise.all([
-      College.find().select("_id name").lean(),
-      Program.find().select("_id name programType duration durationDays status").lean(),
-      ProgramEnrollment.find()
-        .populate("programId", "name programType duration durationDays")
-        .populate("batchId", "name startDate expiryDate status")
-        .lean(),
-      Payment.find().sort({ createdAt: -1 }).lean(),
-      PricingExitFeedback.find().sort({ createdAt: -1 }).lean(),
-      User.find().select("_id email collegeName customCollege goal targetRole targetCompanies onboardingCompleted onboardingCompletedAt createdAt").lean(),
-      ProgramWaitlist.find({ status: { $in: ['Waiting', 'Contacted'] } }).lean(),
-      ProgramWaitlistLead.find({ status: { $in: ['Waitlisted', 'Contacted'] } }).lean(),
-    ]);
-
-    const collegeMap = new Map(allColleges.map((c) => [String(c._id), c.name]));
-    const userMapByEmail = new Map(allUsers.map((u) => [String(u.email || "").toLowerCase(), u]));
-    const userMapById = new Map(allUsers.map((u) => [String(u._id), u]));
-
-    // Map user enrollments: userId -> array of enrollments
-    const enrollmentsByUser = new Map();
-    allEnrollments.forEach((e) => {
-      const uKey = String(e.userId || e.studentId || "");
-      if (!enrollmentsByUser.has(uKey)) enrollmentsByUser.set(uKey, []);
-      enrollmentsByUser.get(uKey).push(e);
-    });
-
-    // Map paid payments: userId -> boolean/list
-    const paidUsersSet = new Set(allPayments.filter((p) => ["captured", "approved"].includes(p.status)).flatMap((p) => [String(p.userId || ""), String(p.studentId || "")].filter(Boolean)));
-
-    // Map payment status: userId or studentId -> Paid | Pending | Failed
-    const paymentStatusByUser = new Map();
-    allPayments.forEach((p) => {
-      const keys = [p.userId ? String(p.userId) : null, p.studentId ? String(p.studentId) : null].filter(Boolean);
-      keys.forEach((key) => {
-        const current = paymentStatusByUser.get(key);
-        if (["captured", "approved"].includes(p.status)) {
-          paymentStatusByUser.set(key, "Paid");
-        } else if (!current && ["pending", "created"].includes(p.status)) {
-          paymentStatusByUser.set(key, "Pending");
-        } else if (!current && ["failed", "rejected"].includes(p.status)) {
-          paymentStatusByUser.set(key, "Failed");
-        }
-      });
-    });
-
-    // Map pricing exit feedback by student/user ID
-    const exitFeedbackMap = new Map();
-    const exitFeedbackCountMap = new Map();
-    const exitFeedbackReasonCounts = new Map();
-    allExitFeedbacks.forEach((fb) => {
-      const reason = fb.customReason || fb.reason || "Viewed pricing — didn't enroll";
-      const normalizedReason = String(reason).trim();
-      if (normalizedReason) {
-        exitFeedbackReasonCounts.set(
-          normalizedReason,
-          (exitFeedbackReasonCounts.get(normalizedReason) || 0) + 1,
-        );
-      }
-
-      const keys = [fb.userId, fb.studentId]
-        .filter(Boolean)
-        .map((value) => String(value));
-      keys.forEach((key) => {
-        exitFeedbackCountMap.set(key, (exitFeedbackCountMap.get(key) || 0) + 1);
-        if (!exitFeedbackMap.has(key)) {
-          exitFeedbackMap.set(key, reason);
-        }
-      });
-    });
-
-    // Query all students
-    const allStudents = await Student.find()
-      .populate("collegeId", "name")
-      .populate("batchId", "name startDate expiryDate status")
-      .populate("programId", "name programType")
-      .lean();
-
-    // Map stats metrics dynamically
-    let totalEnrolled = 0;
-    let activeThisMonth = 0;
-    let collegeCount = 0;
-    let individualCount = 0;
-    let completedCount = 0;
-
-    const now = new Date();
-    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-
-    // Process & Classify Students
-    const processedStudents = allStudents.map((student) => {
-      const sId = String(student._id);
-      const email = String(student.email || "").toLowerCase();
-      const user = userMapByEmail.get(email) || (student.userId ? userMapById.get(String(student.userId)) : null);
-      const uId = user ? String(user._id) : sId;
-
-      const userEnrollments = enrollmentsByUser.get(uId) || enrollmentsByUser.get(sId) || [];
-      const orderedEnrollments = [...userEnrollments].sort((a, b) => {
-        const statusRank = { Active: 0, Completed: 1, Paused: 2 };
-        return (statusRank[a.status] ?? 3) - (statusRank[b.status] ?? 3)
-          || new Date(b.assignedAt || b.createdAt || 0).getTime() - new Date(a.assignedAt || a.createdAt || 0).getTime();
-      });
-      const currentEnrollment = orderedEnrollments.find((enrollment) => enrollment.status === "Active") || null;
-      const primaryEnrollment = currentEnrollment || orderedEnrollments[0] || null;
-      const hasPaidEnrollment = currentEnrollment?.accessTier === "Member";
-
-      // A college is not a cohort by itself. Only an actual batch assignment
-      // should put a learner on a shared schedule or classify them as a
-      // college/cohort learner.
-      const hasCollegeBatch = Boolean(currentEnrollment?.batchId);
-      const hasProgramEnrollment = userEnrollments.length > 0;
-      const isEnrolled = hasProgramEnrollment;
-
-      // Access tier computation
-      let accessType = "Free";
-      if (hasPaidEnrollment) {
-        accessType = "Paid";
-      } else if (hasCollegeBatch) {
-        accessType = "College";
-      }
-
-      // College Name Resolution
-      let collegeName = "Other";
-      if (student.collegeId?.name) {
-        collegeName = student.collegeId.name;
-      } else if (student.collegeId && collegeMap.has(String(student.collegeId))) {
-        collegeName = collegeMap.get(String(student.collegeId));
-      } else if (user?.collegeName && user.collegeName.toLowerCase() !== "other") {
-        collegeName = user.collegeName;
-      } else if (user?.customCollege) {
-        collegeName = user.customCollege;
-      }
-
-      // Programs associated with student
-      const programNamesList = [];
-      userEnrollments.forEach((e) => {
-        if (e.programId?.name && !programNamesList.includes(e.programId.name)) {
-          programNamesList.push(e.programId.name);
-        }
-      });
-      const primaryProgramId = primaryEnrollment?.programId?._id || primaryEnrollment?.programId || null;
-      const scheduleStartDate = primaryEnrollment?.batchId?.startDate
-        || primaryEnrollment?.individualStartDate
-        || primaryEnrollment?.assignedAt
-        || null;
-      const scheduleExpiryDate = primaryEnrollment?.batchId?.expiryDate
-        || primaryEnrollment?.accessExpiresAt
-        || null;
-
-      // Enrolled On is the schedule anchor: a batch start for cohort learners
-      // and the enrollment's adjustable individual start date otherwise.
-      const parsedScheduleStartDate = scheduleStartDate ? new Date(scheduleStartDate) : null;
-      const enrolledOnDate = parsedScheduleStartDate && !Number.isNaN(parsedScheduleStartDate.getTime())
-        ? parsedScheduleStartDate
-        : null;
-      const enrolledOnStr = enrolledOnDate?.toISOString().slice(0, 10) || "";
-
-      // Status
-      const statusStr = primaryEnrollment?.status || student.status || "Active";
-
-      // Active this month means the learner's schedule overlaps the current
-      // calendar month, even when the learner enrolled in a prior month.
-      const scheduleStart = scheduleStartDate ? new Date(scheduleStartDate) : null;
-      const scheduleExpiry = scheduleExpiryDate ? new Date(scheduleExpiryDate) : null;
-      const isActiveThisMonth = Boolean(currentEnrollment && scheduleStart && !Number.isNaN(scheduleStart.getTime()))
-        && statusStr === "Active"
-        && scheduleStart <= currentMonthEnd
-        && (!scheduleExpiry || scheduleExpiry >= currentMonthStart);
-
-      // Update Global Dynamic Stats if enrolled
-      if (isEnrolled) {
-        totalEnrolled++;
-        if (isActiveThisMonth) activeThisMonth++;
-        if (accessType === "College") collegeCount++;
-        else individualCount++;
-        if (statusStr === "Completed") completedCount++;
-      }
-
-      // Skill Relationship
-      const hasSkillProgram = currentEnrollment?.programId?.programType === "Skill";
-
-      // Classification Flags
-      const goal = user?.goal || student.learningGoal || "";
-      const isExploring =
-        goal.toLowerCase().includes("exploring") ||
-        (student.programSelection || "").toLowerCase().includes("exploring");
-
-      const isLead = !isEnrolled && !isExploring && (user?.onboardingCompleted || Boolean(student.targetRole || goal));
-
-      // Lead Source
-      let leadSource = "Signup / Onboarding";
-      const exitReason = exitFeedbackMap.get(uId) || exitFeedbackMap.get(sId);
-      const exitFeedbackCount = exitFeedbackCountMap.get(uId) || exitFeedbackCountMap.get(sId) || 0;
-      if (exitReason) {
-        leadSource = "Viewed Pricing";
-      } else if (student.testsTaken && student.testsTaken > 0) {
-        leadSource = "Placement Readiness Assessment";
-      } else if (programNamesList.length > 0) {
-        leadSource = "Free Program";
-      }
-
-      return {
-        id: student._id,
-        name: student.name,
-        email: student.email,
-        studentIdStr: student.rollNo || String(student._id).slice(-6),
-        createdAt: student.createdAt,
-        college: collegeName,
-        access: accessType,
-        payment: paymentStatusByUser.get(uId) || paymentStatusByUser.get(sId) || (accessType === "Paid" ? "Paid" : "Pending"),
-        programs: programNamesList,
-        currentProgram: currentEnrollment?.programId?.name || "",
-        activeProgramId: currentEnrollment?.programId?._id || currentEnrollment?.programId || null,
-        activeEnrollmentStatus: currentEnrollment?.status || null,
-        activeBatchId: currentEnrollment?.batchId?._id || currentEnrollment?.batchId || null,
-        activeIndividualStartDate: currentEnrollment?.individualStartDate || null,
-        latestEnrollmentAt: currentEnrollment?.assignedAt || currentEnrollment?.createdAt
-          || primaryEnrollment?.assignedAt || primaryEnrollment?.createdAt || student.createdAt || null,
-        programId: primaryProgramId || null,
-        enrollmentId: primaryEnrollment?._id || null,
-        enrollmentStatus: primaryEnrollment?.status || null,
-        accountStatus: student.status || "Active",
-        batchId: primaryEnrollment?.batchId?._id || primaryEnrollment?.batchId || null,
-        individualStartDate: primaryEnrollment?.individualStartDate || null,
-        scheduleStartDate,
-        scheduleExpiryDate,
-        collegeId: student.collegeId?._id || student.collegeId || null,
-        enrolledOn: enrolledOnDate,
-        enrolledOnStr,
-        status: statusStr,
-        programStatus: primaryEnrollment?.status || null,
-        programExpiresAt: primaryEnrollment?.programExpiresAt || null,
-        planExpiresAt: primaryEnrollment?.accessExpiresAt || null,
-        pricingPlan: primaryEnrollment?.pricingPlanSnapshot || null,
-        accessDurationDays: primaryEnrollment?.accessDurationDays || null,
-        accessValid: !primaryEnrollment?.accessExpiresAt || new Date(primaryEnrollment.accessExpiresAt) > now,
-        hasPlacement: currentEnrollment?.programId?.programType === 'Placement',
-        hasCompleted: userEnrollments.some(enrollment => enrollment.status === 'Completed'),
-        isWaitlisted: waitlistRecords.some(record => String(record.userId) === uId)
-          || waitlistLeads.some(record => String(record.userId || '') === uId || record.email === email),
-        lastActive: student.lastActiveAt || enrolledOnDate,
-        // Lead specific fields
-        goal: goal || (isExploring ? "Just Exploring" : "Get Placed"),
-        targetRole: student.targetRole || user?.targetRole || student.otherTargetRole || "",
-        targetCompanies: student.targetCompanies || user?.targetCompanies || [],
-        source: leadSource,
-        pricingExitReason: exitReason || null,
-        pricingExitFeedbackCount: exitFeedbackCount,
-        lastActivity: student.lastActiveAt ? "Assessment completed" : "Onboarding completed",
-        // Skill specific
-        hasSkill: hasSkillProgram,
-        skillAccess: hasPaidEnrollment ? "Paid" : "Free",
-        // Flags
-        isEnrolled,
-        isLead,
-        isExploring,
-      };
-    });
+    const { processedStudents, stats, filterOptions } = await loadGlobalStudentsData();
+    const allColleges = filterOptions.colleges;
+    const allPrograms = filterOptions.programs;
 
     // Filter by Tab
     let tabStudents = processedStudents.filter((s) => {
@@ -4486,16 +4529,7 @@ export const getGlobalStudentsAdmin = async (req, res) => {
     return res.status(200).json({
       success: true,
       data: {
-        stats: {
-          totalEnrolled,
-          activeThisMonth,
-          collegeCount,
-          individualCount,
-          completedCount,
-          leadFeedbackReasonCounts: Array.from(exitFeedbackReasonCounts.entries())
-            .map(([reason, count]) => ({ reason, count }))
-            .sort((a, b) => b.count - a.count),
-        },
+        stats,
         items: paginatedItems,
         page,
         limit,
@@ -4553,6 +4587,9 @@ export const deleteStudentAdmin = async (req, res) => {
       detail: `${student.name} (${student.email})`,
       actor: req.user,
     });
+
+    invalidateGlobalStudentsCache();
+    invalidateAdminMetricsCache();
 
     return res.status(200).json({ success: true, message: "Student and associated records permanently deleted." });
   } catch (error) {
@@ -4695,6 +4732,9 @@ export const bulkUploadStudentsAdmin = async (req, res) => {
       createdCount++;
     }
 
+    invalidateGlobalStudentsCache();
+    invalidateAdminMetricsCache();
+
     return res.status(200).json({
       success: true,
       message: `Bulk import completed. ${createdCount} created, ${skippedCount} skipped.`,
@@ -4749,6 +4789,9 @@ export const updateStudentPaymentAdmin = async (req, res) => {
       { $or: [{ studentId: student._id }, ...(student.userId ? [{ userId: student.userId }] : [])] },
       { $set: { accessTier, paymentStatus: titleCased } }
     );
+
+    invalidateGlobalStudentsCache();
+    invalidateAdminMetricsCache();
 
     return res.json({ success: true, message: `Payment updated to ${titleCased}.`, payment: titleCased });
   } catch (error) {

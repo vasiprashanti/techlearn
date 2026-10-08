@@ -214,7 +214,21 @@ export const getActorName = (user) => {
   return String(user?.email || "").split("@")[0] || "Admin User";
 };
 
+let cachedAdminMetrics = null;
+let cachedAdminMetricsTime = 0;
+const ADMIN_METRICS_CACHE_TTL_MS = 60 * 1000; // 60 seconds
+
+export const invalidateAdminMetricsCache = () => {
+  cachedAdminMetrics = null;
+  cachedAdminMetricsTime = 0;
+};
+
 export const computeAdminMetrics = async () => {
+  const nowTime = Date.now();
+  if (cachedAdminMetrics && (nowTime - cachedAdminMetricsTime < ADMIN_METRICS_CACHE_TTL_MS)) {
+    return cachedAdminMetrics;
+  }
+
   await expireAllActiveBatches();
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -451,7 +465,7 @@ export const computeAdminMetrics = async () => {
   const metrics = submissionAgg[0] || {};
   const studentMetrics = studentAgg[0] || {};
 
-  return {
+  const result = {
     totalUsers,
     activeUsers,
     clubMembers,
@@ -498,4 +512,8 @@ export const computeAdminMetrics = async () => {
     })),
     categoryCounts,
   };
+
+  cachedAdminMetrics = result;
+  cachedAdminMetricsTime = Date.now();
+  return result;
 };

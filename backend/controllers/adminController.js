@@ -310,8 +310,22 @@ export const editCourseExercises = async (req, res) => {
   }
 };
 
+let cachedStatsMetrics = null;
+let cachedStatsMetricsTime = 0;
+const STATS_METRICS_CACHE_TTL_MS = 60 * 1000;
+
+export const invalidateStatsMetricsCache = () => {
+  cachedStatsMetrics = null;
+  cachedStatsMetricsTime = 0;
+};
+
 export const getAdminMetrics = async (req, res) => {
   try {
+    const nowTime = Date.now();
+    if (cachedStatsMetrics && (nowTime - cachedStatsMetricsTime < STATS_METRICS_CACHE_TTL_MS)) {
+      return res.status(200).json(cachedStatsMetrics);
+    }
+
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
@@ -505,7 +519,7 @@ export const getAdminMetrics = async (req, res) => {
     // -------------------------------------------------------------------------
     // Response
     // -------------------------------------------------------------------------
-    return res.status(200).json({
+    const result = {
       // Platform users (app learners)
       totalUsers,
       clubMembers,
@@ -554,7 +568,12 @@ export const getAdminMetrics = async (req, res) => {
 
       // Top performing batch
       topPerformingBatch,  // { batchName, avgScore } | null if no submissions yet
-    });
+    };
+
+    cachedStatsMetrics = result;
+    cachedStatsMetricsTime = Date.now();
+
+    return res.status(200).json(result);
   } catch (err) {
     console.error("Admin Metrics Error:", err);
     return res.status(500).json({ error: "Failed to fetch admin metrics" });
