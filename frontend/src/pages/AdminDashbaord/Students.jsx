@@ -7,7 +7,8 @@ import StudentReportModal from '../../components/AdminDashbaord/StudentReportMod
 import { adminAPI } from '../../services/adminApi';
 import { 
   FiSearch, FiPlus, FiEdit2, FiTrash2, FiChevronDown, FiUserCheck, 
-  FiUsers, FiAward, FiCompass, FiCalendar, FiUpload, FiEye, FiCheckCircle, FiMoreHorizontal, FiX 
+  FiUsers, FiAward, FiCompass, FiCalendar, FiUpload, FiEye, FiCheckCircle, FiMoreHorizontal, FiX,
+  FiTarget, FiClock
 } from 'react-icons/fi';
 
 const searchRoutes = [
@@ -114,6 +115,21 @@ export default function Students() {
       await adminAPI.updateStudentPayment(studentId, newPayment);
     } catch (err) {
       console.error('Failed to update student payment:', err);
+      loadGlobalStudents();
+    }
+  };
+
+  const handleProgramStatusChange = async (studentId, newStatus) => {
+    setStudentsData((prev) => ({
+      ...prev,
+      items: prev.items.map((s) => (s.id === studentId ? { ...s, status: newStatus, enrollmentStatus: newStatus, activeEnrollmentStatus: newStatus } : s)),
+    }));
+    try {
+      await adminAPI.updateStudent(studentId, { enrollmentStatus: newStatus });
+      loadGlobalStudents();
+    } catch (err) {
+      console.error('Failed to update student program status:', err);
+      alert(err.message || 'Failed to update program status.');
       loadGlobalStudents();
     }
   };
@@ -736,68 +752,31 @@ export default function Students() {
               ))}
             </div>
 
-            {/* Navigation Tabs (All Students, Enrolled, Leads, Skill, Exploring) */}
+            {/* Navigation Tabs (All Students, Enrolled, Placement, Skill, Leads, Exploring, Completed, Waitlist) */}
             <div className="flex border-b border-black/10 dark:border-white/10 gap-1 overflow-x-auto">
-              <button
-                onClick={() => setActiveTab('all')}
-                className={`px-3 py-2 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${
-                  activeTab === 'all'
-                    ? 'border-[#3C83F6] text-[#3C83F6] dark:text-[#7fb1ff]'
-                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
-              >
-                <FiUsers className="w-3.5 h-3.5" />
-                All Students
-              </button>
-
-              <button
-                onClick={() => setActiveTab('enrolled')}
-                className={`px-3 py-2 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${
-                  activeTab === 'enrolled'
-                    ? 'border-[#3C83F6] text-[#3C83F6] dark:text-[#7fb1ff]'
-                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
-              >
-                <FiUserCheck className="w-3.5 h-3.5" />
-                Enrolled
-              </button>
-
-              <button
-                onClick={() => setActiveTab('leads')}
-                className={`px-3 py-2 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${
-                  activeTab === 'leads'
-                    ? 'border-[#3C83F6] text-[#3C83F6] dark:text-[#7fb1ff]'
-                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
-              >
-                <FiUsers className="w-3.5 h-3.5" />
-                Leads
-              </button>
-
-              <button
-                onClick={() => setActiveTab('skill')}
-                className={`px-3 py-2 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${
-                  activeTab === 'skill'
-                    ? 'border-[#3C83F6] text-[#3C83F6] dark:text-[#7fb1ff]'
-                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
-              >
-                <FiAward className="w-3.5 h-3.5" />
-                Skill
-              </button>
-
-              <button
-                onClick={() => setActiveTab('exploring')}
-                className={`px-3 py-2 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${
-                  activeTab === 'exploring'
-                    ? 'border-[#3C83F6] text-[#3C83F6] dark:text-[#7fb1ff]'
-                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
-              >
-                <FiCompass className="w-3.5 h-3.5" />
-                Exploring
-              </button>
-              {['placement', 'completed', 'waitlist'].map(tab => <button key={tab} onClick={() => setActiveTab(tab)} className={`px-3 py-2 text-xs font-bold border-b-2 whitespace-nowrap ${activeTab === tab ? 'border-[#3C83F6] text-[#3C83F6]' : 'border-transparent text-slate-500 dark:text-slate-400'}`}>{tab[0].toUpperCase() + tab.slice(1)}</button>)}
+              {[
+                { id: 'all', label: 'All Students', icon: FiUsers },
+                { id: 'enrolled', label: 'Enrolled', icon: FiUserCheck },
+                { id: 'placement', label: 'Placement', icon: FiTarget },
+                { id: 'skill', label: 'Skill', icon: FiAward },
+                { id: 'leads', label: 'Leads', icon: FiUsers },
+                { id: 'exploring', label: 'Exploring', icon: FiCompass },
+                { id: 'completed', label: 'Completed', icon: FiCheckCircle },
+                { id: 'waitlist', label: 'Waitlist', icon: FiClock },
+              ].map(({ id, label, icon: TabIcon }) => (
+                <button
+                  key={id}
+                  onClick={() => setActiveTab(id)}
+                  className={`px-3 py-2 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${
+                    activeTab === id
+                      ? 'border-[#3C83F6] text-[#3C83F6] dark:text-[#7fb1ff]'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <TabIcon className="w-3.5 h-3.5" />
+                  {label}
+                </button>
+              ))}
             </div>
 
             {activeTab === 'leads' && stats.leadFeedbackReasonCounts?.length > 0 && (
@@ -971,15 +950,15 @@ export default function Students() {
                     {(['all', 'enrolled', 'placement', 'completed', 'waitlist'].includes(activeTab)) && (
                       <thead className="sticky top-0 z-10 bg-slate-100/90 dark:bg-[#0b1736]/90 backdrop-blur-md">
                         <tr className="border-b border-black/10 dark:border-white/10 text-[10px] font-bold text-black/40 dark:text-white/40 uppercase tracking-wider whitespace-nowrap">
-                          <th className="py-2.5 px-3 w-8"></th>
-                          <th className="py-2.5 px-2 w-8">#</th>
-                          <th className="py-2.5 px-3 max-w-[220px]">Student</th>
-                          <th className="py-2.5 px-3">College</th>
-                          <th className="py-2.5 px-3">Payment</th>
-                          <th className="py-2.5 px-3">Program</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap">Enrolled On</th>
-                          <th className="py-2.5 px-3">Status</th>
-                          <th className="py-2.5 px-3 text-right">Actions</th>
+                          <th className="py-2 px-2 w-7"></th>
+                          <th className="py-2 px-1.5 w-7 text-center">#</th>
+                          <th className="py-2 px-2.5 max-w-[200px]">Student</th>
+                          <th className="py-2 px-2.5 max-w-[140px]">College</th>
+                          <th className="py-2 px-2.5">Payment</th>
+                          <th className="py-2 px-2.5 max-w-[150px]">Program</th>
+                          <th className="py-2 px-2.5 whitespace-nowrap">Enrolled On</th>
+                          <th className="py-2 px-2.5">Program Status</th>
+                          <th className="py-2 px-2.5 text-right">Actions</th>
                         </tr>
                       </thead>
                     )}
@@ -987,16 +966,16 @@ export default function Students() {
                     {activeTab === 'leads' && (
                       <thead className="sticky top-0 z-10 bg-slate-100/90 dark:bg-[#0b1736]/90 backdrop-blur-md">
                         <tr className="border-b border-black/10 dark:border-white/10 text-[10px] font-bold text-black/40 dark:text-white/40 uppercase tracking-wider whitespace-nowrap">
-                          <th className="py-2.5 px-3 w-8"></th>
-                          <th className="py-2.5 px-2 w-8">#</th>
-                          <th className="py-2.5 px-3 max-w-[220px]">Student</th>
-                          <th className="py-2.5 px-3">Goal / Target Role</th>
-                          <th className="py-2.5 px-3">Target Companies</th>
-                          <th className="py-2.5 px-3">Source</th>
-                          <th className="py-2.5 px-3">Reason</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap">Last Activity</th>
-                          <th className="py-2.5 px-3">Status</th>
-                          <th className="py-2.5 px-3 text-right">Actions</th>
+                          <th className="py-2 px-2 w-7"></th>
+                          <th className="py-2 px-1.5 w-7 text-center">#</th>
+                          <th className="py-2 px-2.5 max-w-[200px]">Student</th>
+                          <th className="py-2 px-2.5">Goal / Target Role</th>
+                          <th className="py-2 px-2.5">Target Companies</th>
+                          <th className="py-2 px-2.5">Source</th>
+                          <th className="py-2 px-2.5">Reason</th>
+                          <th className="py-2 px-2.5 whitespace-nowrap">Last Activity</th>
+                          <th className="py-2 px-2.5">Status</th>
+                          <th className="py-2 px-2.5 text-right">Actions</th>
                         </tr>
                       </thead>
                     )}
@@ -1004,15 +983,15 @@ export default function Students() {
                     {activeTab === 'skill' && (
                       <thead className="sticky top-0 z-10 bg-slate-100/90 dark:bg-[#0b1736]/90 backdrop-blur-md">
                         <tr className="border-b border-black/10 dark:border-white/10 text-[10px] font-bold text-black/40 dark:text-white/40 uppercase tracking-wider whitespace-nowrap">
-                          <th className="py-2.5 px-3 w-8"></th>
-                          <th className="py-2.5 px-2 w-8">#</th>
-                          <th className="py-2.5 px-3 max-w-[220px]">Student</th>
-                          <th className="py-2.5 px-3">College</th>
-                          <th className="py-2.5 px-3">Payment</th>
-                          <th className="py-2.5 px-3">Current Program</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap">Enrolled On</th>
-                          <th className="py-2.5 px-3">Status</th>
-                          <th className="py-2.5 px-3 text-right">Actions</th>
+                          <th className="py-2 px-2 w-7"></th>
+                          <th className="py-2 px-1.5 w-7 text-center">#</th>
+                          <th className="py-2 px-2.5 max-w-[200px]">Student</th>
+                          <th className="py-2 px-2.5 max-w-[140px]">College</th>
+                          <th className="py-2 px-2.5">Payment</th>
+                          <th className="py-2 px-2.5 max-w-[150px]">Current Program</th>
+                          <th className="py-2 px-2.5 whitespace-nowrap">Enrolled On</th>
+                          <th className="py-2 px-2.5">Program Status</th>
+                          <th className="py-2 px-2.5 text-right">Actions</th>
                         </tr>
                       </thead>
                     )}
@@ -1020,15 +999,15 @@ export default function Students() {
                     {activeTab === 'exploring' && (
                       <thead className="sticky top-0 z-10 bg-slate-100/90 dark:bg-[#0b1736]/90 backdrop-blur-md">
                         <tr className="border-b border-black/10 dark:border-white/10 text-[10px] font-bold text-black/40 dark:text-white/40 uppercase tracking-wider whitespace-nowrap">
-                          <th className="py-2.5 px-3 w-8"></th>
-                          <th className="py-2.5 px-2 w-8">#</th>
-                          <th className="py-2.5 px-3 max-w-[220px]">Student</th>
-                          <th className="py-2.5 px-3">Email</th>
-                          <th className="py-2.5 px-3">College</th>
-                          <th className="py-2.5 px-3">Goal</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap">Joined On</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap">Last Activity</th>
-                          <th className="py-2.5 px-3 text-right">Actions</th>
+                          <th className="py-2 px-2 w-7"></th>
+                          <th className="py-2 px-1.5 w-7 text-center">#</th>
+                          <th className="py-2 px-2.5 max-w-[200px]">Student</th>
+                          <th className="py-2 px-2.5">Email</th>
+                          <th className="py-2 px-2.5 max-w-[140px]">College</th>
+                          <th className="py-2 px-2.5">Goal</th>
+                          <th className="py-2 px-2.5 whitespace-nowrap">Joined On</th>
+                          <th className="py-2 px-2.5 whitespace-nowrap">Last Activity</th>
+                          <th className="py-2 px-2.5 text-right">Actions</th>
                         </tr>
                       </thead>
                     )}
@@ -1048,7 +1027,8 @@ export default function Students() {
                           >
                             
                             {/* Checkbox */}
-                            <td className="py-2.5 px-3">
+                            {/* Checkbox */}
+                            <td className="py-2 px-2">
                               <input
                                 type="checkbox"
                                 checked={isSelected}
@@ -1057,17 +1037,17 @@ export default function Students() {
                               />
                             </td>
 
-                            <td className="py-2.5 px-2 font-medium text-black/40 dark:text-white/40 text-[11px]">{idx + 1}</td>
+                            <td className="py-2 px-1.5 font-medium text-black/40 dark:text-white/40 text-[11px] text-center">{idx + 1}</td>
 
                             {/* Student Info */}
-                            <td className="py-2.5 px-3 max-w-[220px]">
+                            <td className="py-2 px-2.5 max-w-[200px]">
                               <div
                                 className="text-left group block truncate max-w-full"
                               >
-                                <span className="font-bold text-slate-800 dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#7fb1ff] transition-colors truncate block">
+                                <span className="font-bold text-slate-800 dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#7fb1ff] transition-colors truncate block" title={student.name}>
                                   {student.name}
                                 </span>
-                                <span className="block text-[11px] text-slate-400 dark:text-slate-500 font-normal truncate">
+                                <span className="block text-[11px] text-slate-400 dark:text-slate-500 font-normal truncate" title={student.email}>
                                   {student.email}
                                 </span>
                               </div>
@@ -1076,10 +1056,12 @@ export default function Students() {
                             {/* ENROLLED / ALL TAB COLUMNS */}
                             {(['all', 'enrolled', 'placement', 'completed', 'waitlist'].includes(activeTab)) && (
                               <>
-                                <td className="py-2.5 px-3 font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                                  {student.college}
+                                <td className="py-2 px-2.5 max-w-[140px] font-medium text-slate-700 dark:text-slate-300">
+                                  <span className="truncate block" title={student.college || ''}>
+                                    {student.college || '—'}
+                                  </span>
                                 </td>
-                                <td className="py-2.5 px-3" onClick={(e) => e.stopPropagation()}>
+                                <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
                                   <div className="relative inline-block">
                                     <select
                                       value={student.payment || (student.access === 'Paid' ? 'Paid' : 'Pending')}
@@ -1092,33 +1074,46 @@ export default function Students() {
                                             : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
                                       }`}
                                     >
-                                      <option value="Paid">Paid</option>
-                                      <option value="Pending">Pending</option>
-                                      <option value="Failed">Failed</option>
+                                      <option value="Paid" className={dropdownOptionClass}>Paid</option>
+                                      <option value="Pending" className={dropdownOptionClass}>Pending</option>
+                                      <option value="Failed" className={dropdownOptionClass}>Failed</option>
                                     </select>
                                     <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 opacity-60" />
                                   </div>
                                   {(student.pricingPlan?.price || student.access === 'Paid') && (
-                                    <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                    <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate max-w-[120px]" title={student.pricingPlan?.title || ''}>
                                       {student.pricingPlan?.price ? `₹${student.pricingPlan.price}` : ''}
                                       {student.pricingPlan?.title ? ` • ${student.pricingPlan.title}` : ''}
                                     </div>
                                   )}
                                 </td>
-                                <td className="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                                  {student.currentProgram || '—'}
+                                <td className="py-2 px-2.5 max-w-[150px] font-semibold text-slate-700 dark:text-slate-300">
+                                  <span className="truncate block" title={student.currentProgram || ''}>
+                                    {student.currentProgram || '—'}
+                                  </span>
                                 </td>
-                                <td className="py-2.5 px-3 text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                <td className="py-2 px-2.5 text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                   {formatDateValue(student.enrolledOn)}
                                 </td>
-                                <td className="py-2.5 px-3">
-                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                    student.status === 'Active' ? 'bg-[#16a34a] text-white' :
-                                    ['Completed', 'Paused'].includes(student.status) ? 'bg-[#efe6d2] text-[#d17d00] dark:bg-[#4f4228] dark:text-[#fcd34d]' :
-                                    'bg-rose-100 text-rose-800 dark:bg-rose-500/10 dark:text-rose-400'
-                                  }`}>
-                                    {student.status}
-                                  </span>
+                                <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
+                                  <div className="relative inline-block">
+                                    <select
+                                      value={student.activeEnrollmentStatus || student.enrollmentStatus || (['Active', 'Completed', 'Paused'].includes(student.status) ? student.status : 'Active')}
+                                      onChange={(e) => handleProgramStatusChange(student.id, e.target.value)}
+                                      className={`appearance-none pr-5 pl-2 py-0.5 rounded-full text-[10px] font-bold border outline-none cursor-pointer transition ${
+                                        (student.activeEnrollmentStatus || student.enrollmentStatus || student.status) === 'Active'
+                                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                                          : (student.activeEnrollmentStatus || student.enrollmentStatus || student.status) === 'Completed'
+                                            ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800'
+                                            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                      }`}
+                                    >
+                                      <option value="Active" className={dropdownOptionClass}>Active</option>
+                                      <option value="Completed" className={dropdownOptionClass}>Completed</option>
+                                      <option value="Paused" className={dropdownOptionClass}>Paused</option>
+                                    </select>
+                                    <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 opacity-60" />
+                                  </div>
                                 </td>
                               </>
                             )}
@@ -1126,18 +1121,18 @@ export default function Students() {
                             {/* LEADS TAB COLUMNS */}
                             {activeTab === 'leads' && (
                               <>
-                                <td className="py-2.5 px-4 font-semibold text-slate-700 dark:text-slate-300">
+                                <td className="py-2 px-2.5 font-semibold text-slate-700 dark:text-slate-300">
                                   {student.targetRole || student.goal}
                                 </td>
-                                <td className="py-2.5 px-4 text-[11px] text-slate-500 dark:text-slate-400">
+                                <td className="py-2 px-2.5 text-[11px] text-slate-500 dark:text-slate-400">
                                   {student.targetCompanies && student.targetCompanies.length > 0 ? student.targetCompanies.join(', ') : '—'}
                                 </td>
-                                <td className="py-2.5 px-4">
+                                <td className="py-2 px-2.5">
                                   <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-medium bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300">
                                     {student.source}
                                   </span>
                                 </td>
-                                <td className="py-2.5 px-4 text-[11px] text-amber-600 dark:text-amber-400 font-medium max-w-[220px]">
+                                <td className="py-2 px-2.5 text-[11px] text-amber-600 dark:text-amber-400 font-medium max-w-[200px]">
                                   <span className="block truncate" title={student.pricingExitReason || undefined}>
                                     {student.pricingExitReason || '—'}
                                   </span>
@@ -1147,10 +1142,10 @@ export default function Students() {
                                     </span>
                                   )}
                                 </td>
-                                <td className="py-2.5 px-4 text-[11px] text-slate-500 dark:text-slate-400">
+                                <td className="py-2 px-2.5 text-[11px] text-slate-500 dark:text-slate-400">
                                   {student.lastActivity}
                                 </td>
-                                <td className="py-2.5 px-4">
+                                <td className="py-2 px-2.5">
                                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#dbe7ff] text-[#3c83f6]">
                                     Interested
                                   </span>
@@ -1161,10 +1156,12 @@ export default function Students() {
                             {/* SKILL TAB COLUMNS */}
                             {activeTab === 'skill' && (
                               <>
-                                <td className="py-2.5 px-4 font-medium text-slate-700 dark:text-slate-300">
-                                  {student.college}
+                                <td className="py-2 px-2.5 max-w-[140px] font-medium text-slate-700 dark:text-slate-300">
+                                  <span className="truncate block" title={student.college || ''}>
+                                    {student.college || '—'}
+                                  </span>
                                 </td>
-                                <td className="py-2.5 px-4" onClick={(e) => e.stopPropagation()}>
+                                <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
                                   <div className="relative inline-block">
                                     <select
                                       value={student.payment || (student.skillAccess === 'Paid' ? 'Paid' : 'Pending')}
@@ -1177,23 +1174,40 @@ export default function Students() {
                                             : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
                                       }`}
                                     >
-                                      <option value="Paid">Paid</option>
-                                      <option value="Pending">Pending</option>
-                                      <option value="Failed">Failed</option>
+                                      <option value="Paid" className={dropdownOptionClass}>Paid</option>
+                                      <option value="Pending" className={dropdownOptionClass}>Pending</option>
+                                      <option value="Failed" className={dropdownOptionClass}>Failed</option>
                                     </select>
                                     <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 opacity-60" />
                                   </div>
                                 </td>
-                                <td className="py-2.5 px-4 font-semibold text-slate-700 dark:text-slate-300">
-                                  {student.currentProgram || '—'}
+                                <td className="py-2 px-2.5 max-w-[150px] font-semibold text-slate-700 dark:text-slate-300">
+                                  <span className="truncate block" title={student.currentProgram || ''}>
+                                    {student.currentProgram || '—'}
+                                  </span>
                                 </td>
-                                <td className="py-2.5 px-4 text-[11px] text-slate-500 dark:text-slate-400">
+                                <td className="py-2 px-2.5 text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                   {formatDateValue(student.enrolledOn)}
                                 </td>
-                                <td className="py-2.5 px-4">
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#16a34a] text-white">
-                                    {student.status}
-                                  </span>
+                                <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
+                                  <div className="relative inline-block">
+                                    <select
+                                      value={student.activeEnrollmentStatus || student.enrollmentStatus || (['Active', 'Completed', 'Paused'].includes(student.status) ? student.status : 'Active')}
+                                      onChange={(e) => handleProgramStatusChange(student.id, e.target.value)}
+                                      className={`appearance-none pr-5 pl-2 py-0.5 rounded-full text-[10px] font-bold border outline-none cursor-pointer transition ${
+                                        (student.activeEnrollmentStatus || student.enrollmentStatus || student.status) === 'Active'
+                                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                                          : (student.activeEnrollmentStatus || student.enrollmentStatus || student.status) === 'Completed'
+                                            ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800'
+                                            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                      }`}
+                                    >
+                                      <option value="Active" className={dropdownOptionClass}>Active</option>
+                                      <option value="Completed" className={dropdownOptionClass}>Completed</option>
+                                      <option value="Paused" className={dropdownOptionClass}>Paused</option>
+                                    </select>
+                                    <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 opacity-60" />
+                                  </div>
                                 </td>
                               </>
                             )}
@@ -1201,26 +1215,28 @@ export default function Students() {
                             {/* EXPLORING TAB COLUMNS */}
                             {activeTab === 'exploring' && (
                               <>
-                                <td className="py-2.5 px-4 text-[11px] text-slate-500 dark:text-slate-400">
+                                <td className="py-2 px-2.5 text-[11px] text-slate-500 dark:text-slate-400">
                                   {student.email}
                                 </td>
-                                <td className="py-2.5 px-4 font-medium text-slate-700 dark:text-slate-300">
-                                  {student.college}
+                                <td className="py-2 px-2.5 max-w-[140px] font-medium text-slate-700 dark:text-slate-300">
+                                  <span className="truncate block" title={student.college || ''}>
+                                    {student.college || '—'}
+                                  </span>
                                 </td>
-                                <td className="py-2.5 px-4 font-semibold text-slate-700 dark:text-slate-300">
+                                <td className="py-2 px-2.5 font-semibold text-slate-700 dark:text-slate-300">
                                   {student.goal}
                                 </td>
-                                <td className="py-2.5 px-4 text-[11px] text-slate-500 dark:text-slate-400">
+                                <td className="py-2 px-2.5 text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                   {formatDateValue(student.enrolledOn)}
                                 </td>
-                                <td className="py-2.5 px-4 text-[11px] text-slate-500 dark:text-slate-400">
+                                <td className="py-2 px-2.5 text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                   {student.lastActivity}
                                 </td>
                               </>
                             )}
 
                             {/* Actions Column */}
-                            <td className="py-2.5 px-4 text-right space-x-1.5 whitespace-nowrap">
+                            <td className="py-2 px-2.5 text-right space-x-1 whitespace-nowrap">
                               <button
                                 onClick={() => setSelectedReportStudent(student)}
                                 title="View Student Report"
