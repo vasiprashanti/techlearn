@@ -3884,6 +3884,20 @@ export const updateStudentAdmin = async (req, res) => {
         await syncPrimaryProgramPointers({ student, user: linkedUser });
       }
 
+      let nextCollegeName = undefined;
+      if (nextCollegeId) {
+        const collegeDoc = await College.findById(nextCollegeId).select("name").lean();
+        if (collegeDoc) nextCollegeName = collegeDoc.name;
+      }
+
+      let parsedFirstName = undefined;
+      let parsedLastName = undefined;
+      if (update.name) {
+        const nameParts = update.name.trim().split(/\s+/);
+        parsedFirstName = nameParts[0] || "";
+        parsedLastName = nameParts.slice(1).join(" ") || "";
+      }
+
       const activeEnrollment = await ProgramEnrollment.findOne({
         status: "Active",
         $or: enrollmentIdentifiers,
@@ -3893,6 +3907,8 @@ export const updateStudentAdmin = async (req, res) => {
         .populate("batchId", "startDate")
         .lean();
       const userUpdate = {
+        ...(parsedFirstName !== undefined ? { firstName: parsedFirstName, lastName: parsedLastName } : {}),
+        ...(nextCollegeName !== undefined ? { collegeName: nextCollegeName } : {}),
         programSelection: activeEnrollment?.programId?.programType || "",
         startDate: activeEnrollment?.batchId?.startDate || activeEnrollment?.individualStartDate || null,
       };
