@@ -60,6 +60,7 @@ import learnerReportRoutes from "./routes/learnerReportRoutes.js";
 import adminJobRoutes from "./routes/adminJobRoutes.js";
 
 import testimonialRoutes from "./routes/testimonialRoutes.js";
+import siteSettingsRoutes from "./routes/siteSettingsRoutes.js";
 
 
 dotenv.config();
@@ -138,6 +139,7 @@ app.use("/api/roadmaps", roadmapRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/practice", practiceRoutes);
 app.use("/api/testimonials", testimonialRoutes);
+app.use("/api/site", siteSettingsRoutes);
 // ✅ BUILD PAGE Routes
 app.use("/api/mini-projects", miniRouter);
 app.use("/api/major-projects", majorRouter);

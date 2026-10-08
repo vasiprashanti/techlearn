@@ -49,6 +49,7 @@ const menuGroups = [
   {
     title: "SYSTEM",
     items: [
+      { id: "admin/pricing", title: "Pricing", icon: <FiSettings className="w-4 h-4" /> },
       { id: "settings", title: "Settings", icon: <FiSettings className="w-4 h-4" /> },
       { id: "analytics", title: "Analytics", icon: <FiBarChart2 className="w-4 h-4" /> },
       { id: "system-health", title: "System Health", icon: <FiActivity className="w-4 h-4" /> },

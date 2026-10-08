@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import FreeAssessmentModal from '../components/Learn/FreeAssessmentModal'
 import JourneyPath from '../components/JourneyPath'
 import ProblemSection from '../components/ProblemSection'
+import HomepagePricing from '../components/HomepagePricing'
 
 const codeFragments = [
   "DSA.solve(problem)",
@@ -362,66 +363,7 @@ const HomePage = () => {
       {/* =========================================================
            05 — PRICING (from Index.html / screenshot)
       ========================================================= */}
-      <section className="tl-pricing-section" id="pricing">
-        <div className="tl-pricing-inner">
-          <div className="tl-pricing-header">
-            <span className="tl-pricing-eyebrow">THE NEXT STEP</span>
-            <h2 className="tl-pricing-title">
-              Choose <i>your</i>&nbsp;&nbsp;path
-            </h2>
-          </div>
-
-          <div className="tl-pricing-grid">
-            {/* Skill Program */}
-            <article className="tl-price-card">
-              <div className="tl-price-badge secondary-badge">BEGINNER FRIENDLY</div>
-              <h3 className="tl-price-card-title">SKILL PROGRAM</h3>
-              <p className="tl-price-subtitle">
-                Pick a skill and build real ability through structured learning, daily practice and hands-on work.
-              </p>
-              <div className="tl-price">
-                ₹399 <small>one-time</small>
-              </div>
-              <div className="tl-price-divider"></div>
-              <ul className="tl-price-features">
-                <li>DSA with Java or Python</li>
-                <li>AI, ML & Generative AI</li>
-                <li>Structured roadmap with concept-wise notes</li>
-                <li>Daily tasks, challenges & quizzes</li>
-                <li>Weekly assessments & progress tracking</li>
-                <li>Monthly mini-project ideas + course certificate</li>
-              </ul>
-              <Link to="/onboarding?intent=skill" className="tl-price-button">
-                START LEARNING →
-              </Link>
-            </article>
-
-            {/* Placement Program (Featured) */}
-            <article className="tl-price-card featured">
-              <div className="tl-price-badge">MOST POPULAR</div>
-              <h3 className="tl-price-card-title">PLACEMENT PROGRAM</h3>
-              <p className="tl-price-subtitle">
-                A focused preparation system for students who want to become interview-ready and improve their chances of landing a job.
-              </p>
-              <div className="tl-price">
-                ₹799 <small>one-time</small>
-              </div>
-              <div className="tl-price-divider"></div>
-              <ul className="tl-price-features">
-                <li>Structured DSA practice</li>
-                <li>Aptitude & Core CS preparation</li>
-                <li>Company & role-based interview questions</li>
-                <li>Daily placement tasks & challenges</li>
-                <li>Mock interview + feedback report</li>
-                <li>Jobs & internships board</li>
-              </ul>
-              <Link to="/onboarding?intent=placement" className="tl-price-button">
-                START PREPARING →
-              </Link>
-            </article>
-          </div>
-        </div>
-      </section>
+      <HomepagePricing />
 
       {/* =========================================================
            06 — FAQS (Light mode)

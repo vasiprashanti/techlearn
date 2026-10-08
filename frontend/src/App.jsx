@@ -108,6 +108,7 @@ const SubmissionMonitor = lazy(() => import('./pages/AdminDashbaord/SubmissionMo
 const AuditLogs = lazy(() => import('./pages/AdminDashbaord/AuditLogs.jsx'))
 const Reports = lazy(() => import('./pages/AdminDashbaord/Reports.jsx'))
 const Settings = lazy(() => import('./pages/AdminDashbaord/Settings.jsx'))
+const AdminPricing = lazy(() => import('./pages/AdminDashbaord/Pricing.jsx'))
 const Programs = lazy(() => import('./pages/AdminDashbaord/Programs.jsx'))
 const ProgramDetails = lazy(() => import('./pages/AdminDashbaord/ProgramDetails.jsx'))
 const HiringRoleJobs = lazy(() => import("./pages/AdminDashbaord/HiringRoleJobs.jsx"));
@@ -402,6 +403,7 @@ function LayoutWrapper() {
           
           {/* All admin routes protected by AdminPrivateRoute */}
           <Route element={<AdminPrivateRoute />}>
+          <Route path="/admin/pricing" element={<AdminPricing />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/courses" element={<Courses_Admin />} />
             <Route path="/admin/hiring" element={<Hiring />} />
