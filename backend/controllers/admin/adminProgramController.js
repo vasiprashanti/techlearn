@@ -557,10 +557,7 @@ const buildProgramMonitoringData = async ({ program, enrollments, students }) =>
   const everEnrolledStudentIds = new Set(
     enrollments.map((enrollment) => getIdString(enrollment.studentId)).filter(Boolean)
   );
-  const currentEnrolled = studentMonitoringRows.filter((student) =>
-    isCurrentMonthInIndia(student.programStartDate, now)
-      && ["Active", "Completed"].includes(student.programStatus)
-  ).length;
+  const currentEnrolled = studentMonitoringRows.filter((student) => student.programStatus === "Active").length;
   const activeToday = studentMonitoringRows.filter((student) => student.activeToday).length;
   const completedStudents = studentMonitoringRows.filter((student) => student.programStatus === "Completed");
   const accuracyValues = completedStudents
@@ -660,6 +657,15 @@ export const listPrograms = async (req, res) => {
     const enrollmentGroups = rawPrograms.length
       ? await ProgramEnrollment.aggregate([
           { $match: { programId: { $in: rawPrograms.map((program) => program._id) } } },
+          {
+            $lookup: {
+              from: "students",
+              localField: "studentId",
+              foreignField: "_id",
+              as: "student",
+            },
+          },
+          { $match: { "student.0": { $exists: true } } },
           { $group: { _id: "$programId", studentIds: { $addToSet: "$studentId" } } },
         ])
       : [];
