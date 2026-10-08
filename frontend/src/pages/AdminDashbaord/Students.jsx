@@ -964,7 +964,7 @@ export default function Students() {
                   No students found in this view.
                 </div>
               ) : (
-                <div className="overflow-x-auto max-h-[calc(100vh-360px)] overflow-y-auto">
+                <div className="overflow-x-auto w-full">
                   <table className="w-full text-left text-xs border-collapse">
                     
                     {/* TAB Headers */}
