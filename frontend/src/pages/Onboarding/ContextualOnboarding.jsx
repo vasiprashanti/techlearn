@@ -664,6 +664,11 @@ export default function ContextualOnboarding() {
           scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
         }
 
+        .tl-screen-body.no-scroll {
+          overflow-y: hidden !important;
+          overflow: hidden !important;
+        }
+
         .tl-screen-body::-webkit-scrollbar {
           width: 5px;
         }
@@ -1161,7 +1166,7 @@ export default function ContextualOnboarding() {
         ) : step <= totalQuestions ? (
           /* QUESTION STEPS (1 question per screen) */
           <div className="tl-screen">
-            <div className="tl-screen-body">
+            <div className={`tl-screen-body ${flowType === "job-ready" && step === 1 ? "no-scroll" : ""}`}>
               <div className="tl-eyebrow">STEP {step} OF {totalQuestions}</div>
 
               {/* LEARN A SKILL QUESTIONS */}
@@ -1572,7 +1577,10 @@ export default function ContextualOnboarding() {
               <button
                 type="button"
                 className="tl-btn tl-btn-back"
-                onClick={() => setStep(totalQuestions)}
+                onClick={() => {
+                  setError("");
+                  setIsFeedbackOpen(true);
+                }}
               >
                 BACK
               </button>
