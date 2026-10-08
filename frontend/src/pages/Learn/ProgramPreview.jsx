@@ -48,19 +48,33 @@ export default function ProgramPreview() {
 
   useEffect(() => {
     let cancelled = false;
-    if (isAuthenticated) {
-      placementLearningAPI
-        .getDashboard()
-        .then((res) => {
-          if (!cancelled && res?.hasPlacementLearning) {
-            setPlacementLearning(res);
-            const activeProgId = String(res.program?.id || res.program?._id || "");
-            if (activeProgId === String(programId)) {
-              setIsEnrolled(true);
-            }
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    if (isAuthenticated || token) {
+      Promise.allSettled([
+        placementLearningAPI.getDashboard(),
+        programLearningAPI.getAssignedPrograms(),
+      ]).then(([placementRes, assignedRes]) => {
+        if (cancelled) return;
+        let userIsEnrolled = false;
+
+        if (placementRes.status === 'fulfilled' && placementRes.value?.hasPlacementLearning) {
+          setPlacementLearning(placementRes.value);
+          const activeProgId = String(placementRes.value.program?.id || placementRes.value.program?._id || "");
+          if (activeProgId === String(programId)) {
+            userIsEnrolled = true;
           }
-        })
-        .catch(() => {});
+        }
+
+        if (assignedRes.status === 'fulfilled' && Array.isArray(assignedRes.value?.programs)) {
+          if (assignedRes.value.programs.some(p => String(p._id || p.id) === String(programId))) {
+            userIsEnrolled = true;
+          }
+        }
+
+        if (userIsEnrolled) {
+          setIsEnrolled(true);
+        }
+      }).catch(() => {});
     } else {
       setIsEnrolled(false);
       setPlacementLearning(null);
