@@ -1125,10 +1125,10 @@ export default function Courses() {
                 No courses match the selected filters. Click &ldquo;Add New Course&rdquo; above to create one.
               </div>
             ) : (
-              <div className="max-h-[78vh] overflow-x-auto overflow-y-auto w-full bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl shadow-xs minimal-scrollbar">
+              <div className="overflow-x-auto w-full bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl shadow-xs minimal-scrollbar">
                 <table className="w-full min-w-[980px] border-collapse">
-                  <thead>
-                    <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/70 dark:bg-slate-900/40 select-none">
+                  <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-[#0b1736] shadow-xs">
+                    <tr className="border-b border-black/5 dark:border-white/10 select-none">
                       <th className="px-3.5 py-3 text-center text-xs font-semibold text-black/45 dark:text-white/50 w-14 whitespace-nowrap">#</th>
                       <th
                         className="px-4 py-3 text-left text-xs font-semibold text-black/45 dark:text-white/50 min-w-[220px] cursor-pointer hover:text-blue-500 whitespace-nowrap"

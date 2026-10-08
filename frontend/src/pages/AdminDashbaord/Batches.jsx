@@ -1273,10 +1273,10 @@ const Batches = () => {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto overflow-y-auto max-h-[75vh] w-full bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl shadow-xs minimal-scrollbar">
+            <div className="overflow-x-auto w-full bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl shadow-xs minimal-scrollbar">
               <table className="w-full min-w-[980px] border-collapse">
-                <thead>
-                  <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/70 dark:bg-slate-900/40 select-none">
+                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-[#0b1736] shadow-xs">
+                  <tr className="border-b border-black/5 dark:border-white/10 select-none">
                     <th className="px-3.5 py-3 text-center w-12 shrink-0">
                       <input
                         type="checkbox"
