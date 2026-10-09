@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { BookOpen, CheckCircle, ChevronLeft, ChevronRight, AlertCircle, Lock, Brain, Target, LayoutDashboard } from "lucide-react";
+import { BookOpen, CheckCircle, ChevronLeft, ChevronRight, AlertCircle, Lock, Brain, Target } from "lucide-react";
 import ScrollProgress from "../../components/ScrollProgress";
 import { courseAPI, placementLearningAPI } from "../../services/api";
 import { dailyChallengeAPI } from "../../services/dailyChallengeApi";
@@ -208,25 +208,7 @@ const CourseTopics = () => {
       <main className="relative z-10 flex min-h-screen min-w-0 flex-1 flex-col overflow-x-clip pt-20 transition-all duration-700 ease-in-out md:pt-24">
         
         {/* Top Header */}
-        <header className="flex-shrink-0 flex items-center justify-between px-4 pt-4 pb-4 sm:px-7 md:px-12">
-          <div className="flex items-center gap-3">
-            <button 
-                onClick={() => navigate('/learn')} 
-                className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] leading-tight text-[#001862] hover:text-[#2d7fe8] dark:text-[#7fb9e6] dark:hover:text-[#96ddff] transition-colors group"
-            >
-                <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                <span>Back to Learn</span>
-            </button>
-            <span className="text-black/20 dark:text-white/20">|</span>
-            <button
-                onClick={() => navigate('/dashboard')}
-                className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[#3C83F6] hover:underline"
-            >
-                <LayoutDashboard className="w-3.5 h-3.5" />
-                <span>Dashboard</span>
-            </button>
-          </div>
-
+        <header className="flex-shrink-0 flex items-center justify-end px-4 pt-4 pb-4 sm:px-7 md:px-12">
           <div className="flex items-center gap-4 sm:gap-6 relative z-50">
             <button 
               onClick={() => setIsSyllabusOpen(true)}

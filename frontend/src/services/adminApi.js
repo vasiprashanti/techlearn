@@ -415,9 +415,21 @@ export const adminAPI = {
 
   getCourses: () => request('/courses'),
   getCourseTopics: (courseId) => request(`/admin/${courseId}`, { noCache: true }),
-  createCourse: (body) => request('/admin/course-initiate', { method: 'POST', body: body instanceof FormData ? body : JSON.stringify(body) }),
-  updateCourse: (courseId, body) => request(`/admin/${courseId}`, { method: 'PUT', body: body instanceof FormData ? body : JSON.stringify(body) }),
-  deleteCourse: (courseId) => request(`/admin/${courseId}`, { method: 'DELETE' }),
+  createCourse: async (body) => {
+    const result = await request('/admin/course-initiate', { method: 'POST', body: body instanceof FormData ? body : JSON.stringify(body) });
+    invalidateCacheForPath('/courses');
+    return result;
+  },
+  updateCourse: async (courseId, body) => {
+    const result = await request(`/admin/${courseId}`, { method: 'PUT', body: body instanceof FormData ? body : JSON.stringify(body) });
+    invalidateCacheForPath('/courses');
+    return result;
+  },
+  deleteCourse: async (courseId) => {
+    const result = await request(`/admin/${courseId}`, { method: 'DELETE' });
+    invalidateCacheForPath('/courses');
+    return result;
+  },
 
   getCertificates: () => request('/admin/certificates'),
   issueCertificate: (body) => request('/admin/certificates/issued', { method: 'POST', body: JSON.stringify(body) }),

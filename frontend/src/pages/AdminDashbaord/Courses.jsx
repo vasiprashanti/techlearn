@@ -124,6 +124,8 @@ export default function Courses() {
           instructorBio: String(course.instructorBio || ""),
           learningOutcomes: Array.isArray(course.learningOutcomes) ? course.learningOutcomes : [],
           duration: String(course.duration || ""),
+          schedule: String(course.schedule || ""),
+          startDate: String(course.startDate || ""),
           _id: String(course._id || course.courseId || course.id || ""),
         };
       });
@@ -271,8 +273,9 @@ export default function Courses() {
       return;
     }
 
-    // 6. Validation: Publishing gate
-    if (courseForm.status === "Published") {
+    // Course shells cannot be created as Published. Existing courses can
+    // transition to Published; the server validates that they have topics.
+    if (!editingCourse && courseForm.status === "Published") {
       setFormError("A course cannot be published with zero actual topics. Please create the course as Draft and add curriculum topics first.");
       return;
     }
@@ -289,7 +292,9 @@ export default function Courses() {
     formData.append("courseType", courseForm.deliveryType === "Trainer-Led" ? "Trainer-led" : "Self-paced");
     formData.append("accessType", courseForm.accessType);
     formData.append("price", String(courseForm.accessType === "Paid" ? courseForm.price : 0));
-    formData.append("status", courseForm.status);
+    if (!editingCourse || courseForm.status !== editingCourse.status) {
+      formData.append("status", courseForm.status);
+    }
     formData.append("numTopics", String(numTopicsVal));
     formData.append("learningOutcomes", JSON.stringify(courseForm.learningOutcomes || []));
 
@@ -332,8 +337,8 @@ export default function Courses() {
       await fetchCourses();
       resetForm();
     } catch (err) {
-      console.error("Error creating course:", err);
-      setFormError(`Could not create course: ${err.message}`);
+      console.error(editingCourse ? "Error updating course:" : "Error creating course:", err);
+      setFormError(`Could not ${editingCourse ? "update" : "create"} course: ${err.message}`);
     } finally {
       setSaving(false);
     }
