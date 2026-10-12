@@ -7,6 +7,7 @@ import {
   BriefcaseBusiness,
   BookOpen,
   LayoutDashboard,
+  Map,
   User,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,6 +21,7 @@ const menuGroups = [
       { id: "dashboard", title: "Dashboard", icon: <LayoutDashboard className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "learn", title: "Learn", icon: <BookOpen className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "jobs", title: "Hiring", icon: <BriefcaseBusiness className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "dashboard/roadmap", title: "Roadmaps", icon: <Map className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/leaderboard", title: "Leaderboard", icon: <Award className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/performance", title: "Performance", icon: <BarChart3 className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/profile", title: "Profile", icon: <User className="w-[18px] h-[18px] md:w-5 md:h-5" /> },

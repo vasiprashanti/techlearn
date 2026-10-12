@@ -605,8 +605,9 @@ export default function Navbar() {
               <li>
                 <Link to="/learn">Learn</Link>
               </li>
-              {/* Roadmaps navigation is intentionally hidden for now.
-                  Re-enable this link before the final launch. */}
+              <li>
+                <Link to="/roadmaps">Roadmaps</Link>
+              </li>
               <li>
                 <Link to="/jobs">Hiring</Link>
               </li>
@@ -733,8 +734,7 @@ export default function Navbar() {
             ref={mobileMenuRef}
           >
             <Link to="/learn">Learn</Link>
-            {/* Roadmaps navigation is intentionally hidden for now.
-                Re-enable this link before the final launch. */}
+            <Link to="/roadmaps">Roadmaps</Link>
             <Link to="/jobs">Hiring</Link>
 
             {isAuthenticated ? (

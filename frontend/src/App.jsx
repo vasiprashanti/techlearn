@@ -256,7 +256,7 @@ function LayoutWrapper() {
                      !isStudentSidebarRoute;
 
   return (
-    <div className="relative z-10 flex flex-col min-h-screen">
+    <div className={`relative z-10 flex flex-col min-h-screen ${(isDashboardRoute || isStudentSidebarRoute) ? 'dashboard-page-shell' : ''}`}>
       {location.pathname.startsWith('/onboarding') && (
         <div
           className="fixed left-0 top-0 z-[100] h-[72px] w-full"

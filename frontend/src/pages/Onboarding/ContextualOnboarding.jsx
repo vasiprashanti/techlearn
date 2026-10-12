@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useUser } from "../../context/UserContext";
@@ -435,6 +435,13 @@ export default function ContextualOnboarding() {
     } else {
       finish();
     }
+  };
+
+  // Single-answer questions advance on selection; multi-answer questions wait for Continue.
+  const continueRef = useRef(handleContinue);
+  continueRef.current = handleContinue;
+  const autoAdvance = () => {
+    setTimeout(() => continueRef.current(), 220);
   };
 
   const handleBack = () => {
@@ -1135,6 +1142,7 @@ export default function ContextualOnboarding() {
                       onClick={() => {
                         setError("");
                         setFlowType(opt.type);
+                        autoAdvance();
                       }}
                     >
                       {opt.label}
@@ -1187,6 +1195,7 @@ export default function ContextualOnboarding() {
                               onClick={() => {
                                 setSkill(item);
                                 setError("");
+                                if (item !== "Other") autoAdvance();
                               }}
                             >
                               {item}
@@ -1228,6 +1237,7 @@ export default function ContextualOnboarding() {
                               onClick={() => {
                                 setSkillGoal(item);
                                 setError("");
+                                if (item !== "Other") autoAdvance();
                               }}
                             >
                               {item}
@@ -1253,6 +1263,7 @@ export default function ContextualOnboarding() {
                               onClick={() => {
                                 setSkillLevel(item);
                                 setError("");
+                                if (item !== "Other") autoAdvance();
                               }}
                             >
                               {item}
@@ -1278,6 +1289,7 @@ export default function ContextualOnboarding() {
                               onClick={() => {
                                 setSkillPreference(item);
                                 setError("");
+                                if (item !== "Other") autoAdvance();
                               }}
                             >
                               {item}
@@ -1308,6 +1320,7 @@ export default function ContextualOnboarding() {
                               onClick={() => {
                                 setJobOpportunity(item);
                                 setError("");
+                                if (item !== "Other") autoAdvance();
                               }}
                             >
                               {item}
@@ -1333,6 +1346,7 @@ export default function ContextualOnboarding() {
                               onClick={() => {
                                 setJobRole(item);
                                 setError("");
+                                if (item !== "Other") autoAdvance();
                               }}
                             >
                               {item}
@@ -1412,6 +1426,7 @@ export default function ContextualOnboarding() {
                               onClick={() => {
                                 setJobLevel(item);
                                 setError("");
+                                if (item !== "Other") autoAdvance();
                               }}
                             >
                               {item}
@@ -1475,6 +1490,7 @@ export default function ContextualOnboarding() {
                               onClick={() => {
                                 setJobPreference(item);
                                 setError("");
+                                if (item !== "Other") autoAdvance();
                               }}
                             >
                               {item}

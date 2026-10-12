@@ -405,7 +405,7 @@ const HomePage = () => {
           </div>
           <div className="tl-faq-contact">
             <p className="tl-faq-subtitle">These are just the most asked ones so far, feel free to reach out anytime!</p>
-            <Link to="/contact" className="tl-primary-button">Contact Us</Link>
+            <Link to="/contact" className="tl-primary-button">CONTACT US</Link>
           </div>
         </div>
       </section>
