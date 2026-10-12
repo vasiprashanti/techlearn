@@ -301,6 +301,15 @@ export const registerUser = async (req, res) => {
     let student = await Student.findOne({ email: emailCheck });
 
     if (!shouldCompleteOnboarding) {
+      if (!student && targetUser.role !== "admin") {
+        // Make the new account visible on the admin side straight away.
+        try {
+          student = await ensureStudentForUser({ user: targetUser, student: null, collegeModel: College });
+        } catch (error) {
+          if (error?.code !== 11000) console.error("Could not create draft student record:", error.message);
+          student = await Student.findOne({ email: emailCheck });
+        }
+      }
       if (student && (!student.userId || String(student.userId) !== String(targetUser._id))) {
         student.userId = targetUser._id;
         await student.save();

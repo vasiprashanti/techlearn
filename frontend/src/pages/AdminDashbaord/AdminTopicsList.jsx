@@ -268,6 +268,7 @@ const AdminTopicsList = () => {
       );
 
       setAddSuccess("Topic added successfully!");
+      setNumTopics((n) => Math.max(n, targetIndex));
 
       const dbResult = topicsRes.data.results?.[0];
       if (dbResult) {
@@ -524,7 +525,9 @@ const AdminTopicsList = () => {
     );
   }
 
-  const totalSlotsCount = Math.max(numTopics, topics.length);
+  // A course that runs N days needs room for N topics even when the planned count is lower.
+  const durationDays = Number((String(duration || "").match(/(\d+)/) || [])[1]) || 0;
+  const totalSlotsCount = Math.max(numTopics, topics.length, durationDays);
   const mappedTopics = new Set();
   
   const slots = Array.from({ length: totalSlotsCount }, (_, i) => {
@@ -1227,6 +1230,23 @@ const AdminTopicsList = () => {
                 <h3 className="text-sm md:text-[15px] font-semibold text-[#0b1b38] dark:text-white">
                   Curriculum Topics ({topics.length})
                 </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const taken = new Set(topics.map((t) => t.index).filter(Boolean));
+                    let next = 1;
+                    while (taken.has(next)) next += 1;
+                    setSelectedSlotIndex(next);
+                    setAddTopicForm({ topicName: "", notesFile: null });
+                    setAddError("");
+                    setAddSuccess("");
+                    setShowAddModal(true);
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3.5 bg-[#3C83F6] hover:bg-[#2f6fd8] text-white rounded-lg text-xs font-semibold transition"
+                >
+                  <FiPlus className="w-3 h-3" />
+                  Add Topic
+                </button>
               </div>
 
               {slots.length === 0 ? (

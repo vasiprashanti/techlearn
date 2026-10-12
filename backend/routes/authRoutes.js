@@ -14,7 +14,8 @@ import { resolveProgramSchedule } from "../utils/programSchedule.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { isAdminIdentity } from "../utils/adminAccess.js";
 import { registerUser } from "../controllers/userController.js";
-import { buildUnifiedProfile } from "../utils/userProfile.js";
+import { buildUnifiedProfile, ensureStudentForUser } from "../utils/userProfile.js";
+import College from "../models/College.js";
 import { generateOTP, storeOTP, verifyOTP, sendOTPEmail } from "../utils/mcqCodingUtils.js";
 
 const router = express.Router();
@@ -60,7 +61,18 @@ router.post("/register/verify-otp", async (req, res) => {
 const mapUserToStudentCohort = async (user) => {
   if (!user?.email) return { user, student: null, batch: null, schedule: null };
 
-  const student = await Student.findOne({ email: normalizeEmail(user.email) }).populate("collegeId", "name").populate("batchId", "name");
+  let student = await Student.findOne({ email: normalizeEmail(user.email) }).populate("collegeId", "name").populate("batchId", "name");
+  if (!student && user.role !== "admin") {
+    // Every learner account needs a Student record so it shows up on the admin side.
+    // No college, batch or program is assigned here.
+    try {
+      await ensureStudentForUser({ user, student: null, collegeModel: College });
+      student = await Student.findOne({ email: normalizeEmail(user.email) }).populate("collegeId", "name").populate("batchId", "name");
+    } catch (error) {
+      if (error?.code !== 11000) console.error("Could not create student record:", error.message);
+      student = await Student.findOne({ email: normalizeEmail(user.email) }).populate("collegeId", "name").populate("batchId", "name");
+    }
+  }
   if (!student) return { user, student: null, batch: null, schedule: null };
 
   const batch = (student.batchId && typeof student.batchId === "object" && student.batchId._id) ? student.batchId : (await Batch.findById(student.batchId).lean());

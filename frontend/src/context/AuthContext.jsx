@@ -114,9 +114,14 @@ const authReducer = (state, action) => {
       };
 
     case AUTH_ACTIONS.LOGOUT:
+      // Must be a fixed signed-out state: initialState was read from localStorage
+      // at page load and would restore the session that is being ended.
       return {
-        ...initialState,
+        user: null,
+        token: null,
+        isAuthenticated: false,
         isLoading: false,
+        error: null,
       };
 
     case AUTH_ACTIONS.CLEAR_ERROR:
