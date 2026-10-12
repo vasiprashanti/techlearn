@@ -87,6 +87,52 @@ const BatchDetails = () => {
   const [reviewSubmission, setReviewSubmission] = useState(null);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [activeReviewProblemIdx, setActiveReviewProblemIdx] = useState(null);
+  const [editScore, setEditScore] = useState('');
+  const [editXp, setEditXp] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Pre-fill the score editor whenever a different submission is opened.
+  useEffect(() => {
+    setEditScore(reviewSubmission?.score ?? '');
+    setEditXp('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewSubmission?.id]);
+
+  const handleUpdateScore = async () => {
+    if (!reviewSubmission?.id) return;
+    const body = {};
+    if (editScore !== '') body.newScore = Number(editScore);
+    if (editXp !== '') body.newXp = Number(editXp);
+    if (!Object.keys(body).length) {
+      alert('Enter a score or XP value to update.');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const response = await adminAPI.updateSubmissionScore(reviewSubmission.id, body);
+      if (response && response.success === false) throw new Error(response.message || 'Failed to update score.');
+      await handleReviewSubmission(reviewSubmission.id, reviewSubmission.student);
+    } catch (err) {
+      alert(err.message || 'Failed to update score.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleResetAttempt = async () => {
+    if (!reviewSubmission?.id) return;
+    if (!window.confirm('Reset this attempt? The student will be able to attempt it again.')) return;
+    setActionLoading(true);
+    try {
+      const response = await adminAPI.updateSubmissionScore(reviewSubmission.id, { action: 'reset' });
+      if (response && response.success === false) throw new Error(response.message || 'Failed to reset the attempt.');
+      setReviewSubmission(null);
+    } catch (err) {
+      alert(err.message || 'Failed to reset the attempt.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handleReviewSubmission = async (submissionId, studentName) => {
     try {

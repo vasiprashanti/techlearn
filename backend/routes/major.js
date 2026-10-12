@@ -1,6 +1,6 @@
 import express from "express";
 import Major from "../models/majorProject.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, isAdmin } from "../middleware/authMiddleware.js";
 import clubMiddleware from "../middleware/clubMiddleware.js";
 
 const router = express.Router();
@@ -33,8 +33,8 @@ router.get(
   }
 );
 
-// Add a major project (Admin or Dev use only – you can protect if needed)
-router.post("/", async (req, res) => {
+// Add a major project (admin only)
+router.post("/", protect, isAdmin, async (req, res) => {
   try {
     const { title, description, isFree } = req.body;
     const newProject = new Major({ title, description, isFree });

@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Question from "../../models/Questions.js";
+import { validateTrackTemplateQuestionAssignment } from "../../utils/trackTemplateValidation.js";
 import Category from "../../models/Category.js";
 import TrackTemplate from "../../models/TrackTemplate.js";
 import Track from "../../models/Track.js";

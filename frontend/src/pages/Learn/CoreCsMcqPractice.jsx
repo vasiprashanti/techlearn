@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle, ChevronDown, X } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 import { coreCsMcqs } from '../../data/coreCsMcqs';
 
@@ -54,6 +54,7 @@ function DifficultyDropdown({ value, onChange, isOpen, onToggle }) {
 
 export default function CoreCsMcqPractice() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [selectedDifficulty, setSelectedDifficulty] = useState('All Difficulty');
   const [selectedTag, setSelectedTag] = useState('All');
   const [currentIndex, setCurrentIndex] = useState(0);
