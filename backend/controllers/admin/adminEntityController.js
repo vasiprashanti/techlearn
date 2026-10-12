@@ -4158,7 +4158,7 @@ export const invalidateGlobalStudentsCache = () => {
   cachedGlobalStudentsTime = 0;
 };
 
-const loadGlobalStudentsData = async () => {
+export const loadGlobalStudentsData = async () => {
   const nowTime = Date.now();
   if (cachedGlobalStudentsData && (nowTime - cachedGlobalStudentsTime < GLOBAL_STUDENTS_CACHE_TTL_MS)) {
     return cachedGlobalStudentsData;
@@ -4184,12 +4184,17 @@ const loadGlobalStudentsData = async () => {
   const userMapByEmail = new Map(allUsers.map((u) => [String(u.email || "").toLowerCase(), u]));
   const userMapById = new Map(allUsers.map((u) => [String(u._id), u]));
 
-  // Map user enrollments: userId -> array of enrollments
+  // Map user enrollments: userId and studentId -> array of enrollments
   const enrollmentsByUser = new Map();
   allEnrollments.forEach((e) => {
-    const uKey = String(e.userId || e.studentId || "");
-    if (!enrollmentsByUser.has(uKey)) enrollmentsByUser.set(uKey, []);
-    enrollmentsByUser.get(uKey).push(e);
+    const keys = new Set();
+    if (e.userId) keys.add(String(e.userId));
+    if (e.studentId) keys.add(String(e.studentId));
+    if (!keys.size && (e.userId || e.studentId)) keys.add(String(e.userId || e.studentId));
+    keys.forEach((key) => {
+      if (!enrollmentsByUser.has(key)) enrollmentsByUser.set(key, []);
+      enrollmentsByUser.get(key).push(e);
+    });
   });
 
   // Map payment status: userId or studentId -> Paid | Pending | Failed
