@@ -453,6 +453,9 @@ export default function FreeAssessmentTest() {
         localStorage.removeItem(runStorageKey);
       } catch (e) {}
 
+      // Keep the per-question flags in sync with the server so the topic
+      // breakdown and question review match the final score.
+      setAssignment((prev) => ({ ...(prev || {}), ...ass }));
       setIsCompleted(true);
       setFinalResult({
         score: ass.score ?? ass.accuracy ?? score,
