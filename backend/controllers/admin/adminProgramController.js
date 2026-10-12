@@ -81,7 +81,7 @@ export const ENTITY_CONFIG = {
     model: Course,
     fieldKey: "courseIds",
     labelField: "title",
-    selectFields: "_id title level courseType numTopics status",
+    selectFields: "_id title level courseType numTopics status description topicIds",
   },
   roadmaps: {
     model: Roadmap,
@@ -188,10 +188,32 @@ export const getProgramFormOptions = async (_req, res) => {
       Course.find({}).select("_id title level courseType numTopics status").sort({ title: 1 }).lean().catch(() => []),
     ]);
 
+    // Curated standard tech employers list
+    const standardEmployers = [
+      "Google", "Amazon", "Microsoft", "Apple", "Meta", "Netflix", "Adobe", "Uber",
+      "Salesforce", "Oracle", "Cisco", "Intel", "IBM", "NVIDIA", "Twitter / X",
+      "LinkedIn", "PayPal", "Stripe", "Atlassian", "Spotify", "Flipkart", "Walmart",
+      "Swiggy", "Zomato", "Paytm", "Razorpay", "CRED", "PhonePe", "Meesho", "Ola",
+      "Zerodha", "Groww", "TCS", "Infosys", "Wipro", "Accenture", "Cognizant",
+      "Capgemini", "Deloitte", "HCL Tech", "Tech Mahindra", "LTIMindtree", "EY",
+      "PwC", "KPMG", "JPMorgan Chase", "Goldman Sachs", "Morgan Stanley", "Barclays",
+      "Deutsche Bank"
+    ];
+
+    // Filter job companies to remove any test accounts or invalid entries
+    const validJobCompanies = (jobCompanies || [])
+      .map((c) => String(c || "").trim())
+      .filter((name) => {
+        const lower = name.toLowerCase();
+        if (/^day\s*\d+/i.test(name)) return false;
+        if (/^\d+$/.test(name)) return false;
+        if (lower.includes("test") || lower.includes("aniket") || lower.includes("user") || lower.includes("admin")) return false;
+        return name.length >= 2 && name.length <= 50;
+      });
+
     const combinedCompanies = normalizeDynamicOptions([
-      ...(questionCompanies || []),
-      ...(questionTags || []),
-      ...(jobCompanies || []),
+      ...standardEmployers,
+      ...validJobCompanies,
     ]);
 
     const combinedRoles = normalizeDynamicOptions((roles || []).map((role) => role.roleName));
@@ -943,7 +965,15 @@ export const getProgramById = async (req, res) => {
 
     const program = await Program.findById(programId)
       .populate("batchIds", ENTITY_CONFIG.batches.selectFields)
-      .populate("courseIds", ENTITY_CONFIG.courses.selectFields)
+      .populate({
+        path: "courseIds",
+        select: ENTITY_CONFIG.courses.selectFields,
+        populate: {
+          path: "topicIds",
+          select: "_id title slug index",
+          options: { sort: { index: 1, createdAt: 1 } },
+        },
+      })
       .populate("roadmapIds", ENTITY_CONFIG.roadmaps.selectFields)
       .populate("trackTemplateIds", ENTITY_CONFIG["track-templates"].selectFields)
       .populate("certificateTemplateIds", ENTITY_CONFIG.certificates.selectFields)

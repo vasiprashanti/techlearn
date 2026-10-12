@@ -23,6 +23,10 @@ import {
   FiAlertCircle,
   FiClock,
   FiLayers,
+  FiInfo,
+  FiBookOpen,
+  FiCalendar,
+  FiTarget,
 } from 'react-icons/fi';
 
 const PROGRAM_TYPES = ['Placement', 'Skill'];
@@ -70,19 +74,53 @@ const TARGET_COMPANY_OPTIONS = [
   'Google',
   'Amazon',
   'Microsoft',
-  'TCS',
-  'Infosys',
-  'Accenture',
-  'Cognizant',
-  'Deloitte',
-  'Capgemini',
-  'Wipro',
+  'Apple',
+  'Meta',
+  'Netflix',
   'Adobe',
+  'Uber',
+  'Salesforce',
+  'Oracle',
+  'Cisco',
+  'Intel',
+  'IBM',
+  'NVIDIA',
+  'Twitter / X',
+  'LinkedIn',
+  'PayPal',
+  'Stripe',
+  'Atlassian',
+  'Spotify',
   'Flipkart',
   'Walmart',
+  'Swiggy',
+  'Zomato',
+  'Paytm',
   'Razorpay',
-  'Atlassian',
-  'HCL',
+  'CRED',
+  'PhonePe',
+  'Meesho',
+  'Ola',
+  'Zerodha',
+  'Groww',
+  'TCS',
+  'Infosys',
+  'Wipro',
+  'Accenture',
+  'Cognizant',
+  'Capgemini',
+  'Deloitte',
+  'HCL Tech',
+  'Tech Mahindra',
+  'LTIMindtree',
+  'EY',
+  'PwC',
+  'KPMG',
+  'JPMorgan Chase',
+  'Goldman Sachs',
+  'Morgan Stanley',
+  'Barclays',
+  'Deutsche Bank',
 ];
 
 const TARGET_ROLE_OPTIONS = [
@@ -185,10 +223,560 @@ const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text
 const parseCommaString = (str) => (str || '').split(',').map((item) => item.trim()).filter(Boolean);
 
 const statusBadgeClass = (status) => {
-  if (status === 'Published') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
+  if (status === 'Published' || status === 'Active') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
   if (status === 'Draft') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300';
   if (status === 'Archived') return 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300';
   return 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300';
+};
+
+const PHASE_TITLES = {
+  learning: 'Phase 1: Foundational & Core Learning',
+  revision: 'Phase 2: Comprehensive Revision & Deep Dive',
+  company_preparation: 'Phase 3: Company Preparation & Industry Focus',
+  mock_interview: 'Phase 4: Rigorous Mock Interviews & Evaluations',
+  final_assessment: 'Phase 5: Final Assessment & Placement Readiness',
+};
+
+const ProgramOverviewView = ({
+  programs,
+  selectedProgramId,
+  onSelectProgram,
+  onProgramUpdated,
+  onOpenEditModal,
+  navigate,
+}) => {
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
+  const [detailedProgram, setDetailedProgram] = useState(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [expandedCourseIds, setExpandedCourseIds] = useState(new Set());
+  const [editingOutcomes, setEditingOutcomes] = useState(false);
+  const [outcomesText, setOutcomesText] = useState('');
+  const [savingOutcomes, setSavingOutcomes] = useState(false);
+  const [outcomesError, setOutcomesError] = useState('');
+  const [programDropdownOpen, setProgramDropdownOpen] = useState(false);
+  const [programSearch, setProgramSearch] = useState('');
+
+  const activeId = selectedProgramId || (programs[0] ? programs[0]._id : null);
+
+  useEffect(() => {
+    if (!activeId) {
+      setDetailedProgram(null);
+      return;
+    }
+    let cancelled = false;
+    setLoadingDetail(true);
+    adminAPI.getProgramById(activeId)
+      .then((res) => {
+        if (!cancelled && res && res.success && res.program) {
+          setDetailedProgram(res.program);
+          setOutcomesText((res.program.learningGoals || []).join('\n'));
+        }
+      })
+      .catch((err) => {
+        console.error('Error fetching program detail for overview:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDetail(false);
+      });
+    return () => { cancelled = true; };
+  }, [activeId]);
+
+  const toggleCourse = (id) => {
+    setExpandedCourseIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSaveOutcomes = async () => {
+    if (!detailedProgram?._id) return;
+    try {
+      setSavingOutcomes(true);
+      setOutcomesError('');
+      const goals = outcomesText
+        .split('\n')
+        .map((g) => g.trim())
+        .filter(Boolean);
+
+      const res = await adminAPI.updateProgram(detailedProgram._id, { learningGoals: goals });
+      if (res && res.success) {
+        setEditingOutcomes(false);
+        setDetailedProgram((prev) => (prev ? { ...prev, learningGoals: goals } : prev));
+        if (onProgramUpdated) onProgramUpdated();
+      } else {
+        setOutcomesError(res?.message || 'Failed to update outcomes');
+      }
+    } catch (err) {
+      setOutcomesError(err.message || 'Failed to update outcomes');
+    } finally {
+      setSavingOutcomes(false);
+    }
+  };
+
+  if (programs.length === 0) {
+    return (
+      <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-12 text-center">
+        <FiFolder className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+        <h3 className="text-base font-bold text-slate-800 dark:text-white">No Programs to Overview</h3>
+        <p className="text-xs text-slate-400 mt-1">Create a program to start configuring its overview, curriculum, and outcomes.</p>
+      </div>
+    );
+  }
+
+  const p = detailedProgram || programs.find((item) => item._id === activeId) || programs[0];
+  const attachedCourses = Array.isArray(p?.courseIds) ? p.courseIds : [];
+  const phases = Array.isArray(p?.phases) && p.phases.length > 0
+    ? p.phases
+    : [
+        { phase: 'learning', startDay: 1, endDay: 10 },
+        { phase: 'revision', startDay: 11, endDay: 15 },
+        { phase: 'company_preparation', startDay: 16, endDay: 20 },
+        { phase: 'mock_interview', startDay: 21, endDay: 25 },
+        { phase: 'final_assessment', startDay: 26, endDay: 30 },
+      ];
+  const outcomes = Array.isArray(p?.learningGoals) && p.learningGoals.length > 0
+    ? p.learningGoals
+    : [
+        'Master essential role-specific algorithms and industry software design patterns',
+        'Build production-grade projects demonstrating full stack architecture',
+        'Ace technical and behavioral rounds through targeted mock assessments',
+        'Gain confidence and verified credentials recognized by hiring partners',
+      ];
+  const pricingText = p?.pricingType === 'Paid'
+    ? `₹${Number(p?.programFee || 0).toLocaleString('en-IN')}`
+    : 'Free';
+
+  return (
+    <div className="space-y-5">
+      {/* ── Program Selector Bar ─────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] shadow-sm relative z-30">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-bold uppercase tracking-wider text-black/50 dark:text-white/50 shrink-0">
+            Selected Program:
+          </span>
+
+          <div className="relative min-w-[280px] sm:min-w-[360px]">
+            <button
+              type="button"
+              onClick={() => {
+                setProgramDropdownOpen((prev) => !prev);
+                setProgramSearch('');
+              }}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 text-sm font-medium rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/35 dark:focus:ring-[#7fb1ff]/35 text-slate-800 dark:text-white"
+            >
+              <span className="truncate pr-2 font-semibold">
+                {p?.name || 'Select Program'}
+              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/10 text-slate-500 dark:text-slate-300">
+                  {getProgramType(p?.programType)}
+                </span>
+                <FiChevronDown
+                  className={`w-4 h-4 text-black/45 dark:text-white/60 shrink-0 transition-transform duration-200 ${
+                    programDropdownOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </div>
+            </button>
+
+            {programDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setProgramDropdownOpen(false)}
+                />
+                <div
+                  className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-xl border border-black/10 dark:border-white/15 p-3 shadow-2xl space-y-2.5 animate-in fade-in slide-in-from-top-2 duration-150"
+                  style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
+                >
+                  {/* Search Input matching company dropdown */}
+                  <div className="relative">
+                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/40 dark:text-white/40 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={programSearch}
+                      onChange={(e) => setProgramSearch(e.target.value)}
+                      placeholder="Search programs..."
+                      className="w-full pl-8 pr-3 py-2 text-xs rounded-lg border border-black/10 dark:border-white/15 bg-slate-50 dark:bg-[#0a1737] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35"
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* Available Programs List */}
+                  <div className="border-t border-black/5 dark:border-white/10 pt-1.5">
+                    <span className="text-[11px] font-semibold text-black/50 dark:text-white/50 block mb-1">
+                      Available Programs ({programs.length})
+                    </span>
+                    <div className="max-h-56 overflow-y-auto space-y-1 minimal-scrollbar">
+                      {programs
+                        .filter((item) =>
+                          !programSearch.trim() ||
+                          normalizeSearchString(item.name).includes(normalizeSearchString(programSearch))
+                        )
+                        .map((item) => {
+                          const isSelected = item._id === p?._id;
+                          return (
+                            <button
+                              key={item._id}
+                              type="button"
+                              onClick={() => {
+                                onSelectProgram(item._id);
+                                setProgramDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-2.5 py-2 text-xs rounded-lg transition-colors flex items-center justify-between gap-2 ${
+                                isSelected
+                                  ? 'bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff] font-bold border border-[#3C83F6]/30 dark:border-[#bceaff]/30'
+                                  : 'text-slate-700 dark:text-slate-200 hover:bg-black/5 dark:hover:bg-white/10'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="truncate">{item.name}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="text-[10px] text-slate-400">
+                                  {getProgramType(item.programType)}
+                                </span>
+                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${statusBadgeClass(item.status)}`}>
+                                  {item.status}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      {programs.filter((item) =>
+                        !programSearch.trim() ||
+                        normalizeSearchString(item.name).includes(normalizeSearchString(programSearch))
+                      ).length === 0 && (
+                        <p className="px-2 py-3 text-xs text-center text-black/45 dark:text-white/45">
+                          No programs matching &quot;{programSearch}&quot;
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {p?._id && (
+            <>
+              <a
+                href={`/learn/programs/${p._id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-9 px-3.5 rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 hover:bg-white/90 dark:hover:bg-white/10 transition-colors"
+              >
+                <FiEye className="w-3.5 h-3.5" />
+                Live User Page
+              </a>
+              <button
+                onClick={() => onOpenEditModal(p)}
+                className="h-9 px-3.5 rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 hover:bg-white/90 dark:hover:bg-white/10 transition-colors"
+              >
+                <FiEdit2 className="w-3.5 h-3.5" />
+                Edit Program
+              </button>
+              <button
+                onClick={() => navigate(`/programs/${p._id}`)}
+                className="h-9 px-4 rounded-lg bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+              >
+                Full Management Details →
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {loadingDetail ? (
+        <div className="p-12 text-center text-xs text-slate-400">Loading program details...</div>
+      ) : (
+        <>
+          {/* Metadata Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-4">
+              <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45 block mb-1">
+                Type & Duration
+              </span>
+              <p className="text-sm sm:text-base font-bold text-slate-800 dark:text-white">
+                {getProgramType(p?.programType)} Program
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {p?.duration || `${p?.durationDays || 30} Days`} · {p?.availability || 'Structured'}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-4">
+              <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45 block mb-1">
+                Pricing & Status
+              </span>
+              <p className="text-sm sm:text-base font-bold text-slate-800 dark:text-white">
+                {pricingText}
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Status: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{p?.status}</span> ({p?.visibility || 'Public'})
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-4">
+              <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45 block mb-1">
+                Curriculum Courses
+              </span>
+              <p className="text-sm sm:text-base font-bold text-slate-800 dark:text-white">
+                {attachedCourses.length} Attached Courses
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Powers User Tab 1: Curriculum
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-4">
+              <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45 block mb-1">
+                Outcomes Configured
+              </span>
+              <p className="text-sm sm:text-base font-bold text-slate-800 dark:text-white">
+                {outcomes.length} Learning Outcomes
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Powers User Tab 3: Outcomes
+              </p>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-5 space-y-3">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Description</h3>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              {p?.description || 'No description provided.'}
+            </p>
+          </div>
+
+          {/* Tab 1: Curriculum Controls */}
+          <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 dark:border-white/5 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <FiBookOpen className="w-4 h-4 text-[#3C83F6]" />
+                  Curriculum & Attached Courses (Controls User Tab 1)
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Click any course below to preview its curriculum topics list. Manage attached courses via the detail page.
+                </p>
+              </div>
+              {p?._id && (
+                <button
+                  onClick={() => navigate(`/programs/${p._id}?attachType=courses`)}
+                  className="px-3 py-1.5 rounded-lg border border-[#3C83F6]/30 bg-[#3C83F6]/10 text-[#3C83F6] dark:text-[#bceaff] text-xs font-bold hover:bg-[#3C83F6]/20 transition-colors"
+                >
+                  Manage Courses in Detail Page
+                </button>
+              )}
+            </div>
+
+            {attachedCourses.length === 0 ? (
+              <div className="p-8 text-center rounded-xl border border-dashed border-black/15 dark:border-white/15">
+                <FiBookOpen className="w-7 h-7 text-slate-400 mx-auto mb-2 opacity-50" />
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">No courses attached to this program yet.</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Attach courses from the full management details page to populate the Curriculum tab.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {attachedCourses.map((c, idx) => {
+                  const cId = c?._id || c;
+                  const isExp = expandedCourseIds.has(cId);
+                  const topics = Array.isArray(c?.topicIds) ? c.topicIds : [];
+
+                  return (
+                    <div
+                      key={cId}
+                      className="rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] overflow-hidden"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => toggleCourse(cId)}
+                        className="w-full px-4 py-3 text-left flex items-center justify-between gap-3 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition-colors"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="w-6 h-6 rounded-md bg-[#3C83F6]/10 text-[#3C83F6] dark:text-[#bceaff] text-xs font-bold flex items-center justify-center shrink-0">
+                            {idx + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                              {c?.title || c?.name || 'Untitled Course'}
+                            </p>
+                            <p className="text-[11px] text-slate-400 truncate">
+                              {topics.length} Topics · {c?.level || 'All Levels'}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-xs text-slate-400 font-semibold flex items-center gap-1">
+                          {isExp ? 'Hide Topics' : 'View Topics'}
+                          <FiChevronDown className={`w-3.5 h-3.5 transition-transform ${isExp ? 'rotate-180' : ''}`} />
+                        </span>
+                      </button>
+
+                      {isExp && (
+                        <div className="px-4 pb-3 pt-1 border-t border-black/5 dark:border-white/5 bg-white/40 dark:bg-black/20">
+                          {topics.length === 0 ? (
+                            <p className="text-xs text-slate-400 py-2">No individual topics listed for this course.</p>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                              {topics.map((t, tIdx) => (
+                                <div
+                                  key={t?._id || tIdx}
+                                  className="flex items-center gap-2 p-2 rounded-lg border border-black/5 dark:border-white/5 bg-white/70 dark:bg-[#0f1f43]/70 text-xs text-slate-700 dark:text-slate-200"
+                                >
+                                  <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-300 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                    {tIdx + 1}
+                                  </span>
+                                  <span className="truncate">{t?.title || t?.name || t}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Tab 2: Schedule Phases */}
+          <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-5 space-y-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <FiCalendar className="w-4 h-4 text-emerald-500" />
+                Schedule: 5 Learning Phases (Controls User Tab 2)
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Displays in a single left-aligned column on the User-side Program Detail page.
+              </p>
+            </div>
+
+            <div className="space-y-2.5">
+              {phases.map((ph, idx) => {
+                const phaseTitle = PHASE_TITLES[ph.phase] || `Phase ${idx + 1}: ${ph.phase}`;
+                const dayRange = `Day ${ph.startDay} - Day ${ph.endDay}`;
+                const durationDays = Number(ph.endDay) - Number(ph.startDay) + 1;
+
+                return (
+                  <div
+                    key={ph.phase || idx}
+                    className="flex items-start sm:items-center justify-between p-3.5 rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center justify-center shrink-0">
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">
+                          {phaseTitle}
+                        </p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {durationDays} Days Duration
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 shrink-0">
+                      {dayRange}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Tab 3: Outcomes */}
+          <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 dark:border-white/5 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <FiTarget className="w-4 h-4 text-indigo-500" />
+                  Program Outcomes (Controls User Tab 3)
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Edit and save outcomes directly. Changes persist and display on the user-side Outcomes tab.
+                </p>
+              </div>
+              {!editingOutcomes ? (
+                <button
+                  onClick={() => setEditingOutcomes(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                >
+                  <FiEdit2 className="w-3.5 h-3.5" />
+                  Edit Outcomes
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setEditingOutcomes(false);
+                      setOutcomesText((p?.learningGoals || []).join('\n'));
+                      setOutcomesError('');
+                    }}
+                    disabled={savingOutcomes}
+                    className="px-3 py-1.5 rounded-lg border border-black/10 dark:border-white/15 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveOutcomes}
+                    disabled={savingOutcomes}
+                    className="px-3.5 py-1.5 rounded-lg bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-xs font-bold transition-colors disabled:opacity-50"
+                  >
+                    {savingOutcomes ? 'Saving...' : 'Save Outcomes'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {outcomesError && (
+              <div className="p-3 rounded-lg bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300 text-xs font-medium">
+                {outcomesError}
+              </div>
+            )}
+
+            {editingOutcomes ? (
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Outcomes list (one per line):
+                </label>
+                <textarea
+                  rows={5}
+                  value={outcomesText}
+                  onChange={(e) => setOutcomesText(e.target.value)}
+                  placeholder="Master core programming...&#10;Build end-to-end applications...&#10;Ace technical interviews..."
+                  className="w-full p-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/90 dark:bg-[#0a1737] text-xs sm:text-sm text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30 font-sans"
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {outcomes.map((goal, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-3 p-3.5 rounded-xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]"
+                  >
+                    <div className="w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <FiCheckCircle className="w-3.5 h-3.5" />
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-medium">
+                      {goal}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
 };
 
 export default function Programs() {
@@ -215,6 +803,8 @@ export default function Programs() {
   const [selectedMonth] = useState(searchParams.get('month') || '');
   const [sortBy] = useState('createdAt');
   const [sortOrder] = useState('desc');
+  const [activeTab, setActiveTab] = useState('list'); // 'list' | 'overview'
+  const [selectedOverviewProgramId, setSelectedOverviewProgramId] = useState('');
 
   // Bulk Selection State
   const [selectedProgramIds, setSelectedProgramIds] = useState([]);
@@ -258,6 +848,7 @@ export default function Programs() {
     programFee: '0',
     pricingPlans: getDefaultPricingPlans('Placement'),
     learningGoalsText: '',
+    learningGoals: [],
     placementCategory: 'Both',
     targetCompanies: [],
     skillTags: [],
@@ -268,15 +859,32 @@ export default function Programs() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    adminAPI.getProgramOptions().then((response) => {
+    adminAPI.getProgramOptions({ noCache: true }).then((response) => {
       if (response?.success) {
         const fetchedSkills = (response.skills || response.skillTags || []).filter(Boolean);
-        const fetchedCompanies = (response.companies || response.targetCompanies || []).filter(Boolean);
+        const fetchedCompanies = (response.companies || response.targetCompanies || [])
+          .filter(Boolean)
+          .filter((c) => {
+            const raw = String(c).trim();
+            const lower = raw.toLowerCase();
+            // Discard "day", "day1", "day2", "day 3", pure numbers, test tokens, or account names
+            if (/^day\s*\d+/i.test(raw) || /^week\s*\d+/i.test(raw)) return false;
+            if (/^\d+$/.test(raw)) return false;
+            if (lower.includes('test') || lower.includes('aniket') || lower.includes('user') || lower.includes('admin')) return false;
+            // Exclude programming terms/tags if any leaked through
+            const bannedKeywords = ['class', 'array', 'pointer', 'search', 'sort', 'stack', 'queue', 'tree', 'graph', 'recursion', 'loop', 'operator', 'method', 'matrix', 'string', 'window', 'interval', 'function', 'variable', 'cs', 'os', 'dbms', 'sql', 'dsa', 'mcq'];
+            if (bannedKeywords.some((term) => lower === term || lower.startsWith(term + ' ') || lower.endsWith(' ' + term))) return false;
+            if (raw.length < 2 || raw.length > 50) return false;
+            return true;
+          });
         const fetchedRoles = (response.roles || response.targetRoles || []).filter(Boolean);
+
+        // Merge standard top target companies with valid fetched companies
+        const validCompanies = Array.from(new Set([...TARGET_COMPANY_OPTIONS, ...fetchedCompanies]));
 
         setProgramOptions({
           skills: fetchedSkills.length ? fetchedSkills : SKILL_TAG_OPTIONS,
-          companies: fetchedCompanies.length ? fetchedCompanies : TARGET_COMPANY_OPTIONS,
+          companies: validCompanies,
           roles: fetchedRoles.length ? fetchedRoles : TARGET_ROLE_OPTIONS,
         });
       }
@@ -494,6 +1102,7 @@ export default function Programs() {
       programFee: '0',
       pricingPlans: [],
       learningGoalsText: '',
+      learningGoals: [],
       placementCategory: 'Both',
       targetCompanies: [],
       skillTags: [],
@@ -518,6 +1127,7 @@ export default function Programs() {
     const existingRoles = Array.isArray(program.targetRoles)
       ? program.targetRoles
       : parseCommaString(program.targetRolesText || '');
+    const existingGoals = Array.isArray(program.learningGoals) ? program.learningGoals : [];
     setFormData({
       name: program.name || '',
       description: program.description || '',
@@ -540,7 +1150,8 @@ export default function Programs() {
       annualTrainerLedFee: String(program.annualTrainerLedFee ?? (program.pricingPlans?.find(p => p.billingPeriod === 'Annual' && p.availability === 'Trainer-Led')?.price || '')),
       programFee: String(program.programFee || 0),
       pricingPlans: [],
-      learningGoalsText: '',
+      learningGoalsText: existingGoals.join('\n'),
+      learningGoals: existingGoals,
       placementCategory: 'Both',
       targetCompanies: Array.isArray(program.targetCompanies) ? program.targetCompanies : [],
       skillTags: Array.isArray(program.skillTags) ? program.skillTags : [],
@@ -626,7 +1237,9 @@ export default function Programs() {
         annualTrainerLedFee: Number(formData.annualTrainerLedFee) || 0,
         programFee: formData.pricingType === 'Paid' ? Number(formData.monthlyStructuredFee || formData.monthlyTrainerLedFee || formData.annualStructuredFee || formData.annualTrainerLedFee) : 0,
         pricingPlans: [],
-        learningGoals: [],
+        learningGoals: formData.learningGoalsText
+          ? formData.learningGoalsText.split('\n').map((g) => g.trim()).filter(Boolean)
+          : Array.isArray(formData.learningGoals) ? formData.learningGoals : [],
         placementCategories: [],
         targetCompanies: formData.targetCompanies,
         skillTags: formData.skillTags,
@@ -690,7 +1303,7 @@ export default function Programs() {
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
-  const programFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
+  const programFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-slate-50 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35 shadow-xs';
 
   const activeCount = programs.filter(p => p.status === 'Published').length;
   const draftCount = programs.filter(p => p.status === 'Draft').length;
@@ -765,10 +1378,16 @@ export default function Programs() {
       {/* Create / Edit Program Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-          <div className="course-form-modal relative w-full max-w-2xl bg-white border border-black/10 dark:bg-[#0a1737] dark:border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-visible">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+          <div
+            className="course-form-modal relative w-full max-w-2xl rounded-2xl border border-black/10 dark:border-white/10 shadow-2xl flex flex-col max-h-[92vh] overflow-visible"
+            style={{ backgroundColor: isDarkMode ? '#0a1737' : '#ffffff' }}
+          >
             {/* Fixed Header */}
-            <div className="px-5 py-3.5 border-b border-black/10 dark:border-white/10 flex items-center justify-between shrink-0">
+            <div
+              className="px-5 py-3.5 border-b border-black/10 dark:border-white/10 flex items-center justify-between shrink-0 rounded-t-2xl"
+              style={{ backgroundColor: isDarkMode ? '#0a1737' : '#ffffff' }}
+            >
               <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-[#bceaff]">
                 {editingProgram ? 'Edit Program' : 'Create Program'}
               </h2>
@@ -782,7 +1401,10 @@ export default function Programs() {
 
 <form onSubmit={handleSubmitProgram} className="flex min-h-0 flex-1 flex-col overflow-visible">
               {/* Scrollable Body */}
-              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-visible p-5 space-y-4 minimal-scrollbar">
+              <div
+                className="min-h-0 flex-1 overflow-y-auto overflow-x-visible p-5 space-y-4 minimal-scrollbar"
+                style={{ backgroundColor: isDarkMode ? '#0a1737' : '#ffffff' }}
+              >
                 {modalError && (
                   <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-600 dark:text-red-400">
                     <FiAlertCircle className="w-4 h-4 shrink-0" />
@@ -1422,6 +2044,25 @@ export default function Programs() {
                   </div>
                 )}
 
+                {/* ── PROGRAM OUTCOMES (What you'll achieve) ── */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Program Outcomes / Learning Goals</label>
+                    <span className="text-[10px] text-black/40 dark:text-white/40">One outcome per line</span>
+                  </div>
+                  <textarea
+                    name="learningGoalsText"
+                    rows={3}
+                    placeholder={"e.g.\nMaster core data structures and algorithms\nBuild production-ready full stack web applications\nAce technical interviews with confidence"}
+                    value={formData.learningGoalsText}
+                    onChange={handleFormChange}
+                    className={programFormInputClass}
+                  />
+                  <p className="text-[11px] text-black/45 dark:text-white/45">
+                    These outcomes are displayed directly on the User-side Program Detail page under the Outcomes tab.
+                  </p>
+                </div>
+
                 {/* ── PROGRAM STRUCTURE: LEARNING PHASES (End of Form) ── */}
                 {(() => {
                   const formDurationDays = (Number(formData.durationDays) || 0) * (formData.durationUnit === 'Weeks' ? 7 : 1);
@@ -1491,7 +2132,10 @@ export default function Programs() {
               </div>
 
               {/* Fixed Footer */}
-              <div className="px-5 py-3.5 border-t border-black/10 dark:border-white/10 flex items-center justify-end gap-3 shrink-0 bg-white/50 dark:bg-[#0a1737]/50">
+              <div
+                className="px-5 py-3.5 border-t border-black/10 dark:border-white/10 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl"
+                style={{ backgroundColor: isDarkMode ? '#0a1737' : '#ffffff' }}
+              >
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -1553,6 +2197,39 @@ export default function Programs() {
               </button>
             </div>
 
+            {/* Programs Page Navigation Tabs: List vs Overview */}
+            <div className="flex items-center gap-2 border-b border-black/10 dark:border-white/10 pb-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('list')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  activeTab === 'list'
+                    ? 'bg-[#3C83F6] text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5'
+                }`}
+              >
+                <FiGrid className="w-4 h-4" />
+                Programs List ({pagination.total || programs.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('overview');
+                  if (!selectedOverviewProgramId && programs.length > 0) {
+                    setSelectedOverviewProgramId(programs[0]._id);
+                  }
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  activeTab === 'overview'
+                    ? 'bg-[#3C83F6] text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5'
+                }`}
+              >
+                <FiInfo className="w-4 h-4" />
+                Overview & Controls
+              </button>
+            </div>
+
             {/* Quick Summary Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
               {/* Total Programs */}
@@ -1601,8 +2278,19 @@ export default function Programs() {
             </div>
           </div>
 
-          {/* Program Listing Section */}
-          <section className="space-y-4">
+          {activeTab === 'overview' ? (
+            /* Overview Tab: Program Selection and Complete Details Display */
+            <ProgramOverviewView
+              programs={programs}
+              selectedProgramId={selectedOverviewProgramId}
+              onSelectProgram={(id) => setSelectedOverviewProgramId(id)}
+              onProgramUpdated={fetchPrograms}
+              onOpenEditModal={(p) => handleOpenEditModal(p)}
+              navigate={navigate}
+            />
+          ) : (
+            /* Program Listing Section */
+            <section className="space-y-4">
             {/* Toolbar: Program Type Filter + Status Filter Pills + Search Bar */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
               <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full scrollbar-none">
@@ -1775,6 +2463,7 @@ export default function Programs() {
               </>
             )}
           </section>
+          )}
 
           {/* Floating Bulk Action Bar — identical to Question Bank */}
           {selectedProgramIds.length > 0 && (
