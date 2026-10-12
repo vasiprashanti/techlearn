@@ -35,7 +35,7 @@ export default function Pricing() {
     finally { setSaving(false); }
   }
   const inputClass = 'w-full rounded-xl border border-white/20 bg-[#101c36] px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#b2e96a]';
-  return <div className="admin-dashboard-typography min-h-screen text-white pt-24 pb-12 px-4 lg:pl-[18rem] lg:pr-8">
+  return <div className="admin-dashboard-typography min-h-screen text-white pt-32 lg:pt-24 pb-12 px-4 lg:pl-[18rem] lg:pr-8">
     <Sidebar />
     <h1 className="text-3xl font-semibold mb-2">Pricing</h1>
     <p className="text-slate-300 mb-6">Homepage display cards only. Program plans and checkout prices are managed separately.</p>

@@ -484,6 +484,13 @@
   }
 }
 
+/* Final milestone sits on the right edge; anchor its label inside the viewport. */
+.milestone[data-progress="1"] .milestone-label {
+  left: auto;
+  right: -4px;
+  transform: none;
+}
+
 /* REDUCED MOTION */
 @media (prefers-reduced-motion: reduce) {
   .path-progress {

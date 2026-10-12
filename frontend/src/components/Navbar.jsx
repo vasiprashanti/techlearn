@@ -14,6 +14,8 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [sectionBackground, setSectionBackground] = useState(null);
+  const [isOverHero, setIsOverHero] = useState(() => location.pathname === '/');
 
 
   const accountRef = useRef(null);
@@ -45,6 +47,17 @@ export default function Navbar() {
       });
 
 
+      // Transparent only while the landing hero is under the navbar; opaque everywhere else.
+      const heroEl = document.querySelector("#start, .tl-hero");
+      const heroRect = heroEl ? heroEl.getBoundingClientRect() : null;
+      setIsOverHero(location.pathname === "/" && (heroRect ? heroRect.top <= 65 && heroRect.bottom >= 72 : window.scrollY < 10));
+      const currentSection = [...document.querySelectorAll(".tl-landing > section, footer")].find(section => {
+        const rect = section.getBoundingClientRect();
+        return rect.top <= 65 && rect.bottom >= 35;
+      });
+      const sectionColor = currentSection ? getComputedStyle(currentSection).backgroundColor : null;
+      setSectionBackground(sectionColor && sectionColor !== "rgba(0, 0, 0, 0)" ? sectionColor : null);
+
       // If we are not on the landing page (no sections found), fallback to current theme
       const hasSections = document.querySelectorAll('#start, #problem, #journey, #results, #pricing, #faqs, #start-program').length > 0;
       if (!hasSections) {
@@ -69,6 +82,7 @@ export default function Navbar() {
   // If over dark section -> use dark theme styling (white text / dark dropdown)
   // If over light section -> use light theme styling (dark text / light dropdown)
   const isDarkNav = isOverDarkSection;
+  const isAppRoute = /^\/(dashboard|admin|colleges|batches|students|programs|track-templates|certificates|reports|settings)/.test(location.pathname);
 
   // Close menus on outside click
   useEffect(() => {
@@ -125,7 +139,7 @@ export default function Navbar() {
   const userAvatar = user?.photoUrl || user?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}&backgroundColor=04103d,3c83f6,1e293b`;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-transparent" style={{ background: 'transparent' }}>
+    <header className="fixed top-0 left-0 right-0 z-50" style={{ background: isOverHero ? 'transparent' : (isAppRoute ? '#01071e' : (sectionBackground || (isDarkNav ? '#01071e' : '#d8eef5'))) }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
