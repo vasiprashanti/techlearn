@@ -48,7 +48,8 @@ export const getCourseTopicsForDashboard = async (req, res) => {
     return res.status(200).json({
       topics: formattedTopics,
       courseTitle: course.title,
-      numTopics: topics.length,
+      // Planned topic count configured on the course (never lower than what exists).
+      numTopics: Math.max(Number(course.numTopics) || 0, topics.length),
       description: course.description || "",
       level: course.level || "Beginner",
       assignedBatchIds: course.assignedBatchIds || [],
