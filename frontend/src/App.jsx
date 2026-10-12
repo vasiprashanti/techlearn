@@ -3,6 +3,7 @@ import { lazy, Suspense, useState, useEffect } from 'react'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ScrollToTop from './components/ScrollToTop'
+import ErrorBoundary from './components/ErrorBoundary'
 import ExternalLinkHandler from './components/ExternalLinkHandler'
 import { ThemeProvider, useTheme } from './context/ThemeContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -281,6 +282,7 @@ function LayoutWrapper() {
       {showNavbar && <Navbar />}
 
       <Suspense fallback={<main className="flex-grow"><RouteFallback /></main>}>
+        <ErrorBoundary resetKey={location.pathname}>
         <main className="flex-grow">
           <Routes>
           <Route path="/login" element={<Signup initialMode="login" />} />
@@ -443,6 +445,7 @@ function LayoutWrapper() {
           <Route path="/about" element={<About />} />
           </Routes>
         </main>
+        </ErrorBoundary>
 
         {showFooter && <Footer />}
       </Suspense>
