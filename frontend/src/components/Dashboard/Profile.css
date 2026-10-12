@@ -51,12 +51,14 @@
 
 .tl-profile .profile-hero { display: flex; align-items: center; gap: 20px; padding: 25px; margin-bottom: 15px; }
 .tl-profile .avatar-wrap { position: relative; flex-shrink: 0; }
-.tl-profile .avatar { display: grid; place-items: center; width: 76px; height: 76px; border: 2px solid var(--border); border-radius: 50%; background: #172743; overflow: hidden; }
-.tl-profile .avatar img { width: 100%; height: 100%; object-fit: cover; }
+.tl-profile .avatar { display: grid; place-items: center; width: 96px; height: 96px; border: 0; border-radius: 0; background: transparent; overflow: visible; }
+.tl-profile .avatar img { width: 100%; height: 100%; object-fit: contain; user-select: none; }
 .tl-profile .avatar-edit {
-  position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 27px; height: 27px;
-  border: 2px solid var(--panel); border-radius: 50%; background: #ffffff; color: #17230c; font-size: 13px; padding: 0;
+  position: absolute; right: -4px; bottom: 0; display: grid; place-items: center; width: 30px; height: 30px;
+  border: 1px solid var(--border); border-radius: 9px; background: var(--panel-hover); color: var(--text); padding: 0;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
 }
+.tl-profile .avatar-edit:hover { color: var(--strong); border-color: var(--strong); }
 .tl-profile .hero-info { flex: 1; min-width: 0; }
 .tl-profile .hero-info h2 { margin: 0 0 6px; font-size: 12px; font-weight: 300; font-family: "Press Start 2P", monospace; color: var(--strong); overflow-wrap: anywhere; line-height: 1.6; }
 .tl-profile .hero-info p { margin: 0; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
@@ -99,8 +101,8 @@
 .tl-profile .field label, .tl-profile .field .field-label { display: block; margin: 0 0 8px; color: var(--strong); font-size: 12px; font-weight: 600; }
 .tl-profile .required { color: var(--danger); }
 .tl-profile .field input, .tl-profile .field select, .tl-profile .field textarea {
-  display: block; width: 100%; min-height: 44px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 10px;
-  background: var(--field); color: var(--text); font-size: 13px; transition: border-color 160ms ease;
+  display: block; width: 100%; min-height: 54px; padding: 15px 18px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--field); color: var(--text); font-size: 14px; transition: border-color 160ms ease;
 }
 .tl-profile .field input::placeholder { color: var(--muted); opacity: 0.8; }
 .tl-profile .field input:focus, .tl-profile .field select:focus { border-color: var(--strong); outline: none; }
@@ -108,13 +110,14 @@
 .tl-profile .field-hint { display: block; margin-top: 7px; color: var(--muted); font-size: 11px; }
 
 .tl-profile .skill-trigger {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 10px 13px;
-  border: 1px solid var(--border); border-radius: 10px; background: var(--field); color: var(--text); text-align: left; font-size: 13px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 54px; padding: 13px 18px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--field); color: var(--text); text-align: left; font-size: 14px;
 }
 .tl-profile .skill-trigger:hover, .tl-profile .skill-trigger[aria-expanded="true"] { border-color: var(--strong); }
 .tl-profile .skill-trigger-content { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
 .tl-profile .skill-summary-chip { display: inline-flex; padding: 3px 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--accent-soft); font-size: 11px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tl-profile .trigger-chevron { color: var(--muted); font-size: 16px; }
+.tl-profile .trigger-icons { display: inline-flex; align-items: center; gap: 12px; flex-shrink: 0; color: var(--muted); }
+.tl-profile .trigger-icons .flip { transform: rotate(180deg); }
 .tl-profile .skill-picker { margin-top: 7px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel-hover); max-height: 300px; overflow: auto; }
 .tl-profile .skill-picker-heading { margin-bottom: 10px; color: var(--muted); font-size: 11px; }
 .tl-profile .skill-options { display: flex; flex-wrap: wrap; gap: 7px; }
@@ -125,8 +128,10 @@
 .tl-profile .small-button { padding: 9px 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel-hover); color: var(--text); font-size: 12px; }
 .tl-profile .small-button:hover { border-color: var(--strong); color: var(--strong); }
 
-.tl-profile .college-chip { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 8px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--field); color: var(--text); }
-.tl-profile .college-chip strong { color: var(--strong); font-size: 13px; overflow-wrap: anywhere; }
+.tl-profile .college-chip { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 54px; padding: 12px 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--field); color: var(--text); }
+.tl-profile .college-chip strong { color: var(--strong); font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.tl-profile .icon-edit { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel-hover); color: var(--muted); padding: 0; }
+.tl-profile .icon-edit:hover { color: var(--strong); border-color: var(--strong); }
 .tl-profile .college-list { margin-top: 7px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel-hover); max-height: 240px; overflow: auto; }
 .tl-profile .college-option { display: block; width: 100%; padding: 11px 13px; border: 0; border-bottom: 1px solid var(--border); background: transparent; color: var(--text); text-align: left; font-size: 13px; }
 .tl-profile .college-option:last-child { border-bottom: 0; }
@@ -179,8 +184,8 @@
 .tl-profile .modal-header p { margin: 0; color: var(--muted); font-size: 12px; }
 .tl-profile .close-button { border: 0; background: transparent; color: var(--muted); font-size: 23px; padding: 0 4px; }
 .tl-profile .avatar-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.tl-profile .avatar-option { display: grid; place-items: center; aspect-ratio: 1; border: 1px solid var(--border); border-radius: 14px; background: var(--field); padding: 4px; overflow: hidden; }
-.tl-profile .avatar-option img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+.tl-profile .avatar-option { display: grid; place-items: center; aspect-ratio: 1; border: 1px solid var(--border); border-radius: 14px; background: var(--field); padding: 8px; overflow: hidden; }
+.tl-profile .avatar-option img { width: 100%; height: 100%; object-fit: contain; }
 .tl-profile .avatar-option:hover, .tl-profile .avatar-option.selected { border-color: var(--primary-button); background: var(--accent-soft); }
 
 .tl-profile .calendar-selectors { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
@@ -194,7 +199,7 @@
 .tl-profile .calendar-day.outside { visibility: hidden; }
 .tl-profile .calendar-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 16px; }
 .tl-profile .calendar-footnote { color: var(--muted); font-size: 10px; }
-.tl-profile .date-trigger { display: flex; align-items: center; width: 100%; min-height: 44px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--field); color: var(--text); text-align: left; font-size: 13px; }
+.tl-profile .date-trigger { display: flex; align-items: center; width: 100%; min-height: 54px; padding: 15px 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--field); color: var(--text); text-align: left; font-size: 14px; }
 .tl-profile .date-trigger:hover { border-color: var(--strong); }
 .tl-profile .date-trigger.placeholder { color: var(--muted); }
 .tl-profile .delete-modal label { display: block; margin: 15px 0 7px; font-size: 12px; color: var(--strong); }
@@ -214,7 +219,7 @@
   .tl-profile .overview-grid, .tl-profile .form-grid { grid-template-columns: 1fr; }
   .tl-profile .field.full { grid-column: auto; }
   .tl-profile .category-card { min-height: 150px; }
-  .tl-profile .avatar { width: 62px; height: 62px; }
+  .tl-profile .avatar { width: 80px; height: 80px; }
   .tl-profile h1 { font-size: 16px; line-height: 2.1; }
   .tl-profile .form-actions { align-items: stretch; flex-direction: column; }
   .tl-profile .action-buttons { width: 100%; }

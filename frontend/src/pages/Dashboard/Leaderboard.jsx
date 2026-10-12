@@ -14,7 +14,7 @@ import Sidebar from '../../components/Dashboard/Sidebar';
 import ScrollProgress from '../../components/ScrollProgress';
 import leaderboardApi from '../../services/leaderboardApi';
 
-const FALLBACK_AVATAR = '/profile_avatars/avatar1.png';
+const FALLBACK_AVATAR = '/profile_avatars/default-avatar.png';
 const MotionDiv = motion.div;
 
 const Leaderboard = () => {

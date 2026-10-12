@@ -364,9 +364,9 @@ export default function DemoDashboard() {
     }
   }, []);
   const displayUser = user || storedUser;
-  let rawPhotoUrl = displayUser?.photoUrl || "/profile_avatars/nobackgroundavatar1.png";
+  let rawPhotoUrl = displayUser?.photoUrl || "/profile_avatars/default-avatar.png";
   if (rawPhotoUrl && !rawPhotoUrl.includes('/profile_avatars/')) {
-    rawPhotoUrl = "/profile_avatars/nobackgroundavatar1.png";
+    rawPhotoUrl = "/profile_avatars/default-avatar.png";
   }
   // Dynamically rewrite to the backgroundless version if user has an old avatar set
   if (rawPhotoUrl && rawPhotoUrl.includes('/profile_avatars/') && !rawPhotoUrl.includes('nobackground')) {

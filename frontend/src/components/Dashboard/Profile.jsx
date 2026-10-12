@@ -5,11 +5,19 @@ import { useAuth } from "../../context/AuthContext";
 import API from "../../api/client";
 import ScrollProgress from "../../components/ScrollProgress";
 import UserSidebarLayout from "./UserSidebarLayout";
+import { FiEdit2, FiChevronDown } from "react-icons/fi";
 import "./Profile.css";
 
 const AVATAR_COUNT = 8;
 const AVATAR_PATH = "/profile_avatars";
-const avatarUrls = Array.from({ length: AVATAR_COUNT }, (_, i) => `${AVATAR_PATH}/avatar${i + 1}.png`);
+const DEFAULT_AVATAR = `${AVATAR_PATH}/default-avatar.png`;
+const avatarUrls = [DEFAULT_AVATAR, ...Array.from({ length: AVATAR_COUNT }, (_, i) => `${AVATAR_PATH}/nobackgroundavatar${i + 1}.png`)];
+
+// Always show the background-free artwork; fall back to the default avatar.
+const resolveAvatar = (url) => {
+  if (!url || !String(url).includes("/profile_avatars/")) return DEFAULT_AVATAR;
+  return String(url).replace("/profile_avatars/avatar", "/profile_avatars/nobackgroundavatar");
+};
 
 const SKILL_CATALOG = ["C / C++", "Java", "Python", "JavaScript", "Web Development", "DSA", "SQL", "AI/ML", "Generative AI", "Aptitude", "Other"];
 const COMPANY_CATALOG = ["TCS", "Infosys", "Accenture", "Wipro", "Cognizant", "Capgemini", "Amazon", "Deloitte", "Microsoft", "Google", "IBM", "Tech Mahindra", "HCLTech", "Oracle", "Other"];
@@ -76,7 +84,10 @@ function ChipPicker({ id, label, placeholder, catalog, values, onChange, addPlac
         <span className="skill-trigger-content">
           {values.length ? values.map((v) => <span className="skill-summary-chip" key={v}>{v}</span>) : placeholder}
         </span>
-        <span className="trigger-chevron">⌄</span>
+        <span className="trigger-icons">
+          {values.length > 0 && <FiEdit2 size={15} aria-hidden="true" />}
+          <FiChevronDown size={18} aria-hidden="true" className={open ? "flip" : ""} />
+        </span>
       </button>
       {open && (
         <div className="skill-picker">
@@ -170,8 +181,11 @@ function CollegePicker({ value, locked, onChange }) {
       {value && !editing ? (
         <div className="college-chip">
           <strong>{value.name}</strong>
-          {!locked && <button className="small-button" type="button" onClick={() => setEditing(true)}>Change</button>}
-          {locked && <span className="pill">Set by your institution</span>}
+          {!locked && (
+            <button className="icon-edit" type="button" aria-label="Edit college" title="Edit college" onClick={() => setEditing(true)}>
+              <FiEdit2 size={15} />
+            </button>
+          )}
         </div>
       ) : (
         <>
@@ -471,15 +485,13 @@ const Profile = () => {
     );
   }
 
-  const avatarSrc = profile.avatar && profile.avatar.includes("/profile_avatars/")
-    ? profile.avatar.replace("/nobackgroundavatar", "/avatar")
-    : `${AVATAR_PATH}/avatar1.png`;
+  const avatarSrc = resolveAvatar(profile.avatar);
 
   const hero = (
     <section className="panel profile-hero" aria-label="Profile summary">
       <div className="avatar-wrap">
         <div className="avatar"><img src={avatarSrc} alt="Profile avatar" /></div>
-        <button className="avatar-edit" type="button" aria-label="Choose avatar" title="Choose avatar" onClick={() => setAvatarOpen(true)}>✎</button>
+        <button className="avatar-edit" type="button" aria-label="Choose avatar" title="Edit avatar" onClick={() => setAvatarOpen(true)}><FiEdit2 size={14} /></button>
       </div>
       <div className="hero-info">
         <h2>{profile.fullName || "Student"}</h2>
@@ -544,7 +556,6 @@ const Profile = () => {
       {view !== "overview" && draft && (
         <section className="detail-view">
           <div className="detail-heading">
-            <button className="back-button" type="button" aria-label="Back to profile overview" onClick={goBack}>←</button>
             <div><h2>{heading[0]}</h2><p>{heading[1]}</p></div>
           </div>
 
@@ -698,14 +709,13 @@ const Profile = () => {
               <p className="form-section-description">Your account details and current status.</p>
               <div className="security-row">
                 <div><h4>Email address</h4><p>{profile.email}</p></div>
-                <span className="pill">Registered</span>
               </div>
               <div className="status-summary" aria-label="Current account and program statuses">
-                <div className="status-card"><span className="status-title">Account Status</span><strong className="status-value">{profile.accountStatus}</strong><small>Your sign-in is active</small></div>
-                <div className="status-card"><span className="status-title">Program Status</span><strong className="status-value">{profile.programStatus}</strong><small>From your current enrollment</small></div>
+                <div className="status-card"><span className="status-title">Account Status</span><strong className="status-value">{profile.accountStatus}</strong></div>
+                <div className="status-card"><span className="status-title">Program Status</span><strong className="status-value">{profile.programStatus}</strong></div>
               </div>
               <div className="security-row">
-                <div><h4>Password &amp; sign-in</h4><p>We'll email you a link to set a new password.</p></div>
+                <div><h4>Password &amp; sign-in</h4></div>
                 <button className="button button-primary" type="button" onClick={resetPassword}>Reset password</button>
               </div>
               <div className="security-row">

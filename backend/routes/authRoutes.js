@@ -343,8 +343,8 @@ router.post("/google", async function googleLogin(req, res) {
           email: formattedEmail,
           password: "",
           authProvider: "google",
-          photoUrl: "/profile_avatars/nobackgroundavatar1.png",
-          avatar: "/profile_avatars/nobackgroundavatar1.png",
+          photoUrl: "/profile_avatars/default-avatar.png",
+          avatar: "/profile_avatars/default-avatar.png",
           mobileNumber: mobileNumber || "",
           collegeName: collegeName || "",
           degree: degree || "",
@@ -367,10 +367,10 @@ router.post("/google", async function googleLogin(req, res) {
     } else {
       user.authProvider = user.authProvider === "local" ? user.authProvider : "google";
       if (!user.photoUrl || !user.photoUrl.includes("/profile_avatars/")) {
-        user.photoUrl = "/profile_avatars/nobackgroundavatar1.png";
+        user.photoUrl = "/profile_avatars/default-avatar.png";
       }
       if (!user.avatar || !user.avatar.includes("/profile_avatars/")) {
-        user.avatar = "/profile_avatars/nobackgroundavatar1.png";
+        user.avatar = "/profile_avatars/default-avatar.png";
       }
       if (mobileNumber) user.mobileNumber = mobileNumber;
       if (collegeName) user.collegeName = collegeName;
@@ -430,8 +430,8 @@ router.post("/firebase", async (req, res) => {
           email: formattedEmail,
           password: "",
           authProvider: "firebase",
-          photoUrl: "/profile_avatars/nobackgroundavatar1.png",
-          avatar: "/profile_avatars/nobackgroundavatar1.png",
+          photoUrl: "/profile_avatars/default-avatar.png",
+          avatar: "/profile_avatars/default-avatar.png",
           role: assignedRole,
         });
       } catch (error) {
@@ -444,10 +444,10 @@ router.post("/firebase", async (req, res) => {
     } else {
       if (isAdmin && user.role !== "admin") user.role = "admin";
       if (!user.photoUrl || !user.photoUrl.includes("/profile_avatars/")) {
-        user.photoUrl = "/profile_avatars/nobackgroundavatar1.png";
+        user.photoUrl = "/profile_avatars/default-avatar.png";
       }
       if (!user.avatar || !user.avatar.includes("/profile_avatars/")) {
-        user.avatar = "/profile_avatars/nobackgroundavatar1.png";
+        user.avatar = "/profile_avatars/default-avatar.png";
       }
       if (user.authProvider !== "local") user.authProvider = "firebase";
       await user.save();
