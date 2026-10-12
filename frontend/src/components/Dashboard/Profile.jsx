@@ -1,565 +1,767 @@
-import React, { useState, useEffect } from "react";
-import { AnimatePresence } from "framer-motion";
-import { 
-  User, Mail, Lock, Camera,
-  X, CheckCircle, Settings,
-  Award, Zap, BookOpen, Shield
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
+import { useAuth } from "../../context/AuthContext";
+import API from "../../api/client";
 import ScrollProgress from "../../components/ScrollProgress";
 import UserSidebarLayout from "./UserSidebarLayout";
+import "./Profile.css";
 
 const AVATAR_COUNT = 8;
 const AVATAR_PATH = "/profile_avatars";
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const avatarUrls = Array.from({ length: AVATAR_COUNT }, (_, i) => `${AVATAR_PATH}/avatar${i + 1}.png`);
 
-const getInitialAvatar = () => {
-  const storedUser = JSON.parse(localStorage.getItem("userData"));
-  if (storedUser?.photoUrl) {
-    let url = storedUser.photoUrl;
-    if (url && !url.includes('/profile_avatars/')) {
-      url = `${AVATAR_PATH}/avatar1.png`;
+const SKILL_CATALOG = ["C / C++", "Java", "Python", "JavaScript", "Web Development", "DSA", "SQL", "AI/ML", "Generative AI", "Aptitude", "Other"];
+const COMPANY_CATALOG = ["TCS", "Infosys", "Accenture", "Wipro", "Cognizant", "Capgemini", "Amazon", "Deloitte", "Microsoft", "Google", "IBM", "Tech Mahindra", "HCLTech", "Oracle", "Other"];
+const ROLE_OPTIONS = ["Software Developer", "Java Developer", "Full Stack Developer", "Python Developer", "Data Analyst", "QA / Test Engineer", "Other"];
+const DEGREES = ["B.Tech / B.E.", "BCA", "B.Sc.", "MCA", "M.Tech / M.E.", "MBA", "B.Com.", "Other"];
+const LEVELS = ["Beginner", "Basic", "Intermediate", "Advanced"];
+const DELETE_REASONS = ["I'm not using TechLearn", "I'm switching to another platform", "I'm having technical issues", "Privacy concerns", "Other"];
+
+const normalizeName = (value) => {
+  const clean = String(value || "").trim().replace(/\s+/g, " ");
+  if (!clean) return "";
+  return (SKILL_CATALOG.concat(COMPANY_CATALOG)).find((s) => s.toLowerCase() === clean.toLowerCase()) || clean;
+};
+const normalizeList = (list) => {
+  const seen = new Set();
+  const out = [];
+  (Array.isArray(list) ? list : []).forEach((item) => {
+    const name = normalizeName(item);
+    const key = name.toLowerCase();
+    if (name && !seen.has(key)) {
+      seen.add(key);
+      out.push(name);
     }
-    if (url.includes('/profile_avatars/') && url.includes('nobackground')) {
-      url = url.replace('/nobackgroundavatar', '/avatar');
-    }
-    return url;
-  }
-  return `${AVATAR_PATH}/avatar1.png`;
+  });
+  return out;
 };
 
-const Profile = () => {
-  const navigate = useNavigate();
-  const { theme } = useTheme();
-  const { user, isLoading, refetchUserData, xp, progress } = useUser();
-  
-  const isDarkMode = theme === 'dark';
-  
-  // Avatar State
-  const [selectedAvatar, setSelectedAvatar] = useState(getInitialAvatar);
-  const [isSelectingAvatar, setIsSelectingAvatar] = useState(false);
-  const [pendingAvatar, setPendingAvatar] = useState(null);
-  const [hasInitialized, setHasInitialized] = useState(false);
+const apiError = (error, fallback) => error?.response?.data?.message || error?.message || fallback;
+
+const formatDob = (iso) => {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+};
+
+/* ---------- Multi-select picker (skills / companies) ---------- */
+function ChipPicker({ id, label, placeholder, catalog, values, onChange, addPlaceholder }) {
+  const [open, setOpen] = useState(false);
+  const [custom, setCustom] = useState("");
+  const wrapRef = useRef(null);
 
   useEffect(() => {
-    if (hasInitialized) return;
-    const storedUser = JSON.parse(localStorage.getItem("userData"));
-    let activePhoto = user?.photoUrl || storedUser?.photoUrl;
-    if (activePhoto) {
-      let url = activePhoto;
-      if (url && !url.includes('/profile_avatars/')) {
-        url = `${AVATAR_PATH}/avatar1.png`;
-      }
-      if (url.includes('/profile_avatars/') && url.includes('nobackground')) {
-        url = url.replace('/nobackgroundavatar', '/avatar');
-      }
-      setSelectedAvatar(url);
-      setHasInitialized(true);
-    }
-  }, [user?.photoUrl, hasInitialized]);
+    const close = (event) => {
+      if (wrapRef.current && !wrapRef.current.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, []);
 
-  const handleAvatarSelect = async (avatarUrl) => {
-    setSelectedAvatar(avatarUrl);
-    setIsSelectingAvatar(false);
+  const options = normalizeList([...catalog, ...values]);
+  const has = (item) => values.some((v) => v.toLowerCase() === item.toLowerCase());
+  const toggle = (item) => onChange(has(item) ? values.filter((v) => v.toLowerCase() !== item.toLowerCase()) : normalizeList([...values, item]));
+  const addCustom = () => {
+    const name = normalizeName(custom);
+    if (!name) return;
+    onChange(normalizeList([...values, name]));
+    setCustom("");
+  };
 
+  return (
+    <div className="field full" ref={wrapRef}>
+      <label htmlFor={`${id}-trigger`}>{label}</label>
+      <button className="skill-trigger" id={`${id}-trigger`} type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <span className="skill-trigger-content">
+          {values.length ? values.map((v) => <span className="skill-summary-chip" key={v}>{v}</span>) : placeholder}
+        </span>
+        <span className="trigger-chevron">⌄</span>
+      </button>
+      {open && (
+        <div className="skill-picker">
+          <div className="skill-picker-heading">Select all that apply</div>
+          <div className="skill-options">
+            {options.map((item) => (
+              <button key={item} type="button" className="skill-option" aria-pressed={has(item)} onClick={() => toggle(item)}>{item}</button>
+            ))}
+          </div>
+          <div className="skill-add">
+            <input
+              value={custom}
+              placeholder={addPlaceholder}
+              aria-label={addPlaceholder}
+              onChange={(e) => setCustom(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } }}
+            />
+            <button className="small-button" type="button" onClick={addCustom}>+ Add</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- College picker with "Add College +" ---------- */
+function CollegePicker({ value, locked, onChange }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [suggestion, setSuggestion] = useState(null);
+  const [message, setMessage] = useState("");
+  const [editing, setEditing] = useState(!value);
+  const wrapRef = useRef(null);
+
+  useEffect(() => { setEditing(!value); }, [value]);
+
+  useEffect(() => {
+    if (!editing || !open) return undefined;
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await API.get("/api/colleges/search", { params: { q: query.trim() } });
+        setResults(data.colleges || []);
+      } catch {
+        setResults([]);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [query, open, editing]);
+
+  useEffect(() => {
+    const close = (event) => {
+      if (wrapRef.current && !wrapRef.current.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, []);
+
+  const choose = (college, note = "") => {
+    onChange({ id: college.id, name: college.name });
+    setQuery("");
+    setSuggestion(null);
+    setOpen(false);
+    setMessage(note);
+  };
+
+  const resolve = async (confirmNew = false) => {
+    const name = query.trim();
+    if (!name) return;
+    setBusy(true);
+    setMessage("");
     try {
-      const storedUser = JSON.parse(localStorage.getItem("userData"));
-
-      if (!storedUser || !storedUser.id) {
-        throw new Error("User ID not found in localStorage");
-      }
-
-      const token = localStorage.getItem("token");
-      const userId = storedUser.id;
-
-      const res = await fetch(
-        `${API_BASE_URL}/users/user/${userId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ photoUrl: avatarUrl }),
-        }
-      );
-
-      if (!res.ok) {
-        throw new Error("Failed to update avatar");
-      }
-
-      await res.json();
-
-      const updatedUser = { ...storedUser, photoUrl: avatarUrl, avatar: avatarUrl };
-      localStorage.setItem("userData", JSON.stringify(updatedUser));
-      
-      if (refetchUserData) {
-        await refetchUserData();
-      }
-      
+      const { data } = await API.post("/api/colleges/resolve", { name, confirmNew });
+      if (data.action === "existing") choose(data.college, "This college is already in our list, so we selected it for you.");
+      else if (data.action === "suggest") { setSuggestion(data.college); setOpen(false); }
+      else choose(data.college, "College added to the list.");
     } catch (error) {
-      console.error("Error updating avatar:", error);
+      setMessage(apiError(error, "Could not add the college."));
+    } finally {
+      setBusy(false);
     }
   };
 
-  const userData = JSON.parse(localStorage.getItem("userData")) || {};
-  const displayUser = user || userData;
-  const canonicalProfile = displayUser?.profile || {};
-  const profileAccount = canonicalProfile.account || {};
-  const profileEducation = canonicalProfile.education || {};
-  const profileEnrollment = canonicalProfile.enrollment || {};
-  const profileGoals = canonicalProfile.goals || {};
-  const profileSkills = canonicalProfile.skills?.selectedSkills || displayUser?.skills || [];
-  const targetCompanies = Array.isArray(profileGoals.companies)
-    ? profileGoals.companies
-    : (Array.isArray(displayUser?.targetCompanies) ? displayUser.targetCompanies : []);
-  
-  const userName = profileAccount.name || (displayUser?.firstName ? `${displayUser.firstName} ${displayUser.lastName || ''}` : 'Student');
+  const typed = query.trim();
+  const exactInResults = results.some((c) => c.name.toLowerCase() === typed.toLowerCase());
 
-  if (isLoading) {
-    return (
-      <div className={`flex min-h-screen w-full font-sans antialiased items-center justify-center ${isDarkMode ? "dark" : "light"}`}>
-         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
-         <div className="w-10 h-10 border-t-2 border-[#3C83F6] dark:border-white rounded-full animate-spin"></div>
+  return (
+    <div className="field full" ref={wrapRef}>
+      <label htmlFor="college-input">College / Institution</label>
+      {value && !editing ? (
+        <div className="college-chip">
+          <strong>{value.name}</strong>
+          {!locked && <button className="small-button" type="button" onClick={() => setEditing(true)}>Change</button>}
+          {locked && <span className="pill">Set by your institution</span>}
+        </div>
+      ) : (
+        <>
+          <input
+            id="college-input"
+            autoComplete="off"
+            placeholder="Search your college, or add a new one"
+            value={query}
+            onFocus={() => setOpen(true)}
+            onChange={(e) => { setQuery(e.target.value); setSuggestion(null); setOpen(true); }}
+          />
+          {open && (
+            <div className="college-list" role="listbox">
+              {results.map((college) => (
+                <button key={college.id} type="button" className="college-option" onClick={() => choose(college)}>
+                  {college.name}{college.city ? ` · ${college.city}` : ""}
+                </button>
+              ))}
+              {typed.length >= 3 && !exactInResults && (
+                <button type="button" className="college-option add" disabled={busy} onClick={() => resolve(false)}>
+                  {busy ? "Checking…" : `Add College +  “${typed}”`}
+                </button>
+              )}
+              {results.length === 0 && typed.length < 3 && <div className="college-option">Type at least 3 letters to search</div>}
+            </div>
+          )}
+          {suggestion && (
+            <div className="college-suggest" role="status">
+              Did you mean <strong>{suggestion.name}</strong>? It's already in our list.
+              <div className="row">
+                <button className="button button-primary" type="button" onClick={() => choose(suggestion, "Selected the existing college.")}>Yes, use {suggestion.name}</button>
+                <button className="button" type="button" onClick={() => resolve(true)}>No, add mine</button>
+              </div>
+            </div>
+          )}
+          {value && <button className="small-button" type="button" style={{ marginTop: 8 }} onClick={() => { setEditing(false); setQuery(""); }}>Cancel</button>}
+        </>
+      )}
+      {message && <span className="field-hint">{message}</span>}
+    </div>
+  );
+}
+
+/* ---------- Date of birth picker ---------- */
+function DobPicker({ value, onChange }) {
+  const today = useMemo(() => { const t = new Date(); t.setHours(0, 0, 0, 0); return t; }, []);
+  const [open, setOpen] = useState(false);
+  const initial = value ? new Date(`${value}T00:00:00`) : new Date(today.getFullYear() - 18, today.getMonth(), 1);
+  const [month, setMonth] = useState(new Date(initial.getFullYear(), initial.getMonth(), 1));
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const first = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
+  const count = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const monthNames = Array.from({ length: 12 }, (_, m) => new Date(2000, m, 1).toLocaleDateString(undefined, { month: "long" }));
+  const years = Array.from({ length: today.getFullYear() - 1899 }, (_, i) => today.getFullYear() - i);
+
+  const openPicker = () => {
+    const base = value ? new Date(`${value}T00:00:00`) : new Date(today.getFullYear() - 18, today.getMonth(), 1);
+    setMonth(new Date(base.getFullYear(), base.getMonth(), 1));
+    setOpen(true);
+  };
+
+  return (
+    <>
+      <button type="button" className={`date-trigger ${value ? "" : "placeholder"}`} onClick={openPicker} aria-label="Choose date of birth">
+        {value ? formatDob(value) : "Select your date of birth"}
+      </button>
+      {open && (
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }} role="dialog" aria-modal="true">
+          <div className="modal-card">
+            <div className="modal-header">
+              <div><h3>Choose date of birth</h3></div>
+              <button className="close-button" type="button" aria-label="Close date picker" onClick={() => setOpen(false)}>×</button>
+            </div>
+            <div className="calendar-selectors">
+              <select aria-label="Select month" value={month.getMonth()} onChange={(e) => setMonth(new Date(month.getFullYear(), Number(e.target.value), 1))}>
+                {monthNames.map((name, m) => <option key={name} value={m}>{name}</option>)}
+              </select>
+              <select aria-label="Select year" value={month.getFullYear()} onChange={(e) => setMonth(new Date(Number(e.target.value), month.getMonth(), 1))}>
+                {years.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div className="calendar-weekdays">{["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => <span key={d}>{d}</span>)}</div>
+            <div className="calendar-grid">
+              {Array.from({ length: first }, (_, i) => <span key={`b${i}`} className="calendar-day outside" aria-hidden="true" />)}
+              {Array.from({ length: count }, (_, i) => {
+                const date = new Date(month.getFullYear(), month.getMonth(), i + 1);
+                return (
+                  <button key={i} type="button" disabled={date > today} className={`calendar-day ${value === iso(date) ? "selected" : ""}`}
+                    onClick={() => { onChange(iso(date)); setOpen(false); }}>{i + 1}</button>
+                );
+              })}
+            </div>
+            <div className="calendar-actions">
+              <button className="button" type="button" onClick={() => { onChange(""); setOpen(false); }}>Clear date</button>
+              <span className="calendar-footnote">Future dates are unavailable</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ---------- Page ---------- */
+const VIEW_HEADINGS = {
+  personal: ["Personal Information", "Update how your profile appears on TechLearn."],
+  academic: ["Academic & Career", "Help TechLearn understand your background and goals."],
+  preferences: ["Learning Preferences", "Customize your learning experience to suit your routine."],
+  account: ["Account & Security", "Review your account information and security options."],
+};
+
+const Profile = () => {
+  const { theme } = useTheme();
+  const { logout } = useAuth();
+  const { refetchUserData } = useUser();
+  const isLight = theme !== "dark";
+
+  const [profile, setProfile] = useState(null);
+  const [draft, setDraft] = useState(null);
+  const [loadError, setLoadError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState("overview");
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState(null);
+  const [editingGoals, setEditingGoals] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleteDetails, setDeleteDetails] = useState("");
+  const [customRole, setCustomRole] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const { data } = await API.get("/api/users/profile/details");
+      setProfile(data.profile);
+      setDraft(null);
+    } catch (error) {
+      setLoadError(apiError(error, "We couldn't load your profile."));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Browser back button returns from a section to the overview.
+  useEffect(() => {
+    const onPop = () => {
+      const hash = window.location.hash.replace("#profile-", "");
+      setView(VIEW_HEADINGS[hash] ? hash : "overview");
+      setNotice(null);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  const roleIsPreset = (role) => !role || ROLE_OPTIONS.includes(role);
+
+  const openView = (next) => {
+    setNotice(null);
+    setEditingGoals(false);
+    const base = profile || {};
+    setDraft({
+      ...base,
+      level: base.level || "",
+      targetRoleSelect: roleIsPreset(base.targetRole) ? base.targetRole || "" : "Other",
+      targetCompanies: base.targetCompanies || [],
+      currentSkills: base.currentSkills || [],
+      skillsOfInterest: base.skillsOfInterest || [],
+    });
+    setCustomRole(roleIsPreset(base.targetRole) ? "" : base.targetRole);
+    setView(next);
+    window.scrollTo({ top: 0 });
+    if (next === "overview") {
+      if (window.location.hash.startsWith("#profile-")) window.history.replaceState({}, "", window.location.pathname);
+    } else {
+      window.history.pushState({ profileView: next }, "", `${window.location.pathname}#profile-${next}`);
+    }
+  };
+
+  const goBack = () => {
+    if (window.location.hash.startsWith("#profile-")) window.history.back();
+    else { setView("overview"); setNotice(null); }
+  };
+
+  const setField = (key, value) => setDraft((d) => ({ ...d, [key]: value }));
+
+  const save = async (keys) => {
+    if (!draft) return;
+    setNotice(null);
+    const payload = {};
+    keys.forEach((key) => { payload[key] = draft[key]; });
+    if (keys.includes("targetRole")) {
+      payload.targetRole = draft.targetRoleSelect === "Other" ? customRole.trim() : draft.targetRoleSelect;
+      if (draft.targetRoleSelect === "Other" && !payload.targetRole) {
+        setNotice({ error: true, text: "Enter your target role." });
+        return;
+      }
+    }
+    if (keys.includes("college")) {
+      delete payload.college;
+      payload.collegeId = draft.college?.id || null;
+    }
+    if (keys.includes("daysPerWeek") && (!draft.daysPerWeek || !draft.hoursPerDay)) {
+      setNotice({ error: true, text: "Select both days per week and hours per day." });
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data } = await API.put("/api/users/profile/details", payload);
+      setProfile(data.profile);
+      setDraft((d) => ({ ...d, ...data.profile, targetRoleSelect: d.targetRoleSelect }));
+      setEditingGoals(false);
+      setNotice({ text: "Changes saved successfully." });
+      if (refetchUserData) refetchUserData();
+    } catch (error) {
+      setNotice({ error: true, text: apiError(error, "Could not save your changes. Please try again.") });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const chooseAvatar = async (url) => {
+    setAvatarOpen(false);
+    try {
+      const { data } = await API.put("/api/users/profile/details", { avatar: url });
+      setProfile(data.profile);
+      try {
+        const stored = JSON.parse(localStorage.getItem("userData") || "{}");
+        localStorage.setItem("userData", JSON.stringify({ ...stored, photoUrl: url, avatar: url }));
+      } catch { /* cache only */ }
+      if (refetchUserData) refetchUserData();
+    } catch (error) {
+      setNotice({ error: true, text: apiError(error, "Could not update your avatar.") });
+    }
+  };
+
+  const resetPassword = async () => {
+    setNotice(null);
+    try {
+      await API.post("/api/auth/forgot-password", { email: profile.email });
+      setNotice({ text: `If an account exists for ${profile.email}, a password reset link has been sent.` });
+    } catch (error) {
+      setNotice({ error: true, text: apiError(error, "Could not send the reset email.") });
+    }
+  };
+
+  const submitDelete = async (event) => {
+    event.preventDefault();
+    if (!deleteReason) return;
+    try {
+      const { data } = await API.post("/api/users/account-deletion-request", { reason: deleteReason, details: deleteDetails });
+      setDeleteOpen(false);
+      setDeleteReason("");
+      setDeleteDetails("");
+      setNotice({ text: data.message || "Deletion request received." });
+    } catch (error) {
+      setDeleteOpen(false);
+      setNotice({ error: true, text: apiError(error, "Could not submit your request.") });
+    }
+  };
+
+  const completion = useMemo(() => {
+    if (!profile) return { percent: 0, personal: false, academic: false, prefs: false };
+    const checks = [profile.fullName, profile.country, profile.college?.name, profile.degree, profile.graduationYear, profile.level, profile.targetRole, profile.daysPerWeek, profile.hoursPerDay];
+    const done = checks.filter(Boolean).length;
+    return {
+      percent: Math.round((done / checks.length) * 100),
+      personal: Boolean(profile.fullName && profile.country),
+      academic: Boolean(profile.college?.name && profile.degree && profile.level && profile.targetRole),
+      prefs: Boolean(profile.daysPerWeek && profile.hoursPerDay),
+    };
+  }, [profile]);
+
+  const thisYear = new Date().getFullYear();
+  const gradYears = Array.from({ length: 19 }, (_, i) => thisYear + 6 - i);
+  const noticeBox = notice && <div className={`notice ${notice.error ? "error" : ""}`} role="status">{notice.text}</div>;
+
+  const shell = (children) => (
+    <>
+      <ScrollProgress />
+      <UserSidebarLayout maxWidthClass="max-w-[1080px]">
+        <div className={`tl-profile ${isLight ? "is-light" : ""}`}>{children}</div>
+      </UserSidebarLayout>
+    </>
+  );
+
+  if (loading) return shell(<div className="page-state"><div>Loading your profile…</div></div>);
+  if (loadError || !profile) {
+    return shell(
+      <div className="page-state">
+        <div role="alert">{loadError || "We couldn't load your profile."}</div>
+        <button className="button button-primary" type="button" onClick={load}>Try again</button>
       </div>
     );
   }
 
-  return (
+  const avatarSrc = profile.avatar && profile.avatar.includes("/profile_avatars/")
+    ? profile.avatar.replace("/nobackgroundavatar", "/avatar")
+    : `${AVATAR_PATH}/avatar1.png`;
+
+  const hero = (
+    <section className="panel profile-hero" aria-label="Profile summary">
+      <div className="avatar-wrap">
+        <div className="avatar"><img src={avatarSrc} alt="Profile avatar" /></div>
+        <button className="avatar-edit" type="button" aria-label="Choose avatar" title="Choose avatar" onClick={() => setAvatarOpen(true)}>✎</button>
+      </div>
+      <div className="hero-info">
+        <h2>{profile.fullName || "Student"}</h2>
+        <p>{profile.email}</p>
+      </div>
+      <div className="completion">
+        <div className="completion-top"><span>Profile completion</span><strong>{completion.percent}%</strong></div>
+        <div className="progress-track"><div className="progress-fill" style={{ width: `${completion.percent}%` }} /></div>
+      </div>
+    </section>
+  );
+
+  const cards = [
+    { id: "personal", title: "Personal Information", text: "Your name, contact details, location and profile photo.", status: completion.personal ? "Completed" : "In progress",
+      icon: <><circle cx="12" cy="8" r="4" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></> },
+    { id: "academic", title: "Academic & Career", text: "Your education, skills, experience level and career goals.", status: completion.academic ? "Completed" : "In progress",
+      icon: <><path d="m2 10 10-5 10 5-10 5-10-5Z" /><path d="M6 12v5c3.5 3 8.5 3 12 0v-5" /><path d="M22 10v6" /></> },
+    { id: "preferences", title: "Learning Preferences", text: "Choose how you learn and set your weekly learning goal.", status: completion.prefs ? "Goals set" : "In progress",
+      icon: <><path d="M12 3v3m0 12v3M3 12h3m12 0h3" /><circle cx="12" cy="12" r="6" /><path d="m9.5 12 1.7 1.7 3.5-3.8" /></> },
+    { id: "account", title: "Account & Security", text: "Manage your account details and review security options.", status: "Account settings",
+      icon: <><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /><path d="M12 14v3" /></> },
+  ];
+
+  const heading = VIEW_HEADINGS[view];
+  const formActions = (keys) => (
+    <div className="form-actions">
+      <p>Your profile information helps personalize your experience.</p>
+      <div className="action-buttons">
+        <button className="button" type="button" onClick={goBack}>Cancel</button>
+        <button className="button button-primary" type="button" disabled={saving} onClick={() => save(keys)}>{saving ? "Saving…" : "Save Changes"}</button>
+      </div>
+    </div>
+  );
+
+
+  return shell(
     <>
-      <ScrollProgress />
-      <UserSidebarLayout maxWidthClass="max-w-4xl">
-        <div className="space-y-3.5">
-          
-          {/* HEADING - PRESERVED ORIGINAL BRAND DESIGN */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mx-auto max-w-4xl pt-1 text-center"
-          >
-            <h1 className="font-press-start leading-normal">
-              <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
-                MY PROFILE
-              </span>
-            </h1>
-          </motion.div>
+      <header className="page-heading"><h1>PROFILE</h1></header>
+      {hero}
 
-          {/* 1. SLEEK COMPACT HEADER BANNER CARD - SINGLE HORIZONTAL BALANCED LAYOUT */}
-          <motion.div 
-            initial={{ opacity: 0, y: 12 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ duration: 0.4 }}
-            className="dashboard-surface w-full relative overflow-hidden shadow-md"
-          >
-            {/* Sleek low-profile blue banner strip */}
-            <div className="h-12 sm:h-14 w-full bg-gradient-to-r from-[#0052a3] via-[#0274c4] to-[#0091d9]" />
-
-            {/* Profile Content Bar - Single Visually Balanced Horizontal Layout */}
-            <div className="px-5 py-3.5 sm:px-6 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
-              <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
-                {/* Avatar with intentional, balanced vertical overlap */}
-                <div className="relative group shrink-0 -mt-8 sm:-mt-9">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl p-0.5 bg-white dark:bg-[#020b23] shadow-md">
-                    <div className="w-full h-full rounded-[14px] overflow-hidden bg-slate-100 dark:bg-[#091842]">
-                      <img
-                        src={selectedAvatar}
-                        alt="Avatar"
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    </div>
+      {view === "overview" && (
+        <section>
+          <div className="overview-grid">
+            {cards.map((card) => (
+              <button key={card.id} className="category-card" type="button" onClick={() => openView(card.id)}>
+                <div className="card-top">
+                  <div className="card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{card.icon}</svg>
                   </div>
-                  <button
-                    onClick={() => setIsSelectingAvatar(true)}
-                    className="absolute -bottom-1 -right-1 bg-[#3C83F6] hover:bg-[#2563eb] text-white p-1 rounded-md shadow hover:scale-110 active:scale-95 transition-all duration-300 z-10"
-                    title="Change Avatar"
-                  >
-                    <Camera className="w-3 h-3" />
+                  <span className="arrow-icon">↗</span>
+                </div>
+                <h3>{card.title}</h3>
+                <p>{card.text}</p>
+                <div className="card-footer"><span className="card-status">{card.status}</span></div>
+              </button>
+            ))}
+          </div>
+          {noticeBox}
+        </section>
+      )}
+
+      {view !== "overview" && draft && (
+        <section className="detail-view">
+          <div className="detail-heading">
+            <button className="back-button" type="button" aria-label="Back to profile overview" onClick={goBack}>←</button>
+            <div><h2>{heading[0]}</h2><p>{heading[1]}</p></div>
+          </div>
+
+          {view === "personal" && (
+            <div className="panel form-panel">
+              <h3 className="form-section-title">Basic details</h3>
+              <p className="form-section-description">Keep your contact information up to date.</p>
+              <div className="form-grid">
+                <div className="field">
+                  <label htmlFor="fullName">Full name <span className="required">*</span></label>
+                  <input id="fullName" value={draft.fullName || ""} placeholder="Enter your full name" autoComplete="name" onChange={(e) => setField("fullName", e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="email">Email address</label>
+                  <input id="email" type="email" value={draft.email || ""} readOnly />
+                </div>
+                <div className="field">
+                  <label>Date of birth</label>
+                  <DobPicker value={draft.dob || ""} onChange={(v) => setField("dob", v)} />
+                  <span className="field-hint">Users must be at least 18 years of age</span>
+                </div>
+                <div className="field">
+                  <label htmlFor="country">Country</label>
+                  <input id="country" value={draft.country || ""} placeholder="e.g. India" autoComplete="country-name" onChange={(e) => setField("country", e.target.value)} />
+                </div>
+              </div>
+              {formActions(["fullName", "dob", "country"])}
+              {noticeBox}
+            </div>
+          )}
+
+          {view === "academic" && (
+            <div className="panel form-panel">
+              <h3 className="form-section-title">Education</h3>
+              <p className="form-section-description">Tell us about your academic background.</p>
+              <div className="form-grid">
+                <CollegePicker value={draft.college} locked={draft.collegeLocked} onChange={(college) => setField("college", college)} />
+                <div className="field">
+                  <label htmlFor="degree">Degree</label>
+                  <select id="degree" value={draft.degree || ""} onChange={(e) => setField("degree", e.target.value)}>
+                    <option value="">Select degree</option>
+                    {[...new Set([...DEGREES, draft.degree].filter(Boolean))].map((d) => <option key={d}>{d}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label htmlFor="branch">Branch / Specialization</label>
+                  <input id="branch" value={draft.branch || ""} placeholder="e.g. Computer Science" onChange={(e) => setField("branch", e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="gradYear">Graduation year</label>
+                  <select id="gradYear" value={draft.graduationYear || ""} onChange={(e) => setField("graduationYear", e.target.value)}>
+                    <option value="">Select year</option>
+                    {[...new Set([...gradYears, Number(draft.graduationYear) || null].filter(Boolean))].sort((a, b) => b - a).map((y) => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label htmlFor="level">Current skill level</label>
+                  <select id="level" value={draft.level || ""} onChange={(e) => setField("level", e.target.value)}>
+                    <option value="">Select level</option>
+                    {LEVELS.map((l) => <option key={l}>{l}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label htmlFor="targetRole">Target role</label>
+                  <select id="targetRole" value={draft.targetRoleSelect || ""} onChange={(e) => setField("targetRoleSelect", e.target.value)}>
+                    <option value="">Select target role</option>
+                    {ROLE_OPTIONS.map((r) => <option key={r}>{r}</option>)}
+                  </select>
+                  {draft.targetRoleSelect === "Other" && (
+                    <input style={{ marginTop: 8 }} value={customRole} placeholder="Enter your target role" onChange={(e) => setCustomRole(e.target.value)} />
+                  )}
+                </div>
+                <ChipPicker id="targetCompanies" label="Target companies" placeholder="Select companies you are targeting" catalog={COMPANY_CATALOG}
+                  values={draft.targetCompanies} onChange={(v) => setField("targetCompanies", v)} addPlaceholder="Add another company" />
+                <ChipPicker id="currentSkills" label="Current Skills" placeholder="Select skills you already know" catalog={SKILL_CATALOG}
+                  values={draft.currentSkills} onChange={(v) => setField("currentSkills", v)} addPlaceholder="Add another skill" />
+                <ChipPicker id="skillsOfInterest" label="Skills of Interest" placeholder="Select skills you want to learn" catalog={SKILL_CATALOG}
+                  values={draft.skillsOfInterest} onChange={(v) => setField("skillsOfInterest", v)} addPlaceholder="Add another skill" />
+              </div>
+              <div className="form-actions">
+                <p>These details help personalize recommendations.</p>
+                <div className="action-buttons">
+                  <button className="button" type="button" onClick={goBack}>Cancel</button>
+                  <button className="button button-primary" type="button" disabled={saving}
+                    onClick={() => save(["college", "degree", "branch", "graduationYear", "level", "targetRole", "targetCompanies", "currentSkills", "skillsOfInterest"])}>
+                    {saving ? "Saving…" : "Save Changes"}
                   </button>
                 </div>
-
-                {/* User info & Badges vertically centered */}
-                <div className="space-y-1 my-auto">
-                  <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
-                    <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-[#0d2a57] dark:text-white leading-tight">
-                      {userName}
-                    </h2>
-                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                      {displayUser?.email || "No email provided"}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-0.5">
-                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[8px] uppercase tracking-widest text-emerald-600 dark:text-emerald-400 font-extrabold">
-                      <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
-                      {displayUser?.role === 'admin' ? 'ADMIN ACCOUNT' : 'STUDENT ACCOUNT'}
-                    </span>
-                    <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-0.5 text-[8px] uppercase tracking-widest text-blue-600 dark:text-blue-400 font-extrabold">
-                      {profileEnrollment.program?.name || "No active program"}
-                    </span>
-                    <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[8px] uppercase tracking-widest text-amber-600 dark:text-amber-400 font-extrabold">
-                      {Number(xp || 0).toLocaleString()} XP
-                    </span>
-                  </div>
-                </div>
               </div>
-
-              {/* Account Settings Action Button - Vertically Aligned */}
-              <button
-                type="button"
-                onClick={() => navigate('/dashboard/profile/settings')}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-4 py-2 text-xs font-bold shadow-md shadow-blue-500/20 active:scale-95 transition-all shrink-0 cursor-pointer self-center"
-              >
-                <Settings className="w-3.5 h-3.5" />
-                <span>Account Settings</span>
-              </button>
+              {noticeBox}
             </div>
-          </motion.div>
+          )}
 
-          {/* 2. COMPACT THREE STAT METRIC CARDS ROW */}
-          <motion.div 
-            initial={{ opacity: 0, y: 12 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ duration: 0.4, delay: 0.05 }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full"
-          >
-            {/* Total XP Card */}
-            <div className="dashboard-surface p-3.5 flex flex-col justify-between shadow-sm min-h-[75px]">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[9px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold">TOTAL XP</span>
-                <div className="p-1 rounded-md bg-amber-500/10 text-amber-500">
-                  <Zap className="w-3.5 h-3.5 animate-pulse" />
+          {view === "preferences" && (
+            <div className="panel form-panel">
+              <h3 className="form-section-title">Your learning goals</h3>
+              <p className="form-section-description">Set a realistic routine you can maintain. These goals help us create your schedule.</p>
+              {draft.daysPerWeek && draft.hoursPerDay && !editingGoals ? (
+                <div className="goal-summary">
+                  <div className="goal-summary-card"><div><span className="goal-label">Weekly Learning Goal</span><strong>{draft.daysPerWeek} {Number(draft.daysPerWeek) === 1 ? "day" : "days"}/week</strong></div><button className="small-button" type="button" onClick={() => setEditingGoals(true)}>Edit</button></div>
+                  <div className="goal-summary-card"><div><span className="goal-label">Daily Learning Goal</span><strong>{draft.hoursPerDay} {Number(draft.hoursPerDay) === 1 ? "hour" : "hours"}/day</strong></div><button className="small-button" type="button" onClick={() => setEditingGoals(true)}>Edit</button></div>
                 </div>
-              </div>
-              <p className="text-xl sm:text-2xl font-black text-[#0d2a57] dark:text-white">
-                {Number(xp || 0).toLocaleString()}
-              </p>
-            </div>
-
-            {/* Exercises Card */}
-            <div className="dashboard-surface p-3.5 flex flex-col justify-between shadow-sm min-h-[75px]">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[9px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold">EXERCISES</span>
-                <div className="p-1 rounded-md bg-blue-500/10 text-blue-500">
-                  <Award className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <p className="text-xl sm:text-2xl font-black text-[#0d2a57] dark:text-white">
-                {progress?.completedExercises || 0} <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">/ {progress?.totalExercises || 0}</span>
-              </p>
-            </div>
-
-            {/* Course Progress Card */}
-            <div className="dashboard-surface p-3.5 flex flex-col justify-between shadow-sm min-h-[75px]">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[9px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold font-sans">COURSE</span>
-                <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-500">
-                  <BookOpen className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                  {progress?.courseProgress || 0}%
-                </p>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                  <div 
-                    className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
-                    style={{ width: `${progress?.courseProgress || 0}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* 3. TWO-COLUMN COMPACT SECTION CARDS GRID */}
-          <motion.div 
-            initial={{ opacity: 0, y: 12 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ duration: 0.4, delay: 0.1 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-3.5 w-full items-stretch"
-          >
-            {/* ROW 1 - CARD A: Account Profile */}
-            <div className="dashboard-surface p-3.5 sm:p-4 shadow-sm flex flex-col justify-between h-full">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 pb-1 border-b border-black/5 dark:border-white/5">
-                  <div className="p-1 rounded-md bg-blue-500/10 text-blue-500">
-                    <User className="w-3.5 h-3.5" />
+              ) : (
+                <div className="form-grid">
+                  <div className="field">
+                    <label htmlFor="daysPerWeek">Days per week <span className="required">*</span></label>
+                    <select id="daysPerWeek" value={draft.daysPerWeek || ""} onChange={(e) => setField("daysPerWeek", e.target.value)}>
+                      <option value="">Select days</option>
+                      {[1, 2, 3, 4, 5, 6, 7].map((d) => <option key={d} value={d}>{d} day{d > 1 ? "s" : ""}/week</option>)}
+                    </select>
                   </div>
-                  <h3 className="text-xs sm:text-sm font-bold text-[#0d2a57] dark:text-white">
-                    Account Profile
-                  </h3>
-                </div>
-
-                <div className="divide-y divide-black/5 dark:divide-white/5 text-xs">
-                  <div className="py-1.5 flex items-center justify-between gap-3">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Full Name</span>
-                    <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
-                      {profileAccount.name || `${displayUser?.firstName || "First"} ${displayUser?.lastName || "Last"}`}
-                    </span>
-                  </div>
-                  <div className="py-1.5 flex items-center justify-between gap-3">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Email Address</span>
-                    <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
-                      {profileAccount.email || displayUser?.email || "No email provided"}
-                    </span>
-                  </div>
-                  <div className="py-1.5 flex items-center justify-between gap-3">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Account Role</span>
-                    <span className="font-semibold text-[#0d2a57] dark:text-white capitalize">
-                      {profileAccount.role || displayUser?.role || "Student"}
-                    </span>
-                  </div>
-                  <div className="py-1.5 flex items-center justify-between gap-3">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Password</span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-[#0d2a57] dark:text-white tracking-[0.15em]">••••••••</span>
-                      <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[8px] uppercase tracking-widest text-blue-600 dark:text-blue-400 font-bold">ENCRYPTED</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ROW 1 - CARD B: Education & Enrollment */}
-            <div className="dashboard-surface p-3.5 sm:p-4 shadow-sm flex flex-col justify-between h-full">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 pb-1 border-b border-black/5 dark:border-white/5">
-                  <div className="p-1 rounded-md bg-blue-500/10 text-blue-500">
-                    <BookOpen className="w-3.5 h-3.5" />
-                  </div>
-                  <h3 className="text-xs sm:text-sm font-bold text-[#0d2a57] dark:text-white">
-                    Education & Enrollment
-                  </h3>
-                </div>
-
-                <div className="divide-y divide-black/5 dark:divide-white/5 text-xs">
-                  <div className="py-1.5 flex items-center justify-between gap-3">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">College</span>
-                    <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
-                      {profileEducation.college || displayUser?.collegeName || "Not assigned"}
-                    </span>
-                  </div>
-                  <div className="py-1.5 flex items-center justify-between gap-3">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Degree</span>
-                    <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
-                      {profileEducation.degree || displayUser?.degree || "Not assigned"}
-                    </span>
-                  </div>
-                  <div className="py-1.5 flex items-center justify-between gap-3">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Branch / Stream</span>
-                    <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
-                      {profileEducation.branch || displayUser?.branch || "Not specified"}
-                    </span>
-                  </div>
-                  <div className="py-1.5 flex items-center justify-between gap-3">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Graduation Year</span>
-                    <span className="font-semibold text-[#0d2a57] dark:text-white">
-                      {profileEducation.graduationYear || displayUser?.graduationYear || "Not specified"}
-                    </span>
-                  </div>
-                  <div className="py-1.5 flex items-center justify-between gap-3">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Batch</span>
-                    <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
-                      {profileEnrollment.batch?.name || displayUser?.batchName || (displayUser?.batchId ? "Assigned batch" : "Individual schedule")}
-                    </span>
-                  </div>
-                  <div className="py-1.5 flex items-center justify-between gap-3">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Program Selection</span>
-                    <span className="font-bold text-blue-600 dark:text-blue-400">
-                      {profileEnrollment.program?.name || "Not assigned"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ROW 2 - CARD C: Goals & Placement Preferences */}
-            {(profileGoals.learningGoal === "Get Placed" || Boolean(profileGoals.targetRole) || Boolean(profileGoals.opportunityType) || displayUser?.learningGoal === "Get Placed" || Boolean(displayUser?.targetRole) || Boolean(displayUser?.placementCategory)) && (
-              <div className="dashboard-surface p-3.5 sm:p-4 shadow-sm flex flex-col justify-between h-full">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 pb-1 border-b border-black/5 dark:border-white/5">
-                    <div className="p-1 rounded-md bg-blue-500/10 text-blue-500">
-                      <Award className="w-3.5 h-3.5" />
-                    </div>
-                    <h3 className="text-xs sm:text-sm font-bold text-[#0d2a57] dark:text-white">
-                      Goals & Placement Preferences
-                    </h3>
-                  </div>
-
-                  <div className="divide-y divide-black/5 dark:divide-white/5 text-xs">
-                    <div className="py-1.5 flex items-center justify-between gap-3">
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Learning Goal</span>
-                      <span className="font-semibold text-[#0d2a57] dark:text-white">
-                        {profileGoals.learningGoal || displayUser?.learningGoal || "Not specified"}
-                      </span>
-                    </div>
-                    <div className="py-1.5 flex items-center justify-between gap-3">
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Target Role</span>
-                      <span className="font-semibold text-[#0d2a57] dark:text-white">
-                        {profileGoals.targetRole || displayUser?.targetRole || displayUser?.otherTargetRole || "Not specified"}
-                      </span>
-                    </div>
-                    <div className="py-1.5 flex items-center justify-between gap-3">
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Opportunity Type</span>
-                      <span className="font-semibold text-[#0d2a57] dark:text-white">
-                        {profileGoals.opportunityType || displayUser?.placementCategory || "Not specified"}
-                      </span>
-                    </div>
-                    <div className="py-1.5 flex items-center justify-between gap-3">
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Placement Timeline</span>
-                      <span className="font-semibold text-[#0d2a57] dark:text-white">
-                        {profileGoals.placementTimeline || displayUser?.placementTimeline || "Not specified"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ROW 2 - CARD D: Target Companies & Skills Cards */}
-            <div className="flex flex-col gap-3.5 justify-between h-full">
-              {/* Target Companies */}
-              {(profileGoals.learningGoal === "Get Placed" || Boolean(profileGoals.companies?.length) || displayUser?.learningGoal === "Get Placed" || Boolean(displayUser?.targetCompanies?.length)) && (
-                <div className="dashboard-surface p-3.5 sm:p-4 shadow-sm space-y-2 flex-1 flex flex-col justify-center">
-                  <div className="flex items-center gap-2 pb-1 border-b border-black/5 dark:border-white/5">
-                    <div className="p-1 rounded-md bg-blue-500/10 text-blue-500">
-                      <Shield className="w-3.5 h-3.5" />
-                    </div>
-                    <h3 className="text-xs sm:text-sm font-bold text-[#0d2a57] dark:text-white">
-                      Selected Target Companies
-                    </h3>
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5 pt-0.5">
-                    {targetCompanies.length > 0 ? (
-                      targetCompanies.map((company, index) => (
-                        <span key={index} className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-300">
-                          {company}
-                        </span>
-                      ))
-                    ) : (
-                      <p className="text-xs text-slate-500 dark:text-slate-400">None selected</p>
-                    )}
+                  <div className="field">
+                    <label htmlFor="hoursPerDay">Hours per day <span className="required">*</span></label>
+                    <select id="hoursPerDay" value={draft.hoursPerDay || ""} onChange={(e) => setField("hoursPerDay", e.target.value)}>
+                      <option value="">Select hours</option>
+                      {[["0.5", "30 minutes/day"], ["1", "1 hour/day"], ["1.5", "1.5 hours/day"], ["2", "2 hours/day"], ["3", "3 hours/day"], ["4", "4 hours/day"], ["5", "5 hours/day"], ["6", "6 hours/day"], ["8", "8 hours/day"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
                   </div>
                 </div>
               )}
+              <p className="field-hint">{draft.daysPerWeek && draft.hoursPerDay && !editingGoals ? "Your goals are saved to your account." : "Choose both values and save to set your goals."}</p>
 
-              {/* Skills & Interests */}
-              {(profileGoals.learningGoal === "Learn New Skills" || profileSkills.length > 0 || displayUser?.learningGoal === "Learn New Skills" || (Array.isArray(displayUser?.skills) && displayUser.skills.length > 0)) && (
-                <div className="dashboard-surface p-3.5 sm:p-4 shadow-sm space-y-2 flex-1 flex flex-col justify-center">
-                  <div className="flex items-center gap-2 pb-1 border-b border-black/5 dark:border-white/5">
-                    <div className="p-1 rounded-md bg-blue-500/10 text-blue-500">
-                      <Zap className="w-3.5 h-3.5" />
-                    </div>
-                    <h3 className="text-xs sm:text-sm font-bold text-[#0d2a57] dark:text-white">
-                      Skills & Interests
-                    </h3>
-                  </div>
+              <div className="preference-divider" />
+              <h3 className="form-section-title">Learning mode</h3>
+              <p className="form-section-description">Your learning mode is assigned by your Program.</p>
+              <div className="readonly-mode"><span className="mode-indicator" /><span>{draft.learningMode || "Structured"}</span></div>
 
-                  <div className="flex flex-wrap gap-1.5 pt-0.5">
-                    {profileSkills.length > 0 ? (
-                      profileSkills.map((skill, index) => (
-                        <span key={index} className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-300">
-                          {skill}
-                        </span>
-                      ))
-                    ) : (
-                      <p className="text-xs text-slate-500 dark:text-slate-400">No skills selected yet.</p>
-                    )}
-                  </div>
+              <div className="form-grid reminders-grid">
+                <div className="field">
+                  <label htmlFor="reminders">Learning reminders</label>
+                  <select id="reminders" value={draft.remindersEnabled ? "On" : "Off"} onChange={(e) => setField("remindersEnabled", e.target.value === "On")}>
+                    <option value="On">Enabled</option>
+                    <option value="Off">Disabled</option>
+                  </select>
                 </div>
-              )}
+              </div>
+              <div className="form-actions">
+                <p>You can update these preferences anytime.</p>
+                <div className="action-buttons">
+                  <button className="button" type="button" onClick={goBack}>Cancel</button>
+                  <button className="button button-primary" type="button" disabled={saving} onClick={() => save(["daysPerWeek", "hoursPerDay", "remindersEnabled"])}>{saving ? "Saving…" : "Save Changes"}</button>
+                </div>
+              </div>
+              {noticeBox}
             </div>
-          </motion.div>
-        </div>
-      </UserSidebarLayout>
+          )}
 
-      <AnimatePresence>
-        {isSelectingAvatar && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setIsSelectingAvatar(false)}
-              className="absolute inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm"
-            />
-            
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0, y: 20 }} 
-              animate={{ scale: 1, opacity: 1, y: 0 }} 
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="bg-white/95 dark:bg-[#0a1128]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl w-full max-w-xl mx-4 relative z-10"
-            >
-              <button
-                onClick={() => setIsSelectingAvatar(false)}
-                className="absolute top-5 right-5 w-7 h-7 rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center transition-colors text-black/50 dark:text-white/50"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              
-              <div className="text-center mb-6 mt-1">
-                <h3 className="text-xl font-medium text-black dark:text-white tracking-tight mb-1">
-                  Choose Your Avatar
-                </h3>
-                <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 font-semibold">
-                  Select a profile identity
-                </p>
+          {view === "account" && (
+            <div className="panel form-panel">
+              <h3 className="form-section-title">Account information</h3>
+              <p className="form-section-description">Your account details and current status.</p>
+              <div className="security-row">
+                <div><h4>Email address</h4><p>{profile.email}</p></div>
+                <span className="pill">Registered</span>
               </div>
-
-              <div className="flex flex-wrap justify-center gap-4 mb-8">
-                {Array.from({ length: AVATAR_COUNT }, (_, i) => {
-                  const avatarUrl = `${AVATAR_PATH}/avatar${i + 1}.png`;
-                  const isSelected = avatarUrl === (pendingAvatar || selectedAvatar);
-
-                  return (
-                    <button
-                      type="button"
-                      key={i}
-                      onClick={() => setPendingAvatar(avatarUrl)}
-                      className={`relative rounded-full focus:outline-none transition-all duration-300 ${
-                        isSelected
-                          ? "scale-110 shadow-lg"
-                          : "hover:scale-105 hover:shadow-md opacity-70 hover:opacity-100"
-                      }`}
-                    >
-                      <div className={`p-0.5 rounded-full ${isSelected ? 'bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-400' : 'bg-transparent'}`}>
-                        <img
-                          src={avatarUrl}
-                          alt={`Avatar ${i + 1}`}
-                          className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover bg-white dark:bg-black/50"
-                          draggable={false}
-                        />
-                      </div>
-                      {isSelected && (
-                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#3C83F6] dark:bg-white rounded-full flex items-center justify-center border-2 border-white dark:border-[#0a1128] shadow-sm">
-                          <CheckCircle className="w-3 h-3 text-white dark:text-black" />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+              <div className="status-summary" aria-label="Current account and program statuses">
+                <div className="status-card"><span className="status-title">Account Status</span><strong className="status-value">{profile.accountStatus}</strong><small>Your sign-in is active</small></div>
+                <div className="status-card"><span className="status-title">Program Status</span><strong className="status-value">{profile.programStatus}</strong><small>From your current enrollment</small></div>
               </div>
+              <div className="security-row">
+                <div><h4>Password &amp; sign-in</h4><p>We'll email you a link to set a new password.</p></div>
+                <button className="button button-primary" type="button" onClick={resetPassword}>Reset password</button>
+              </div>
+              <div className="security-row">
+                <div><h4>Sign out</h4><p>Sign out of your current TechLearn session.</p></div>
+                <button className="button" type="button" onClick={logout}>Sign out</button>
+              </div>
+              <div className="security-row">
+                <div><h4>Delete account</h4><p>Send a request to remove your account and data. Our team confirms by email.</p></div>
+                <button className="button button-danger" type="button" onClick={() => setDeleteOpen(true)}>Delete account</button>
+              </div>
+              {noticeBox}
+              <div className="form-actions">
+                <p>Account deletion asks for confirmation and a reason.</p>
+                <div className="action-buttons"><button className="button" type="button" onClick={goBack}>Back to Profile</button></div>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
-              <div className="flex justify-center gap-3 border-t border-black/5 dark:border-white/5 pt-6">
-                <button
-                  onClick={() => setIsSelectingAvatar(false)}
-                  className="px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-black/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer"
-                >
-                  Cancel
+      {avatarOpen && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) setAvatarOpen(false); }}>
+          <div className="modal-card">
+            <div className="modal-header">
+              <div><h3>Choose your avatar</h3><p>Select an avatar for your TechLearn profile.</p></div>
+              <button className="close-button" type="button" aria-label="Close avatar picker" onClick={() => setAvatarOpen(false)}>×</button>
+            </div>
+            <div className="avatar-grid">
+              {avatarUrls.map((url) => (
+                <button key={url} type="button" className={`avatar-option ${avatarSrc === url ? "selected" : ""}`} onClick={() => chooseAvatar(url)} aria-label="Select avatar">
+                  <img src={url} alt="" />
                 </button>
-                <button
-                  onClick={() => handleAvatarSelect(pendingAvatar || selectedAvatar)}
-                  disabled={!pendingAvatar || pendingAvatar.replace('nobackgroundavatar', 'avatar') === selectedAvatar.replace('nobackgroundavatar', 'avatar')}
-                  className="px-6 py-2.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black rounded-xl text-[10px] uppercase tracking-widest font-bold shadow-md hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-md cursor-pointer"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </motion.div>
+              ))}
+            </div>
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
+
+      {deleteOpen && (
+        <div className="modal-backdrop delete-modal" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) setDeleteOpen(false); }}>
+          <form className="modal-card wide" onSubmit={submitDelete}>
+            <div className="modal-header"><div><h3>Delete your TechLearn account?</h3><p>This sends a deletion request. Nothing is removed until our team confirms it with you.</p></div></div>
+            <label htmlFor="deleteReason">Why are you leaving? <span className="required">*</span></label>
+            <select id="deleteReason" required value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)}>
+              <option value="">Select a reason</option>
+              {DELETE_REASONS.map((r) => <option key={r}>{r}</option>)}
+            </select>
+            <label htmlFor="deleteDetails">Anything else you'd like us to know? (optional)</label>
+            <textarea id="deleteDetails" maxLength={500} value={deleteDetails} onChange={(e) => setDeleteDetails(e.target.value)} placeholder="Share a little more, if you'd like" />
+            <div className="delete-actions">
+              <button className="button" type="button" onClick={() => setDeleteOpen(false)}>Keep account</button>
+              <button className="button button-danger" type="submit">Send request</button>
+            </div>
+          </form>
+        </div>
+      )}
     </>
   );
 };

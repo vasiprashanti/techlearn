@@ -160,7 +160,10 @@ export default function DashboardSettings() {
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/users/user/${userId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(localStorage.getItem("token") ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
+        },
         body: JSON.stringify(payload),
       });
 

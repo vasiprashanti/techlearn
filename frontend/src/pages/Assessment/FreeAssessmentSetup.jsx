@@ -11,41 +11,67 @@ export default function FreeAssessmentSetup() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const initialRole = location.state?.targetRole || user?.targetRole || 'Full Stack Developer';
-  const initialCompany = location.state?.targetCompany || user?.targetCompanies?.[0] || 'Google';
-  const initialPlacementType = location.state?.placementType || location.state?.placementCategory || user?.placementCategory || 'Off-Campus';
+  const ROLE_OPTIONS = ['Software Developer', 'Java Developer', 'Full Stack Developer', 'Python Developer', 'Data Analyst', 'QA / Test Engineer', 'Other'];
+  const COMPANY_OPTIONS = ['TCS', 'Infosys', 'Accenture', 'Wipro', 'Cognizant', 'Capgemini', 'Amazon', 'Deloitte', 'Other'];
+  const PLACEMENT_OPTIONS = ['On-Campus', 'Off-Campus', 'Both'];
 
-  const [selectedRole, setSelectedRole] = useState(initialRole);
-  const [selectedCompany, setSelectedCompany] = useState(initialCompany);
+  const stateCompanies = [].concat(location.state?.targetCompanies || location.state?.targetCompany || []).filter(Boolean);
+  const initialRole = location.state?.targetRole || user?.targetRole || '';
+  const initialCompanies = stateCompanies.length > 0 ? stateCompanies : (user?.targetCompanies || []).filter(Boolean);
+  const rawPlacement = location.state?.placementType || location.state?.placementCategory || user?.placementCategory || '';
+  const initialPlacementType = PLACEMENT_OPTIONS.find((o) => o.toLowerCase() === String(rawPlacement).toLowerCase()) || '';
+
+  const [selectedRole, setSelectedRole] = useState(ROLE_OPTIONS.includes(initialRole) || !initialRole ? initialRole : 'Other');
+  const [customRole, setCustomRole] = useState(ROLE_OPTIONS.includes(initialRole) ? '' : initialRole);
+  const [selectedCompanies, setSelectedCompanies] = useState(initialCompanies);
+  const [customCompany, setCustomCompany] = useState('');
   const [placementType, setPlacementType] = useState(initialPlacementType);
+  const [confirmed, setConfirmed] = useState(Boolean(initialRole && initialCompanies.length > 0 && initialPlacementType));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Synchronize when location.state or user loads
+  // Pick up saved profile values once the user loads (without overriding choices already made)
   useEffect(() => {
-    if (location.state?.targetRole) setSelectedRole(location.state.targetRole);
-    else if (user?.targetRole) setSelectedRole(user.targetRole);
+    const savedRole = location.state?.targetRole || user?.targetRole || '';
+    if (!selectedRole && savedRole) {
+      if (ROLE_OPTIONS.includes(savedRole)) setSelectedRole(savedRole);
+      else { setSelectedRole('Other'); setCustomRole(savedRole); }
+    }
+    const savedCompanies = stateCompanies.length > 0 ? stateCompanies : (user?.targetCompanies || []).filter(Boolean);
+    if (selectedCompanies.length === 0 && savedCompanies.length > 0) setSelectedCompanies(savedCompanies);
+    if (!placementType && initialPlacementType) setPlacementType(initialPlacementType);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
-    if (location.state?.targetCompany) setSelectedCompany(location.state.targetCompany);
-    else if (user?.targetCompanies?.[0]) setSelectedCompany(user.targetCompanies[0]);
+  const finalRole = selectedRole === 'Other' ? customRole.trim() : selectedRole;
+  const finalCompanies = selectedCompanies
+    .map((c) => (c === 'Other' ? customCompany.trim() : c))
+    .filter(Boolean);
+  const finalCompany = finalCompanies.join(', ');
 
-    if (location.state?.placementType) setPlacementType(location.state.placementType);
-    else if (location.state?.placementCategory) setPlacementType(location.state.placementCategory);
-    else if (user?.placementCategory) setPlacementType(user.placementCategory);
-  }, [location.state, user]);
+  const toggleCompany = (item) => {
+    setError('');
+    setSelectedCompanies((prev) => (prev.includes(item) ? prev.filter((c) => c !== item) : [...prev, item]));
+  };
 
-  const finalRole = selectedRole || 'Full Stack Developer';
-  const finalCompany = selectedCompany || 'Google';
+  const handleConfirmDetails = () => {
+    if (!finalRole) return setError('Please choose your target role.');
+    if (finalCompanies.length === 0) return setError('Please choose at least one target company.');
+    if (!placementType) return setError('Please choose your placement type.');
+    setError('');
+    setConfirmed(true);
+  };
 
   const handleStartInterview = async () => {
-    if (!finalRole || !finalCompany) {
+    if (!finalRole || finalCompanies.length === 0) {
       setError('Please ensure your role and company are selected.');
       return;
     }
 
     const payload = {
       targetRole: finalRole,
-      targetCompany: finalCompany,
+      targetCompany: finalCompanies,
+      placementCategory: placementType,
       programId: location.state?.programId || null,
     };
 
@@ -70,6 +96,8 @@ export default function FreeAssessmentSetup() {
             assignmentId: response.assignmentId,
             targetRole: finalRole,
             targetCompany: finalCompany,
+            targetCompanies: finalCompanies,
+            placementType,
           },
         });
       } else {
@@ -155,6 +183,16 @@ export default function FreeAssessmentSetup() {
           --border: rgba(255, 255, 255, .14);
           --soft-bg: rgba(255, 255, 255, .035);
         }
+
+        .tl-pre-assessment-root .setup-card { background: var(--card); border: 1px solid var(--border); border-radius: 22px; padding: 28px; max-width: 760px; margin-top: 22px; }
+        .tl-pre-assessment-root .setup-group { margin-bottom: 26px; }
+        .tl-pre-assessment-root .setup-label { font-weight: 700; font-size: 15px; margin-bottom: 12px; }
+        .tl-pre-assessment-root .setup-label span { font-weight: 500; color: var(--muted); font-size: 13px; }
+        .tl-pre-assessment-root .setup-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+        .tl-pre-assessment-root .setup-chip { border: 1px solid var(--border); background: var(--soft-bg); color: var(--text); padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; }
+        .tl-pre-assessment-root .setup-chip.selected { background: var(--lime); border-color: var(--lime); color: #04103d; }
+        .tl-pre-assessment-root .setup-input { margin-top: 12px; width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--soft-bg); color: var(--text); font-size: 14px; }
+        .tl-pre-assessment-root .edit-details { margin-top: 8px; background: none; border: none; color: var(--muted); text-decoration: underline; font-size: 12px; }
 
         .tl-pre-assessment-root * {
           box-sizing: border-box;
@@ -634,7 +672,7 @@ export default function FreeAssessmentSetup() {
         </div>
 
         <h1 className="page-title">
-          <i style={{ fontStyle: "italic", marginRight: "0.28em" }}>Your</i> interview is ready.
+          {confirmed ? (<><i style={{ fontStyle: "italic", marginRight: "0.28em" }}>Your</i> interview is ready.</>) : (<><i style={{ fontStyle: "italic", marginRight: "0.28em" }}>Tell us</i> about your target.</>)}
         </h1>
 
         {error && (
@@ -646,6 +684,47 @@ export default function FreeAssessmentSetup() {
         {/* =========================
              CONTENT
         ========================= */}
+        {!confirmed ? (
+          <section className="setup-card">
+            <div className="setup-group">
+              <div className="setup-label">1. What role are you preparing for?</div>
+              <div className="setup-chips">
+                {ROLE_OPTIONS.map((item) => (
+                  <button key={item} type="button" className={`setup-chip ${selectedRole === item ? 'selected' : ''}`}
+                    onClick={() => { setError(''); setSelectedRole(item); }}>{item}</button>
+                ))}
+              </div>
+              {selectedRole === 'Other' && (
+                <input className="setup-input" placeholder="Enter your target role" value={customRole} onChange={(e) => setCustomRole(e.target.value)} />
+              )}
+            </div>
+
+            <div className="setup-group">
+              <div className="setup-label">2. Which companies are you targeting? <span>(select all that apply)</span></div>
+              <div className="setup-chips">
+                {[...new Set([...COMPANY_OPTIONS.filter((c) => c !== 'Other'), ...selectedCompanies.filter((c) => !COMPANY_OPTIONS.includes(c)), 'Other'])].map((item) => (
+                  <button key={item} type="button" className={`setup-chip ${selectedCompanies.includes(item) ? 'selected' : ''}`}
+                    onClick={() => toggleCompany(item)}>{item}</button>
+                ))}
+              </div>
+              {selectedCompanies.includes('Other') && (
+                <input className="setup-input" placeholder="Enter company name" value={customCompany} onChange={(e) => setCustomCompany(e.target.value)} />
+              )}
+            </div>
+
+            <div className="setup-group">
+              <div className="setup-label">3. What type of placement are you aiming for?</div>
+              <div className="setup-chips">
+                {PLACEMENT_OPTIONS.map((item) => (
+                  <button key={item} type="button" className={`setup-chip ${placementType === item ? 'selected' : ''}`}
+                    onClick={() => { setError(''); setPlacementType(item); }}>{item}</button>
+                ))}
+              </div>
+            </div>
+
+            <button type="button" className="start-button" onClick={handleConfirmDetails}>CONTINUE →</button>
+          </section>
+        ) : (
         <div className="content-layout">
           {/* =========================
                LEFT — INSTRUCTIONS
@@ -777,6 +856,7 @@ export default function FreeAssessmentSetup() {
                 <h2 className="summary-title">
                   Interview Details
                 </h2>
+                <button type="button" className="edit-details" onClick={() => setConfirmed(false)}>Edit details</button>
               </div>
 
               {/* DETAILS */}
@@ -877,6 +957,7 @@ export default function FreeAssessmentSetup() {
             </div>
           </aside>
         </div>
+        )}
       </main>
     </div>
   );

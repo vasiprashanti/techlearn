@@ -190,6 +190,17 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
+    dateOfBirth: { type: Date, default: null },
+    country: { type: String, trim: true, default: "" },
+    skillLevel: { type: String, default: "" },
+    skillsOfInterest: { type: [String], default: [] },
+    daysPerWeek: { type: Number, default: null },
+    hoursPerDay: { type: Number, default: null },
+    remindersEnabled: { type: Boolean, default: true },
+    deletionRequestedAt: { type: Date, default: null },
+    deletionReason: { type: String, default: "" },
+    deletionDetails: { type: String, default: "" },
+
     resetPasswordToken: String,
     resetPasswordExpires: Date,
   },

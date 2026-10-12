@@ -280,7 +280,17 @@ export const startFreeAssessment = async (req, res) => {
       }).distinct("programId");
       const blueprintProgSet = new Set(blueprintProgIds.map(String));
 
-      const publicPlacement = publicPlacements.find((p) => {
+      // Prefer the Program whose configured target roles match the learner's
+      // selected role, so the role-specific blueprint is used.
+      const normalizeRole = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      const wantedRole = normalizeRole(targetRole);
+      const matchesRole = (p) => wantedRole && (p.targetRoles || []).some((role) => {
+        const candidate = normalizeRole(role);
+        return candidate && (candidate === wantedRole || candidate.includes(wantedRole) || wantedRole.includes(candidate));
+      });
+      const roleMatchedPlacement = publicPlacements.find((p) => blueprintProgSet.has(String(p._id)) && matchesRole(p));
+
+      const publicPlacement = roleMatchedPlacement || publicPlacements.find((p) => {
         const hasBlueprint = blueprintProgSet.has(String(p._id));
         return hasBlueprint && (isUserVisibleProgram(p) || p.visibility === "Public");
       }) || publicPlacements.find((p) => blueprintProgSet.has(String(p._id))) || publicPlacements.find(isUserVisibleProgram);
