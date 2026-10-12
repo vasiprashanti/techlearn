@@ -66,7 +66,7 @@ export default function ProgramPreview() {
   useEffect(() => {
     let cancelled = false;
     const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-    if (isAuthenticated || token) {
+    if (isAuthenticated) {
       Promise.allSettled([
         placementLearningAPI.getDashboard(),
         programLearningAPI.getAssignedPrograms(),
@@ -100,6 +100,31 @@ export default function ProgramPreview() {
       cancelled = true;
     };
   }, [isAuthenticated, programId]);
+
+  // Auto-enroll if returning from auth redirect with autoEnroll=true
+  useEffect(() => {
+    if (autoEnrollAttempted.current) return;
+    const shouldAutoEnroll = searchParams.get('autoEnroll') === 'true';
+    if (shouldAutoEnroll && isAuthenticated && program && !isEnrolled && !isPaying) {
+      autoEnrollAttempted.current = true;
+      const isProgramPaid = Boolean(program?.isPaid || (Array.isArray(program?.pricingPlans) && program.pricingPlans.length > 0));
+      if (!isProgramPaid) {
+        setIsPaying(true);
+        setPaymentMessage("");
+        programLearningAPI.enrollFreeProgram(program._id)
+          .then(async () => {
+            if (typeof refetchUserData === 'function') {
+              await refetchUserData();
+            }
+            navigate('/dashboard');
+          })
+          .catch((error) => {
+            setPaymentMessage(error.message || 'Could not complete enrollment.');
+            setIsPaying(false);
+          });
+      }
+    }
+  }, [searchParams, isAuthenticated, program, isEnrolled, isPaying, refetchUserData, navigate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -272,29 +297,6 @@ export default function ProgramPreview() {
     currentPrice = Number(program.programFee) || 0;
   }
 
-  // Auto-enroll if returning from auth redirect with autoEnroll=true
-  useEffect(() => {
-    if (autoEnrollAttempted.current) return;
-    const shouldAutoEnroll = searchParams.get('autoEnroll') === 'true';
-    if (shouldAutoEnroll && isAuthenticated && program && !isEnrolled && !isPaying) {
-      autoEnrollAttempted.current = true;
-      if (!isPaid) {
-        setIsPaying(true);
-        setPaymentMessage("");
-        programLearningAPI.enrollFreeProgram(program._id)
-          .then(async () => {
-            if (typeof refetchUserData === 'function') {
-              await refetchUserData();
-            }
-            navigate('/dashboard');
-          })
-          .catch((error) => {
-            setPaymentMessage(error.message || 'Could not complete enrollment.');
-            setIsPaying(false);
-          });
-      }
-    }
-  }, [searchParams, isAuthenticated, program, isEnrolled, isPaying, isPaid, refetchUserData, navigate]);
 
   // Handle Checkout / Payment
   const handlePayment = async () => {
