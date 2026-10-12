@@ -101,10 +101,22 @@ export default function Signup({
   };
 
   const handlePostAuthNavigation = (authenticatedUser, options = {}) => {
+    // Check if there is a pending program enrollment action saved
+    const pendingProgramId = sessionStorage.getItem('pending_enroll_program_id');
+    if (pendingProgramId) {
+      sessionStorage.removeItem('pending_enroll_program_id');
+      navigate(`/learn/programs/${pendingProgramId}?autoEnroll=true`);
+      return true;
+    }
+
     // 1. If explicit state from location or contextual onboarding exists, prioritize it
     const locationState = location.state;
     if (locationState && typeof locationState === 'object') {
       if (locationState.programId) {
+        if (locationState.directEnroll) {
+          navigate(`/learn/programs/${locationState.programId}?autoEnroll=true`);
+          return true;
+        }
         navigate('/onboarding/programs', { state: locationState });
         return true;
       }
@@ -202,8 +214,10 @@ export default function Signup({
           return;
         }
 
-        handleClose();
-        handlePostAuthNavigation(data.user);
+        const handled = handlePostAuthNavigation(data.user);
+        if (!handled) {
+          handleClose();
+        }
       } else {
         setStatusMsg({
           text: data.message || 'Google sign-in succeeded, but backend verification failed.',
@@ -264,8 +278,10 @@ export default function Signup({
             return;
           }
 
-          handleClose();
-          handlePostAuthNavigation(data.user);
+          const handled = handlePostAuthNavigation(data.user);
+          if (!handled) {
+            handleClose();
+          }
         } else {
           setStatusMsg({
             text: data.message || 'Invalid email or password.',
@@ -479,8 +495,10 @@ export default function Signup({
           return;
         }
 
-        handleClose();
-        handlePostAuthNavigation(regData.user);
+        const handled = handlePostAuthNavigation(regData.user);
+        if (!handled) {
+          handleClose();
+        }
       } else {
         setOtpError(regData.message || 'Account creation failed. Please check your details.');
       }
