@@ -373,6 +373,7 @@ export default function Signup({
         setOtpError(otpData.message || 'Unable to resend code.');
         return;
       }
+      setEmailVerificationToken('');
       setResendTimer(30);
       setOtpDigits(['', '', '', '', '', '']);
       otpInputRefs.current[0]?.focus();
@@ -384,6 +385,7 @@ export default function Signup({
   };
 
   const handleUseDifferentEmail = () => {
+    setEmailVerificationToken('');
     setOtpSent(false);
     setOtpDigits(['', '', '', '', '', '']);
     setOtpError('');
@@ -402,20 +404,24 @@ export default function Signup({
     setOtpError('');
 
     try {
-      const verifyRes = await fetch(`${getApiBase()}/auth/register/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), otp: fullOtp }),
-      });
-      const verifyData = await verifyRes.json();
-      if (!verifyRes.ok) {
-        setOtpError(verifyData.message || 'Incorrect verification code. Please try again.');
-        setLoading(false);
-        return;
+      // The OTP can only be used once. If account creation failed after a successful
+      // verification, reuse the verification token so the user can simply retry.
+      let verificationToken = emailVerificationToken;
+      if (!verificationToken) {
+        const verifyRes = await fetch(`${getApiBase()}/auth/register/verify-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim(), otp: fullOtp }),
+        });
+        const verifyData = await verifyRes.json();
+        if (!verifyRes.ok) {
+          setOtpError(verifyData.message || 'Incorrect verification code. Please try again.');
+          setLoading(false);
+          return;
+        }
+        verificationToken = verifyData.verificationToken;
+        setEmailVerificationToken(verificationToken);
       }
-
-      const verificationToken = verifyData.verificationToken;
-      setEmailVerificationToken(verificationToken);
 
       let draft = {};
       try {

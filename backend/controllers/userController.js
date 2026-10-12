@@ -1,6 +1,8 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import admin from "../utils/firebaseAdmin.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
 import College from "../models/College.js";
 import Student from "../models/Student.js";
@@ -176,7 +178,9 @@ export const registerUser = async (req, res) => {
         if (payload.purpose === "signup-email-verification") otpVerifiedEmail = payload.email;
       } catch {}
     }
-    const isGoogleAuthUser = Boolean(req.body.isGoogleUser || req.body.authProvider === "google" || req.body.authProvider === "firebase");
+    // Only a verified Firebase ID token counts as a Google/Firebase signup. Never trust
+    // client-supplied flags such as isGoogleUser: they would let anyone skip verification.
+    const isGoogleAuthUser = Boolean(req.body.idToken && verifiedEmail && verifiedEmail === emailCheck);
     const isVerifiedSession = Boolean((verifiedEmail && verifiedEmail === emailCheck) || (otpVerifiedEmail && otpVerifiedEmail === emailCheck) || isGoogleAuthUser);
 
     if (!isVerifiedSession) {
@@ -191,9 +195,16 @@ export const registerUser = async (req, res) => {
       }
       if (!isValidPassword(password)) {
         return res.status(400).json({
-          message: "Password must be at least 6 characters with one letter and one number",
+          message: "Password must be at least 8 characters with one uppercase letter, one number and one special character",
         });
       }
+    }
+
+    // A password supplied with a verified signup must still meet the rules.
+    if (isVerifiedSession && password && !isValidPassword(String(password))) {
+      return res.status(400).json({
+        message: "Password must be at least 8 characters with one uppercase letter, one number and one special character",
+      });
     }
 
     // Handle names
@@ -255,7 +266,8 @@ export const registerUser = async (req, res) => {
 
       await targetUser.save();
     } else {
-      const rawPassword = password || "UserAuthAccount123!";
+      // Verified sessions may have no password; use an unguessable one instead of a shared default.
+      const rawPassword = password || crypto.randomBytes(32).toString("hex");
       const hashedPassword = await bcrypt.hash(rawPassword, 12);
 
       targetUser = new User({

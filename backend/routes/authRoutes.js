@@ -12,6 +12,7 @@ import Batch from "../models/Batch.js";
 import { syncProgramEnrollment } from "../utils/programEnrollment.js";
 import { resolveProgramSchedule } from "../utils/programSchedule.js";
 import { protect } from "../middleware/authMiddleware.js";
+import { authRateLimit } from "../middleware/authRateLimit.js";
 import { isAdminIdentity } from "../utils/adminAccess.js";
 import { registerUser } from "../controllers/userController.js";
 import { buildUnifiedProfile, ensureStudentForUser } from "../utils/userProfile.js";
@@ -30,7 +31,7 @@ function generateToken(id) {
 const normalizeEmail = (email = "") => String(email).trim().toLowerCase();
 
 /* Email signup verification */
-router.post("/register/send-otp", async (req, res) => {
+router.post("/register/send-otp", authRateLimit({ name: "send-otp", perIp: 20, perEmail: 5 }), async (req, res) => {
   try {
     const email = normalizeEmail(req.body.email);
     const password = String(req.body.password || "");
@@ -49,7 +50,7 @@ router.post("/register/send-otp", async (req, res) => {
   }
 });
 
-router.post("/register/verify-otp", async (req, res) => {
+router.post("/register/verify-otp", authRateLimit({ name: "verify-otp", perIp: 40, perEmail: 8 }), async (req, res) => {
   const email = normalizeEmail(req.body.email);
   if (!email || !(await verifyOTP(`signup:${email}`, req.body.otp))) {
     return res.status(400).json({ message: "Invalid or expired OTP" });
@@ -197,10 +198,10 @@ const formatAuthUser = (user, student = null, batch = null, schedule = null) => 
 };
 
 /* ========== REGISTER ========== */
-router.post("/register", registerUser);
+router.post("/register", authRateLimit({ name: "register", windowMs: 60 * 60 * 1000, perIp: 30, perEmail: 10 }), registerUser);
 
 /* ========== LOGIN ========== */
-router.post("/login", async function login(req, res) {
+router.post("/login", authRateLimit({ name: "login", perIp: 60, perEmail: 10, message: "Too many login attempts. Please wait a few minutes and try again." }), async function login(req, res) {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -217,7 +218,8 @@ router.post("/login", async function login(req, res) {
 
     const user = await User.findOne({ email: formattedEmail });
     if (!user) {
-      return res.status(400).json({ message: "User not found" });
+      // Same message as a wrong password so accounts cannot be enumerated.
+      return res.status(400).json({ message: "Invalid email or password" });
     }
 
     if (!user.password || ["google", "firebase"].includes(user.authProvider)) {
@@ -226,7 +228,7 @@ router.post("/login", async function login(req, res) {
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
-      return res.status(400).json({ message: "Invalid password" });
+      return res.status(400).json({ message: "Invalid email or password" });
     }
 
     const mapped = await mapUserToStudentCohort(user);
@@ -486,13 +488,15 @@ router.get("/me", protect, async function getMe(req, res) {
 //Tested and working fine
 
 /* ========== FORGOT PASSWORD ========== */
-router.post("/forgot-password", async (req, res) => {
-  const { email } = req.body;
+router.post("/forgot-password", authRateLimit({ name: "forgot-password", perIp: 20, perEmail: 5 }), async (req, res) => {
+  // Always answer the same way so this endpoint cannot be used to discover which emails have accounts.
+  const genericReply = { message: "If an account exists for that email, a reset link has been sent." };
+  const email = typeof req.body?.email === "string" ? normalizeEmail(req.body.email) : "";
 
   try {
-    const user = await User.findOne({ email });
+    const user = email ? await User.findOne({ email }) : null;
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(200).json(genericReply);
     }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
@@ -528,7 +532,7 @@ router.post("/forgot-password", async (req, res) => {
     };
 
     await transporter.sendMail(mailOptions);
-    return res.status(200).json({ message: "Reset email sent successfully" });
+    return res.status(200).json(genericReply);
   } catch (err) {
     console.error("Forgot Password Error:", err);
     res.status(500).json({ message: "Something went wrong" });
@@ -537,7 +541,7 @@ router.post("/forgot-password", async (req, res) => {
 //Tested and working fine
 
 /* ========== RESET PASSWORD ========== */
-router.post("/reset-password/:resetToken", async (req, res) => {
+router.post("/reset-password/:resetToken", authRateLimit({ name: "reset-password", perIp: 30, perEmail: 30 }), async (req, res) => {
   const resetToken = req.params.resetToken;
   const { password, confirmPassword } = req.body;
 
@@ -547,6 +551,10 @@ router.post("/reset-password/:resetToken", async (req, res) => {
 
   if (password !== confirmPassword) {
     return res.status(400).json({ message: "Passwords do not match" });
+  }
+
+  if (typeof password !== "string" || password.length < 8 || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+    return res.status(400).json({ message: "Password must be at least 8 characters with one uppercase letter, one number and one special character" });
   }
 
   try {
