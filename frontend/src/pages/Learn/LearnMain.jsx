@@ -801,7 +801,7 @@ const LearnMain = () => {
 
                           <div className="card-footer">
                             {isEnrolledInProg ? (
-                              <div className="free-label" style={{ backgroundColor: "#89c638", color: "#02052e" }}>ENROLLED</div>
+                              <div className="free-label enrolled-label">ENROLLED</div>
                             ) : isFree ? (
                               <div className="free-label">FREE</div>
                             ) : (

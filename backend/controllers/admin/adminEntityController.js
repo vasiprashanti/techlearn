@@ -4158,7 +4158,7 @@ export const invalidateGlobalStudentsCache = () => {
   cachedGlobalStudentsTime = 0;
 };
 
-const loadGlobalStudentsData = async () => {
+export const loadGlobalStudentsData = async () => {
   const nowTime = Date.now();
   if (cachedGlobalStudentsData && (nowTime - cachedGlobalStudentsTime < GLOBAL_STUDENTS_CACHE_TTL_MS)) {
     return cachedGlobalStudentsData;
@@ -4173,7 +4173,7 @@ const loadGlobalStudentsData = async () => {
       .populate("programId", "name programType duration durationDays")
       .populate("batchId", "name startDate expiryDate status")
       .lean(),
-    Payment.find().select("userId studentId status createdAt").sort({ createdAt: -1 }).lean(),
+    Payment.find().select("userId studentId programId status createdAt").sort({ createdAt: -1 }).lean(),
     PricingExitFeedback.find().select("userId studentId reason customReason createdAt").sort({ createdAt: -1 }).lean(),
     User.find().select("_id email collegeName customCollege goal targetRole targetCompanies onboardingCompleted onboardingCompletedAt createdAt").lean(),
     ProgramWaitlist.find({ status: { $in: ['Waiting', 'Contacted'] } }).select("userId").lean(),
@@ -4184,19 +4184,32 @@ const loadGlobalStudentsData = async () => {
   const userMapByEmail = new Map(allUsers.map((u) => [String(u.email || "").toLowerCase(), u]));
   const userMapById = new Map(allUsers.map((u) => [String(u._id), u]));
 
-  // Map user enrollments: userId -> array of enrollments
+  // Map user enrollments: userId and studentId -> array of enrollments
   const enrollmentsByUser = new Map();
   allEnrollments.forEach((e) => {
-    const uKey = String(e.userId || e.studentId || "");
-    if (!enrollmentsByUser.has(uKey)) enrollmentsByUser.set(uKey, []);
-    enrollmentsByUser.get(uKey).push(e);
+    const keys = new Set();
+    if (e.userId) keys.add(String(e.userId));
+    if (e.studentId) keys.add(String(e.studentId));
+    if (!keys.size && (e.userId || e.studentId)) keys.add(String(e.userId || e.studentId));
+    keys.forEach((key) => {
+      if (!enrollmentsByUser.has(key)) enrollmentsByUser.set(key, []);
+      enrollmentsByUser.get(key).push(e);
+    });
   });
 
   // Map payment status: userId or studentId -> Paid | Pending | Failed
   const paymentStatusByUser = new Map();
+  const paymentsByProgramAndUser = new Map();
   allPayments.forEach((p) => {
     const keys = [p.userId ? String(p.userId) : null, p.studentId ? String(p.studentId) : null].filter(Boolean);
+    const progId = p.programId ? String(p.programId) : null;
     keys.forEach((key) => {
+      if (progId) {
+        const progKey = `${key}_${progId}`;
+        if (!paymentsByProgramAndUser.has(progKey)) {
+          paymentsByProgramAndUser.set(progKey, p);
+        }
+      }
       const current = paymentStatusByUser.get(key);
       if (["captured", "approved"].includes(p.status)) {
         paymentStatusByUser.set(key, "Paid");
@@ -4290,25 +4303,79 @@ const loadGlobalStudentsData = async () => {
       accessType = "College";
     }
 
-    // College Name Resolution
-    let collegeName = "Other";
-    if (student.collegeId?.name) {
+    // College Name Resolution: Do not assign Public Demo College or default.
+    // Keep empty or display "—" if not explicitly assigned.
+    let collegeName = "";
+    if (student.collegeId?.name && !student.collegeId.name.toLowerCase().includes("public demo")) {
       collegeName = student.collegeId.name;
     } else if (student.collegeId && collegeMap.has(String(student.collegeId))) {
-      collegeName = collegeMap.get(String(student.collegeId));
-    } else if (user?.collegeName && user.collegeName.toLowerCase() !== "other") {
+      const cName = collegeMap.get(String(student.collegeId));
+      if (!cName.toLowerCase().includes("public demo")) {
+        collegeName = cName;
+      }
+    } else if (user?.collegeName && user.collegeName.toLowerCase() !== "other" && !user.collegeName.toLowerCase().includes("public demo")) {
       collegeName = user.collegeName;
-    } else if (user?.customCollege) {
+    } else if (user?.customCollege && !user.customCollege.toLowerCase().includes("public demo")) {
       collegeName = user.customCollege;
     }
 
-    // Programs associated with student
+    // Programs associated with student with individual enrollment metadata
     const programNamesList = [];
-    userEnrollments.forEach((e) => {
-      if (e.programId?.name && !programNamesList.includes(e.programId.name)) {
-        programNamesList.push(e.programId.name);
+    const studentProgramEnrollments = userEnrollments.map((e) => {
+      const pName = e.programId?.name || "Untitled Program";
+      if (!programNamesList.includes(pName)) {
+        programNamesList.push(pName);
       }
+
+      const pStartDate = e.batchId?.startDate || e.individualStartDate || e.assignedAt || e.createdAt || null;
+      const pExpiryDate = e.batchId?.expiryDate || e.accessExpiresAt || e.programExpiresAt || null;
+      const isExpired = pExpiryDate ? new Date(pExpiryDate) < now : false;
+      const pAccountStatus = isExpired ? "Expired" : "Active";
+
+      // Derive program payment status
+      const pIdStr = String(e.programId?._id || e.programId || "");
+      const progPayment = paymentsByProgramAndUser.get(`${uId}_${pIdStr}`)
+        || paymentsByProgramAndUser.get(`${sId}_${pIdStr}`);
+
+      let pPaymentStatus = "Free";
+      if (e.accessTier === "Member" || e.pricingPlanSnapshot?.price > 0) {
+        if (progPayment) {
+          pPaymentStatus = ["captured", "approved"].includes(progPayment.status)
+            ? "Paid"
+            : ["pending", "created"].includes(progPayment.status)
+              ? "Pending"
+              : "Failed";
+        } else {
+          pPaymentStatus = paymentStatusByUser.get(uId) || paymentStatusByUser.get(sId) || "Paid";
+        }
+      } else if (e.accessTier === "Free" || e.pricingType === "Free") {
+        pPaymentStatus = "Free";
+      } else if (progPayment) {
+        pPaymentStatus = ["captured", "approved"].includes(progPayment.status)
+          ? "Paid"
+          : ["pending", "created"].includes(progPayment.status)
+            ? "Pending"
+            : "Failed";
+      }
+
+      return {
+        enrollmentId: e._id,
+        programId: e.programId?._id || e.programId,
+        programName: pName,
+        programType: e.programId?.programType || "Placement",
+        status: e.status || "Active",
+        programStatus: e.status || "Active",
+        accountStatus: pAccountStatus,
+        paymentStatus: pPaymentStatus,
+        accessTier: e.accessTier || "Free",
+        startDate: pStartDate,
+        expiryDate: pExpiryDate,
+        batchName: e.batchId?.name || null,
+        batchId: e.batchId?._id || e.batchId || null,
+        pricingPlan: e.pricingPlanSnapshot || null,
+      };
     });
+
     const primaryProgramId = primaryEnrollment?.programId?._id || primaryEnrollment?.programId || null;
     const scheduleStartDate = primaryEnrollment?.batchId?.startDate
       || primaryEnrollment?.individualStartDate
@@ -4328,6 +4395,9 @@ const loadGlobalStudentsData = async () => {
 
     const scheduleStart = scheduleStartDate ? new Date(scheduleStartDate) : null;
     const scheduleExpiry = scheduleExpiryDate ? new Date(scheduleExpiryDate) : null;
+    const isPrimaryExpired = scheduleExpiry ? scheduleExpiry < now : false;
+    const primaryAccountStatus = isPrimaryExpired ? "Expired" : "Active";
+
     const isActiveThisMonth = Boolean(currentEnrollment && scheduleStart && !Number.isNaN(scheduleStart.getTime()))
       && statusStr === "Active"
       && scheduleStart <= currentMonthEnd
@@ -4361,6 +4431,31 @@ const loadGlobalStudentsData = async () => {
       leadSource = "Free Program";
     }
 
+    // Determine primary enrollment payment status
+    const primaryProgIdStr = String(primaryEnrollment?.programId?._id || primaryEnrollment?.programId || "");
+    const primaryProgPayment = paymentsByProgramAndUser.get(`${uId}_${primaryProgIdStr}`)
+      || paymentsByProgramAndUser.get(`${sId}_${primaryProgIdStr}`);
+    let primaryPaymentStatus = "Free";
+    if (primaryEnrollment?.accessTier === "Member" || primaryEnrollment?.pricingPlanSnapshot?.price > 0) {
+      if (primaryProgPayment) {
+        primaryPaymentStatus = ["captured", "approved"].includes(primaryProgPayment.status)
+          ? "Paid"
+          : ["pending", "created"].includes(primaryProgPayment.status)
+            ? "Pending"
+            : "Failed";
+      } else {
+        primaryPaymentStatus = paymentStatusByUser.get(uId) || paymentStatusByUser.get(sId) || "Paid";
+      }
+    } else if (primaryEnrollment?.accessTier === "Free" || primaryEnrollment?.pricingType === "Free") {
+      primaryPaymentStatus = "Free";
+    } else if (primaryProgPayment) {
+      primaryPaymentStatus = ["captured", "approved"].includes(primaryProgPayment.status)
+        ? "Paid"
+        : ["pending", "created"].includes(primaryProgPayment.status)
+          ? "Pending"
+          : "Failed";
+    }
+
     return {
       id: student._id,
       name: student.name,
@@ -4369,19 +4464,21 @@ const loadGlobalStudentsData = async () => {
       createdAt: student.createdAt,
       college: collegeName,
       access: accessType,
-      payment: paymentStatusByUser.get(uId) || paymentStatusByUser.get(sId) || (accessType === "Paid" ? "Paid" : "Pending"),
+      payment: primaryPaymentStatus,
+      paymentStatus: primaryPaymentStatus,
       programs: programNamesList,
-      currentProgram: currentEnrollment?.programId?.name || "",
-      activeProgramId: currentEnrollment?.programId?._id || currentEnrollment?.programId || null,
-      activeEnrollmentStatus: currentEnrollment?.status || null,
+      enrollments: studentProgramEnrollments,
+      currentProgram: currentEnrollment?.programId?.name || (studentProgramEnrollments[0]?.programName || ""),
+      activeProgramId: currentEnrollment?.programId?._id || currentEnrollment?.programId || (studentProgramEnrollments[0]?.programId || null),
+      activeEnrollmentStatus: currentEnrollment?.status || (studentProgramEnrollments[0]?.status || null),
       activeBatchId: currentEnrollment?.batchId?._id || currentEnrollment?.batchId || null,
       activeIndividualStartDate: currentEnrollment?.individualStartDate || null,
       latestEnrollmentAt: currentEnrollment?.assignedAt || currentEnrollment?.createdAt
         || primaryEnrollment?.assignedAt || primaryEnrollment?.createdAt || student.createdAt || null,
-      programId: primaryProgramId || null,
-      enrollmentId: primaryEnrollment?._id || null,
-      enrollmentStatus: primaryEnrollment?.status || null,
-      accountStatus: student.status || "Active",
+      programId: primaryProgramId || (studentProgramEnrollments[0]?.programId || null),
+      enrollmentId: primaryEnrollment?._id || (studentProgramEnrollments[0]?.enrollmentId || null),
+      enrollmentStatus: primaryEnrollment?.status || (studentProgramEnrollments[0]?.status || null),
+      accountStatus: primaryAccountStatus,
       batchId: primaryEnrollment?.batchId?._id || primaryEnrollment?.batchId || null,
       individualStartDate: primaryEnrollment?.individualStartDate || null,
       scheduleStartDate,
@@ -4390,12 +4487,12 @@ const loadGlobalStudentsData = async () => {
       enrolledOn: enrolledOnDate,
       enrolledOnStr,
       status: statusStr,
-      programStatus: primaryEnrollment?.status || null,
+      programStatus: primaryEnrollment?.status || (studentProgramEnrollments[0]?.status || null),
       programExpiresAt: primaryEnrollment?.programExpiresAt || null,
       planExpiresAt: primaryEnrollment?.accessExpiresAt || null,
       pricingPlan: primaryEnrollment?.pricingPlanSnapshot || null,
       accessDurationDays: primaryEnrollment?.accessDurationDays || null,
-      accessValid: !primaryEnrollment?.accessExpiresAt || new Date(primaryEnrollment.accessExpiresAt) > now,
+      accessValid: !isPrimaryExpired,
       hasPlacement: currentEnrollment?.programId?.programType === 'Placement',
       hasCompleted: userEnrollments.some(enrollment => enrollment.status === 'Completed'),
       isWaitlisted: waitlistUserIds.has(uId) || (Boolean(email) && waitlistEmails.has(email)),

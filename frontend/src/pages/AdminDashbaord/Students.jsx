@@ -106,10 +106,31 @@ export default function Students() {
   // Active View & Filter states
   const [activeTab, setActiveTab] = useState('all');
 
+  // Selected program index or programId per student row
+  const [selectedProgramByStudent, setSelectedProgramByStudent] = useState({});
+
+  const getEffectiveEnrollment = (student) => {
+    const enrollments = Array.isArray(student.enrollments) ? student.enrollments : [];
+    if (!enrollments.length) return null;
+    const selectedProgId = selectedProgramByStudent[student.id];
+    if (selectedProgId) {
+      const match = enrollments.find(e => String(e.programId) === String(selectedProgId));
+      if (match) return match;
+    }
+    return enrollments[0];
+  };
+
+  const handleSelectStudentProgram = (studentId, programId) => {
+    setSelectedProgramByStudent(prev => ({
+      ...prev,
+      [studentId]: programId,
+    }));
+  };
+
   const handlePaymentStatusChange = async (studentId, newPayment) => {
     setStudentsData((prev) => ({
       ...prev,
-      items: prev.items.map((s) => (s.id === studentId ? { ...s, payment: newPayment, access: newPayment } : s)),
+      items: prev.items.map((s) => (s.id === studentId ? { ...s, payment: newPayment, paymentStatus: newPayment, access: newPayment } : s)),
     }));
     try {
       await adminAPI.updateStudentPayment(studentId, newPayment);
@@ -953,11 +974,10 @@ export default function Students() {
                           <th className="py-2 px-2 w-7"></th>
                           <th className="py-2 px-1.5 w-7 text-center">#</th>
                           <th className="py-2 px-2.5 max-w-[200px]">Student</th>
-                          <th className="py-2 px-2.5 max-w-[140px]">College</th>
-                          <th className="py-2 px-2.5">Payment</th>
-                          <th className="py-2 px-2.5 max-w-[150px]">Program</th>
-                          <th className="py-2 px-2.5 whitespace-nowrap">Enrolled On</th>
+                          <th className="py-2 px-2.5 max-w-[170px]">Program</th>
                           <th className="py-2 px-2.5">Program Status</th>
+                          <th className="py-2 px-2.5">Account Status</th>
+                          <th className="py-2 px-2.5">Payment Status</th>
                           <th className="py-2 px-2.5 text-right">Actions</th>
                         </tr>
                       </thead>
@@ -986,11 +1006,10 @@ export default function Students() {
                           <th className="py-2 px-2 w-7"></th>
                           <th className="py-2 px-1.5 w-7 text-center">#</th>
                           <th className="py-2 px-2.5 max-w-[200px]">Student</th>
-                          <th className="py-2 px-2.5 max-w-[140px]">College</th>
-                          <th className="py-2 px-2.5">Payment</th>
-                          <th className="py-2 px-2.5 max-w-[150px]">Current Program</th>
-                          <th className="py-2 px-2.5 whitespace-nowrap">Enrolled On</th>
+                          <th className="py-2 px-2.5 max-w-[170px]">Program</th>
                           <th className="py-2 px-2.5">Program Status</th>
+                          <th className="py-2 px-2.5">Account Status</th>
+                          <th className="py-2 px-2.5">Payment Status</th>
                           <th className="py-2 px-2.5 text-right">Actions</th>
                         </tr>
                       </thead>
@@ -1020,8 +1039,20 @@ export default function Students() {
                             key={student.id}
                             onClick={(e) => {
                               // Don't trigger modal if user clicks directly on interactive inputs/buttons
-                              if (e.target.closest('input, button')) return;
-                              setSelectedReportStudent(student);
+                              if (e.target.closest('input, button, select')) return;
+                              const eff = getEffectiveEnrollment(student);
+                              setSelectedReportStudent(eff ? {
+                                ...student,
+                                programId: eff.programId,
+                                programName: eff.programName,
+                                currentProgram: eff.programName,
+                                payment: eff.paymentStatus,
+                                paymentStatus: eff.paymentStatus,
+                                status: eff.programStatus,
+                                activeEnrollmentStatus: eff.programStatus,
+                                batch: eff.batchName || student.batch,
+                                batchId: eff.batchId || student.batchId,
+                              } : student);
                             }}
                             className="hover:bg-black/[0.04] dark:hover:bg-white/[0.04] cursor-pointer transition-colors"
                           >
@@ -1054,69 +1085,110 @@ export default function Students() {
                             </td>
 
                             {/* ENROLLED / ALL TAB COLUMNS */}
-                            {(['all', 'enrolled', 'placement', 'completed', 'waitlist'].includes(activeTab)) && (
-                              <>
-                                <td className="py-2 px-2.5 max-w-[140px] font-medium text-slate-700 dark:text-slate-300">
-                                  <span className="truncate block" title={student.college || ''}>
-                                    {student.college || '—'}
-                                  </span>
-                                </td>
-                                <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
-                                  <div className="relative inline-block">
-                                    <select
-                                      value={student.payment || (student.access === 'Paid' ? 'Paid' : 'Pending')}
-                                      onChange={(e) => handlePaymentStatusChange(student.id, e.target.value)}
-                                      className={`appearance-none pr-6 pl-2.5 py-0.5 rounded-full text-[10px] font-bold border outline-none cursor-pointer transition ${
-                                        (student.payment === 'Paid' || student.access === 'Paid')
-                                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-                                          : (student.payment === 'Pending')
-                                            ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
-                                            : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
-                                      }`}
-                                    >
-                                      <option value="Paid" className={dropdownOptionClass}>Paid</option>
-                                      <option value="Pending" className={dropdownOptionClass}>Pending</option>
-                                      <option value="Failed" className={dropdownOptionClass}>Failed</option>
-                                    </select>
-                                    <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 opacity-60" />
-                                  </div>
-                                  {(student.pricingPlan?.price || student.access === 'Paid') && (
-                                    <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate max-w-[120px]" title={student.pricingPlan?.title || ''}>
-                                      {student.pricingPlan?.price ? `₹${student.pricingPlan.price}` : ''}
-                                      {student.pricingPlan?.title ? ` • ${student.pricingPlan.title}` : ''}
+                            {(['all', 'enrolled', 'placement', 'completed', 'waitlist'].includes(activeTab)) && (() => {
+                              const effEnrollment = getEffectiveEnrollment(student);
+                              const enrollments = Array.isArray(student.enrollments) ? student.enrollments : [];
+                              const hasMultiple = enrollments.length > 1;
+                              const currentProgId = effEnrollment?.programId || student.programId || '';
+                              const progStatus = effEnrollment?.programStatus || student.activeEnrollmentStatus || student.enrollmentStatus || (['Active', 'Completed', 'Paused'].includes(student.status) ? student.status : 'Active');
+                              const isAccountExpired = effEnrollment?.accountStatus === 'Expired' || (effEnrollment?.expiryDate && new Date(effEnrollment.expiryDate) < new Date());
+                              const accountStatus = effEnrollment?.accountStatus || (isAccountExpired ? 'Expired' : 'Active');
+                              const paymentStatus = effEnrollment?.paymentStatus || student.payment || (student.access === 'Paid' ? 'Paid' : 'Free');
+
+                              return (
+                                <>
+                                  {/* Program Column (Dropdown if multiple enrollments, else badge/name) */}
+                                  <td className="py-2 px-2.5 max-w-[170px]" onClick={(e) => e.stopPropagation()}>
+                                    {hasMultiple ? (
+                                      <div className="relative inline-block w-full max-w-[160px]">
+                                        <select
+                                          value={currentProgId}
+                                          onChange={(e) => handleSelectStudentProgram(student.id, e.target.value)}
+                                          className="appearance-none w-full bg-blue-50/70 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg pr-6 pl-2 py-1 text-[11px] font-semibold outline-none cursor-pointer truncate"
+                                        >
+                                          {enrollments.map((enr) => (
+                                            <option key={enr.programId || enr.programName} value={enr.programId} className={dropdownOptionClass}>
+                                              {enr.programName || 'Program'}
+                                            </option>
+                                          ))}
+                                        </select>
+                                        <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-blue-600 dark:text-blue-300" />
+                                      </div>
+                                    ) : (
+                                      <span className="font-semibold text-slate-700 dark:text-slate-300 truncate block" title={effEnrollment?.programName || student.currentProgram || '—'}>
+                                        {effEnrollment?.programName || student.currentProgram || '—'}
+                                      </span>
+                                    )}
+                                  </td>
+
+                                  {/* Program Status Column */}
+                                  <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
+                                    <div className="relative inline-block">
+                                      <select
+                                        value={progStatus}
+                                        onChange={(e) => handleProgramStatusChange(student.id, e.target.value)}
+                                        className={`appearance-none pr-5 pl-2 py-0.5 rounded-full text-[10px] font-bold border outline-none cursor-pointer transition ${
+                                          progStatus === 'Active'
+                                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                                            : progStatus === 'Completed'
+                                              ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800'
+                                              : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                        }`}
+                                      >
+                                        <option value="Active" className={dropdownOptionClass}>Active</option>
+                                        <option value="Completed" className={dropdownOptionClass}>Completed</option>
+                                        <option value="Paused" className={dropdownOptionClass}>Paused</option>
+                                      </select>
+                                      <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 opacity-60" />
                                     </div>
-                                  )}
-                                </td>
-                                <td className="py-2 px-2.5 max-w-[150px] font-semibold text-slate-700 dark:text-slate-300">
-                                  <span className="truncate block" title={student.currentProgram || ''}>
-                                    {student.currentProgram || '—'}
-                                  </span>
-                                </td>
-                                <td className="py-2 px-2.5 text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                                  {formatDateValue(student.enrolledOn)}
-                                </td>
-                                <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
-                                  <div className="relative inline-block">
-                                    <select
-                                      value={student.activeEnrollmentStatus || student.enrollmentStatus || (['Active', 'Completed', 'Paused'].includes(student.status) ? student.status : 'Active')}
-                                      onChange={(e) => handleProgramStatusChange(student.id, e.target.value)}
-                                      className={`appearance-none pr-5 pl-2 py-0.5 rounded-full text-[10px] font-bold border outline-none cursor-pointer transition ${
-                                        (student.activeEnrollmentStatus || student.enrollmentStatus || student.status) === 'Active'
+                                  </td>
+
+                                  {/* Account Status Column */}
+                                  <td className="py-2 px-2.5">
+                                    <span
+                                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                        accountStatus === 'Active'
                                           ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-                                          : (student.activeEnrollmentStatus || student.enrollmentStatus || student.status) === 'Completed'
-                                            ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800'
-                                            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                          : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
                                       }`}
                                     >
-                                      <option value="Active" className={dropdownOptionClass}>Active</option>
-                                      <option value="Completed" className={dropdownOptionClass}>Completed</option>
-                                      <option value="Paused" className={dropdownOptionClass}>Paused</option>
-                                    </select>
-                                    <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 opacity-60" />
-                                  </div>
-                                </td>
-                              </>
-                            )}
+                                      {accountStatus}
+                                    </span>
+                                  </td>
+
+                                  {/* Payment Status Column */}
+                                  <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
+                                    <div className="relative inline-block">
+                                      <select
+                                        value={paymentStatus}
+                                        onChange={(e) => handlePaymentStatusChange(student.id, e.target.value)}
+                                        className={`appearance-none pr-6 pl-2.5 py-0.5 rounded-full text-[10px] font-bold border outline-none cursor-pointer transition ${
+                                          paymentStatus === 'Paid'
+                                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                                            : paymentStatus === 'Pending'
+                                              ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                              : paymentStatus === 'Free'
+                                                ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800'
+                                                : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                                        }`}
+                                      >
+                                        <option value="Paid" className={dropdownOptionClass}>Paid</option>
+                                        <option value="Free" className={dropdownOptionClass}>Free</option>
+                                        <option value="Pending" className={dropdownOptionClass}>Pending</option>
+                                        <option value="Failed" className={dropdownOptionClass}>Failed</option>
+                                      </select>
+                                      <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 opacity-60" />
+                                    </div>
+                                    {(effEnrollment?.pricingPlan?.price || student.pricingPlan?.price) && (
+                                      <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate max-w-[120px]" title={effEnrollment?.pricingPlan?.title || student.pricingPlan?.title || ''}>
+                                        ₹{effEnrollment?.pricingPlan?.price || student.pricingPlan?.price}
+                                        {(effEnrollment?.pricingPlan?.title || student.pricingPlan?.title) ? ` • ${effEnrollment?.pricingPlan?.title || student.pricingPlan?.title}` : ''}
+                                      </div>
+                                    )}
+                                  </td>
+                                </>
+                              );
+                            })()}
 
                             {/* LEADS TAB COLUMNS */}
                             {activeTab === 'leads' && (
@@ -1154,63 +1226,110 @@ export default function Students() {
                             )}
 
                             {/* SKILL TAB COLUMNS */}
-                            {activeTab === 'skill' && (
-                              <>
-                                <td className="py-2 px-2.5 max-w-[140px] font-medium text-slate-700 dark:text-slate-300">
-                                  <span className="truncate block" title={student.college || ''}>
-                                    {student.college || '—'}
-                                  </span>
-                                </td>
-                                <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
-                                  <div className="relative inline-block">
-                                    <select
-                                      value={student.payment || (student.skillAccess === 'Paid' ? 'Paid' : 'Pending')}
-                                      onChange={(e) => handlePaymentStatusChange(student.id, e.target.value)}
-                                      className={`appearance-none pr-6 pl-2.5 py-0.5 rounded-full text-[10px] font-bold border outline-none cursor-pointer transition ${
-                                        (student.payment === 'Paid' || student.skillAccess === 'Paid')
+                            {activeTab === 'skill' && (() => {
+                              const effEnrollment = getEffectiveEnrollment(student);
+                              const enrollments = Array.isArray(student.enrollments) ? student.enrollments : [];
+                              const hasMultiple = enrollments.length > 1;
+                              const currentProgId = effEnrollment?.programId || student.programId || '';
+                              const progStatus = effEnrollment?.programStatus || student.activeEnrollmentStatus || student.enrollmentStatus || (['Active', 'Completed', 'Paused'].includes(student.status) ? student.status : 'Active');
+                              const isAccountExpired = effEnrollment?.accountStatus === 'Expired' || (effEnrollment?.expiryDate && new Date(effEnrollment.expiryDate) < new Date());
+                              const accountStatus = effEnrollment?.accountStatus || (isAccountExpired ? 'Expired' : 'Active');
+                              const paymentStatus = effEnrollment?.paymentStatus || student.payment || (student.skillAccess === 'Paid' ? 'Paid' : 'Free');
+
+                              return (
+                                <>
+                                  {/* Program Column (Dropdown if multiple enrollments, else badge/name) */}
+                                  <td className="py-2 px-2.5 max-w-[170px]" onClick={(e) => e.stopPropagation()}>
+                                    {hasMultiple ? (
+                                      <div className="relative inline-block w-full max-w-[160px]">
+                                        <select
+                                          value={currentProgId}
+                                          onChange={(e) => handleSelectStudentProgram(student.id, e.target.value)}
+                                          className="appearance-none w-full bg-blue-50/70 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg pr-6 pl-2 py-1 text-[11px] font-semibold outline-none cursor-pointer truncate"
+                                        >
+                                          {enrollments.map((enr) => (
+                                            <option key={enr.programId || enr.programName} value={enr.programId} className={dropdownOptionClass}>
+                                              {enr.programName || 'Program'}
+                                            </option>
+                                          ))}
+                                        </select>
+                                        <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-blue-600 dark:text-blue-300" />
+                                      </div>
+                                    ) : (
+                                      <span className="font-semibold text-slate-700 dark:text-slate-300 truncate block" title={effEnrollment?.programName || student.currentProgram || '—'}>
+                                        {effEnrollment?.programName || student.currentProgram || '—'}
+                                      </span>
+                                    )}
+                                  </td>
+
+                                  {/* Program Status Column */}
+                                  <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
+                                    <div className="relative inline-block">
+                                      <select
+                                        value={progStatus}
+                                        onChange={(e) => handleProgramStatusChange(student.id, e.target.value)}
+                                        className={`appearance-none pr-5 pl-2 py-0.5 rounded-full text-[10px] font-bold border outline-none cursor-pointer transition ${
+                                          progStatus === 'Active'
+                                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                                            : progStatus === 'Completed'
+                                              ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800'
+                                              : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                        }`}
+                                      >
+                                        <option value="Active" className={dropdownOptionClass}>Active</option>
+                                        <option value="Completed" className={dropdownOptionClass}>Completed</option>
+                                        <option value="Paused" className={dropdownOptionClass}>Paused</option>
+                                      </select>
+                                      <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 opacity-60" />
+                                    </div>
+                                  </td>
+
+                                  {/* Account Status Column */}
+                                  <td className="py-2 px-2.5">
+                                    <span
+                                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                        accountStatus === 'Active'
                                           ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-                                          : (student.payment === 'Pending')
-                                            ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
-                                            : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                                          : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
                                       }`}
                                     >
-                                      <option value="Paid" className={dropdownOptionClass}>Paid</option>
-                                      <option value="Pending" className={dropdownOptionClass}>Pending</option>
-                                      <option value="Failed" className={dropdownOptionClass}>Failed</option>
-                                    </select>
-                                    <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 opacity-60" />
-                                  </div>
-                                </td>
-                                <td className="py-2 px-2.5 max-w-[150px] font-semibold text-slate-700 dark:text-slate-300">
-                                  <span className="truncate block" title={student.currentProgram || ''}>
-                                    {student.currentProgram || '—'}
-                                  </span>
-                                </td>
-                                <td className="py-2 px-2.5 text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                                  {formatDateValue(student.enrolledOn)}
-                                </td>
-                                <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
-                                  <div className="relative inline-block">
-                                    <select
-                                      value={student.activeEnrollmentStatus || student.enrollmentStatus || (['Active', 'Completed', 'Paused'].includes(student.status) ? student.status : 'Active')}
-                                      onChange={(e) => handleProgramStatusChange(student.id, e.target.value)}
-                                      className={`appearance-none pr-5 pl-2 py-0.5 rounded-full text-[10px] font-bold border outline-none cursor-pointer transition ${
-                                        (student.activeEnrollmentStatus || student.enrollmentStatus || student.status) === 'Active'
-                                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-                                          : (student.activeEnrollmentStatus || student.enrollmentStatus || student.status) === 'Completed'
-                                            ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800'
-                                            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
-                                      }`}
-                                    >
-                                      <option value="Active" className={dropdownOptionClass}>Active</option>
-                                      <option value="Completed" className={dropdownOptionClass}>Completed</option>
-                                      <option value="Paused" className={dropdownOptionClass}>Paused</option>
-                                    </select>
-                                    <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 opacity-60" />
-                                  </div>
-                                </td>
-                              </>
-                            )}
+                                      {accountStatus}
+                                    </span>
+                                  </td>
+
+                                  {/* Payment Status Column */}
+                                  <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
+                                    <div className="relative inline-block">
+                                      <select
+                                        value={paymentStatus}
+                                        onChange={(e) => handlePaymentStatusChange(student.id, e.target.value)}
+                                        className={`appearance-none pr-6 pl-2.5 py-0.5 rounded-full text-[10px] font-bold border outline-none cursor-pointer transition ${
+                                          paymentStatus === 'Paid'
+                                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                                            : paymentStatus === 'Pending'
+                                              ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                              : paymentStatus === 'Free'
+                                                ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800'
+                                                : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                                        }`}
+                                      >
+                                        <option value="Paid" className={dropdownOptionClass}>Paid</option>
+                                        <option value="Free" className={dropdownOptionClass}>Free</option>
+                                        <option value="Pending" className={dropdownOptionClass}>Pending</option>
+                                        <option value="Failed" className={dropdownOptionClass}>Failed</option>
+                                      </select>
+                                      <FiChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 opacity-60" />
+                                    </div>
+                                    {(effEnrollment?.pricingPlan?.price || student.pricingPlan?.price) && (
+                                      <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate max-w-[120px]" title={effEnrollment?.pricingPlan?.title || student.pricingPlan?.title || ''}>
+                                        ₹{effEnrollment?.pricingPlan?.price || student.pricingPlan?.price}
+                                        {(effEnrollment?.pricingPlan?.title || student.pricingPlan?.title) ? ` • ${effEnrollment?.pricingPlan?.title || student.pricingPlan?.title}` : ''}
+                                      </div>
+                                    )}
+                                  </td>
+                                </>
+                              );
+                            })()}
 
                             {/* EXPLORING TAB COLUMNS */}
                             {activeTab === 'exploring' && (
@@ -1238,7 +1357,21 @@ export default function Students() {
                             {/* Actions Column */}
                             <td className="py-2 px-2.5 text-right space-x-1 whitespace-nowrap">
                               <button
-                                onClick={() => setSelectedReportStudent(student)}
+                                onClick={() => {
+                                  const eff = getEffectiveEnrollment(student);
+                                  setSelectedReportStudent(eff ? {
+                                    ...student,
+                                    programId: eff.programId,
+                                    programName: eff.programName,
+                                    currentProgram: eff.programName,
+                                    payment: eff.paymentStatus,
+                                    paymentStatus: eff.paymentStatus,
+                                    status: eff.programStatus,
+                                    activeEnrollmentStatus: eff.programStatus,
+                                    batch: eff.batchName || student.batch,
+                                    batchId: eff.batchId || student.batchId,
+                                  } : student);
+                                }}
                                 title="View Student Report"
                                 className="p-1 rounded-lg text-black/40 hover:text-[#3C83F6] dark:text-white/40 dark:hover:text-[#7fb1ff] hover:bg-black/5 dark:hover:bg-white/5 transition-colors inline-block"
                               >
