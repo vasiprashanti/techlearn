@@ -40,7 +40,7 @@ export default function PaymentStatus() {
         {/* Close Button */}
         <button
           type="button"
-          onClick={() => navigate(status === "success" ? `/learn/program/${programId}` : "/learn")}
+          onClick={() => navigate(status === "success" ? `/learn/programs/${programId}` : "/learn")}
           className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-white transition cursor-pointer"
           aria-label="Close"
         >
@@ -109,7 +109,7 @@ export default function PaymentStatus() {
               <>
                 {programId ? (
                   <Link
-                    to={`/learn/program/${programId}`}
+                    to={`/learn/programs/${programId}`}
                     className="inline-flex w-full items-center justify-center rounded-xl bg-[#a3e635] hover:bg-[#86efac] py-3 press-start-font text-[10px] font-bold text-[#0a1128] shadow-md shadow-[#a3e635]/25 transition cursor-pointer gap-2"
                   >
                     <span>GO TO CURRICULUM</span>

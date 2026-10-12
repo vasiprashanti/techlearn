@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import ScrollProgress from "../../components/ScrollProgress";
 import LoadingScreen from "../../components/LoadingScreen";
 import { programLearningAPI } from "../../services/programLearningApi";
@@ -47,6 +47,9 @@ export default function ProgramPreview() {
   const [placementLearning, setPlacementLearning] = useState(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [expandedCourseIds, setExpandedCourseIds] = useState(new Set());
+
+  const [searchParams] = useSearchParams();
+  const autoEnrollAttempted = useRef(false);
 
   const toggleCourseExpand = (cId) => {
     setExpandedCourseIds((prev) => {
@@ -269,9 +272,35 @@ export default function ProgramPreview() {
     currentPrice = Number(program.programFee) || 0;
   }
 
+  // Auto-enroll if returning from auth redirect with autoEnroll=true
+  useEffect(() => {
+    if (autoEnrollAttempted.current) return;
+    const shouldAutoEnroll = searchParams.get('autoEnroll') === 'true';
+    if (shouldAutoEnroll && isAuthenticated && program && !isEnrolled && !isPaying) {
+      autoEnrollAttempted.current = true;
+      if (!isPaid) {
+        setIsPaying(true);
+        setPaymentMessage("");
+        programLearningAPI.enrollFreeProgram(program._id)
+          .then(async () => {
+            if (typeof refetchUserData === 'function') {
+              await refetchUserData();
+            }
+            navigate('/dashboard');
+          })
+          .catch((error) => {
+            setPaymentMessage(error.message || 'Could not complete enrollment.');
+            setIsPaying(false);
+          });
+      }
+    }
+  }, [searchParams, isAuthenticated, program, isEnrolled, isPaying, isPaid, refetchUserData, navigate]);
+
   // Handle Checkout / Payment
   const handlePayment = async () => {
     if (!isAuthenticated) {
+      // Preserve the program and intended enrollment action across login/signup
+      sessionStorage.setItem('pending_enroll_program_id', String(program?._id || programId));
       openLogin();
       return;
     }
@@ -293,15 +322,13 @@ export default function ProgramPreview() {
     }
 
     if (!isPaid) {
-      if (!user?.onboardingCompleted && !user?.onboarding?.completed) {
-        navigate(`/onboarding?intent=${intent}`, { state: { programId: program._id, intent } });
-        return;
-      }
       setIsPaying(true);
       setPaymentMessage("");
       try {
         await programLearningAPI.enrollFreeProgram(program._id);
-        await refetchUserData();
+        if (typeof refetchUserData === 'function') {
+          await refetchUserData();
+        }
         navigate('/dashboard');
       } catch (error) {
         setPaymentMessage(error.message || 'Could not enroll in this Program.');
@@ -488,12 +515,12 @@ export default function ProgramPreview() {
             >
               <span>
                 {isPaying
-                  ? "PROCESSING PAYMENT…"
+                  ? "ENROLLING…"
                   : isEnrolled
                   ? (isDay1 ? "START LEARNING" : "RESUME LEARNING")
                   : isPaid
                   ? `PAY ₹${currentPrice} WITH RAZORPAY`
-                  : "CREATE LEARNER PROFILE"}
+                  : "START FREE PROGRAM"}
               </span>
               <span className="button-arrow">→</span>
             </button>
