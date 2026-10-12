@@ -9,6 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useUser } from "../../context/UserContext";
 import { useAuthModalContext } from "../../context/AuthModalContext";
 import { initiateRazorpayPayment } from "../../utils/razorpayCheckout";
+import { FiChevronDown, FiBookOpen } from "react-icons/fi";
 import "../../styles/courseDetails.css";
 
 const formatPhaseName = (phaseKey) => {
@@ -45,6 +46,19 @@ export default function ProgramPreview() {
   // Enrolled status & learning progression
   const [placementLearning, setPlacementLearning] = useState(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
+  const [expandedCourseIds, setExpandedCourseIds] = useState(new Set());
+
+  const toggleCourseExpand = (cId) => {
+    setExpandedCourseIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(String(cId))) {
+        next.delete(String(cId));
+      } else {
+        next.add(String(cId));
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -181,6 +195,9 @@ export default function ProgramPreview() {
   const intent = program.programType === "Skill" ? "skill" : "placement";
   const materials = Array.isArray(program.materials) ? program.materials : [];
   const phases = Array.isArray(program.phases) ? program.phases : [];
+  const attachedCourses = Array.isArray(program.courseIds) && program.courseIds.length > 0
+    ? program.courseIds
+    : materials.filter((m) => m.type === "Course");
   const learningGoals = Array.isArray(program.learningGoals) && program.learningGoals.length > 0
     ? program.learningGoals
     : [];
@@ -563,34 +580,30 @@ export default function ProgramPreview() {
               type="button"
               onClick={() => setActiveTab("curriculum")}
             >
-              {phases.length > 0 ? "Phases & Schedule" : "Resources"}
+              Curriculum
             </button>
 
-            {materials.length > 0 && phases.length > 0 && (
-              <button
-                className={`tab ${activeTab === "resources" ? "active" : ""}`}
-                data-tab="resources"
-                type="button"
-                onClick={() => setActiveTab("resources")}
-              >
-                Materials ({materials.length})
-              </button>
-            )}
+            <button
+              className={`tab ${activeTab === "schedule" ? "active" : ""}`}
+              data-tab="schedule"
+              type="button"
+              onClick={() => setActiveTab("schedule")}
+            >
+              Schedule
+            </button>
 
-            {learningGoals.length > 0 && (
-              <button
-                className={`tab ${activeTab === "outcomes" ? "active" : ""}`}
-                data-tab="outcomes"
-                type="button"
-                onClick={() => setActiveTab("outcomes")}
-              >
-                Outcomes
-              </button>
-            )}
+            <button
+              className={`tab ${activeTab === "outcomes" ? "active" : ""}`}
+              data-tab="outcomes"
+              type="button"
+              onClick={() => setActiveTab("outcomes")}
+            >
+              Outcomes
+            </button>
           </div>
 
           {/* =====================================
-               PHASES / CURRICULUM
+               TAB 1: CURRICULUM (ATTACHED COURSES)
           ====================================== */}
           <div
             className={`tab-content ${
@@ -598,120 +611,123 @@ export default function ProgramPreview() {
             }`}
             id="curriculum"
           >
-            <div className="section-eyebrow">
-              {phases.length > 0 ? "PROGRAM PHASES" : "PROGRAM RESOURCES"}
-            </div>
+            <div className="section-eyebrow">CURRICULUM</div>
 
             <h2 className="section-title">What you'll learn.</h2>
 
-            <div className="curriculum-list">
-              {phases.length > 0 ? (
-                (() => {
-                  const mid = Math.ceil(phases.length / 2);
-                  const col1 = phases.slice(0, mid);
-                  const col2 = phases.slice(mid);
+            {attachedCourses.length > 0 ? (
+              <div className="space-y-4">
+                {attachedCourses.map((course, idx) => {
+                  const cId = String(course._id || course.id || idx);
+                  const isExpanded = expandedCourseIds.has(cId);
+                  const topics = Array.isArray(course.topicIds) ? course.topicIds : [];
+                  const topicCount = course.numTopics || topics.length;
 
                   return (
-                    <>
-                      <div className="curriculum-col">
-                        {col1.map((p, idx) => (
-                          <div className="curriculum-row" key={p.phase || idx}>
-                            <div className="chapter-number">
-                              {String(idx + 1).padStart(2, "0")}
-                            </div>
-                            <div>
-                              <div className="chapter-name">{formatPhaseName(p.phase)}</div>
-                              <span className="text-xs opacity-60">
-                                Day {p.startDay} - Day {p.endDay}
-                              </span>
+                    <div
+                      key={cId}
+                      className="rounded-2xl border border-[var(--border)] overflow-hidden transition-all duration-200 bg-[rgba(255,255,255,0.02)] dark:bg-[rgba(255,255,255,0.02)]"
+                    >
+                      {/* Course Header Bar (Clickable) */}
+                      <button
+                        type="button"
+                        onClick={() => toggleCourseExpand(cId)}
+                        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-[rgba(255,255,255,0.03)] dark:hover:bg-[rgba(255,255,255,0.04)] transition-colors group cursor-pointer"
+                      >
+                        <div className="flex items-center gap-4 min-w-0">
+                          <span className="chapter-number text-[8px] font-mono opacity-50 shrink-0">
+                            {String(idx + 1).padStart(2, "0")}
+                          </span>
+                          <div className="min-w-0">
+                            <h3 className="text-base sm:text-lg font-bold text-[var(--navy)] truncate group-hover:text-[#3c83f6] transition-colors">
+                              {course.title || "Untitled Course"}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-0.5 text-xs text-[var(--muted)]">
+                              {course.level && <span>{course.level}</span>}
+                              {course.level && <span>•</span>}
+                              <span>{topicCount} {topicCount === 1 ? "Topic" : "Topics"}</span>
+                              {course.courseType && (
+                                <>
+                                  <span>•</span>
+                                  <span>{course.courseType}</span>
+                                </>
+                              )}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                      <div className="curriculum-col">
-                        {col2.map((p, idx) => (
-                          <div className="curriculum-row" key={p.phase || idx}>
-                            <div className="chapter-number">
-                              {String(mid + idx + 1).padStart(2, "0")}
-                            </div>
-                            <div>
-                              <div className="chapter-name">{formatPhaseName(p.phase)}</div>
-                              <span className="text-xs opacity-60">
-                                Day {p.startDay} - Day {p.endDay}
-                              </span>
-                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0 ml-4">
+                          <span className="text-xs font-semibold text-[#3c83f6] opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline">
+                            {isExpanded ? "Collapse" : "View Curriculum"}
+                          </span>
+                          <div className={`p-1.5 rounded-lg border border-[var(--border)] transition-transform duration-200 ${isExpanded ? "rotate-180 bg-[#3c83f6]/10 text-[#3c83f6]" : "opacity-60"}`}>
+                            <FiChevronDown className="w-4 h-4" />
                           </div>
-                        ))}
-                      </div>
-                    </>
+                        </div>
+                      </button>
+
+                      {/* Expandable Course Topics Curriculum List */}
+                      {isExpanded && (
+                        <div className="px-6 pb-5 pt-2 border-t border-[var(--border)] bg-black/[0.02] dark:bg-black/20 animate-in fade-in duration-200">
+                          {course.description && (
+                            <p className="text-xs text-[var(--muted)] mb-4 leading-relaxed max-w-3xl">
+                              {course.description}
+                            </p>
+                          )}
+
+                          {topics.length > 0 ? (
+                            <div className="curriculum-list border-t-0">
+                              {(() => {
+                                const mid = Math.ceil(topics.length / 2);
+                                const col1 = topics.slice(0, mid);
+                                const col2 = topics.slice(mid);
+
+                                return (
+                                  <>
+                                    <div className="curriculum-col">
+                                      {col1.map((topic, tIdx) => {
+                                        const cleanTitle = (topic.title || "")
+                                          .replace(/^CORE\s+(\w+)\s+NOTES\s*[-–]\s*\d+$/i, "$1")
+                                          .replace(/^\d+\.\s*/, "")
+                                          .replace(/\s*[-–]\s*\d+$/, "") || `Module ${tIdx + 1}`;
+                                        return (
+                                          <div className="curriculum-row" key={topic._id || tIdx}>
+                                            <div className="chapter-number">{String(tIdx + 1).padStart(2, "0")}</div>
+                                            <div className="chapter-name">{cleanTitle}</div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                    <div className="curriculum-col">
+                                      {col2.map((topic, tIdx) => {
+                                        const cleanTitle = (topic.title || "")
+                                          .replace(/^CORE\s+(\w+)\s+NOTES\s*[-–]\s*\d+$/i, "$1")
+                                          .replace(/^\d+\.\s*/, "")
+                                          .replace(/\s*[-–]\s*\d+$/, "") || `Module ${mid + tIdx + 1}`;
+                                        return (
+                                          <div className="curriculum-row" key={topic._id || tIdx}>
+                                            <div className="chapter-number">{String(mid + tIdx + 1).padStart(2, "0")}</div>
+                                            <div className="chapter-name">{cleanTitle}</div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          ) : (
+                            <div className="py-4 text-center text-xs text-[var(--muted)]">
+                              Comprehensive curriculum covering foundational concepts through practical projects.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   );
-                })()
-              ) : materials.length > 0 ? (
-                (() => {
-                  const mid = Math.ceil(materials.length / 2);
-                  const col1 = materials.slice(0, mid);
-                  const col2 = materials.slice(mid);
-
-                  return (
-                    <>
-                      <div className="curriculum-col">
-                        {col1.map((mat, idx) => (
-                          <div className="curriculum-row" key={mat.id || idx}>
-                            <div className="chapter-number">
-                              {String(idx + 1).padStart(2, "0")}
-                            </div>
-                            <div>
-                              <div className="chapter-name">{mat.title}</div>
-                              <span className="text-xs opacity-60">
-                                {mat.type} {mat.description ? `• ${mat.description}` : ""}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="curriculum-col">
-                        {col2.map((mat, idx) => (
-                          <div className="curriculum-row" key={mat.id || idx}>
-                            <div className="chapter-number">
-                              {String(mid + idx + 1).padStart(2, "0")}
-                            </div>
-                            <div>
-                              <div className="chapter-name">{mat.title}</div>
-                              <span className="text-xs opacity-60">
-                                {mat.type} {mat.description ? `• ${mat.description}` : ""}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  );
-                })()
-              ) : (
-                <div className="curriculum-col">
-                  <div className="curriculum-row">
-                    <div className="chapter-number">01</div>
-                    <div className="chapter-name">Foundations & Structured Learning</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* =====================================
-               RESOURCES TAB (when phases exist)
-          ====================================== */}
-          {materials.length > 0 && phases.length > 0 && (
-            <div
-              className={`tab-content ${
-                activeTab === "resources" ? "active" : ""
-              }`}
-              id="resources"
-            >
-              <div className="section-eyebrow">ATTACHED MATERIALS</div>
-
-              <h2 className="section-title">Included learning assets.</h2>
-
+                })}
+              </div>
+            ) : materials.length > 0 ? (
               <div className="curriculum-list">
                 {(() => {
                   const mid = Math.ceil(materials.length / 2);
@@ -754,23 +770,77 @@ export default function ProgramPreview() {
                   );
                 })()}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="curriculum-col">
+                <div className="curriculum-row">
+                  <div className="chapter-number">01</div>
+                  <div className="chapter-name">Foundations & Structured Learning Modules</div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* =====================================
-               OUTCOMES
+               TAB 2: SCHEDULE (5 LEARNING PHASES IN 1 LEFT-ALIGNED COLUMN)
           ====================================== */}
-          {learningGoals.length > 0 && (
-            <div
-              className={`tab-content ${
-                activeTab === "outcomes" ? "active" : ""
-              }`}
-              id="outcomes"
-            >
-              <div className="section-eyebrow">AFTER THIS PROGRAM</div>
+          <div
+            className={`tab-content ${
+              activeTab === "schedule" ? "active" : ""
+            }`}
+            id="schedule"
+          >
+            <div className="section-eyebrow">PROGRAM SCHEDULE</div>
 
-              <h2 className="section-title">What you'll achieve.</h2>
+            <h2 className="section-title">5 Learning Phases.</h2>
 
+            {phases.length > 0 ? (
+              <div className="max-w-3xl flex flex-col border-t border-[var(--border)]">
+                {phases.map((p, idx) => (
+                  <div
+                    className="curriculum-row py-4"
+                    key={p.phase || idx}
+                    style={{ gridTemplateColumns: "56px 1fr" }}
+                  >
+                    <div className="chapter-number text-xs font-mono">
+                      {String(idx + 1).padStart(2, "0")}
+                    </div>
+                    <div>
+                      <div className="chapter-name text-base font-bold text-[var(--navy)]">
+                        {formatPhaseName(p.phase)}
+                      </div>
+                      <span className="text-xs text-[var(--muted)] mt-0.5 inline-block">
+                        Day {p.startDay} – Day {p.endDay} ({Number(p.endDay) - Number(p.startDay) + 1} Days)
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="max-w-3xl flex flex-col border-t border-[var(--border)]">
+                {["Day 0 Readiness", "Core Learning", "Revision", "Company Preparation", "Final Assessment"].map((ph, idx) => (
+                  <div className="curriculum-row py-4" key={ph} style={{ gridTemplateColumns: "56px 1fr" }}>
+                    <div className="chapter-number text-xs font-mono">{String(idx + 1).padStart(2, "0")}</div>
+                    <div className="chapter-name text-base font-bold text-[var(--navy)]">Phase {idx + 1}: {ph}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* =====================================
+               TAB 3: OUTCOMES
+          ====================================== */}
+          <div
+            className={`tab-content ${
+              activeTab === "outcomes" ? "active" : ""
+            }`}
+            id="outcomes"
+          >
+            <div className="section-eyebrow">AFTER THIS PROGRAM</div>
+
+            <h2 className="section-title">What you'll achieve.</h2>
+
+            {learningGoals.length > 0 ? (
               <div className="outcomes-grid">
                 {learningGoals.map((outcome, index) => (
                   <div className="outcome-card" key={index}>
@@ -781,8 +851,23 @@ export default function ProgramPreview() {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="outcomes-grid">
+                {[
+                  "Master problem-solving and algorithmic foundations",
+                  "Build end-to-end full stack projects with modern stacks",
+                  "Crack technical placement interviews and hiring assessments",
+                ].map((fallbackGoal, index) => (
+                  <div className="outcome-card" key={index}>
+                    <div className="outcome-number">
+                      {String(index + 1).padStart(2, "0")}
+                    </div>
+                    <div className="outcome-title">{fallbackGoal}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
       </main>
     </div>

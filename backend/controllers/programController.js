@@ -122,7 +122,15 @@ export const getPublicProgramPreview = async (req, res) => {
       visibility: "Public",
     })
       .select("_id name description programType duration durationDays phases pricingType availability billingOptions structuredFee trainerLedFee monthlyStructuredFee monthlyTrainerLedFee annualStructuredFee annualTrainerLedFee programFee pricingPlans skillTags targetCompanies targetRoles learningGoals courseIds roadmapIds trackTemplateIds projectIds")
-      .populate("courseIds", "_id title description level courseType numTopics assignedBatchIds")
+      .populate({
+        path: "courseIds",
+        select: "_id title description level courseType numTopics assignedBatchIds topicIds",
+        populate: {
+          path: "topicIds",
+          select: "_id title slug index",
+          options: { sort: { index: 1, createdAt: 1 } },
+        },
+      })
       .populate("roadmapIds", "_id title description status assignedBatchIds")
       .populate("trackTemplateIds", "_id name trackType description totalDays status batchId")
       .populate("projectIds", "_id title description category duration_days status")
@@ -194,6 +202,7 @@ export const getPublicProgramPreview = async (req, res) => {
         targetCompanies: program.targetCompanies || [],
         targetRoles: program.targetRoles || [],
         learningGoals: program.learningGoals || [],
+        courseIds: (program.courseIds || []).filter((course) => course && isUserVisibleCourse(course)),
         materials,
         courseCount: materials.filter((material) => material.type === "Course").length,
         roadmapCount: materials.filter((material) => material.type === "Roadmap").length,
