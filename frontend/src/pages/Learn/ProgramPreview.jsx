@@ -101,12 +101,16 @@ export default function ProgramPreview() {
     };
   }, [isAuthenticated, programId]);
 
-  // Auto-enroll if returning from auth redirect with autoEnroll=true
+  // Auto-enroll if returning from auth redirect with autoEnroll=true or pending sessionStorage
   useEffect(() => {
     if (autoEnrollAttempted.current) return;
-    const shouldAutoEnroll = searchParams.get('autoEnroll') === 'true';
+    const pendingProgId = sessionStorage.getItem('pending_enroll_program_id');
+    const matchesPending = Boolean(pendingProgId && program && String(program._id) === String(pendingProgId));
+    const shouldAutoEnroll = searchParams.get('autoEnroll') === 'true' || matchesPending;
+
     if (shouldAutoEnroll && isAuthenticated && program && !isEnrolled && !isPaying) {
       autoEnrollAttempted.current = true;
+      sessionStorage.removeItem('pending_enroll_program_id');
       const isProgramPaid = Boolean(program?.isPaid || (Array.isArray(program?.pricingPlans) && program.pricingPlans.length > 0));
       if (!isProgramPaid) {
         setIsPaying(true);

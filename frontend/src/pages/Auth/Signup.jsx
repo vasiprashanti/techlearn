@@ -214,8 +214,10 @@ export default function Signup({
           return;
         }
 
-        handleClose();
-        handlePostAuthNavigation(data.user);
+        const handled = handlePostAuthNavigation(data.user);
+        if (!handled) {
+          handleClose();
+        }
       } else {
         setStatusMsg({
           text: data.message || 'Google sign-in succeeded, but backend verification failed.',
@@ -276,8 +278,10 @@ export default function Signup({
             return;
           }
 
-          handleClose();
-          handlePostAuthNavigation(data.user);
+          const handled = handlePostAuthNavigation(data.user);
+          if (!handled) {
+            handleClose();
+          }
         } else {
           setStatusMsg({
             text: data.message || 'Invalid email or password.',
@@ -485,8 +489,10 @@ export default function Signup({
           return;
         }
 
-        handleClose();
-        handlePostAuthNavigation(regData.user);
+        const handled = handlePostAuthNavigation(regData.user);
+        if (!handled) {
+          handleClose();
+        }
       } else {
         setOtpError(regData.message || 'Account creation failed. Please check your details.');
       }
