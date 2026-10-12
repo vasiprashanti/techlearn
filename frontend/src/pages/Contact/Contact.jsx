@@ -108,13 +108,13 @@ const Contact = () => {
           <div className="contact-buttons flex flex-wrap justify-center gap-6 pt-20 pb-12">
             <a 
               href="tel:+919347055962" 
-              className="contact-btn bg-[#00225c] hover:bg-[#001a4a] text-white px-8 py-4 rounded-full text-lg transition-all duration-300 hover:scale-105 border border-white/20 backdrop-blur-sm"
+              className="contact-btn uppercase tracking-wide bg-[#00225c] hover:bg-[#001a4a] text-white px-8 py-4 rounded-full text-lg transition-all duration-300 hover:scale-105 border border-white/20 backdrop-blur-sm"
             >
               Ring Ring!
             </a>
             <a 
               href="mailto:techlearnsolutions@gmail.com" 
-              className="contact-btn bg-[#00225c] hover:bg-[#001a4a] text-white px-8 py-4 rounded-full text-lg transition-all duration-300 hover:scale-105 border border-white/20 backdrop-blur-sm"
+              className="contact-btn uppercase tracking-wide bg-[#00225c] hover:bg-[#001a4a] text-white px-8 py-4 rounded-full text-lg transition-all duration-300 hover:scale-105 border border-white/20 backdrop-blur-sm"
             >
               Shoot a Mail
             </a>
@@ -122,7 +122,7 @@ const Contact = () => {
               href={`https://wa.me/919000663666?text=Hello%20TechLearn!%20I%20have%20a%20query.`}
               target="_blank" 
               rel="noopener noreferrer"
-              className="contact-btn bg-[#00225c] hover:bg-[#001a4a] text-white px-8 py-4 rounded-full text-lg transition-all duration-300 hover:scale-105 border border-white/20 backdrop-blur-sm"
+              className="contact-btn uppercase tracking-wide bg-[#00225c] hover:bg-[#001a4a] text-white px-8 py-4 rounded-full text-lg transition-all duration-300 hover:scale-105 border border-white/20 backdrop-blur-sm"
             >
               WhatsApp Us
             </a>

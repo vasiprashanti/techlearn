@@ -110,6 +110,14 @@ export default function Navbar() {
     };
   }, []);
 
+  // Keep the page behind the full-screen menu from scrolling
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [mobileMenuOpen]);
+
   // Close menus on route change
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -139,7 +147,7 @@ export default function Navbar() {
   const userAvatar = user?.photoUrl || user?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}&backgroundColor=04103d,3c83f6,1e293b`;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50" style={{ background: isOverHero ? 'transparent' : (isAppRoute ? '#01071e' : (sectionBackground || (isDarkNav ? '#01071e' : '#d8eef5'))) }}>
+    <header className="fixed top-0 left-0 right-0 z-50" style={{ background: mobileMenuOpen ? (isDarkNav ? '#01071e' : '#d8eef5') : isOverHero ? 'transparent' : (isAppRoute ? '#01071e' : (sectionBackground || (isDarkNav ? '#01071e' : '#d8eef5'))) }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -166,6 +174,7 @@ export default function Navbar() {
           --theme-btn-bg: rgba(0, 17, 59, 0.06);
           --theme-btn-hover: rgba(0, 17, 59, 0.12);
           --theme-btn-color: #00113b;
+          --menu-page-bg: #d8eef5;
         }
 
         /* Dark Section Active or Dark Page Fallback */
@@ -190,6 +199,7 @@ export default function Navbar() {
           --theme-btn-bg: rgba(255, 255, 255, 0.06);
           --theme-btn-hover: rgba(255, 255, 255, 0.12);
           --theme-btn-color: #ffffff;
+          --menu-page-bg: #01071e;
         }
 
         .tl-nav {
@@ -441,9 +451,9 @@ export default function Navbar() {
           display: none;
           align-items: center;
           justify-content: center;
-          border: 1px solid var(--border);
+          border: none;
           border-radius: 9px;
-          background: var(--theme-btn-bg);
+          background: transparent;
           cursor: pointer;
         }
 
@@ -564,8 +574,35 @@ export default function Navbar() {
           .tl-menu-button {
             display: flex;
           }
+          /* Full-page menu: covers everything under the navbar, like the course chapter drawer */
           .tl-mobile-menu {
+            position: fixed;
             top: 68px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 12px 20px 32px;
+            border: none;
+            border-radius: 0;
+            background: var(--menu-page-bg);
+            backdrop-filter: none;
+            box-shadow: none;
+            overflow-y: auto;
+            z-index: 40;
+          }
+          .tl-mobile-menu a,
+          .tl-mobile-menu button {
+            min-height: 56px;
+            padding: 0 4px;
+            border-radius: 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--heading);
+          }
+          .tl-mobile-menu a:last-child,
+          .tl-mobile-menu button:last-child {
+            border-bottom: none;
           }
         }
 
