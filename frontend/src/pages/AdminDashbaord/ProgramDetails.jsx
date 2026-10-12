@@ -32,6 +32,8 @@ import {
   FiCheck,
   FiCalendar,
   FiTarget,
+  FiChevronDown,
+  FiEdit2,
 } from 'react-icons/fi';
 
 const SECTIONS = [
