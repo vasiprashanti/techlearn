@@ -670,7 +670,7 @@ const Profile = () => {
               <div className="preference-divider" />
               <h3 className="form-section-title">Learning mode</h3>
               <p className="form-section-description">Your learning mode is assigned by your Program.</p>
-              <div className="readonly-mode"><span className="mode-indicator" /><span>{draft.learningMode || "Structured"}</span></div>
+              <div className="readonly-mode"><span className="mode-indicator" /><span>{String(draft.learningMode || "Structured").replace(/[_-]+/g, " ").replace(/w/g, (c) => c.toUpperCase())}</span></div>
 
               <div className="form-grid reminders-grid">
                 <div className="field">
