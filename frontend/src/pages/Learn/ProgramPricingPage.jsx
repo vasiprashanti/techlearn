@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -20,7 +20,7 @@ export default function ProgramPricingPage() {
   const { openLogin } = useAuthModalContext();
 
   const [item, setItem] = useState(null);
-  const [itemType, setItemType] = useState("program"); // "program" or "course"
+  const [itemType, setItemType] = useState("program");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [payingPlanKey, setPayingPlanKey] = useState("");
@@ -76,7 +76,7 @@ export default function ProgramPricingPage() {
 
   if (loading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? "bg-[#050a3b] text-white" : "bg-[#dff5ff] text-[#050a3b]"}`}>
+      <div className={`min-h-[calc(100vh-64px)] flex items-center justify-center ${isDarkMode ? "bg-[#050a3b] text-white" : "bg-[#dff5ff] text-[#050a3b]"}`}>
         <LoadingScreen showMessage={false} size={48} duration={800} />
       </div>
     );
@@ -84,7 +84,7 @@ export default function ProgramPricingPage() {
 
   if (error || !item) {
     return (
-      <div className={`min-h-screen flex flex-col items-center justify-center p-6 text-center ${isDarkMode ? "bg-[#050a3b] text-white" : "bg-[#dff5ff] text-[#050a3b]"}`}>
+      <div className={`min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-6 text-center ${isDarkMode ? "bg-[#050a3b] text-white" : "bg-[#dff5ff] text-[#050a3b]"}`}>
         <h1 className="text-2xl font-bold mb-3">{error || "Pricing Not Found"}</h1>
         <button
           onClick={() => navigate(-1)}
@@ -104,7 +104,6 @@ export default function ProgramPricingPage() {
       (p) => p.active !== false && Number(p.price) > 0
     );
 
-    // Look for monthly and annual candidates
     const isMonthly = (p) => {
       const period = String(p.billingPeriod || "").toLowerCase();
       const unit = String(p.accessDurationUnit || "").toLowerCase();
@@ -128,7 +127,6 @@ export default function ProgramPricingPage() {
     const annualPrice = annualPlan?.price ?? item.annualStructuredFee ?? item.annualTrainerLedFee ?? item.programFee ?? null;
 
     if (rawPlans.length > 0) {
-      // Map configured plans
       cards = rawPlans.slice(0, 2).map((plan, idx) => {
         const isFeatured = idx === 1 || isAnnual(plan);
         const periodText = isMonthly(plan) ? "per month" : isAnnual(plan) ? "per year" : (plan.billingPeriod ? `per ${plan.billingPeriod.toLowerCase()}` : "one-time");
@@ -164,7 +162,6 @@ export default function ProgramPricingPage() {
         };
       });
     } else {
-      // Fallback from program root fees if pricingPlans array is empty
       if (monthlyPrice && Number(monthlyPrice) > 0) {
         cards.push({
           planKey: `${item.programType?.toLowerCase() || "skill"}-monthly-structured`,
@@ -205,7 +202,6 @@ export default function ProgramPricingPage() {
       }
     }
   } else {
-    // Course pricing card
     const priceNum = Number(item.price ?? item.programFee ?? 0);
     cards = [
       {
@@ -273,7 +269,7 @@ export default function ProgramPricingPage() {
   };
 
   return (
-    <div className={`w-full min-h-screen flex flex-col font-sans transition-colors duration-300 ${
+    <div className={`w-full min-h-[calc(100vh-64px)] lg:h-[calc(100vh-64px)] flex flex-col justify-center items-center font-sans overflow-y-auto lg:overflow-hidden transition-colors duration-300 ${
       isDarkMode ? "dark bg-[#03092b] text-[#f0f6fc]" : "light bg-[#dff5ff] text-[#050a3b]"
     }`}>
       <style>{`
@@ -287,98 +283,83 @@ export default function ProgramPricingPage() {
           transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
         }
         .price-card-hover:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 16px 40px rgba(4,16,61,.12);
+          transform: translateY(-2px);
+          box-shadow: 0 16px 36px rgba(4,16,61,.08);
         }
 
         .feature-item::before {
           content: "";
-          flex: 0 0 14px;
-          width: 14px;
-          height: 14px;
-          margin-top: 2px;
+          flex: 0 0 13px;
+          width: 13px;
+          height: 13px;
+          margin-top: 1px;
           border-radius: 50%;
           background-color: #b5e959;
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.2 6.7 10.8 12 5.5' fill='none' stroke='%23050a3b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-          background-size: 10px 10px;
+          background-size: 9px 9px;
           background-position: center;
           background-repeat: no-repeat;
           display: inline-block;
         }
       `}</style>
 
-      {/* Top Bar / Navigation */}
-      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 pt-6 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#071330]/80 text-xs font-semibold backdrop-blur-sm hover:opacity-80 transition cursor-pointer"
-        >
-          <span>← Back</span>
-        </button>
+      {/* Main Pricing Section - fits single viewport without scroll */}
+      <main className="w-full max-w-[840px] mx-auto px-4 py-4 sm:py-5 flex flex-col justify-center my-auto">
+        {/* Header matching exact sizes from HTML reference */}
+        <header className="text-center mx-auto mb-3 sm:mb-4 max-w-[610px]">
+          <div className="programpricing-pixel text-[7px] leading-[1.8] tracking-[0.3px] uppercase opacity-50 mb-1.5 sm:mb-2 text-[#050a3b] dark:text-[#bceaff]">
+            CHOOSE YOUR PLAN
+          </div>
 
-        <span className="text-xs font-bold opacity-60 tracking-wider uppercase">
-          {item.name || item.title}
-        </span>
-      </div>
+          <h1 className="text-[24px] sm:text-[34px] lg:text-[38px] font-extrabold tracking-[-0.065em] text-[#050a3b] dark:text-white leading-[1.08] m-0">
+            One <i>Program.</i> {cards.length > 1 ? "Two ways" : "One goal"}
+          </h1>
 
-      {/* Main Pricing Section */}
-      <main className="flex-1 w-full px-3.5 py-10 sm:py-14 flex items-center justify-center">
-        <div className="w-full max-w-[1000px] mx-auto">
-          {/* Header */}
-          <header className="text-center mx-auto mb-9 sm:mb-10 max-w-[610px]">
-            <div className="programpricing-pixel text-[7px] tracking-[0.3px] uppercase opacity-55 mb-4 text-[#050a3b] dark:text-[#bceaff]">
-              CHOOSE YOUR PLAN
+          <p className="mt-1 text-[11px] sm:text-[12px] leading-[1.5] text-[#65708c] dark:text-slate-300 max-w-[500px] mx-auto">
+            Choose a focused timeline or give yourself more room to practise, improve, and build skills.
+          </p>
+
+          {paymentError && (
+            <div className="mt-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-600 dark:text-red-300">
+              {paymentError}
             </div>
+          )}
+        </header>
 
-            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-[#050a3b] dark:text-white leading-[1.08]">
-              One <i>Program.</i> {cards.length > 1 ? "Two ways" : "One goal"}
-            </h1>
+        {/* Pricing Cards Grid matching HTML reference */}
+        <div className={`grid gap-3.5 mx-auto items-stretch w-full ${
+          cards.length === 1
+            ? "grid-cols-1 max-w-[370px]"
+            : "grid-cols-1 md:grid-cols-2 max-w-[760px]"
+        }`}>
+          {cards.map((card, idx) => {
+            const isPaying = payingPlanKey === (card.planKey || "course");
+            const isFeatured = card.isFeatured;
 
-            <p className="mt-3 text-xs sm:text-sm text-[#65708c] dark:text-slate-300 max-w-[500px] mx-auto leading-relaxed">
-              Choose a focused timeline or give yourself more room to practise, improve, and build skills.
-            </p>
-
-            {paymentError && (
-              <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-xs text-red-600 dark:text-red-300">
-                {paymentError}
-              </div>
-            )}
-          </header>
-
-          {/* Pricing Cards Grid */}
-          <div className={`grid gap-4 mx-auto items-stretch ${
-            cards.length === 1
-              ? "grid-cols-1 max-w-[420px]"
-              : "grid-cols-1 md:grid-cols-2 max-w-[800px]"
-          }`}>
-            {cards.map((card, idx) => {
-              const isPaying = payingPlanKey === (card.planKey || "course");
-              const isFeatured = card.isFeatured;
-
-              return (
-                <article
-                  key={card.planKey || idx}
-                  className={`price-card-hover relative min-w-0 p-7 rounded-[18px] border flex flex-col ${
-                    isFeatured
-                      ? "bg-[#050a3b] text-white border-[#050a3b] dark:border-white/20 shadow-xl"
-                      : "bg-white dark:bg-[#071330] text-[#050a3b] dark:text-white border-black/10 dark:border-white/10 shadow-sm"
-                  }`}
-                >
+            return (
+              <article
+                key={card.planKey || idx}
+                className={`price-card-hover relative min-w-0 p-[18px] sm:p-[20px] rounded-[16px] border flex flex-col justify-between ${
+                  isFeatured
+                    ? "bg-[#050a3b] text-white border-[#050a3b] dark:border-white/20 shadow-lg"
+                    : "bg-white dark:bg-[#071330] text-[#050a3b] dark:text-white border-[rgba(4,16,61,0.13)] dark:border-white/10 shadow-sm"
+                }`}
+              >
+                <div>
                   {/* Popular / Feature Pill */}
                   {card.badge && (
-                    <div className="absolute top-[18px] right-[18px] px-2 py-1 rounded-full bg-[#b5e959] text-[#050a3b] programpricing-pixel text-[5px] uppercase tracking-wider font-bold">
+                    <div className="absolute top-[13px] right-[13px] px-[7px] py-[3.5px] rounded-full bg-[#b5e959] text-[#050a3b] programpricing-pixel text-[5px] uppercase tracking-wider font-bold leading-[1.6]">
                       {card.badge}
                     </div>
                   )}
 
                   {/* Price Label */}
-                  <div className="programpricing-pixel text-[7px] tracking-[0.2px] uppercase opacity-75 mb-4">
+                  <div className="programpricing-pixel text-[7px] tracking-[0.2px] leading-[1.8] uppercase opacity-75 mb-2">
                     {card.label}
                   </div>
 
                   {/* Price */}
-                  <div className="flex items-baseline flex-wrap gap-1.5 text-4xl sm:text-5xl font-extrabold tracking-tight leading-none">
+                  <div className="flex items-baseline flex-wrap gap-1.5 text-[32px] sm:text-[36px] font-extrabold tracking-[-0.065em] leading-[1.05]">
                     ₹{card.price.toLocaleString("en-IN")}{" "}
                     <small className={`text-[10px] font-medium tracking-normal ${
                       isFeatured ? "text-white/65" : "text-[#65708c] dark:text-slate-400"
@@ -388,7 +369,7 @@ export default function ProgramPricingPage() {
                   </div>
 
                   {/* Description */}
-                  <p className={`min-h-[46px] mt-3.5 text-[11px] leading-relaxed ${
+                  <p className={`min-h-[34px] sm:min-h-[38px] mt-2 text-[11px] leading-[1.45] ${
                     isFeatured ? "text-white/75" : "text-[#65708c] dark:text-slate-400"
                   }`}>
                     {card.description}
@@ -399,7 +380,7 @@ export default function ProgramPricingPage() {
                     type="button"
                     disabled={Boolean(payingPlanKey)}
                     onClick={() => handleSelectPlan(card)}
-                    className={`programpricing-pixel w-full min-h-[42px] mt-5 py-2.5 px-3.5 rounded-[8px] text-[10px] tracking-[1px] font-normal transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
+                    className={`programpricing-pixel w-full min-h-[38px] mt-3 py-2 px-3 rounded-[8px] text-[10px] tracking-[1px] font-normal transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
                       isFeatured
                         ? "bg-[#b5e959] hover:bg-[#c8f477] text-[#050a3b] border border-[#b5e959]"
                         : "bg-[#050a3b] hover:bg-[#111b58] text-white border border-[#050a3b] dark:bg-[#3c83f6] dark:hover:bg-[#2563eb] dark:border-transparent"
@@ -408,28 +389,28 @@ export default function ProgramPricingPage() {
                     <span>{isPaying ? "PROCESSING…" : "ENROLL NOW"}</span>
                     <span aria-hidden="true">→</span>
                   </button>
+                </div>
 
-                  {/* Features List */}
-                  <ul className={`p-0 mt-6 list-none border-t ${
-                    isFeatured ? "border-white/15" : "border-black/10 dark:border-white/10"
-                  }`}>
-                    {card.features.map((feat, fIdx) => (
-                      <li
-                        key={fIdx}
-                        className={`feature-item flex items-start gap-2 py-2.5 border-b text-[10px] leading-relaxed ${
-                          isFeatured
-                            ? "border-white/15 text-white/85"
-                            : "border-black/10 dark:border-white/10 text-[#303c5d] dark:text-slate-300"
-                        }`}
-                      >
-                        <span>{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              );
-            })}
-          </div>
+                {/* Features List */}
+                <ul className={`p-0 mt-3 list-none border-t ${
+                  isFeatured ? "border-white/15" : "border-[rgba(4,16,61,0.10)] dark:border-white/10"
+                }`}>
+                  {card.features.slice(0, 6).map((feat, fIdx) => (
+                    <li
+                      key={fIdx}
+                      className={`feature-item flex items-start gap-2 py-1.5 border-b text-[10px] leading-[1.4] ${
+                        isFeatured
+                          ? "border-white/15 text-white/85"
+                          : "border-[rgba(4,16,61,0.10)] dark:border-white/10 text-[#303c5d] dark:text-slate-300"
+                      }`}
+                    >
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            );
+          })}
         </div>
       </main>
     </div>

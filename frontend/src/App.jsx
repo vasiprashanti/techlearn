@@ -253,6 +253,7 @@ function LayoutWrapper() {
                      !location.pathname.startsWith('/daily-challenge/') &&
                      !location.pathname.startsWith('/free-assessment') &&
                      !location.pathname.startsWith('/onboarding') &&
+                     !location.pathname.includes('/pricing') &&
                      !isDashboardRoute &&
                      !isStudentSidebarRoute;
 
