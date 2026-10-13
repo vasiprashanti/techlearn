@@ -563,8 +563,12 @@ export const adminAPI = {
       method: 'POST',
       body: JSON.stringify({ ids, ...options }),
     }),
-  detachProgramEntity: (programId, entityType, entityId) =>
-    request(`/admin/programs/${programId}/attachments/${entityType}/${entityId}`, { method: 'DELETE' }),
+  detachProgramEntity: (programId, entityType, entityId, options = {}) => {
+    const query = new URLSearchParams();
+    if (options.removeEnrollment) query.set('removeEnrollment', 'true');
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return request(`/admin/programs/${programId}/attachments/${entityType}/${entityId}${queryString}`, { method: 'DELETE' });
+  },
   reorderProgramEntities: (programId, entityType, ids) =>
     request(`/admin/programs/${programId}/attachments/${entityType}/order`, {
       method: 'PATCH',

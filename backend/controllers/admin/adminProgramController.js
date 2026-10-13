@@ -1745,7 +1745,21 @@ export const detachEntity = async (req, res) => {
             ...(student.email ? [{ email: String(student.email).trim().toLowerCase() }] : []),
           ],
         }).select("_id").lean();
-        await pauseProgramEnrollment({ student, user, programId });
+
+        const removeEnrollment = req.query.removeEnrollment === "true" || req.query.deleteEnrollment === "true";
+        if (removeEnrollment) {
+          const identifiers = [
+            user?._id ? { userId: user._id } : null,
+            student._id ? { studentId: student._id } : null,
+          ].filter(Boolean);
+          if (identifiers.length) {
+            await ProgramEnrollment.deleteMany({ programId, $or: identifiers });
+          }
+        } else {
+          await pauseProgramEnrollment({ student, user, programId });
+        }
+
+        // If student or user's active primary program was this program, clear it or sync to next
         await syncPrimaryProgramPointers({ student, user });
       }
     }
