@@ -12,21 +12,26 @@ export default function FreeAssessmentSetup() {
   const location = useLocation();
 
   const ROLE_OPTIONS = ['Software Developer', 'Java Developer', 'Full Stack Developer', 'Python Developer', 'Data Analyst', 'QA / Test Engineer', 'Other'];
-  const COMPANY_OPTIONS = ['TCS', 'Infosys', 'Accenture', 'Wipro', 'Cognizant', 'Capgemini', 'Amazon', 'Deloitte', 'Other'];
-  const PLACEMENT_OPTIONS = ['On-Campus', 'Off-Campus', 'Both'];
+  const GENERAL_COMPANY = 'Other / General Interview';
+  const COMPANY_OPTIONS = ['TCS', 'Infosys', 'Accenture', 'Wipro', 'Cognizant', 'Capgemini', 'Amazon', 'Deloitte', GENERAL_COMPANY];
+  const LEVEL_OPTIONS = [
+    { value: 'Fresher', hint: 'Easy-focused, with some medium questions' },
+    { value: 'Mid-level', hint: 'Medium-focused, with easy and hard questions' },
+    { value: 'Senior', hint: 'Hard-focused, with some medium questions' },
+  ];
 
   const stateCompanies = [].concat(location.state?.targetCompanies || location.state?.targetCompany || []).filter(Boolean);
   const initialRole = location.state?.targetRole || user?.targetRole || '';
-  const initialCompanies = stateCompanies.length > 0 ? stateCompanies : (user?.targetCompanies || []).filter(Boolean);
-  const rawPlacement = location.state?.placementType || location.state?.placementCategory || user?.placementCategory || '';
-  const initialPlacementType = PLACEMENT_OPTIONS.find((o) => o.toLowerCase() === String(rawPlacement).toLowerCase()) || '';
+  // this flow takes a single company; keep the first one saved from onboarding
+  const initialCompany = (stateCompanies.length > 0 ? stateCompanies : (user?.targetCompanies || []).filter(Boolean))[0] || '';
+  const initialLevel = LEVEL_OPTIONS.find((o) => o.value.toLowerCase() === String(location.state?.level || '').toLowerCase())?.value || '';
 
   const [selectedRole, setSelectedRole] = useState(ROLE_OPTIONS.includes(initialRole) || !initialRole ? initialRole : 'Other');
   const [customRole, setCustomRole] = useState(ROLE_OPTIONS.includes(initialRole) ? '' : initialRole);
-  const [selectedCompanies, setSelectedCompanies] = useState(initialCompanies);
-  const [customCompany, setCustomCompany] = useState('');
-  const [placementType, setPlacementType] = useState(initialPlacementType);
-  const [confirmed, setConfirmed] = useState(Boolean(initialRole && initialCompanies.length > 0 && initialPlacementType));
+  const [company, setCompany] = useState(initialCompany);
+  const [level, setLevel] = useState(initialLevel);
+  const [step, setStep] = useState(initialRole ? (initialCompany ? 2 : 1) : 0);
+  const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -37,41 +42,52 @@ export default function FreeAssessmentSetup() {
       if (ROLE_OPTIONS.includes(savedRole)) setSelectedRole(savedRole);
       else { setSelectedRole('Other'); setCustomRole(savedRole); }
     }
-    const savedCompanies = stateCompanies.length > 0 ? stateCompanies : (user?.targetCompanies || []).filter(Boolean);
-    if (selectedCompanies.length === 0 && savedCompanies.length > 0) setSelectedCompanies(savedCompanies);
-    if (!placementType && initialPlacementType) setPlacementType(initialPlacementType);
+    const savedCompany = (stateCompanies.length > 0 ? stateCompanies : (user?.targetCompanies || []).filter(Boolean))[0] || '';
+    if (!company && savedCompany) setCompany(savedCompany);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const finalRole = selectedRole === 'Other' ? customRole.trim() : selectedRole;
-  const finalCompanies = selectedCompanies
-    .map((c) => (c === 'Other' ? customCompany.trim() : c))
-    .filter(Boolean);
-  const finalCompany = finalCompanies.join(', ');
+  const finalCompanies = company ? [company] : [];
+  const finalCompany = company;
 
-  const toggleCompany = (item) => {
-    setError('');
-    setSelectedCompanies((prev) => (prev.includes(item) ? prev.filter((c) => c !== item) : [...prev, item]));
+  const validateStep = (index) => {
+    if (index === 0 && !finalRole) return selectedRole === 'Other' ? 'Please enter your target role.' : 'Please choose the role you are preparing for.';
+    if (index === 1 && !company) return 'Please choose a company.';
+    if (index === 2 && !level) return 'Please choose your level.';
+    return '';
   };
 
-  const handleConfirmDetails = () => {
-    if (!finalRole) return setError('Please choose your target role.');
-    if (finalCompanies.length === 0) return setError('Please choose at least one target company.');
-    if (!placementType) return setError('Please choose your placement type.');
+  const goNext = () => {
+    const problem = validateStep(step);
+    if (problem) return setError(problem);
     setError('');
-    setConfirmed(true);
+    if (step < 2) setStep(step + 1);
+    else setConfirmed(true);
+  };
+
+  const goBack = () => {
+    setError('');
+    if (step > 0) setStep(step - 1);
+  };
+
+  // Single-answer questions move on as soon as an option is picked
+  const pickAndAdvance = (apply, nextStep) => {
+    setError('');
+    apply();
+    setTimeout(() => setStep(nextStep), 180);
   };
 
   const handleStartInterview = async () => {
-    if (!finalRole || finalCompanies.length === 0) {
-      setError('Please ensure your role and company are selected.');
+    if (!finalRole || finalCompanies.length === 0 || !level) {
+      setError('Please ensure your role, company and level are selected.');
       return;
     }
 
     const payload = {
       targetRole: finalRole,
       targetCompany: finalCompanies,
-      placementCategory: placementType,
+      level,
       programId: location.state?.programId || null,
     };
 
@@ -97,7 +113,7 @@ export default function FreeAssessmentSetup() {
             targetRole: finalRole,
             targetCompany: finalCompany,
             targetCompanies: finalCompanies,
-            placementType,
+            level,
           },
         });
       } else {
@@ -184,14 +200,21 @@ export default function FreeAssessmentSetup() {
           --soft-bg: rgba(255, 255, 255, .035);
         }
 
-        .tl-pre-assessment-root .setup-card { background: var(--card); border: 1px solid var(--border); border-radius: 22px; padding: 28px; max-width: 760px; margin-top: 22px; }
-        .tl-pre-assessment-root .setup-group { margin-bottom: 26px; }
-        .tl-pre-assessment-root .setup-label { font-weight: 700; font-size: 15px; margin-bottom: 12px; }
-        .tl-pre-assessment-root .setup-label span { font-weight: 500; color: var(--muted); font-size: 13px; }
-        .tl-pre-assessment-root .setup-chips { display: flex; flex-wrap: wrap; gap: 10px; }
-        .tl-pre-assessment-root .setup-chip { border: 1px solid var(--border); background: var(--soft-bg); color: var(--text); padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; }
-        .tl-pre-assessment-root .setup-chip.selected { background: var(--lime); border-color: var(--lime); color: #04103d; }
-        .tl-pre-assessment-root .setup-input { margin-top: 12px; width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--soft-bg); color: var(--text); font-size: 14px; }
+        .tl-pre-assessment-root .setup-step { max-width: 760px; margin: 8vh auto 0; }
+        .tl-pre-assessment-root .setup-title { font-size: clamp(30px, 2.5vw, 46px); line-height: 1.1; letter-spacing: -1.4px; font-weight: 600; margin-bottom: 10px; }
+        .tl-pre-assessment-root .setup-title i { font-style: italic; }
+        .tl-pre-assessment-root .setup-sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+        .tl-pre-assessment-root .setup-hint { color: var(--muted); font-size: 13px; margin-top: 14px; }
+        .tl-pre-assessment-root .setup-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tl-pre-assessment-root .setup-chip { border: 1px solid var(--border); background: var(--soft-bg); color: var(--text); padding: 8px 16px; min-height: 42px; border-radius: 8px; font-size: 13px; font-weight: 500; transition: background .18s ease, border-color .18s ease, color .18s ease; }
+        .tl-pre-assessment-root .setup-chip:hover { background: var(--lime); border-color: var(--lime); color: #000f45; }
+        .tl-pre-assessment-root .setup-chip.selected { background: var(--lime); border-color: var(--lime); color: #000f45; }
+        .tl-pre-assessment-root .setup-input { margin-top: 14px; width: 100%; height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--soft-bg); color: var(--text); font-size: 13px; outline: none; }
+        .tl-pre-assessment-root .setup-input:focus { border-color: var(--lime); }
+        .tl-pre-assessment-root .setup-error { color: #ff5a5f; font-size: 13px; margin-top: 14px; }
+        .tl-pre-assessment-root .setup-actions { display: flex; gap: 12px; margin-top: 28px; align-items: center; }
+        .tl-pre-assessment-root .setup-back { height: 46px; padding: 0 22px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--text); font-family: "Press Start 2P", monospace; font-size: 8px; }
+        .tl-pre-assessment-root .setup-next { width: auto; min-width: 180px; }
         .tl-pre-assessment-root .edit-details { margin-top: 8px; background: none; border: none; color: var(--muted); text-decoration: underline; font-size: 12px; }
 
         .tl-pre-assessment-root * {
@@ -671,11 +694,13 @@ export default function FreeAssessmentSetup() {
           ASSESSMENT OVERVIEW
         </div>
 
-        <h1 className="page-title">
-          {confirmed ? (<><i style={{ fontStyle: "italic", marginRight: "0.28em" }}>Your</i> interview is ready.</>) : (<><i style={{ fontStyle: "italic", marginRight: "0.28em" }}>Tell us</i> about your target.</>)}
-        </h1>
+        {confirmed && (
+          <h1 className="page-title">
+            <i style={{ fontStyle: "italic", marginRight: "0.28em" }}>Your</i> interview is ready.
+          </h1>
+        )}
 
-        {error && (
+        {error && confirmed && (
           <div className="error-banner">
             {error}
           </div>
@@ -685,44 +710,56 @@ export default function FreeAssessmentSetup() {
              CONTENT
         ========================= */}
         {!confirmed ? (
-          <section className="setup-card">
-            <div className="setup-group">
-              <div className="setup-label">1. What role are you preparing for?</div>
-              <div className="setup-chips">
-                {ROLE_OPTIONS.map((item) => (
-                  <button key={item} type="button" className={`setup-chip ${selectedRole === item ? 'selected' : ''}`}
-                    onClick={() => { setError(''); setSelectedRole(item); }}>{item}</button>
-                ))}
-              </div>
-              {selectedRole === 'Other' && (
-                <input className="setup-input" placeholder="Enter your target role" value={customRole} onChange={(e) => setCustomRole(e.target.value)} />
-              )}
-            </div>
+          <section className="setup-step">
+            {step === 0 && (
+              <>
+                <h2 className="setup-title">Which role are you <i>preparing for?</i></h2>
+                <p className="setup-sub">Used to select the relevant Program and its interview blueprint.</p>
+                <div className="setup-chips">
+                  {ROLE_OPTIONS.map((item) => (
+                    <button key={item} type="button" className={`setup-chip ${selectedRole === item ? 'selected' : ''}`}
+                      onClick={() => (item === 'Other' ? (setError(''), setSelectedRole(item)) : pickAndAdvance(() => setSelectedRole(item), 1))}>{item}</button>
+                  ))}
+                </div>
+                {selectedRole === 'Other' && (
+                  <input className="setup-input" placeholder="Enter your target role" maxLength={60} autoFocus value={customRole} onChange={(e) => { setError(''); setCustomRole(e.target.value); }} />
+                )}
+              </>
+            )}
 
-            <div className="setup-group">
-              <div className="setup-label">2. Which companies are you targeting? <span>(select all that apply)</span></div>
-              <div className="setup-chips">
-                {[...new Set([...COMPANY_OPTIONS.filter((c) => c !== 'Other'), ...selectedCompanies.filter((c) => !COMPANY_OPTIONS.includes(c)), 'Other'])].map((item) => (
-                  <button key={item} type="button" className={`setup-chip ${selectedCompanies.includes(item) ? 'selected' : ''}`}
-                    onClick={() => toggleCompany(item)}>{item}</button>
-                ))}
-              </div>
-              {selectedCompanies.includes('Other') && (
-                <input className="setup-input" placeholder="Enter company name" value={customCompany} onChange={(e) => setCustomCompany(e.target.value)} />
-              )}
-            </div>
+            {step === 1 && (
+              <>
+                <h2 className="setup-title">Which company are you <i>targeting?</i></h2>
+                <p className="setup-sub">Used to prioritize matching company-tagged questions from the Question Bank.</p>
+                <div className="setup-chips">
+                  {[...new Set([...COMPANY_OPTIONS, ...(company && !COMPANY_OPTIONS.includes(company) ? [company] : [])])].map((item) => (
+                    <button key={item} type="button" className={`setup-chip ${company === item ? 'selected' : ''}`}
+                      onClick={() => pickAndAdvance(() => setCompany(item), 2)}>{item}</button>
+                  ))}
+                </div>
+              </>
+            )}
 
-            <div className="setup-group">
-              <div className="setup-label">3. What type of placement are you aiming for?</div>
-              <div className="setup-chips">
-                {PLACEMENT_OPTIONS.map((item) => (
-                  <button key={item} type="button" className={`setup-chip ${placementType === item ? 'selected' : ''}`}
-                    onClick={() => { setError(''); setPlacementType(item); }}>{item}</button>
-                ))}
-              </div>
-            </div>
+            {step === 2 && (
+              <>
+                <h2 className="setup-title">What level are you <i>preparing for?</i></h2>
+                <p className="setup-sub">Used to determine the difficulty mix of questions.</p>
+                <div className="setup-chips">
+                  {LEVEL_OPTIONS.map((item) => (
+                    <button key={item.value} type="button" className={`setup-chip ${level === item.value ? 'selected' : ''}`}
+                      onClick={() => { setError(''); setLevel(item.value); }}>{item.value}</button>
+                  ))}
+                </div>
+                {level && <p className="setup-hint">{LEVEL_OPTIONS.find((o) => o.value === level)?.hint}</p>}
+              </>
+            )}
 
-            <button type="button" className="start-button" onClick={handleConfirmDetails}>CONTINUE →</button>
+            {error && <div className="setup-error">{error}</div>}
+
+            <div className="setup-actions">
+              {step > 0 && <button type="button" className="setup-back" onClick={goBack}>BACK</button>}
+              <button type="button" className="start-button setup-next" onClick={goNext}>{step === 2 ? 'CONTINUE →' : 'NEXT →'}</button>
+            </div>
           </section>
         ) : (
         <div className="content-layout">
@@ -883,11 +920,11 @@ export default function FreeAssessmentSetup() {
 
                 <div className="detail-row">
                   <div className="detail-label">
-                    Placement Type
+                    Level
                   </div>
 
-                  <div className="detail-value" id="placementType">
-                    {placementType}
+                  <div className="detail-value" id="level">
+                    {level}
                   </div>
                 </div>
 

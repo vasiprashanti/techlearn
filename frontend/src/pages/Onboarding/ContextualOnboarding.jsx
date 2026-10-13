@@ -211,6 +211,10 @@ export default function ContextualOnboarding() {
       if (prev.includes(item)) {
         return prev.filter((c) => c !== item);
       }
+      if (prev.length >= 3) {
+        setError("You can select up to 3 companies.");
+        return prev;
+      }
       return [...prev, item];
     });
   };

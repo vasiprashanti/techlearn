@@ -76,8 +76,11 @@ export default function Navbar() {
       const sectionColor = currentSection ? getComputedStyle(currentSection).backgroundColor : null;
       const pageSurface = () => {
         // Inner pages paint their colour on a full-screen fixed layer; use it so the navbar matches the page.
-        for (const el of document.querySelectorAll(".fixed.inset-0.-z-10")) {
+        // the page layer mounted last is the visible one; skip hidden layers left by other layouts
+        const layers = Array.from(document.querySelectorAll(".fixed.inset-0.-z-10")).filter((el) => el.offsetParent !== null || getComputedStyle(el).position === "fixed").reverse();
+        for (const el of layers) {
           const cs = getComputedStyle(el);
+          if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") continue;
           const solid = cs.backgroundColor;
           if (solid && solid !== "rgba(0, 0, 0, 0)" && solid !== "transparent") return solid;
           const first = cs.backgroundImage.match(/rgba?\([^)]+\)/);

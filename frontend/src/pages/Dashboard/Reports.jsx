@@ -83,63 +83,27 @@ const reportTabs = [
 const ProgramReport = ({ report }) => {
   const snapshot = report?.snapshot || {};
   const days = snapshot.days || [];
-  const duration = snapshot.program?.durationDays || days.length || 0;
-  const completed = snapshot.completedDays || 0;
-  const progressPercent = duration > 0 ? Math.round((completed / duration) * 100) : 0;
 
   return (
     <motion.article
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="dashboard-surface rounded-2xl p-5 sm:p-7 shadow-sm transition duration-300"
+      className="transition duration-300"
     >
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between border-b border-black/5 dark:border-white/5 pb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-[#3c83f6]/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#3c83f6] dark:bg-[#3c83f6]/20 dark:text-[#8fd9ff]">
-              {report.type || "Program"}
-            </span>
-            {snapshot.schedule?.type && (
-              <span className="text-xs text-[#00113b]/50 dark:text-[#afcff1]/50 font-medium">
-                {snapshot.schedule.type === "batch" ? "Batch Cohort" : "Self-Paced"}
-              </span>
-            )}
-          </div>
-          <h2 className="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-[#00113b] dark:text-white">
-            {report.title}
-          </h2>
-          <p className="mt-1 flex items-center gap-2 text-xs sm:text-sm text-[#00113b]/60 dark:text-[#afcff1]/70">
-            <Calendar className="h-3.5 w-3.5" />
-            {snapshot.schedule?.startDate
-              ? `Started on ${formatDate(snapshot.schedule.startDate)}`
-              : "Ongoing schedule"}
-            {snapshot.schedule?.batchName ? ` · ${snapshot.schedule.batchName}` : ""}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-xl bg-white/40 dark:bg-white/5 p-3 text-center border border-black/5 dark:border-white/5">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#00113b]/50 dark:text-[#afcff1]/60">Progress</p>
-            <p className="mt-1 text-lg sm:text-xl font-bold text-[#00113b] dark:text-white">{completed}/{duration}</p>
-            <p className="text-[10px] text-[#3c83f6] dark:text-[#8fd9ff] font-semibold">{progressPercent}%</p>
-          </div>
-          <div className="rounded-xl bg-white/40 dark:bg-white/5 p-3 text-center border border-black/5 dark:border-white/5">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#00113b]/50 dark:text-[#afcff1]/60">Current</p>
-            <p className="mt-1 text-lg sm:text-xl font-bold text-[#00113b] dark:text-white">Day {snapshot.currentDay || 1}</p>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">of {duration}</p>
-          </div>
-          <div className="rounded-xl bg-white/40 dark:bg-white/5 p-3 text-center border border-black/5 dark:border-white/5">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#00113b]/50 dark:text-[#afcff1]/60">Avg Score</p>
-            <p className="mt-1 text-lg sm:text-xl font-bold text-[#00113b] dark:text-white">
-              {snapshot.score === null || snapshot.score === undefined ? "—" : `${snapshot.score}%`}
-            </p>
-            <p className="text-[10px] text-emerald-500 font-semibold">Overall</p>
-          </div>
-        </div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#00113b] dark:text-white">
+          {report.title}
+        </h2>
+        <p className="flex items-center gap-2 text-xs sm:text-sm text-[#00113b]/60 dark:text-[#afcff1]/70">
+          <Calendar className="h-3.5 w-3.5" />
+          {snapshot.schedule?.startDate
+            ? `Started on ${formatDate(snapshot.schedule.startDate)}`
+            : "Ongoing schedule"}
+        </p>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-black/5 dark:border-white/10 bg-white/30 dark:bg-black/15">
+      <div className="mt-4 overflow-hidden rounded-xl border border-black/5 dark:border-white/10 bg-white/30 dark:bg-black/15">
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-black/[0.02] dark:bg-white/[0.03] text-[11px] font-bold uppercase tracking-wider text-[#00113b]/60 dark:text-[#afcff1]/70 border-b border-black/5 dark:border-white/5">
