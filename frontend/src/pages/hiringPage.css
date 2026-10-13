@@ -107,6 +107,14 @@
   box-sizing: border-box;
 }
 
+@media (min-width: 768px) {
+  .hiring-page-container.has-sidebar .page {
+    padding-left: calc(90px + 32px);
+    padding-right: 32px;
+    max-width: 1400px;
+  }
+}
+
 /* Header (Left-aligned design system) */
 .hiring-page-container .hiring-header {
   text-align: left;
@@ -126,13 +134,14 @@
 /* Title matching Learn / design system gradient and font */
 .hiring-page-container .hiring-title {
   font-family: "Press Start 2P", monospace;
-  font-size: clamp(28px, 4.5vw, 44px);
-  line-height: 1.15;
-  letter-spacing: -1.5px;
+  font-size: clamp(20px, 3.5vw, 32px);
+  line-height: 1.25;
+  letter-spacing: -1px;
   background: linear-gradient(
     90deg,
-    #02107a,
-    #1c31ed
+    #60a5fa,
+    #3b82f6 50%,
+    #a78bfa 100%
   ) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
@@ -143,8 +152,8 @@
 .hiring-page-container.light-mode .hiring-title {
   background: linear-gradient(
     90deg,
-    #00113b,
-    #1d4ed8
+    #02107a,
+    #1c31ed
   ) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
@@ -154,7 +163,7 @@
 .hiring-page-container .hiring-subtitle {
   max-width: 700px;
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.6;
   color: var(--secondary);
 }

@@ -196,22 +196,15 @@ export default function Performance() {
   return (
     <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="space-y-8 px-1 py-2">
-        {/* Brand Page Heading */}
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.65 }}
-          className="mx-auto max-w-5xl pt-2 text-center md:pt-4"
-        >
-          <h1 className="font-press-start leading-normal">
-            <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
-              PERFORMANCE
-            </span>
+        {/* Brand Page Heading (Shared Standard) */}
+        <header className="user-page-header">
+          <h1 className="user-page-title">
+            PERFORMANCE
           </h1>
-          <p className="mt-3 text-sm leading-6 text-[#00113b]/65 dark:text-[#afcff1]/70 max-w-none mx-auto md:whitespace-nowrap">
+          <p className="user-page-subtitle">
             Review program progress, practice accuracy, assessment results, and improvement over time.
           </p>
-        </motion.div>
+        </header>
 
         {/* Jobs-style tabs keep the performance sections easy to scan. */}
         <div className="border-b border-black/10 dark:border-white/10">
