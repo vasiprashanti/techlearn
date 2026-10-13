@@ -99,6 +99,24 @@ export default function ProgramPricingPage() {
   // Derive pricing cards based on configured options
   let cards = [];
 
+  const defaultFocusedBenefits = [
+    "One complete skill program",
+    "Structured learning roadmap",
+    "Hands-on practice and challenges",
+    "Quizzes and skill assessments",
+    "Progress tracking",
+    "Certificate upon successful completion",
+  ];
+
+  const defaultFlexibleBenefits = [
+    "Everything in Focused",
+    "More time for hands-on practice",
+    "Revisit challenging concepts",
+    "Strengthen skills through repetition",
+    "Flexible schedule with clear progress goals",
+    "Certificate upon successful completion",
+  ];
+
   if (itemType === "program") {
     const rawPlans = (item.pricingPlans || []).filter(
       (p) => p.active !== false && Number(p.price) > 0
@@ -130,23 +148,11 @@ export default function ProgramPricingPage() {
       cards = rawPlans.slice(0, 2).map((plan, idx) => {
         const isFeatured = idx === 1 || isAnnual(plan);
         const periodText = isMonthly(plan) ? "per month" : isAnnual(plan) ? "per year" : (plan.billingPeriod ? `per ${plan.billingPeriod.toLowerCase()}` : "one-time");
-        const defaultBenefits = isFeatured
-          ? [
-              "Everything in Focused",
-              "More time for hands-on practice",
-              "Revisit challenging concepts",
-              "Strengthen skills through repetition",
-              "Flexible schedule with clear progress goals",
-              "Certificate upon successful completion",
-            ]
-          : [
-              "One complete skill program",
-              "Structured learning roadmap",
-              "Hands-on practice and challenges",
-              "Quizzes and skill assessments",
-              "Progress tracking",
-              "Certificate upon successful completion",
-            ];
+
+        // Use custom benefits if 4 or more configured; otherwise use the rich default set from the HTML reference
+        const features = (Array.isArray(plan.benefits) && plan.benefits.length >= 4)
+          ? plan.benefits
+          : (isFeatured ? defaultFlexibleBenefits : defaultFocusedBenefits);
 
         return {
           planKey: plan.key,
@@ -157,7 +163,7 @@ export default function ProgramPricingPage() {
           description: isFeatured
             ? "The same learning path, with more room to practise, revisit concepts, and improve while staying on track."
             : "A defined timeline. A structured path. Learn with focus, practise with purpose, and work towards your certificate.",
-          features: (Array.isArray(plan.benefits) && plan.benefits.length > 0) ? plan.benefits : defaultBenefits,
+          features,
           isFeatured,
         };
       });
@@ -170,14 +176,7 @@ export default function ProgramPricingPage() {
           price: Number(monthlyPrice),
           periodText: "per month",
           description: "A defined timeline. A structured path. Learn with focus, practise with purpose, and work towards your certificate.",
-          features: [
-            "One complete skill program",
-            "Structured learning roadmap",
-            "Hands-on practice and challenges",
-            "Quizzes and skill assessments",
-            "Progress tracking",
-            "Certificate upon successful completion",
-          ],
+          features: defaultFocusedBenefits,
           isFeatured: false,
         });
       }
@@ -189,14 +188,7 @@ export default function ProgramPricingPage() {
           price: Number(annualPrice),
           periodText: "per year",
           description: "The same learning path, with more room to practise, revisit concepts, and improve while staying on track.",
-          features: [
-            "Everything in Focused",
-            "More time for hands-on practice",
-            "Revisit challenging concepts",
-            "Strengthen skills through repetition",
-            "Flexible schedule with clear progress goals",
-            "Certificate upon successful completion",
-          ],
+          features: defaultFlexibleBenefits,
           isFeatured: true,
         });
       }
@@ -215,6 +207,7 @@ export default function ProgramPricingPage() {
           "Complete course curriculum and topics",
           "Interactive coding compiler & exercises",
           "Self-paced learning with verified quizzes",
+          "Progress tracking",
           "Certificate upon successful completion",
         ],
         isFeatured: true,
@@ -269,7 +262,7 @@ export default function ProgramPricingPage() {
   };
 
   return (
-    <div className={`w-full min-h-[calc(100vh-64px)] lg:h-[calc(100vh-64px)] flex flex-col justify-center items-center font-sans overflow-y-auto lg:overflow-hidden transition-colors duration-300 ${
+    <div className={`w-full min-h-[calc(100vh-64px)] flex flex-col justify-center items-center font-sans transition-colors duration-300 ${
       isDarkMode ? "dark bg-[#03092b] text-[#f0f6fc]" : "light bg-[#dff5ff] text-[#050a3b]"
     }`}>
       <style>{`
@@ -283,54 +276,54 @@ export default function ProgramPricingPage() {
           transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
         }
         .price-card-hover:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 16px 36px rgba(4,16,61,.08);
+          transform: translateY(-3px);
+          box-shadow: 0 16px 40px rgba(4,16,61,.06);
         }
 
         .feature-item::before {
           content: "";
-          flex: 0 0 13px;
-          width: 13px;
-          height: 13px;
+          flex: 0 0 14px;
+          width: 14px;
+          height: 14px;
           margin-top: 1px;
           border-radius: 50%;
           background-color: #b5e959;
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.2 6.7 10.8 12 5.5' fill='none' stroke='%23050a3b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-          background-size: 9px 9px;
+          background-size: 10px 10px;
           background-position: center;
           background-repeat: no-repeat;
           display: inline-block;
         }
       `}</style>
 
-      {/* Main Pricing Section - fits single viewport without scroll */}
-      <main className="w-full max-w-[840px] mx-auto px-4 py-4 sm:py-5 flex flex-col justify-center my-auto">
-        {/* Header matching exact sizes from HTML reference */}
-        <header className="text-center mx-auto mb-3 sm:mb-4 max-w-[610px]">
-          <div className="programpricing-pixel text-[7px] leading-[1.8] tracking-[0.3px] uppercase opacity-50 mb-1.5 sm:mb-2 text-[#050a3b] dark:text-[#bceaff]">
+      {/* Main Pricing Section - exact spacing and sizing matching programpricing.html */}
+      <main className="w-full max-w-[1000px] mx-auto px-3.5 py-8 sm:py-10 flex flex-col justify-center">
+        {/* Header from programpricing.html */}
+        <header className="text-center mx-auto mb-7 sm:mb-9 max-w-[610px]">
+          <div className="programpricing-pixel text-[7px] leading-[1.8] tracking-[.3px] uppercase opacity-50 mb-3.5 sm:mb-4 text-[rgba(4,16,61,.48)] dark:text-[#bceaff]">
             CHOOSE YOUR PLAN
           </div>
 
-          <h1 className="text-[24px] sm:text-[34px] lg:text-[38px] font-extrabold tracking-[-0.065em] text-[#050a3b] dark:text-white leading-[1.08] m-0">
+          <h1 className="text-[28px] sm:text-[38px] lg:text-[44px] font-extrabold tracking-[-.065em] text-[#050a3b] dark:text-white leading-[1.08] m-0">
             One <i>Program.</i> {cards.length > 1 ? "Two ways" : "One goal"}
           </h1>
 
-          <p className="mt-1 text-[11px] sm:text-[12px] leading-[1.5] text-[#65708c] dark:text-slate-300 max-w-[500px] mx-auto">
+          <p className="mt-2.5 text-[12px] leading-[1.7] text-[#65708c] dark:text-slate-300 max-w-[500px] mx-auto">
             Choose a focused timeline or give yourself more room to practise, improve, and build skills.
           </p>
 
           {paymentError && (
-            <div className="mt-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-600 dark:text-red-300">
+            <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-600 dark:text-red-300">
               {paymentError}
             </div>
           )}
         </header>
 
-        {/* Pricing Cards Grid matching HTML reference */}
-        <div className={`grid gap-3.5 mx-auto items-stretch w-full ${
+        {/* Pricing Cards Grid matching exact programpricing.html dimensions */}
+        <div className={`grid gap-4 mx-auto items-stretch w-full ${
           cards.length === 1
-            ? "grid-cols-1 max-w-[370px]"
-            : "grid-cols-1 md:grid-cols-2 max-w-[760px]"
+            ? "grid-cols-1 max-w-[400px]"
+            : "grid-cols-1 md:grid-cols-2 max-w-[800px]"
         }`}>
           {cards.map((card, idx) => {
             const isPaying = payingPlanKey === (card.planKey || "course");
@@ -339,27 +332,27 @@ export default function ProgramPricingPage() {
             return (
               <article
                 key={card.planKey || idx}
-                className={`price-card-hover relative min-w-0 p-[18px] sm:p-[20px] rounded-[16px] border flex flex-col justify-between ${
+                className={`price-card-hover relative min-w-0 p-[27px] rounded-[18px] border flex flex-col justify-between ${
                   isFeatured
-                    ? "bg-[#050a3b] text-white border-[#050a3b] dark:border-white/20 shadow-lg"
-                    : "bg-white dark:bg-[#071330] text-[#050a3b] dark:text-white border-[rgba(4,16,61,0.13)] dark:border-white/10 shadow-sm"
+                    ? "bg-[#050a3b] text-white border-[#050a3b] dark:border-white/20"
+                    : "bg-white dark:bg-[#071330] text-[#050a3b] dark:text-white border-[rgba(4,16,61,.13)] dark:border-white/10"
                 }`}
               >
                 <div>
                   {/* Popular / Feature Pill */}
                   {card.badge && (
-                    <div className="absolute top-[13px] right-[13px] px-[7px] py-[3.5px] rounded-full bg-[#b5e959] text-[#050a3b] programpricing-pixel text-[5px] uppercase tracking-wider font-bold leading-[1.6]">
+                    <div className="popular absolute top-[18px] right-[18px] px-[8px] py-[6px] rounded-full bg-[#b5e959] text-[#050a3b] programpricing-pixel text-[5px] uppercase tracking-wider font-bold leading-[1.6]">
                       {card.badge}
                     </div>
                   )}
 
                   {/* Price Label */}
-                  <div className="programpricing-pixel text-[7px] tracking-[0.2px] leading-[1.8] uppercase opacity-75 mb-2">
+                  <div className="price-label programpricing-pixel text-[7px] tracking-[.2px] leading-[1.8] uppercase opacity-75 mb-[19px]">
                     {card.label}
                   </div>
 
                   {/* Price */}
-                  <div className="flex items-baseline flex-wrap gap-1.5 text-[32px] sm:text-[36px] font-extrabold tracking-[-0.065em] leading-[1.05]">
+                  <div className="price flex items-baseline flex-wrap gap-[6px] text-[34px] sm:text-[42px] lg:text-[45px] font-extrabold tracking-[-.065em] leading-[1.05]">
                     ₹{card.price.toLocaleString("en-IN")}{" "}
                     <small className={`text-[10px] font-medium tracking-normal ${
                       isFeatured ? "text-white/65" : "text-[#65708c] dark:text-slate-400"
@@ -369,7 +362,7 @@ export default function ProgramPricingPage() {
                   </div>
 
                   {/* Description */}
-                  <p className={`min-h-[34px] sm:min-h-[38px] mt-2 text-[11px] leading-[1.45] ${
+                  <p className={`price-description min-h-[50px] mt-[14px] text-[11px] leading-[1.65] ${
                     isFeatured ? "text-white/75" : "text-[#65708c] dark:text-slate-400"
                   }`}>
                     {card.description}
@@ -380,7 +373,7 @@ export default function ProgramPricingPage() {
                     type="button"
                     disabled={Boolean(payingPlanKey)}
                     onClick={() => handleSelectPlan(card)}
-                    className={`programpricing-pixel w-full min-h-[38px] mt-3 py-2 px-3 rounded-[8px] text-[10px] tracking-[1px] font-normal transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
+                    className={`programpricing-pixel w-full min-h-[40px] mt-[20px] py-[10px] px-[14px] rounded-[8px] text-[10px] tracking-[1px] font-light transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
                       isFeatured
                         ? "bg-[#b5e959] hover:bg-[#c8f477] text-[#050a3b] border border-[#b5e959]"
                         : "bg-[#050a3b] hover:bg-[#111b58] text-white border border-[#050a3b] dark:bg-[#3c83f6] dark:hover:bg-[#2563eb] dark:border-transparent"
@@ -392,16 +385,16 @@ export default function ProgramPricingPage() {
                 </div>
 
                 {/* Features List */}
-                <ul className={`p-0 mt-3 list-none border-t ${
-                  isFeatured ? "border-white/15" : "border-[rgba(4,16,61,0.10)] dark:border-white/10"
+                <ul className={`feature-list p-0 mt-[24px] list-none border-t ${
+                  isFeatured ? "border-white/15" : "border-[rgba(4,16,61,.10)] dark:border-white/10"
                 }`}>
-                  {card.features.slice(0, 6).map((feat, fIdx) => (
+                  {card.features.map((feat, fIdx) => (
                     <li
                       key={fIdx}
-                      className={`feature-item flex items-start gap-2 py-1.5 border-b text-[10px] leading-[1.4] ${
+                      className={`feature-item flex items-start gap-[8px] py-[10px] border-b text-[10px] leading-[1.6] ${
                         isFeatured
                           ? "border-white/15 text-white/85"
-                          : "border-[rgba(4,16,61,0.10)] dark:border-white/10 text-[#303c5d] dark:text-slate-300"
+                          : "border-[rgba(4,16,61,.10)] dark:border-white/10 text-[#303c5d] dark:text-slate-300"
                       }`}
                     >
                       <span>{feat}</span>
