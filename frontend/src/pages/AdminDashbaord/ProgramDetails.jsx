@@ -1747,17 +1747,36 @@ export default function ProgramDetails() {
     }
   };
 
-  const handleConfirmDetach = async () => {
+  const handleConfirmDetach = async (options = {}) => {
     if (!detachItem) return;
     try {
       setDetaching(true);
-      await adminAPI.detachProgramEntity(programId, detachItem.typeKey, detachItem.item._id);
+      await adminAPI.detachProgramEntity(programId, detachItem.typeKey, detachItem.item._id, options);
       setDetachItem(null);
-      setToastMessage('Successfully detached item from Program.');
+      setToastMessage(options.removeEnrollment ? 'Successfully detached student and removed enrollment.' : 'Successfully detached item from Program.');
       fetchProgramDetail();
     } catch (err) {
       console.error('Error detaching entity:', err);
       alert(err.message || 'Failed to detach entity');
+    } finally {
+      setDetaching(false);
+    }
+  };
+
+  const handleDeleteStudentEntry = async () => {
+    if (!detachItem || detachItem.typeKey !== 'students') return;
+    const confirmDelete = window.confirm(`Permanently delete the entire student profile for "${getItemTitle(detachItem.item, 'students')}"? This will delete all submissions and records for this user.`);
+    if (!confirmDelete) return;
+
+    try {
+      setDetaching(true);
+      await adminAPI.deleteStudent(detachItem.item._id);
+      setDetachItem(null);
+      setToastMessage('Successfully deleted student record entirely.');
+      fetchProgramDetail();
+    } catch (err) {
+      console.error('Error deleting student record:', err);
+      alert(err.message || 'Failed to delete student record');
     } finally {
       setDetaching(false);
     }
@@ -2188,34 +2207,75 @@ export default function ProgramDetails() {
       {detachItem && (
         <div className="fixed inset-0 z-[145] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setDetachItem(null)} />
-          <div className="relative w-full max-w-md rounded-xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 p-6 shadow-2xl">
-            <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">Detach Item?</h3>
+          <div className="relative w-full max-w-lg rounded-xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">
+              {detachItem.typeKey === 'students' ? 'Remove or Delete Student?' : 'Detach Item?'}
+            </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-              Remove{' '}
+              Selected item:{' '}
               <span className="font-semibold text-slate-800 dark:text-slate-200">
                 {getItemTitle(detachItem.item, detachItem.typeKey)}
-              </span>{' '}
-              from this program?
+              </span>
             </p>
-            <div className="px-3.5 py-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-300 text-xs mb-5">
-              This only removes the association — the resource itself won't be deleted.
-            </div>
-            <div className="flex items-center justify-end gap-3">
+
+            {detachItem.typeKey === 'students' ? (
+              <div className="space-y-3 mb-5">
+                <div className="p-3.5 rounded-xl border border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300">
+                  <p className="font-semibold mb-1">Choose how you want to remove this student:</p>
+                  <ul className="list-disc pl-4 space-y-1 opacity-90">
+                    <li><strong>Detach &amp; Remove Enrollment:</strong> Unenrolls the student from this program so they no longer see "Enrolled". Their user account remains intact.</li>
+                    <li><strong>Delete Entire Student Record:</strong> Permanently deletes this student and all their associated records from the database.</li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div className="px-3.5 py-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-300 text-xs mb-5">
+                This only removes the association — the resource itself won't be deleted.
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-end gap-2.5 pt-1">
               <button
+                type="button"
                 disabled={detaching}
                 onClick={() => setDetachItem(null)}
-                className="h-10 px-4 rounded-xl border border-black/10 dark:border-white/15 text-sm font-medium text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                className="h-9 px-4 rounded-xl border border-black/10 dark:border-white/15 text-xs font-semibold text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
               >
                 Cancel
               </button>
-              <button
-                disabled={detaching}
-                onClick={handleConfirmDetach}
-                className="h-10 px-5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-75 text-white text-sm font-semibold inline-flex items-center gap-2 transition-colors shadow-sm"
-              >
-                <FiTrash2 className="w-3.5 h-3.5" />
-                {detaching ? 'Detaching...' : 'Detach'}
-              </button>
+
+              {detachItem.typeKey === 'students' ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={detaching}
+                    onClick={() => handleConfirmDetach({ removeEnrollment: true })}
+                    className="h-9 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-75 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors shadow-sm"
+                  >
+                    <FiTrash2 className="w-3.5 h-3.5" />
+                    <span>{detaching ? 'Processing...' : 'Detach & Remove Enrollment'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={detaching}
+                    onClick={handleDeleteStudentEntry}
+                    className="h-9 px-4 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-75 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors shadow-sm"
+                  >
+                    <FiTrash2 className="w-3.5 h-3.5" />
+                    <span>{detaching ? 'Processing...' : 'Delete Entire Record'}</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  disabled={detaching}
+                  onClick={() => handleConfirmDetach()}
+                  className="h-9 px-5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-75 text-white text-xs font-semibold inline-flex items-center gap-2 transition-colors shadow-sm"
+                >
+                  <FiTrash2 className="w-3.5 h-3.5" />
+                  <span>{detaching ? 'Detaching...' : 'Detach'}</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

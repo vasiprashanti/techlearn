@@ -246,10 +246,14 @@ export default function Courses() {
       ]).then(([placementRes, assignedRes]) => {
         if (cancelled) return;
         const idSet = new Set();
-        if (placementRes.status === 'fulfilled' && placementRes.value?.hasPlacementLearning) {
-          setPlacementLearning(placementRes.value);
-          const pId = placementRes.value.program?.id || placementRes.value.program?._id;
-          if (pId) idSet.add(String(pId));
+        if (placementRes.status === 'fulfilled') {
+          if (placementRes.value?.hasPlacementLearning) {
+            setPlacementLearning(placementRes.value);
+            const pId = placementRes.value.program?.id || placementRes.value.program?._id;
+            if (pId) idSet.add(String(pId));
+          } else {
+            setPlacementLearning(null);
+          }
         }
 
         if (assignedRes.status === 'fulfilled' && Array.isArray(assignedRes.value?.programs)) {
@@ -264,10 +268,11 @@ export default function Courses() {
           idSet.add(String(user.programId));
         }
 
-        if (idSet.size > 0) {
-          setEnrolledProgramIds(idSet);
-        }
+        setEnrolledProgramIds(idSet);
       }).catch(() => {});
+    } else {
+      setEnrolledProgramIds(new Set());
+      setPlacementLearning(null);
     }
     return () => {
       cancelled = true;

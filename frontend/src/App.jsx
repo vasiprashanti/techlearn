@@ -45,6 +45,7 @@ const CourseDetails = lazy(() => import('./pages/Learn/CourseDetails'))
 const CourseQuiz = lazy(() => import('./pages/Learn/CourseQuiz'))
 const CourseTopics = lazy(() => import('./pages/Learn/CourseTopics'))
 const ProgramPreview = lazy(() => import('./pages/Learn/ProgramPreview'))
+const ProgramPricingPage = lazy(() => import('./pages/Learn/ProgramPricingPage'))
 const PaymentStatus = lazy(() => import('./pages/Learn/PaymentStatus'))
 const LiveBatchDetails = lazy(() => import('./pages/Learn/LiveBatchDetails'))
 const AllInterviewQuestions = lazy(() => import('./pages/Learn/AllInterviewQuestions'))
@@ -262,6 +263,7 @@ function LayoutWrapper() {
                      !location.pathname.startsWith('/daily-challenge/') &&
                      !location.pathname.startsWith('/free-assessment') &&
                      !location.pathname.startsWith('/onboarding') &&
+                     !location.pathname.includes('/pricing') &&
                      !isDashboardRoute &&
                      !isStudentSidebarRoute;
 
@@ -354,6 +356,9 @@ function LayoutWrapper() {
           <Route path="/learn/courses/:courseId" element={<CourseDetails />} />
           <Route path="/learn/courses/:courseId/topics" element={<CourseTopics />} />
           <Route path="/learn/programs/:programId" element={<ProgramPreview />} />
+          <Route path="/learn/programs/:programId/pricing" element={<ProgramPricingPage />} />
+          <Route path="/programs/:programId/pricing" element={<ProgramPricingPage />} />
+          <Route path="/learn/courses/:courseId/pricing" element={<ProgramPricingPage />} />
           <Route path="/payment-status" element={<PaymentStatus />} />
           <Route path="/learn/payment-status" element={<PaymentStatus />} />
           <Route path="/learn/courses/:courseId/quiz" element={<CourseQuiz />} />
