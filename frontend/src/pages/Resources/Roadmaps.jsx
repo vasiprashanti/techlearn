@@ -585,8 +585,8 @@ export default function Roadmaps() {
   );
 
   return (
-    <div className={`min-h-screen font-sans antialiased ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
-      <div className={`fixed inset-0 -z-10 transition-colors duration-300 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-[#d6eef4]"}`} />
+    <div className={`min-h-screen font-sans antialiased ${isDarkMode ? "text-white" : "text-[#080830]"}`}>
+      <div className={`fixed inset-0 -z-10 transition-colors duration-300 ${isDarkMode ? "bg-[#000b36]" : "bg-[#ceeefd]"}`} />
 
       {/* Logged-in learners get the dashboard sidebar here too */}
       {hasUser && <Sidebar />}
