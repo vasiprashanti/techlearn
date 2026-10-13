@@ -124,7 +124,7 @@ const Sidebar = () => {
       `}</style>
 
       {/* Slim vertical desktop sidebar with vertically centered navigation */}
-      <div className={`hidden lg:flex flex-col fixed left-0 top-0 bottom-0 bg-[#ffffff30] dark:bg-[#020b23] border-r-0 dark:border-r dark:border-white/5 z-40 h-screen overflow-hidden w-[90px] pt-6 ${sidebarShadowClass} justify-between items-center pb-6`}>
+      <div className={`hidden lg:flex flex-col fixed left-0 top-0 bottom-0 bg-[#ffffff30] dark:bg-[#01071e] border-r-0 z-40 h-screen overflow-hidden w-[90px] pt-6 ${sidebarShadowClass} justify-between items-center pb-6`}>
         {/* Adjusted top padding/spacer to push buttons slightly down */}
         <div className="h-14 shrink-0"></div>
 
@@ -163,7 +163,7 @@ const Sidebar = () => {
             onClick={() => setMobileMenuOpen(false)}
             className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
           />
-          <div className={`lg:hidden fixed left-0 top-0 bottom-0 w-24 bg-[#ffffff30] dark:bg-[#020b23] border-r-0 dark:border-r dark:border-white/5 z-50 ${mobileSidebarShadowClass} flex flex-col pt-6 transition-transform duration-200 ease-out`}>
+          <div className={`lg:hidden fixed left-0 top-0 bottom-0 w-24 bg-[#ffffff30] dark:bg-[#01071e] border-r-0 z-50 ${mobileSidebarShadowClass} flex flex-col pt-6 transition-transform duration-200 ease-out`}>
               <div className="flex items-center justify-end shrink-0 relative px-2 h-8">
                 <button
                   onClick={() => setMobileMenuOpen(false)}

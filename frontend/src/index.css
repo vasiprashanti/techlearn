@@ -3898,6 +3898,28 @@ body .admin-dashboard-typography.dark .course-form-modal.course-form-modal.cours
   background: #01071e !important;
   background-image: none !important;
 }
+/* Learn, Hiring and Roadmaps use the dashboard's page colour (#01071e, same as the navbar). */
+.dark .tl-page-bg,
+.dark .tl-page-bg > main,
+.dark .tl-page-bg > main > div,
+.dark .tl-page-bg .fixed.inset-0.-z-10 {
+  background: #01071e !important;
+  background-image: none !important;
+}
+
+/* Dashboard cards share the Profile card colour and have no border. */
+.dark .dashboard-page-shell .dashboard-surface,
+.dark .dashboard-page-shell .dashboard-surface-strong,
+.dark .dashboard-page-shell [class~="dark:bg-gradient-to-br"] {
+  background-color: #0a1238 !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.dark .dashboard-page-shell [class*="border-[#15366f]"] {
+  border-color: transparent !important;
+}
+
 .dark .dashboard-page-shell { color: #f1f5f9; }
 .dark .dashboard-page-shell [class~="dark:text-white"] { color: #fff !important; }
 .dark .dashboard-page-shell [class~="dark:text-slate-100"],

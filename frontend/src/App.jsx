@@ -227,6 +227,15 @@ function LayoutWrapper() {
                            location.pathname.startsWith('/programs/') ||
                            location.pathname.startsWith('/admin');
 
+  // Public pages that should share the dashboard's dark page colour.
+  const isDarkTonePage =
+    location.pathname === '/learn' ||
+    location.pathname.startsWith('/learn/') ||
+    location.pathname === '/jobs' ||
+    location.pathname.startsWith('/jobs/') ||
+    location.pathname.startsWith('/roadmaps') ||
+    location.pathname.startsWith('/resources/roadmaps');
+
   const isStudentSidebarRoute =
     ['/projects', '/leaderboard'].includes(location.pathname) ||
     location.pathname.startsWith('/demo') ||
@@ -257,7 +266,7 @@ function LayoutWrapper() {
                      !isStudentSidebarRoute;
 
   return (
-    <div className={`relative z-10 flex flex-col min-h-screen ${(isDashboardRoute || isStudentSidebarRoute) ? 'dashboard-page-shell' : ''}`}>
+    <div className={`relative z-10 flex flex-col min-h-screen ${(isDashboardRoute || isStudentSidebarRoute) ? 'dashboard-page-shell' : isDarkTonePage ? 'tl-page-bg' : ''}`}>
       {location.pathname.startsWith('/onboarding') && (
         <div
           className="fixed left-0 top-0 z-[100] h-[72px] w-full"

@@ -38,20 +38,12 @@
 .tl-profile [hidden] { display: none !important; }
 
 .tl-profile .page-heading { margin-bottom: 28px; }
-.tl-profile h1 {
-  font-family: "Press Start 2P", monospace;
-  font-size: clamp(20px, 2.4vw, 26px);
-  font-weight: 400;
-  line-height: 2;
-  margin: 0 0 12px;
-  color: var(--strong);
-  overflow-wrap: anywhere;
-}
-.tl-profile .panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); }
+.tl-profile h1 { margin: 0 0 12px; overflow-wrap: anywhere; }
+.tl-profile .panel { background: var(--panel); border: 0; border-radius: var(--radius); }
 
 .tl-profile .profile-hero { display: flex; align-items: center; gap: 20px; padding: 25px; margin-bottom: 15px; }
 .tl-profile .avatar-wrap { position: relative; flex-shrink: 0; }
-.tl-profile .avatar { display: grid; place-items: center; width: 96px; height: 96px; border: 0; border-radius: 0; background: transparent; overflow: visible; }
+.tl-profile .avatar { display: grid; place-items: center; width: 72px; height: 72px; border: 0; border-radius: 0; background: transparent; overflow: visible; }
 .tl-profile .avatar img { width: 100%; height: 100%; object-fit: contain; user-select: none; }
 .tl-profile .avatar-edit {
   position: absolute; right: -4px; bottom: 0; display: grid; place-items: center; width: 30px; height: 30px;
@@ -71,10 +63,10 @@
 .tl-profile .overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .tl-profile .category-card {
   display: flex; flex-direction: column; align-items: stretch; min-width: 0; min-height: 135px; padding: 14px;
-  border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); color: var(--text); text-align: left;
-  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+  border: 0; border-radius: var(--radius); background: var(--panel); color: var(--text); text-align: left;
+  transition: background 180ms ease, transform 180ms ease;
 }
-.tl-profile .category-card:hover { background: var(--panel-hover); border-color: var(--strong); transform: translateY(-2px); }
+.tl-profile .category-card:hover { background: var(--panel-hover); transform: translateY(-2px); }
 .tl-profile .card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
 .tl-profile .card-icon { display: grid; place-items: center; width: 45px; height: 45px; color: var(--strong); }
 .tl-profile .card-icon svg { width: 31px; height: 28px; }
@@ -141,7 +133,7 @@
 .tl-profile .college-suggest .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 
 .tl-profile .goal-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.tl-profile .goal-summary-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 17px; border: 1px solid var(--border); border-radius: 12px; background: var(--field); }
+.tl-profile .goal-summary-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 17px; border: 0; border-radius: 12px; background: var(--field); }
 .tl-profile .goal-label { display: block; margin-bottom: 5px; color: var(--muted); font-size: 11px; }
 .tl-profile .goal-summary-card strong { display: block; font-size: 17px; color: var(--strong); }
 .tl-profile .preference-divider { height: 1px; background: var(--border); margin: 26px 0; }
@@ -155,7 +147,7 @@
 .tl-profile .security-row p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
 .tl-profile .pill { display: inline-flex; align-items: center; padding: 5px 10px; border: 1px solid var(--border); border-radius: 100px; font-size: 11px; color: var(--text); }
 .tl-profile .status-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 10px 0 14px; }
-.tl-profile .status-card { min-width: 0; padding: 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--field); }
+.tl-profile .status-card { min-width: 0; padding: 15px; border: 0; border-radius: 12px; background: var(--field); }
 .tl-profile .status-title, .tl-profile .status-value, .tl-profile .status-card small { display: block; }
 .tl-profile .status-title { color: var(--muted); font-size: 11px; }
 .tl-profile .status-value { margin: 7px 0; font-size: 14px; color: var(--strong); overflow-wrap: anywhere; }
@@ -219,8 +211,7 @@
   .tl-profile .overview-grid, .tl-profile .form-grid { grid-template-columns: 1fr; }
   .tl-profile .field.full { grid-column: auto; }
   .tl-profile .category-card { min-height: 150px; }
-  .tl-profile .avatar { width: 80px; height: 80px; }
-  .tl-profile h1 { font-size: 16px; line-height: 2.1; }
+  .tl-profile .avatar { width: 64px; height: 64px; }
   .tl-profile .form-actions { align-items: stretch; flex-direction: column; }
   .tl-profile .action-buttons { width: 100%; }
   .tl-profile .action-buttons .button { flex: 1; }

@@ -602,7 +602,7 @@ export default function DemoDashboard() {
                     <img
                       src={photoUrl}
                       alt="Avatar"
-                      className="w-20 h-20 object-contain select-none absolute bottom-2"
+                      className="w-16 h-16 object-contain select-none absolute bottom-2"
                     />
                     <button
                       onClick={() => {
