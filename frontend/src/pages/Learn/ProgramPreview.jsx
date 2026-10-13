@@ -74,11 +74,15 @@ export default function ProgramPreview() {
         if (cancelled) return;
         let userIsEnrolled = false;
 
-        if (placementRes.status === 'fulfilled' && placementRes.value?.hasPlacementLearning) {
-          setPlacementLearning(placementRes.value);
-          const activeProgId = String(placementRes.value.program?.id || placementRes.value.program?._id || "");
-          if (activeProgId === String(programId)) {
-            userIsEnrolled = true;
+        if (placementRes.status === 'fulfilled') {
+          if (placementRes.value?.hasPlacementLearning) {
+            setPlacementLearning(placementRes.value);
+            const activeProgId = String(placementRes.value.program?.id || placementRes.value.program?._id || "");
+            if (activeProgId === String(programId)) {
+              userIsEnrolled = true;
+            }
+          } else {
+            setPlacementLearning(null);
           }
         }
 
@@ -88,9 +92,7 @@ export default function ProgramPreview() {
           }
         }
 
-        if (userIsEnrolled) {
-          setIsEnrolled(true);
-        }
+        setIsEnrolled(userIsEnrolled);
       }).catch(() => {});
     } else {
       setIsEnrolled(false);
