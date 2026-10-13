@@ -186,7 +186,7 @@ export default function Navbar() {
   const userAvatar = user?.photoUrl || user?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}&backgroundColor=04103d,3c83f6,1e293b`;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50" style={{ background: mobileMenuOpen ? navSurface : isOverHero ? "transparent" : navSurface }}>
+    <header className="fixed top-0 left-0 right-0 z-50" style={{ background: mobileMenuOpen ? navSurface : 'transparent' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
