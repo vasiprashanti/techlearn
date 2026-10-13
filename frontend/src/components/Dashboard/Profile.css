@@ -221,3 +221,24 @@
 @media (prefers-reduced-motion: reduce) {
   .tl-profile *, .tl-profile *::before, .tl-profile *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* Single-select dropdown: at most 7 rows visible, then scroll */
+.tl-profile .select-wrap { position: relative; }
+.tl-profile .select-trigger .select-placeholder { color: var(--muted); }
+.tl-profile .select-list {
+  position: absolute; left: 0; right: 0; z-index: 30; margin: 6px 0 0; padding: 6px; list-style: none;
+  max-height: calc(44px * 7 + 12px); overflow-y: auto; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--panel-hover); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+.tl-profile .select-option {
+  display: block; width: 100%; height: 44px; padding: 0 14px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--text); text-align: left; font-size: 14px;
+}
+.tl-profile .select-option:hover { background: var(--accent-soft); color: var(--strong); }
+.tl-profile .select-option.selected { color: var(--strong); font-weight: 700; background: rgba(137, 198, 56, 0.16); }
+.tl-profile .select-trigger { padding-right: 18px; }
+.tl-profile .calendar-selectors .select-trigger { min-height: 46px; }
+/* A filled, read-only field (email) reads as active like the name field */
+.tl-profile .field input[readonly], .tl-profile .field input:disabled { color: var(--text); cursor: not-allowed; opacity: 1; }
+.tl-profile .field-hint { padding-left: 18px; }
+.tl-profile .action-buttons { margin-left: auto; }

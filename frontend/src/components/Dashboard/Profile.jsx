@@ -53,6 +53,45 @@ const formatDob = (iso) => {
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
 };
 
+/* ---------- Single-select dropdown (shows at most 7 rows, then scrolls) ---------- */
+function SelectField({ id, value, onChange, options, placeholder = "Select", ariaLabel }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const close = (event) => {
+      if (wrapRef.current && !wrapRef.current.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, []);
+
+  const selected = options.find((o) => String(o.value) === String(value));
+  const label = selected ? selected.label : value !== "" && value != null ? String(value) : "";
+
+  return (
+    <div className="select-wrap" ref={wrapRef} onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}>
+      <button type="button" id={id} className="skill-trigger select-trigger" aria-haspopup="listbox" aria-expanded={open} aria-label={ariaLabel} onClick={() => setOpen((o) => !o)}>
+        <span className={label ? "" : "select-placeholder"}>{label || placeholder}</span>
+        <span className="trigger-icons"><FiChevronDown size={18} aria-hidden="true" className={open ? "flip" : ""} /></span>
+      </button>
+      {open && (
+        <ul className="select-list" role="listbox">
+          {options.map((option) => {
+            const isSelected = String(option.value) === String(value);
+            return (
+              <li key={option.value}>
+                <button type="button" role="option" aria-selected={isSelected} className={`select-option ${isSelected ? "selected" : ""}`}
+                  onClick={() => { onChange(option.value); setOpen(false); }}>{option.label}</button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /* ---------- Multi-select picker (skills / companies) ---------- */
 function ChipPicker({ id, label, placeholder, catalog, values, onChange, addPlaceholder }) {
   const [open, setOpen] = useState(false);
@@ -231,25 +270,36 @@ function CollegePicker({ value, locked, onChange }) {
 
 /* ---------- Date of birth picker ---------- */
 function DobPicker({ value, onChange }) {
-  const today = useMemo(() => { const t = new Date(); t.setHours(0, 0, 0, 0); return t; }, []);
+  // Users must be at least 18: nothing after today's day and month in (this year - 18) can be chosen.
+  const maxDob = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return new Date(t.getFullYear() - 18, t.getMonth(), t.getDate());
+  }, []);
+  const maxYear = maxDob.getFullYear();
   const [open, setOpen] = useState(false);
-  const initial = value ? new Date(`${value}T00:00:00`) : new Date(today.getFullYear() - 18, today.getMonth(), 1);
-  const [month, setMonth] = useState(new Date(initial.getFullYear(), initial.getMonth(), 1));
+  const startMonth = () => {
+    const base = value ? new Date(`${value}T00:00:00`) : maxDob;
+    return new Date(base.getFullYear(), base.getMonth(), 1);
+  };
+  const [month, setMonth] = useState(startMonth);
   const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const first = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
   const count = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
   const monthNames = Array.from({ length: 12 }, (_, m) => new Date(2000, m, 1).toLocaleDateString(undefined, { month: "long" }));
-  const years = Array.from({ length: today.getFullYear() - 1899 }, (_, i) => today.getFullYear() - i);
+  const lastMonth = month.getFullYear() === maxYear ? maxDob.getMonth() : 11;
+  const monthOptions = monthNames.slice(0, lastMonth + 1).map((name, m) => ({ value: m, label: name }));
+  const yearOptions = Array.from({ length: maxYear - 1899 }, (_, i) => ({ value: maxYear - i, label: String(maxYear - i) }));
 
-  const openPicker = () => {
-    const base = value ? new Date(`${value}T00:00:00`) : new Date(today.getFullYear() - 18, today.getMonth(), 1);
-    setMonth(new Date(base.getFullYear(), base.getMonth(), 1));
-    setOpen(true);
+  const pickYear = (y) => {
+    const year = Number(y);
+    const cap = year === maxYear ? maxDob.getMonth() : 11;
+    setMonth(new Date(year, Math.min(month.getMonth(), cap), 1));
   };
 
   return (
     <>
-      <button type="button" className={`date-trigger ${value ? "" : "placeholder"}`} onClick={openPicker} aria-label="Choose date of birth">
+      <button type="button" className={`date-trigger ${value ? "" : "placeholder"}`} onClick={() => { setMonth(startMonth()); setOpen(true); }} aria-label="Choose date of birth">
         {value ? formatDob(value) : "Select your date of birth"}
       </button>
       {open && (
@@ -260,12 +310,8 @@ function DobPicker({ value, onChange }) {
               <button className="close-button" type="button" aria-label="Close date picker" onClick={() => setOpen(false)}>×</button>
             </div>
             <div className="calendar-selectors">
-              <select aria-label="Select month" value={month.getMonth()} onChange={(e) => setMonth(new Date(month.getFullYear(), Number(e.target.value), 1))}>
-                {monthNames.map((name, m) => <option key={name} value={m}>{name}</option>)}
-              </select>
-              <select aria-label="Select year" value={month.getFullYear()} onChange={(e) => setMonth(new Date(Number(e.target.value), month.getMonth(), 1))}>
-                {years.map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
+              <SelectField ariaLabel="Select month" value={month.getMonth()} options={monthOptions} onChange={(m) => setMonth(new Date(month.getFullYear(), Number(m), 1))} />
+              <SelectField ariaLabel="Select year" value={month.getFullYear()} options={yearOptions} onChange={pickYear} />
             </div>
             <div className="calendar-weekdays">{["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => <span key={d}>{d}</span>)}</div>
             <div className="calendar-grid">
@@ -273,14 +319,14 @@ function DobPicker({ value, onChange }) {
               {Array.from({ length: count }, (_, i) => {
                 const date = new Date(month.getFullYear(), month.getMonth(), i + 1);
                 return (
-                  <button key={i} type="button" disabled={date > today} className={`calendar-day ${value === iso(date) ? "selected" : ""}`}
+                  <button key={i} type="button" disabled={date > maxDob} className={`calendar-day ${value === iso(date) ? "selected" : ""}`}
                     onClick={() => { onChange(iso(date)); setOpen(false); }}>{i + 1}</button>
                 );
               })}
             </div>
             <div className="calendar-actions">
               <button className="button" type="button" onClick={() => { onChange(""); setOpen(false); }}>Clear date</button>
-              <span className="calendar-footnote">Future dates are unavailable</span>
+              <span className="calendar-footnote">You must be at least 18</span>
             </div>
           </div>
         </div>
@@ -518,7 +564,6 @@ const Profile = () => {
   const heading = VIEW_HEADINGS[view];
   const formActions = (keys) => (
     <div className="form-actions">
-      <p>Your profile information helps personalize your experience.</p>
       <div className="action-buttons">
         <button className="button" type="button" onClick={goBack}>Cancel</button>
         <button className="button button-primary" type="button" disabled={saving} onClick={() => save(keys)}>{saving ? "Saving…" : "Save Changes"}</button>
@@ -575,7 +620,7 @@ const Profile = () => {
                 <div className="field">
                   <label>Date of birth</label>
                   <DobPicker value={draft.dob || ""} onChange={(v) => setField("dob", v)} />
-                  <span className="field-hint">Users must be at least 18 years of age</span>
+                  <span className="field-hint">Users must be at least 18 years of age to access or use this service</span>
                 </div>
                 <div className="field">
                   <label htmlFor="country">Country</label>
@@ -595,10 +640,8 @@ const Profile = () => {
                 <CollegePicker value={draft.college} locked={draft.collegeLocked} onChange={(college) => setField("college", college)} />
                 <div className="field">
                   <label htmlFor="degree">Degree</label>
-                  <select id="degree" value={draft.degree || ""} onChange={(e) => setField("degree", e.target.value)}>
-                    <option value="">Select degree</option>
-                    {[...new Set([...DEGREES, draft.degree].filter(Boolean))].map((d) => <option key={d}>{d}</option>)}
-                  </select>
+                  <SelectField id="degree" value={draft.degree || ""} placeholder="Select degree" onChange={(v) => setField("degree", v)}
+                    options={[...new Set([...DEGREES, draft.degree].filter(Boolean))].map((d) => ({ value: d, label: d }))} />
                 </div>
                 <div className="field">
                   <label htmlFor="branch">Branch / Specialization</label>
@@ -606,24 +649,18 @@ const Profile = () => {
                 </div>
                 <div className="field">
                   <label htmlFor="gradYear">Graduation year</label>
-                  <select id="gradYear" value={draft.graduationYear || ""} onChange={(e) => setField("graduationYear", e.target.value)}>
-                    <option value="">Select year</option>
-                    {[...new Set([...gradYears, Number(draft.graduationYear) || null].filter(Boolean))].sort((a, b) => b - a).map((y) => <option key={y} value={y}>{y}</option>)}
-                  </select>
+                  <SelectField id="gradYear" value={draft.graduationYear || ""} placeholder="Select year" onChange={(v) => setField("graduationYear", v)}
+                    options={[...new Set([...gradYears, Number(draft.graduationYear) || null].filter(Boolean))].sort((a, b) => b - a).map((y) => ({ value: y, label: String(y) }))} />
                 </div>
                 <div className="field">
                   <label htmlFor="level">Current skill level</label>
-                  <select id="level" value={draft.level || ""} onChange={(e) => setField("level", e.target.value)}>
-                    <option value="">Select level</option>
-                    {LEVELS.map((l) => <option key={l}>{l}</option>)}
-                  </select>
+                  <SelectField id="level" value={draft.level || ""} placeholder="Select level" onChange={(v) => setField("level", v)}
+                    options={LEVELS.map((l) => ({ value: l, label: l }))} />
                 </div>
                 <div className="field">
                   <label htmlFor="targetRole">Target role</label>
-                  <select id="targetRole" value={draft.targetRoleSelect || ""} onChange={(e) => setField("targetRoleSelect", e.target.value)}>
-                    <option value="">Select target role</option>
-                    {ROLE_OPTIONS.map((r) => <option key={r}>{r}</option>)}
-                  </select>
+                  <SelectField id="targetRole" value={draft.targetRoleSelect || ""} placeholder="Select target role" onChange={(v) => setField("targetRoleSelect", v)}
+                    options={ROLE_OPTIONS.map((r) => ({ value: r, label: r }))} />
                   {draft.targetRoleSelect === "Other" && (
                     <input style={{ marginTop: 8 }} value={customRole} placeholder="Enter your target role" onChange={(e) => setCustomRole(e.target.value)} />
                   )}
@@ -636,7 +673,6 @@ const Profile = () => {
                   values={draft.skillsOfInterest} onChange={(v) => setField("skillsOfInterest", v)} addPlaceholder="Add another skill" />
               </div>
               <div className="form-actions">
-                <p>These details help personalize recommendations.</p>
                 <div className="action-buttons">
                   <button className="button" type="button" onClick={goBack}>Cancel</button>
                   <button className="button button-primary" type="button" disabled={saving}
@@ -662,38 +698,32 @@ const Profile = () => {
                 <div className="form-grid">
                   <div className="field">
                     <label htmlFor="daysPerWeek">Days per week <span className="required">*</span></label>
-                    <select id="daysPerWeek" value={draft.daysPerWeek || ""} onChange={(e) => setField("daysPerWeek", e.target.value)}>
-                      <option value="">Select days</option>
-                      {[1, 2, 3, 4, 5, 6, 7].map((d) => <option key={d} value={d}>{d} day{d > 1 ? "s" : ""}/week</option>)}
-                    </select>
+                    <SelectField id="daysPerWeek" value={draft.daysPerWeek || ""} placeholder="Select days" onChange={(v) => setField("daysPerWeek", v)}
+                      options={[3, 4, 5, 6, 7].map((d) => ({ value: d, label: `${d} days/week` }))} />
                   </div>
                   <div className="field">
                     <label htmlFor="hoursPerDay">Hours per day <span className="required">*</span></label>
-                    <select id="hoursPerDay" value={draft.hoursPerDay || ""} onChange={(e) => setField("hoursPerDay", e.target.value)}>
-                      <option value="">Select hours</option>
-                      {[["0.5", "30 minutes/day"], ["1", "1 hour/day"], ["1.5", "1.5 hours/day"], ["2", "2 hours/day"], ["3", "3 hours/day"], ["4", "4 hours/day"], ["5", "5 hours/day"], ["6", "6 hours/day"], ["8", "8 hours/day"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                    </select>
+                    <SelectField id="hoursPerDay" value={draft.hoursPerDay || ""} placeholder="Select hours" onChange={(v) => setField("hoursPerDay", v)}
+                      options={[["0.5", "0.5 hours (30 mins)"], ["1", "1 hour/day"], ["1.5", "1.5 hours/day"], ["2", "2 hours/day"], ["3", "3 hours/day"], ["4", "4 hours/day"], ["5", "5 hours/day"], ["6", "6 hours/day"], ["8", "8 hours/day"]].map(([v, l]) => ({ value: v, label: l }))} />
                   </div>
                 </div>
               )}
               <p className="field-hint">{draft.daysPerWeek && draft.hoursPerDay && !editingGoals ? "Your goals are saved to your account." : "Choose both values and save to set your goals."}</p>
 
               <div className="preference-divider" />
-              <h3 className="form-section-title">Learning mode</h3>
-              <p className="form-section-description">Your learning mode is assigned by your Program.</p>
-              <div className="readonly-mode"><span className="mode-indicator" /><span>{String(draft.learningMode || "Structured").replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</span></div>
-
-              <div className="form-grid reminders-grid">
+              <div className="form-grid">
+                <div className="field">
+                  <label>Learning mode</label>
+                  <div className="readonly-mode"><span className="mode-indicator" /><span>{draft.learningMode || "Not enrolled in a Program yet"}</span></div>
+                  <span className="field-hint">Set by the Program you're enrolled in.</span>
+                </div>
                 <div className="field">
                   <label htmlFor="reminders">Learning reminders</label>
-                  <select id="reminders" value={draft.remindersEnabled ? "On" : "Off"} onChange={(e) => setField("remindersEnabled", e.target.value === "On")}>
-                    <option value="On">Enabled</option>
-                    <option value="Off">Disabled</option>
-                  </select>
+                  <SelectField id="reminders" value={draft.remindersEnabled ? "On" : "Off"} onChange={(v) => setField("remindersEnabled", v === "On")}
+                    options={[{ value: "On", label: "Enabled" }, { value: "Off", label: "Disabled" }]} />
                 </div>
               </div>
               <div className="form-actions">
-                <p>You can update these preferences anytime.</p>
                 <div className="action-buttons">
                   <button className="button" type="button" onClick={goBack}>Cancel</button>
                   <button className="button button-primary" type="button" disabled={saving} onClick={() => save(["daysPerWeek", "hoursPerDay", "remindersEnabled"])}>{saving ? "Saving…" : "Save Changes"}</button>

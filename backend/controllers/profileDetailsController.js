@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import User from "../models/User.js";
 import Student from "../models/Student.js";
 import College from "../models/College.js";
+import Program from "../models/Program.js";
 import { getUnifiedProfileForUser } from "../utils/userProfile.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
 
@@ -37,6 +38,15 @@ const buildDetails = async (user, student) => {
   const enrollment = unified?.profile?.enrollment || {};
   const collegeName = student?.collegeId?.name || user.collegeName || "";
 
+  // Learning mode comes from the Program the learner is enrolled in.
+  let learningMode = "";
+  if (enrollment.program?.id) {
+    const program = await Program.findById(enrollment.program.id).select("availability").lean();
+    if (enrollment.scheduleType === "batch" || program?.availability === "Trainer-Led") learningMode = "Trainer-led";
+    else if (program?.availability === "Structured" || program?.availability === "Both") learningMode = "Structured";
+    else learningMode = "Self-paced";
+  }
+
   return {
     fullName: [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || student?.name || "",
     email: user.email || "",
@@ -59,7 +69,7 @@ const buildDetails = async (user, student) => {
     daysPerWeek: user.daysPerWeek || "",
     hoursPerDay: user.hoursPerDay || "",
     remindersEnabled: user.remindersEnabled !== false,
-    learningMode: user.learningPath || "Structured",
+    learningMode,
     accountStatus: "Active",
     programStatus: enrollment.status ? `${enrollment.status}${enrollment.program?.name ? ` - ${enrollment.program.name}` : ""}` : "No active Program",
   };
