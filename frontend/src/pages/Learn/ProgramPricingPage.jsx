@@ -262,7 +262,7 @@ export default function ProgramPricingPage() {
   };
 
   return (
-    <div className={`w-full min-h-[calc(100vh-64px)] flex flex-col justify-center items-center font-sans transition-colors duration-300 ${
+    <div className={`w-full min-h-[calc(100vh-64px)] flex flex-col items-center font-sans transition-colors duration-300 ${
       isDarkMode ? "dark bg-[#03092b] text-[#f0f6fc]" : "light bg-[#dff5ff] text-[#050a3b]"
     }`}>
       <style>{`
@@ -296,8 +296,8 @@ export default function ProgramPricingPage() {
         }
       `}</style>
 
-      {/* Main Pricing Section - exact spacing and sizing matching programpricing.html */}
-      <main className="w-full max-w-[1000px] mx-auto px-3.5 py-8 sm:py-10 flex flex-col justify-center">
+      {/* Main Pricing Section - exact padding matching clamp(52px, 5.6vw, 74px) 14px from programpricing.html */}
+      <main className="w-full max-w-[1000px] mx-auto px-[14px] pt-[clamp(44px,4.8vw,68px)] pb-[clamp(36px,4vw,60px)] flex flex-col">
         {/* Header from programpricing.html */}
         <header className="text-center mx-auto mb-7 sm:mb-9 max-w-[610px]">
           <div className="programpricing-pixel text-[7px] leading-[1.8] tracking-[.3px] uppercase opacity-50 mb-3.5 sm:mb-4 text-[rgba(4,16,61,.48)] dark:text-[#bceaff]">
