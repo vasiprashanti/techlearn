@@ -116,9 +116,12 @@ export default function Navbar() {
 
   // If over dark section -> use dark theme styling (white text / dark dropdown)
   // If over light section -> use light theme styling (dark text / light dropdown)
-  const isDarkNav = isOverDarkSection;
+  const isDarkNav = isDarkMode || isOverDarkSection;
   const isAppRoute = /^\/(dashboard|admin|colleges|batches|students|programs|track-templates|certificates|reports|settings)/.test(location.pathname);
-  const navSurface = isAppRoute ? '#01071e' : (sectionBackground || (isDarkNav ? '#01071e' : '#d8eef5'));
+  const defaultLightSurface = '#bceaff';
+  const navSurface = isAppRoute
+    ? (isDarkMode ? '#01071e' : defaultLightSurface)
+    : (sectionBackground || (isDarkNav ? '#01071e' : '#d8eef5'));
 
   // Close menus on outside click
   useEffect(() => {
