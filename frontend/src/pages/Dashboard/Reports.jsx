@@ -34,22 +34,22 @@ const formatDate = (value) => {
 };
 
 const StatCard = ({ label, value, hint, icon: Icon, colorClass = "text-[#3c83f6] dark:text-[#8fd9ff]" }) => (
-  <div className="dashboard-surface relative overflow-hidden rounded-2xl p-4 sm:p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+  <div className="dashboard-surface relative overflow-hidden rounded-xl p-3 sm:p-4 transition-all duration-300">
     <div className="flex items-center justify-between gap-3">
-      <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.16em] text-[#00113b]/60 dark:text-[#afcff1]/70">
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#00113b]/60 dark:text-[#afcff1]/70">
         {label}
       </p>
       {Icon && (
-        <div className={`flex h-8 w-8 items-center justify-center rounded-xl bg-black/5 dark:bg-white/5 ${colorClass}`}>
-          <Icon className="h-4 w-4" />
+        <div className={`flex h-6 w-6 items-center justify-center rounded-lg bg-black/5 dark:bg-white/5 ${colorClass}`}>
+          <Icon className="h-3.5 w-3.5" />
         </div>
       )}
     </div>
-    <p className="mt-2 text-2xl sm:text-3xl font-extrabold tracking-tight text-[#00113b] dark:text-white">
+    <p className="mt-1 text-xl sm:text-2xl font-extrabold tracking-tight text-[#00113b] dark:text-white">
       {value}
     </p>
     {hint && (
-      <p className="mt-1 text-xs text-[#00113b]/55 dark:text-[#afcff1]/60 font-medium">
+      <p className="mt-0.5 text-[11px] text-[#00113b]/55 dark:text-[#afcff1]/60 font-medium">
         {hint}
       </p>
     )}
@@ -103,7 +103,7 @@ const ProgramReport = ({ report }) => {
         </p>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-black/5 dark:border-white/10 bg-white/30 dark:bg-black/15">
+      <div className="mt-4 overflow-hidden rounded-xl border border-black/5 dark:border-white/10 bg-white/40 dark:bg-[#0a1238]">
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-black/[0.02] dark:bg-white/[0.03] text-[11px] font-bold uppercase tracking-wider text-[#00113b]/60 dark:text-[#afcff1]/70 border-b border-black/5 dark:border-white/5">
@@ -201,14 +201,14 @@ export default function Performance() {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.65 }}
-          className="mx-auto max-w-4xl pt-2 text-center md:pt-4"
+          className="mx-auto max-w-5xl pt-2 text-center md:pt-4"
         >
           <h1 className="font-press-start leading-normal">
             <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
               PERFORMANCE
             </span>
           </h1>
-          <p className="mt-3 text-sm leading-6 text-[#00113b]/65 dark:text-[#afcff1]/70 max-w-xl mx-auto">
+          <p className="mt-3 text-sm leading-6 text-[#00113b]/65 dark:text-[#afcff1]/70 max-w-none mx-auto md:whitespace-nowrap">
             Review program progress, practice accuracy, assessment results, and improvement over time.
           </p>
         </motion.div>
@@ -216,7 +216,7 @@ export default function Performance() {
         {/* Jobs-style tabs keep the performance sections easy to scan. */}
         <div className="border-b border-black/10 dark:border-white/10">
           <div className="flex items-center gap-5 overflow-x-auto">
-            {reportTabs.map(({ key, label, icon: IconComponent }) => {
+            {reportTabs.map(({ key, label }) => {
               const isActive = activeTab === key;
               return (
                 <button
@@ -229,7 +229,6 @@ export default function Performance() {
                       : "border-transparent text-[#00113b]/65 hover:border-[#3c83f6]/45 hover:text-[#00113b] dark:text-[#afcff1]/70 dark:hover:text-white"
                   }`}
                 >
-                  <IconComponent className="h-4 w-4" />
                   {label}
                 </button>
               );
@@ -275,7 +274,7 @@ export default function Performance() {
             className="space-y-6"
           >
             {/* Quick Metrics Grid */}
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-3 max-w-4xl">
               <StatCard
                 label="Total Attempts"
                 value={data.practice?.snapshot?.totalAttempts || 0}
@@ -299,7 +298,7 @@ export default function Performance() {
             </div>
 
             {/* Practice Track Table */}
-            <div className="dashboard-surface rounded-2xl p-5 sm:p-7 shadow-sm">
+            <div>
               <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-4">
                 <div>
                   <h2 className="text-lg font-bold tracking-tight text-[#00113b] dark:text-white">Track Breakdown</h2>
@@ -307,7 +306,7 @@ export default function Performance() {
                 </div>
               </div>
 
-              <div className="mt-5 overflow-hidden rounded-xl border border-black/5 dark:border-white/10 bg-white/30 dark:bg-black/15">
+              <div className="mt-5 overflow-hidden rounded-xl border border-black/5 dark:border-white/10 bg-white/40 dark:bg-[#0a1238]">
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-left text-sm">
                     <thead className="bg-black/[0.02] dark:bg-white/[0.03] text-[11px] font-bold uppercase tracking-wider text-[#00113b]/60 dark:text-[#afcff1]/70 border-b border-black/5 dark:border-white/5">
@@ -360,7 +359,7 @@ export default function Performance() {
             transition={{ duration: 0.4 }}
             className="space-y-6"
           >
-            <div className="dashboard-surface rounded-2xl p-5 sm:p-7 shadow-sm">
+            <div>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-black/5 dark:border-white/5 pb-4">
                 <div>
                   <h2 className="text-lg font-bold tracking-tight text-[#00113b] dark:text-white">Assessment Transcripts</h2>
@@ -371,7 +370,7 @@ export default function Performance() {
                 </span>
               </div>
 
-              <div className="mt-5 overflow-hidden rounded-xl border border-black/5 dark:border-white/10 bg-white/30 dark:bg-black/15">
+              <div className="mt-5 overflow-hidden rounded-xl border border-black/5 dark:border-white/10 bg-white/40 dark:bg-[#0a1238]">
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-left text-sm">
                     <thead className="bg-black/[0.02] dark:bg-white/[0.03] text-[11px] font-bold uppercase tracking-wider text-[#00113b]/60 dark:text-[#afcff1]/70 border-b border-black/5 dark:border-white/5">

@@ -75,7 +75,7 @@ export default function FreeAssessmentSetup() {
   const pickAndAdvance = (apply, nextStep) => {
     setError('');
     apply();
-    setTimeout(() => setStep(nextStep), 180);
+    setTimeout(() => setStep(nextStep), 350);
   };
 
   const handleStartInterview = async () => {
@@ -200,7 +200,8 @@ export default function FreeAssessmentSetup() {
           --soft-bg: rgba(255, 255, 255, .035);
         }
 
-        .tl-pre-assessment-root .setup-step { max-width: 760px; margin: 8vh auto 0; }
+        .tl-pre-assessment-root .setup-step { max-width: 760px; margin: 8vh auto 0; padding-bottom: 120px; animation: setupSlideIn .5s ease; }
+        @keyframes setupSlideIn { from { opacity: 0; transform: translateX(64px); } to { opacity: 1; transform: translateX(0); } }
         .tl-pre-assessment-root .setup-title { font-size: clamp(30px, 2.5vw, 46px); line-height: 1.1; letter-spacing: -1.4px; font-weight: 600; margin-bottom: 10px; }
         .tl-pre-assessment-root .setup-title i { font-style: italic; }
         .tl-pre-assessment-root .setup-sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
@@ -212,9 +213,9 @@ export default function FreeAssessmentSetup() {
         .tl-pre-assessment-root .setup-input { margin-top: 14px; width: 100%; height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--soft-bg); color: var(--text); font-size: 13px; outline: none; }
         .tl-pre-assessment-root .setup-input:focus { border-color: var(--lime); }
         .tl-pre-assessment-root .setup-error { color: #ff5a5f; font-size: 13px; margin-top: 14px; }
-        .tl-pre-assessment-root .setup-actions { display: flex; gap: 12px; margin-top: 28px; align-items: center; }
+        .tl-pre-assessment-root .setup-actions { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: min(760px, 100% - 40px); display: flex; gap: 12px; padding: 16px 0 24px; align-items: center; background: var(--bg); z-index: 50; }
         .tl-pre-assessment-root .setup-back { height: 46px; padding: 0 22px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--text); font-family: "Press Start 2P", monospace; font-size: 8px; }
-        .tl-pre-assessment-root .setup-next { width: auto; min-width: 180px; }
+        .tl-pre-assessment-root .setup-next { flex: 1; width: auto; }
         .tl-pre-assessment-root .edit-details { margin-top: 8px; background: none; border: none; color: var(--muted); text-decoration: underline; font-size: 12px; }
 
         .tl-pre-assessment-root * {
@@ -710,7 +711,7 @@ export default function FreeAssessmentSetup() {
              CONTENT
         ========================= */}
         {!confirmed ? (
-          <section className="setup-step">
+          <section className="setup-step" key={step}>
             {step === 0 && (
               <>
                 <h2 className="setup-title">Which role are you <i>preparing for?</i></h2>
