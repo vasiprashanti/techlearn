@@ -167,7 +167,7 @@ const Leaderboard = () => {
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
       <main
-        className={`flex flex-col items-center flex-1 transition-all duration-700 ease-in-out z-10 lg:ml-[90px] pt-24 pb-8 px-4 sm:px-6 md:px-10 lg:px-14 overflow-auto ${
+        className={`flex flex-col items-center flex-1 transition-all duration-700 ease-in-out z-10 md:ml-[90px] pt-24 pb-8 px-4 sm:px-6 md:px-10 lg:px-14 overflow-auto ${
           mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}
       >

@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import Student from "../models/Student.js";
 import College from "../models/College.js";
 import Program from "../models/Program.js";
+import Payment from "../models/Payment.js";
 import { getUnifiedProfileForUser } from "../utils/userProfile.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
 
@@ -40,11 +41,26 @@ const buildDetails = async (user, student) => {
 
   // Learning mode comes from the Program the learner is enrolled in.
   let learningMode = "";
+  let paymentStatus = "Not available";
   if (enrollment.program?.id) {
-    const program = await Program.findById(enrollment.program.id).select("availability").lean();
+    const program = await Program.findById(enrollment.program.id).select("availability pricingType").lean();
     if (enrollment.scheduleType === "batch" || program?.availability === "Trainer-Led") learningMode = "Trainer-led";
     else if (program?.availability === "Structured" || program?.availability === "Both") learningMode = "Structured";
     else learningMode = "Self-paced";
+
+    // Payment status of the enrolled Program, from the learner's latest payment for it.
+    const latest = await Payment.findOne({ userId: user._id, programId: enrollment.program.id })
+      .sort({ createdAt: -1 })
+      .select("status")
+      .lean();
+    if (latest) {
+      if (["captured", "approved"].includes(latest.status)) paymentStatus = "Paid";
+      else if (["pending", "created"].includes(latest.status)) paymentStatus = "Pending";
+      else if (["failed", "rejected"].includes(latest.status)) paymentStatus = "Failed";
+      else if (["refunded", "partially_refunded"].includes(latest.status)) paymentStatus = "Refunded";
+    } else if (program?.pricingType === "Free") {
+      paymentStatus = "Free";
+    }
   }
 
   return {
@@ -71,7 +87,8 @@ const buildDetails = async (user, student) => {
     remindersEnabled: user.remindersEnabled !== false,
     learningMode,
     accountStatus: "Active",
-    programStatus: enrollment.status ? `${enrollment.status}${enrollment.program?.name ? ` - ${enrollment.program.name}` : ""}` : "No active Program",
+    programStatus: enrollment.program?.name || "No active Program",
+    paymentStatus,
   };
 };
 

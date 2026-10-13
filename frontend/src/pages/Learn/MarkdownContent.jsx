@@ -213,8 +213,8 @@ const createMarkdownComponents = (compact = false) => {
       };
 
       return (
-        <div className={`code-editor-block ${compact ? 'my-6' : 'my-10'} relative overflow-hidden rounded-xl border border-[#d8e0eb] bg-[#f8fafc] shadow-[0_10px_30px_rgba(31,67,115,0.12)] dark:border-[#1e293b] dark:bg-[#0b1220] dark:shadow-[0_10px_30px_rgba(0,0,0,0.35)]`}>
-          <div className="flex min-h-[52px] items-center justify-between border-b border-[#d8e0eb] bg-[#f8fafc] px-3.5 dark:border-[#182235] dark:bg-[#0d1525]">
+        <div className={`code-editor-block ${compact ? 'my-6' : 'my-10'} relative overflow-hidden rounded-xl border border-[#d8e0eb] bg-[#f8fafc] shadow-[0_10px_30px_rgba(31,67,115,0.12)] dark:border-[#1e293b] dark:bg-[#0a1238] dark:shadow-[0_10px_30px_rgba(0,0,0,0.35)]`}>
+          <div className="flex min-h-[52px] items-center justify-between border-b border-[#d8e0eb] bg-[#f8fafc] px-3.5 dark:border-[#182235] dark:bg-[#0a1238]">
             <div className="flex items-center gap-2 text-sm font-medium text-[#07143b] dark:text-[#e5e7eb]"><span className="h-2 w-2 rounded-full bg-[#79c143]" />{language === 'c' ? 'C' : language}</div>
             <div className="flex items-center gap-1.5">
             <button
@@ -245,8 +245,8 @@ const createMarkdownComponents = (compact = false) => {
               {codeText.split('\n').map((line, index) => <span key={`${index}-${line}`} className="flex min-h-[1.8em] !text-black dark:!text-white"><span className="mr-4 inline-block w-12 shrink-0 select-none border-r border-[#d8e0eb] pr-3 text-right text-[#8793a6] dark:border-[#182235] dark:text-[#334155]">{index + 1}</span><span className="code-source-text whitespace-pre-wrap break-words pl-4 !text-black dark:!text-white">{line || ' '}</span></span>)}
             </code>
           </pre>
-          {hasRun && <div className="border-t border-[#d8e0eb] bg-[#f8fafc] text-black dark:border-[#1e293b] dark:bg-[#0b1220] dark:text-[#dbe4ef]">
-            <div className="flex h-[29px] items-center border-b border-[#d8e0eb] bg-[#f8fafc] px-3 dark:border-[#1e293b] dark:bg-[#0d1525]">
+          {hasRun && <div className="border-t border-[#d8e0eb] bg-[#f8fafc] text-black dark:border-[#1e293b] dark:bg-[#0a1238] dark:text-[#dbe4ef]">
+            <div className="flex h-[29px] items-center border-b border-[#d8e0eb] bg-[#f8fafc] px-3 dark:border-[#1e293b] dark:bg-[#0a1238]">
               <span className="font-mono text-[12px] font-bold uppercase tracking-[0.7px] text-[#64748b] dark:text-[#94a3b8]">Output</span>
             </div>
             <pre className="m-0 whitespace-pre-wrap break-words px-3 py-[11px] pb-[13px] font-mono text-[14px] leading-[1.8] text-black dark:text-[#dbe4ef]">{output}</pre>

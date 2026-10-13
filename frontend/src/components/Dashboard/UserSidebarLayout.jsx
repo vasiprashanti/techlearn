@@ -41,7 +41,7 @@ export default function UserSidebarLayout({ children, maxWidthClass = 'max-w-[14
 
       <main
         className={`flex flex-col items-center flex-1 transition-all duration-700 ease-in-out z-10 ${
-          showSidebar ? 'lg:ml-[90px]' : ''
+          showSidebar ? 'md:ml-[90px]' : ''
         } pt-28 pb-12 px-6 md:px-12 lg:px-16 overflow-auto`}
       >
         <div className={`w-full mx-auto ${maxWidthClass}`}>{children}</div>

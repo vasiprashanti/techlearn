@@ -6,6 +6,7 @@ import { AlertCircle, ArrowLeft, BookOpen, Loader2, Search, X } from "lucide-rea
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { resourceAPI } from "../../services/api";
+import Sidebar from "../../components/Dashboard/Sidebar";
 
 const unwrap = (payload) => payload?.data ?? payload;
 
@@ -422,7 +423,7 @@ export default function Roadmaps() {
       {loading && <LoadingState label="Loading roadmap details..." />}
       {!loading && error && <ErrorState message={error} />}
       {!loading && !error && detail && (
-        <article className={`overflow-hidden rounded-[14px] border shadow-xl shadow-[#3c83f6]/5 ${isDarkMode ? "border-white/10 bg-[#071a39]/85" : "border-white/80 bg-white/70"}`}>
+        <article className={`tl-card overflow-hidden rounded-[14px] border shadow-xl shadow-[#3c83f6]/5 ${isDarkMode ? "border-white/10 bg-[#071a39]/85" : "border-white/80 bg-white/70"}`}>
           <header className="border-b border-white/15 bg-gradient-to-br from-[#3c83f6] to-[#6366f1] px-6 py-8 text-white sm:px-10 sm:py-10">
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/75">Roadmap learning path</p>
             <h1 className="mt-3 max-w-4xl text-3xl font-black tracking-tight sm:text-5xl">{detail.title}</h1>
@@ -584,7 +585,10 @@ export default function Roadmaps() {
     <div className={`min-h-screen font-sans antialiased ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
       <div className={`fixed inset-0 -z-10 transition-colors duration-300 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-[#d6eef4]"}`} />
 
-      <main className="min-h-screen w-full">
+      {/* Logged-in learners get the dashboard sidebar here too */}
+      {hasUser && <Sidebar />}
+
+      <main className={`min-h-screen w-full ${hasUser ? "md:pl-[90px]" : ""}`}>
         <div className="mx-auto w-[calc(100%-1.5rem)] sm:w-[calc(100%-3rem)] lg:w-[86%] max-w-none px-0 pb-16 pt-20 sm:pt-28">
           {roadmapId ? detailContent : listContent}
         </div>

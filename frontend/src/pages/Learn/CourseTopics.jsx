@@ -12,7 +12,7 @@ const MarkdownContent = lazy(() => import('./MarkdownContent'));
 const CourseTopicsSkeleton = ({ isDarkMode }) => (
     <div className={`flex min-h-screen w-full min-w-0 overflow-x-clip font-sans antialiased text-[#001862] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
     <ScrollProgress />
-    <div className={`fixed inset-0 -z-10 ${isDarkMode ? "bg-[#080d25]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
+    <div className={`fixed inset-0 -z-10 ${isDarkMode ? "bg-[#01071e]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
     <main className="flex-1 flex min-h-screen min-w-0 flex-col overflow-x-clip pt-20 md:pt-24">
       <header className="px-6 md:px-12 pt-4 pb-4">
         <div className="h-4 w-32 rounded-full bg-[#7ec9ff]/30 dark:bg-white/10 animate-pulse" />
@@ -185,7 +185,7 @@ const CourseTopics = () => {
   if (error || !currentCourse) {
     return (
       <div className={`flex min-h-full w-full font-sans antialiased text-[#001862] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
-        <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-[#080d25]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
+        <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-[#01071e]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
         <div className="flex-1 flex items-center justify-center relative z-10">
           <div className="dashboard-surface text-center p-12 shadow-sm">
             <h1 className="dashboard-page-title mb-4">{error ? 'Error Loading' : 'Course Not Found'}</h1>
@@ -203,12 +203,12 @@ const CourseTopics = () => {
       <ScrollProgress />
       
       {/* Unified Background */}
-      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-[#080d25]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-[#01071e]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
 
-      <main className="relative z-10 flex min-h-screen min-w-0 flex-1 flex-col overflow-x-clip pt-20 transition-all duration-700 ease-in-out md:pt-24">
+      <main className="relative z-10 flex min-h-screen min-w-0 flex-1 flex-col overflow-x-clip pt-20 transition-all duration-700 ease-in-out md:pt-[72px]">
         
         {/* Top Header */}
-        <header className="flex-shrink-0 flex items-center justify-end px-4 pt-4 pb-4 sm:px-7 md:px-12">
+        <header className="flex-shrink-0 flex items-center justify-end px-4 pt-4 pb-4 sm:px-7 md:hidden">
           <div className="flex items-center gap-4 sm:gap-6 relative z-50">
             <button 
               onClick={() => setIsSyllabusOpen(true)}
@@ -229,7 +229,7 @@ const CourseTopics = () => {
               onClick={() => setIsSyllabusOpen(false)}
               className="fixed inset-x-0 bottom-0 top-20 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-30 md:hidden"
             />
-            <div data-course-sidebar="true" className="fixed left-0 top-20 bottom-0 w-full sm:w-96 rounded-r-2xl bg-[#bceaff]/80 dark:bg-[#080d25] backdrop-blur-2xl border-r border-black/5 dark:border-white/5 z-40 flex flex-col shadow-[0_20px_60px_rgba(15,23,42,0.08)] md:hidden">
+            <div data-course-sidebar="true" className="fixed left-0 top-20 bottom-0 w-full sm:w-96 rounded-r-2xl bg-[#bceaff]/80 dark:bg-[#01071e] backdrop-blur-2xl border-r border-black/5 dark:border-white/5 z-40 flex flex-col shadow-[0_20px_60px_rgba(15,23,42,0.08)] md:hidden">
                 <div className="p-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/40 dark:bg-black/20">
                   <div>
                     <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-semibold block">Syllabus</span>
@@ -253,10 +253,10 @@ const CourseTopics = () => {
                         disabled={topic.isLocked}
                         className={`group flex w-full items-center justify-between gap-3 rounded-lg border px-4 py-2.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
                           isActive
-                            ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#001862] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
+                            ? "border-transparent bg-[#e4f6ff]/75 text-[#001862] dark:border-transparent dark:bg-[#0a1238] dark:text-white"
                             : topic.isLocked
                             ? "border-transparent text-[#001862]/40 dark:text-white/30 cursor-not-allowed opacity-50"
-                            : "border-transparent text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
+                            : "border-transparent text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-transparent dark:hover:bg-[#0a1238] dark:hover:text-white"
                         }`}
                       >
                         <span className="block min-w-0 flex-1 text-sm font-medium leading-tight line-clamp-2">
@@ -278,9 +278,9 @@ const CourseTopics = () => {
         }`}>
           <aside
             data-course-sidebar="true"
-            className="sticky top-24 hidden w-64 self-start justify-self-start md:flex flex-col rounded-r-2xl border-y border-r border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none max-h-[calc(100vh-8rem)] overflow-y-auto minimal-scrollbar"
+            className="sticky top-[72px] hidden w-64 self-start justify-self-start md:flex flex-col rounded-none border-0 bg-transparent backdrop-blur-none shadow-none transition-colors duration-300 max-h-[calc(100vh-72px)] overflow-y-auto minimal-scrollbar"
           >
-            <div className="px-3 py-4 md:ml-6 md:max-w-[13.5rem] md:px-0 md:py-14">
+            <div className="px-3 py-4 md:py-8">
               <div className="space-y-2">
                 {currentCourse.topics.map((topic, index) => {
                   const isActive = selectedTopic === index;
@@ -295,10 +295,10 @@ const CourseTopics = () => {
                       disabled={topic.isLocked}
                       className={`group flex w-full items-center justify-between gap-3 rounded-2xl border px-5 py-3.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
                         isActive
-                          ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#001862] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
+                          ? "border-transparent bg-[#e4f6ff]/75 text-[#001862] dark:border-transparent dark:bg-[#0a1238] dark:text-white"
                           : topic.isLocked
                           ? "border-transparent text-[#001862]/40 dark:text-white/30 cursor-not-allowed opacity-50"
-                          : "border-transparent text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
+                          : "border-transparent text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-transparent dark:hover:bg-[#0a1238] dark:hover:text-white"
                       }`}
                     >
                       <span className="block min-w-0 flex-1 text-sm font-medium leading-tight line-clamp-2">
@@ -404,9 +404,9 @@ const CourseTopics = () => {
           {placementData ? (
             <aside
               data-course-sidebar="true"
-              className="sticky top-24 hidden w-64 self-start justify-self-start md:flex flex-col rounded-l-2xl border-y border-l border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none max-h-[calc(100vh-8rem)] overflow-y-auto minimal-scrollbar"
+              className="sticky top-[72px] hidden w-64 self-start justify-self-start md:flex flex-col rounded-none border-0 bg-transparent backdrop-blur-none shadow-none transition-colors duration-300 max-h-[calc(100vh-72px)] overflow-y-auto minimal-scrollbar"
             >
-              <div className="px-3 py-4 md:mr-6 md:max-w-[13.5rem] md:px-0 md:py-14">
+              <div className="px-3 py-4 md:py-8">
                 <div className="space-y-2">
                   <div className="text-[10.5px] uppercase tracking-[0.2em] text-[#001862]/40 dark:text-white/35 font-bold mb-4 px-5">
                     Quick Actions
@@ -415,7 +415,7 @@ const CourseTopics = () => {
                   {!backendCourse?.isPlacementPrimary && placementData?.attachedCourse && (
                     <button
                       onClick={() => navigate(`/learn/courses/${placementData.attachedCourse.id || placementData.attachedCourse._id}/topics?day=${currentTopic?.day || selectedTopic + 1}`)}
-                      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
+                      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-transparent dark:hover:bg-[#0a1238] dark:hover:text-white transition-all duration-300 ease-out font-medium"
                     >
                       <span className="block min-w-0 flex-1 text-sm leading-tight">
                         Go to Today's {placementData.attachedCourse.title} Notes
@@ -431,7 +431,7 @@ const CourseTopics = () => {
                         navigate('/dashboard');
                       }
                     }}
-                    className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
+                    className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-transparent dark:hover:bg-[#0a1238] dark:hover:text-white transition-all duration-300 ease-out font-medium"
                   >
                     <span className="block min-w-0 flex-1 text-sm leading-tight">
                       Go to Daily Challenge
@@ -440,7 +440,7 @@ const CourseTopics = () => {
 
                   <button
                     onClick={() => navigate('/dashboard')}
-                    className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
+                    className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-transparent dark:hover:bg-[#0a1238] dark:hover:text-white transition-all duration-300 ease-out font-medium"
                   >
                     <span className="block min-w-0 flex-1 text-sm leading-tight">
                       Go to Daily Tasks
@@ -451,7 +451,7 @@ const CourseTopics = () => {
                     <button
                       key={course.id || course._id}
                       onClick={() => navigate(`/learn/courses/${course.id || course._id}/topics?day=${currentTopic?.day || selectedTopic + 1}`)}
-                      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
+                      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-transparent dark:hover:bg-[#0a1238] dark:hover:text-white transition-all duration-300 ease-out font-medium"
                     >
                       <span className="block min-w-0 flex-1 text-sm leading-tight">
                         Go to {course.title} Notes

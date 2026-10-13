@@ -737,30 +737,25 @@ const Profile = () => {
             <div className="panel form-panel">
               <h3 className="form-section-title">Account information</h3>
               <p className="form-section-description">Your account details and current status.</p>
-              <div className="security-row">
-                <div><h4>Email address</h4><p>{profile.email}</p></div>
-              </div>
-              <div className="status-summary" aria-label="Current account and program statuses">
+              <div className="status-summary" aria-label="Current account, program and payment statuses">
                 <div className="status-card"><span className="status-title">Account Status</span><strong className="status-value">{profile.accountStatus}</strong></div>
                 <div className="status-card"><span className="status-title">Program Status</span><strong className="status-value">{profile.programStatus}</strong></div>
+                <div className="status-card"><span className="status-title">Payment Status</span><strong className="status-value">{profile.paymentStatus || "Not available"}</strong></div>
               </div>
               <div className="security-row">
                 <div><h4>Password &amp; sign-in</h4></div>
                 <button className="button button-primary" type="button" onClick={resetPassword}>Reset password</button>
               </div>
               <div className="security-row">
-                <div><h4>Sign out</h4><p>Sign out of your current TechLearn session.</p></div>
-                <button className="button" type="button" onClick={logout}>Sign out</button>
-              </div>
-              <div className="security-row">
                 <div><h4>Delete account</h4><p>Send a request to remove your account and data. Our team confirms by email.</p></div>
                 <button className="button button-danger" type="button" onClick={() => setDeleteOpen(true)}>Delete account</button>
               </div>
-              {noticeBox}
-              <div className="form-actions">
-                <p>Account deletion asks for confirmation and a reason.</p>
-                <div className="action-buttons"><button className="button" type="button" onClick={goBack}>Back to Profile</button></div>
+              <div className="security-row">
+                <div><h4>Sign out</h4><p>Sign out of your current TechLearn session.</p></div>
+                <button className="button" type="button" onClick={logout}>Sign out</button>
               </div>
+              {noticeBox}
+              <div className="account-back"><button className="button" type="button" onClick={goBack}>Back to Profile</button></div>
             </div>
           )}
         </section>

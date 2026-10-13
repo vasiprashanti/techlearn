@@ -4,6 +4,24 @@ import { Moon, Sun, User } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
+// Social links shown in the logged-in mobile menu (transparent pixel-art icons, so they work on light and dark).
+const SOCIAL_LINKS = [
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/company/techlearnsolutions', icon: '/social_icons/linkedin.png' },
+  { label: 'YouTube', href: 'https://www.youtube.com/@techlearnsolutions8014', icon: '/social_icons/youtube.png' },
+  { label: 'WhatsApp', href: 'https://wa.me/919676663136?text=Hi%20there!%20I%20want%20to%20know%20more%20about%20your%20courses', icon: '/social_icons/whatsapp.png' },
+  { label: 'Instagram', href: 'https://www.instagram.com/techlearn_in/', icon: '/social_icons/instagram.png' },
+];
+
+const MOBILE_MEMBER_LINKS = [
+  ['Dashboard', '/dashboard'],
+  ['Learn', '/learn'],
+  ['Roadmaps', '/roadmaps'],
+  ['Leaderboard', '/dashboard/leaderboard'],
+  ['Performance', '/dashboard/performance'],
+  ['Hiring', '/jobs'],
+  ['Profile', '/dashboard/profile'],
+];
+
 export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const { isAuthenticated, user, logout } = useAuth();
@@ -56,7 +74,19 @@ export default function Navbar() {
         return rect.top <= 65 && rect.bottom >= 35;
       });
       const sectionColor = currentSection ? getComputedStyle(currentSection).backgroundColor : null;
-      setSectionBackground(sectionColor && sectionColor !== "rgba(0, 0, 0, 0)" ? sectionColor : null);
+      const pageSurface = () => {
+        // Inner pages paint their colour on a full-screen fixed layer; use it so the navbar matches the page.
+        for (const el of document.querySelectorAll(".fixed.inset-0.-z-10")) {
+          const cs = getComputedStyle(el);
+          const solid = cs.backgroundColor;
+          if (solid && solid !== "rgba(0, 0, 0, 0)" && solid !== "transparent") return solid;
+          const first = cs.backgroundImage.match(/rgba?\([^)]+\)/);
+          if (first) return first[0];
+        }
+        return null;
+      };
+      const resolved = sectionColor && sectionColor !== "rgba(0, 0, 0, 0)" ? sectionColor : pageSurface();
+      setSectionBackground(resolved);
 
       // If we are not on the landing page (no sections found), fallback to current theme
       const hasSections = document.querySelectorAll('#start, #problem, #journey, #results, #pricing, #faqs, #start-program').length > 0;
@@ -72,8 +102,10 @@ export default function Navbar() {
     window.addEventListener('scroll', checkDarkSection, { passive: true });
     window.addEventListener('resize', checkDarkSection);
     checkDarkSection();
+    const resample = [setTimeout(checkDarkSection, 400), setTimeout(checkDarkSection, 1500)];
 
     return () => {
+      resample.forEach(clearTimeout);
       window.removeEventListener('scroll', checkDarkSection);
       window.removeEventListener('resize', checkDarkSection);
     };
@@ -83,6 +115,7 @@ export default function Navbar() {
   // If over light section -> use light theme styling (dark text / light dropdown)
   const isDarkNav = isOverDarkSection;
   const isAppRoute = /^\/(dashboard|admin|colleges|batches|students|programs|track-templates|certificates|reports|settings)/.test(location.pathname);
+  const navSurface = isAppRoute ? '#01071e' : (sectionBackground || (isDarkNav ? '#01071e' : '#d8eef5'));
 
   // Close menus on outside click
   useEffect(() => {
@@ -147,7 +180,7 @@ export default function Navbar() {
   const userAvatar = user?.photoUrl || user?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}&backgroundColor=04103d,3c83f6,1e293b`;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50" style={{ background: mobileMenuOpen ? (isDarkNav ? '#01071e' : '#d8eef5') : isOverHero ? 'transparent' : (isAppRoute ? '#01071e' : (sectionBackground || (isDarkNav ? '#01071e' : '#d8eef5'))) }}>
+    <header className="fixed top-0 left-0 right-0 z-50" style={{ background: mobileMenuOpen ? navSurface : isOverHero ? "transparent" : navSurface }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -600,9 +633,63 @@ export default function Navbar() {
             font-weight: 600;
             color: var(--heading);
           }
+          .tl-mobile-menu.active {
+            display: flex;
+            flex-direction: column;
+          }
           .tl-mobile-menu a:last-child,
           .tl-mobile-menu button:last-child {
             border-bottom: none;
+          }
+          .tl-mobile-links {
+            border-top: 1px solid var(--border);
+            margin-top: 8px;
+          }
+          .tl-mobile-links a {
+            font-weight: 400;
+            font-size: 18px;
+            color: var(--text);
+          }
+          .tl-mobile-links a:last-child {
+            border-bottom: 1px solid var(--border);
+          }
+          .tl-mobile-links a.active {
+            font-weight: 700;
+            color: var(--heading);
+          }
+          .tl-mobile-footer {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 4px 4px;
+            border-top: 1px solid var(--border);
+          }
+          .tl-mobile-menu .tl-mobile-logout {
+            width: auto;
+            min-height: 0;
+            padding: 6px 0;
+            border: none;
+            font-size: 13px;
+            font-weight: 500;
+          }
+          .tl-mobile-socials {
+            display: flex;
+            gap: 12px;
+          }
+          .tl-mobile-socials img {
+            width: 30px;
+            height: 30px;
+            display: block;
+            image-rendering: pixelated;
+          }
+          .tl-mobile-menu .tl-mobile-socials a {
+            width: auto;
+            min-height: 0;
+            padding: 0;
+            border: none;
+            font-size: 30px;
+            line-height: 1;
           }
         }
 
@@ -617,7 +704,7 @@ export default function Navbar() {
         }
       `}</style>
 
-      <div className={`tl-navbar-root ${isDarkNav ? 'dark-theme' : ''} ${scrollY > 30 ? 'scrolled' : ''}`}>
+      <div className={`tl-navbar-root ${isDarkNav ? 'dark-theme' : ''} ${scrollY > 30 ? 'scrolled' : ''}`} style={{ '--dropdown-bg': navSurface, '--menu-page-bg': navSurface }}>
         <nav className="tl-nav">
           {/* BRAND */}
           <Link
@@ -770,20 +857,32 @@ export default function Navbar() {
             id="mobileMenu"
             ref={mobileMenuRef}
           >
-            <Link to="/learn">Learn</Link>
-            <Link to="/roadmaps">Roadmaps</Link>
-            <Link to="/jobs">Hiring</Link>
-
             {isAuthenticated ? (
               <>
-                <Link to="/dashboard">Dashboard</Link>
-                <Link to="/dashboard/profile">Manage your profile</Link>
-                <button type="button" onClick={handleLogout}>
-                  Sign out
-                </button>
+                <div className="tl-mobile-links">
+                  {MOBILE_MEMBER_LINKS.map(([label, to]) => {
+                    const isActive = to === '/dashboard' ? location.pathname === to : location.pathname.startsWith(to);
+                    return (
+                      <Link key={to} to={to} className={isActive ? 'active' : ''}>{label}</Link>
+                    );
+                  })}
+                </div>
+                <div className="tl-mobile-footer">
+                  <button type="button" className="tl-mobile-logout" onClick={handleLogout}>Logout</button>
+                  <div className="tl-mobile-socials">
+                    {SOCIAL_LINKS.map(({ label, href, icon }) => (
+                      <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}>
+                        <img src={icon} alt="" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
               </>
             ) : (
               <>
+                <Link to="/learn">Learn</Link>
+                <Link to="/roadmaps">Roadmaps</Link>
+                <Link to="/jobs">Hiring</Link>
                 <button type="button" onClick={handleLoginClick}>
                   Log in
                 </button>

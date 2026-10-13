@@ -897,7 +897,7 @@ export default function ContextualOnboarding() {
 
         .tl-learn-card {
           width: 100%;
-          max-width: 440px;
+          max-width: 340px;
           background: var(--chip-blue);
           border: 1px solid var(--border);
           border-radius: 16px;
@@ -967,7 +967,7 @@ export default function ContextualOnboarding() {
           font-size: 13px;
           line-height: 1.5;
           color: var(--muted-light);
-          margin-bottom: 16px;
+          margin-bottom: 4px;
         }
 
         .tl-content-divider {
@@ -1541,10 +1541,10 @@ export default function ContextualOnboarding() {
                 const displayItem = result?.program || result?.matchedCourse;
                 const isProgram = result?.itemType === "program" || !!result?.program;
                 const title = result?.program?.name || result?.matchedCourse?.title || "Recommended Track";
-                const description = result?.program?.description || result?.matchedCourse?.description || "";
-                const price = result?.program?.price || result?.matchedCourse?.price || "Free";
-                const isFree = !price || price === "Free" || String(price).toLowerCase() === "free";
-                const displayPrice = isFree ? "Free" : `₹${String(price).replace(/[^\d]/g, "")}`;
+                const description = (result?.program?.description || result?.matchedCourse?.description || "").trim()
+                  || (isProgram
+                    ? "A structured, step-by-step program built around your goals, with everything you need in one place."
+                    : "A guided course that helps you build this skill step by step.");
 
                 return (
                   <div className="tl-rec-container">
@@ -1562,24 +1562,11 @@ export default function ContextualOnboarding() {
                             e.currentTarget.src = "/c-programming.jpg";
                           }}
                         />
-                        <div className="tl-category-badge">
-                          {isProgram ? "Program" : "Course"}
-                        </div>
                       </div>
 
                       <div className="tl-card-content">
                         <h2 className="tl-card-title">{title}</h2>
                         <p className="tl-card-description">{description}</p>
-                        <div className="tl-content-divider" />
-                        <div className="tl-card-footer">
-                          <div className="tl-price">
-                            {displayPrice}
-                            {!isFree && <span style={{ fontSize: 10, color: "var(--muted)", marginLeft: 4 }}>/ Year</span>}
-                          </div>
-                          <span className="tl-start-link">
-                            Start Now →
-                          </span>
-                        </div>
                       </div>
                     </div>
                   </div>

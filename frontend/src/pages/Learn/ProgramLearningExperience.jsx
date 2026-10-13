@@ -200,7 +200,7 @@ export default function ProgramLearningExperience() {
   return (
     <div className={'min-h-screen ' + themeClasses}>
       <Sidebar />
-      <main className="min-h-screen px-4 pb-16 pt-24 lg:ml-[90px] lg:px-10">
+      <main className="min-h-screen px-4 pb-16 pt-24 md:ml-[90px] lg:px-10">
         <div className="mx-auto max-w-6xl">
           <button
             type="button"

@@ -146,7 +146,7 @@
 .tl-profile .security-row h4 { margin: 0 0 4px; font-size: 13px; color: var(--strong); }
 .tl-profile .security-row p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
 .tl-profile .pill { display: inline-flex; align-items: center; padding: 5px 10px; border: 1px solid var(--border); border-radius: 100px; font-size: 11px; color: var(--text); }
-.tl-profile .status-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 10px 0 14px; }
+.tl-profile .status-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 4px 0 14px; }
 .tl-profile .status-card { min-width: 0; padding: 15px; border: 0; border-radius: 12px; background: var(--field); }
 .tl-profile .status-title, .tl-profile .status-value, .tl-profile .status-card small { display: block; }
 .tl-profile .status-title { color: var(--muted); font-size: 11px; }
@@ -161,7 +161,7 @@
 .tl-profile .button:disabled { opacity: 0.6; cursor: not-allowed; }
 .tl-profile .button-primary { border-color: var(--primary-button); background: var(--primary-button); color: var(--primary-button-text); }
 .tl-profile .button-primary:hover { border-color: var(--primary-button-hover); background: var(--primary-button-hover); }
-.tl-profile .button-danger { border-color: rgba(248, 113, 113, 0.45); color: var(--danger); }
+.tl-profile .button-danger { border-color: transparent; color: var(--danger); }
 .tl-profile .button-danger:hover { background: rgba(248, 113, 113, 0.1); }
 .tl-profile .notice { margin-top: 18px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--accent-soft); color: var(--strong); font-size: 12px; }
 .tl-profile .notice.error { color: var(--danger); border-color: rgba(248, 113, 113, 0.4); background: rgba(248, 113, 113, 0.08); }
@@ -242,3 +242,5 @@
 .tl-profile .field input[readonly], .tl-profile .field input:disabled { color: var(--text); cursor: not-allowed; opacity: 1; }
 .tl-profile .field-hint { padding-left: 18px; }
 .tl-profile .action-buttons { margin-left: auto; }
+
+.tl-profile .account-back { display: flex; justify-content: center; margin-top: 28px; }

@@ -3910,6 +3910,7 @@ body .admin-dashboard-typography.dark .course-form-modal.course-form-modal.cours
 /* Dashboard cards share the Profile card colour and have no border. */
 .dark .dashboard-page-shell .dashboard-surface,
 .dark .dashboard-page-shell .dashboard-surface-strong,
+.dark .dashboard-page-shell .tl-card,
 .dark .dashboard-page-shell [class~="dark:bg-gradient-to-br"] {
   background-color: #0a1238 !important;
   background-image: none !important;

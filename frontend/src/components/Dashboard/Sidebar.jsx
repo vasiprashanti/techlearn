@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Award,
@@ -10,8 +10,6 @@ import {
   Map,
   User,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { FiSidebar, FiX } from "react-icons/fi";
 import { useTheme } from "../../context/ThemeContext";
 
 const menuGroups = [
@@ -34,7 +32,6 @@ const SCROLL_KEY = 'student-sidebar-scroll';
 const Sidebar = () => {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const desktopNavRef = useRef(null);
   const location = useLocation();
   const isDashboardRoute =
@@ -50,9 +47,6 @@ const Sidebar = () => {
   const isProfileRoute = location.pathname.startsWith('/dashboard/profile');
   const sidebarShadowClass = isDarkMode
     ? (isProfileRoute ? 'shadow-[6px_0_18px_rgba(0,0,0,0.08)]' : 'shadow-[10px_0_34px_rgba(0,0,0,0.15)]')
-    : 'shadow-none';
-  const mobileSidebarShadowClass = isDarkMode
-    ? (isProfileRoute ? 'shadow-xl' : 'shadow-2xl')
     : 'shadow-none';
 
   useEffect(() => {
@@ -114,72 +108,13 @@ const Sidebar = () => {
 
   return (
     <>
-      <style>{`
-        @media (max-width: 1024px) {
-          main header {
-            padding-left: 3.5rem !important;
-            transition: padding 0.3s ease-in-out;
-          }
-        }
-      `}</style>
 
-      {/* Slim vertical desktop sidebar with vertically centered navigation */}
-      <div className={`hidden lg:flex flex-col fixed left-0 top-0 bottom-0 bg-[#ffffff30] dark:bg-[#01071e] border-r-0 z-40 h-screen overflow-hidden w-[90px] pt-6 ${sidebarShadowClass} justify-between items-center pb-6`}>
-        {/* Adjusted top padding/spacer to push buttons slightly down */}
-        <div className="h-14 shrink-0"></div>
-
-        {/* Vertically Centered links */}
-        <div className="flex-1 flex flex-col justify-center items-center w-full">
-          <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="w-full overflow-y-auto px-1" style={{ scrollbarWidth: 'none' }}>
-            <style>{`
-              .custom-scrollbar::-webkit-scrollbar {
-                display: none;
-              }
-            `}</style>
-            <div className="custom-scrollbar">
-              {renderNavLinks()}
-            </div>
-          </div>
+      {/* Slim vertical sidebar (tablet and desktop); the link group is centred in the full page height */}
+      <div className={`hidden md:flex flex-col fixed left-0 top-0 bottom-0 bg-[#ffffff30] dark:bg-[#01071e] border-r-0 z-40 h-screen overflow-hidden w-[90px] ${sidebarShadowClass} justify-center items-center`}>
+        <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="w-full max-h-full overflow-y-auto px-1 custom-scrollbar" style={{ scrollbarWidth: 'none' }}>
+          {renderNavLinks()}
         </div>
-
-        {/* Adjusted Bottom Spacer to balance the vertical centering */}
-        <div className="h-6 w-full shrink-0"></div>
       </div>
-
-      <button
-        onClick={() => setMobileMenuOpen(true)}
-        title="Open Menu"
-        className="lg:hidden fixed top-24 left-4 z-[45] flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/55 dark:bg-black/55 border border-black/10 dark:border-white/10 text-[#00113b] dark:text-[#8fd9ff] hover:text-[#3c83f6] dark:hover:text-white hover:scale-105 active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-all duration-300"
-      >
-        <FiSidebar className="w-4 h-4" />
-        <span className="text-xs font-semibold tracking-wide">Menu</span>
-      </button>
-
-      {mobileMenuOpen && (
-        <>
-          <button
-            type="button"
-            aria-label="Close sidebar overlay"
-            onClick={() => setMobileMenuOpen(false)}
-            className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
-          />
-          <div className={`lg:hidden fixed left-0 top-0 bottom-0 w-24 bg-[#ffffff30] dark:bg-[#01071e] border-r-0 z-50 ${mobileSidebarShadowClass} flex flex-col pt-6 transition-transform duration-200 ease-out`}>
-              <div className="flex items-center justify-end shrink-0 relative px-2 h-8">
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="absolute right-2 top-0 p-1 text-[#00113b] dark:text-slate-400 hover:text-white"
-                  aria-label="Close sidebar"
-                >
-                  <FiX className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="flex-1 flex flex-col justify-center items-center overflow-y-auto px-1 pb-6 scrollbar-hide w-full">
-                {renderNavLinks(() => setMobileMenuOpen(false))}
-              </div>
-          </div>
-        </>
-      )}
     </>
   );
 };
