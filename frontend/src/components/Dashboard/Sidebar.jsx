@@ -19,7 +19,7 @@ const menuGroups = [
       { id: "dashboard", title: "Dashboard", icon: <LayoutDashboard className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "learn", title: "Learn", icon: <BookOpen className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "jobs", title: "Hiring", icon: <BriefcaseBusiness className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
-      { id: "dashboard/roadmap", title: "Roadmaps", icon: <Map className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "roadmaps", title: "Roadmaps", icon: <Map className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/leaderboard", title: "Leaderboard", icon: <Award className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/performance", title: "Performance", icon: <BarChart3 className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
       { id: "dashboard/profile", title: "Profile", icon: <User className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
@@ -80,10 +80,12 @@ const Sidebar = () => {
         <NavLink
           key={item.id}
           to={`/${item.id}`}
-          end
+          end={item.id !== "roadmaps"}
           onClick={onClickAction}
           className={({ isActive }) => {
-            const isCurrent = isActive;
+            const isCurrent = item.id === "roadmaps"
+              ? ["/roadmaps", "/resources/roadmaps", "/dashboard/roadmap"].some((p) => location.pathname.startsWith(p))
+              : isActive;
 
             return `flex flex-col items-center justify-center gap-1.5 w-[3.65rem] h-[3.65rem] md:w-[4.15rem] md:h-[4.15rem] rounded-[1.1rem] transition-all duration-300 ease-out select-none
             ${
