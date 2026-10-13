@@ -13,46 +13,46 @@ const menuGroups = [
   {
     title: "OVERVIEW",
     items: [
-      { id: "admin", title: "Dashboard", icon: <FiGrid className="w-3.5 h-3.5" /> },
+      { id: "admin", title: "Dashboard", icon: <FiGrid className="w-4 h-4" /> },
     ]
   },
   {
     title: "LEARNING",
     items: [
-      { id: "programs", title: "Programs", icon: <FiFolder className="w-3.5 h-3.5" /> },
-      { id: "question-bank", title: "Question Bank", icon: <FiCode className="w-3.5 h-3.5" /> },
-      { id: "track-templates", title: "Track Templates", icon: <FiGitCommit className="w-3.5 h-3.5" /> },
-      { id: "admin/roadmaps", title: "Roadmaps", icon: <FiFileText className="w-3.5 h-3.5" /> },
-      { id: "admin/courses", title: "Courses", icon: <FiBookOpen className="w-3.5 h-3.5" /> },
-      { id: "admin/hiring", title: "Hiring", icon: <FiBriefcase className="w-3.5 h-3.5" /> },
-      { id: "admin/projects", title: "Projects", icon: <FiClipboard className="w-3.5 h-3.5" /> },
-      { id: "certificates", title: "Certificates", icon: <FiAward className="w-3.5 h-3.5" /> },
+      { id: "programs", title: "Programs", icon: <FiFolder className="w-4 h-4" /> },
+      { id: "question-bank", title: "Question Bank", icon: <FiCode className="w-4 h-4" /> },
+      { id: "track-templates", title: "Track Templates", icon: <FiGitCommit className="w-4 h-4" /> },
+      { id: "admin/roadmaps", title: "Roadmaps", icon: <FiFileText className="w-4 h-4" /> },
+      { id: "admin/courses", title: "Courses", icon: <FiBookOpen className="w-4 h-4" /> },
+      { id: "admin/hiring", title: "Hiring", icon: <FiBriefcase className="w-4 h-4" /> },
+      { id: "admin/projects", title: "Projects", icon: <FiClipboard className="w-4 h-4" /> },
+      { id: "certificates", title: "Certificates", icon: <FiAward className="w-4 h-4" /> },
     ]
   },
   {
     title: "ORGANIZATION",
     items: [
-      { id: "batches", title: "Batches", icon: <FiLayers className="w-3.5 h-3.5" /> },
-      { id: "students", title: "Students", icon: <FiUsers className="w-3.5 h-3.5" /> },
-      { id: "colleges", title: "Colleges", icon: <FiHome className="w-3.5 h-3.5" /> },
-      { id: "admin/hiring", title: "Companies", icon: <FiBriefcase className="w-3.5 h-3.5" /> },
+      { id: "batches", title: "Batches", icon: <FiLayers className="w-4 h-4" /> },
+      { id: "students", title: "Students", icon: <FiUsers className="w-4 h-4" /> },
+      { id: "colleges", title: "Colleges", icon: <FiHome className="w-4 h-4" /> },
+      { id: "admin/hiring", title: "Companies", icon: <FiBriefcase className="w-4 h-4" /> },
     ]
   },
   {
     title: "OPERATIONS",
     items: [
-      { id: "submission-monitor", title: "Submission Monitor", icon: <FiMonitor className="w-3.5 h-3.5" /> },
-      { id: "audit-logs", title: "Audit Logs", icon: <FiClipboard className="w-3.5 h-3.5" /> },
-      { id: "reports", title: "Reports", icon: <FiPieChart className="w-3.5 h-3.5" /> },
+      { id: "submission-monitor", title: "Submission Monitor", icon: <FiMonitor className="w-4 h-4" /> },
+      { id: "audit-logs", title: "Audit Logs", icon: <FiClipboard className="w-4 h-4" /> },
+      { id: "reports", title: "Reports", icon: <FiPieChart className="w-4 h-4" /> },
     ]
   },
   {
     title: "SYSTEM",
     items: [
-      { id: "admin/pricing", title: "Pricing", icon: <FiSettings className="w-3.5 h-3.5" /> },
-      { id: "settings", title: "Settings", icon: <FiSettings className="w-3.5 h-3.5" /> },
-      { id: "analytics", title: "Analytics", icon: <FiBarChart2 className="w-3.5 h-3.5" /> },
-      { id: "system-health", title: "System Health", icon: <FiActivity className="w-3.5 h-3.5" /> },
+      { id: "admin/pricing", title: "Pricing", icon: <FiSettings className="w-4 h-4" /> },
+      { id: "settings", title: "Settings", icon: <FiSettings className="w-4 h-4" /> },
+      { id: "analytics", title: "Analytics", icon: <FiBarChart2 className="w-4 h-4" /> },
+      { id: "system-health", title: "System Health", icon: <FiActivity className="w-4 h-4" /> },
     ]
   }
 ];
@@ -81,7 +81,7 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
     : "text-[10px] uppercase tracking-[0.22em] font-semibold text-[#17386c]/58 px-4";
 
   const getNavClass = (isActive) =>
-    `sidebar-button flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs tracking-wide transition-all duration-300 ease-out ${
+    `sidebar-button flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm tracking-wide transition-all duration-300 ease-out ${
       isActive
         ? isDarkMode
           ? "bg-[#122449] hover:bg-[#183766] !text-white font-semibold shadow-lg border border-[#5574c7]/55"
@@ -98,7 +98,6 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
     }
   }, []);
 
-
   useEffect(() => {
     const handleOpenMobileSidebar = () => setMobileMenuOpen(true);
     window.addEventListener(OPEN_ADMIN_SIDEBAR_EVENT, handleOpenMobileSidebar);
@@ -112,9 +111,9 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
   };
 
   const renderNavLinks = (onClickAction = () => {}) => (
-    <div className="space-y-4 pb-8">
+    <div className="space-y-6 pb-12">
       {menuGroups.map((group, idx) => (
-        <div key={idx} className="space-y-1.5">
+        <div key={idx} className="space-y-2">
           <h4 className={sectionHeadingClass}>
             {group.title}
           </h4>
