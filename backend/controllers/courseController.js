@@ -824,7 +824,7 @@ export const getAllCourses = async (req, res) => {
       };
     }
 
-    const courses = await Course.find(filter);
+    const courses = await Course.find(filter).lean();
     const topicCourseIds = isAdmin || courses.length === 0
       ? new Set()
       : new Set((await Topic.distinct("courseId", { courseId: { $in: courses.map((course) => course._id) } })).map(String));
