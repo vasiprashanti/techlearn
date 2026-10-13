@@ -54,6 +54,37 @@ const getProgramType = (value) => {
   return normalized === 'placement' || normalized.includes('placement') ? 'Placement' : 'Skill';
 };
 
+const getItemTitle = (item, typeKey) => {
+  if (typeKey === 'students') return item.name || item.email || 'Unnamed Student';
+  if (typeKey === 'courses') return item.title || 'Untitled Course';
+  if (typeKey === 'roadmaps') return item.title || 'Untitled Roadmap';
+  if (typeKey === 'track-templates') return item.name || 'Untitled Track Template';
+  if (typeKey === 'certificates') return item.name || 'Untitled Certificate';
+  if (typeKey === 'projects') return item.title || 'Untitled Project';
+  return item.name || item.title || 'Untitled Item';
+};
+
+const getItemSubtitle = (item, typeKey) => {
+  if (typeKey === 'students') return `${item.email || ''} ${item.rollNo ? `(${item.rollNo})` : ''}`;
+  if (typeKey === 'batches') return `Start: ${item.startDate ? new Date(item.startDate).toLocaleDateString() : 'N/A'}`;
+  if (typeKey === 'courses') return `${item.level || ''} • ${item.courseType || ''}`;
+  if (typeKey === 'track-templates') return `Type: ${item.trackType || 'N/A'}`;
+  if (typeKey === 'projects') return `Category: ${item.category || 'N/A'} • ${item.duration_days ? `${item.duration_days} Days` : ''}`;
+  if (typeKey === 'certificates') return item.description || 'Certificate Template';
+  return item.description || '';
+};
+
+const getItemLink = (item, typeKey) => {
+  if (typeKey === 'batches') return `/batches/${item._id}`;
+  if (typeKey === 'students') return `/students`;
+  if (typeKey === 'courses') return `/admin/courses`;
+  if (typeKey === 'roadmaps') return `/admin/roadmaps`;
+  if (typeKey === 'track-templates') return `/track-templates/${item._id}`;
+  if (typeKey === 'certificates') return `/certificates`;
+  if (typeKey === 'projects') return `/admin/projects/edit/${item._id}`;
+  return null;
+};
+
 const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
 
 const getTodayIsoDate = () => {
@@ -301,19 +332,26 @@ const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach, onEd
                 <td className="px-3 py-3.5 text-center text-xs font-semibold tabular-nums text-slate-700 dark:text-slate-200 whitespace-nowrap">
                   {row.progress}
                 </td>
-                <td className="px-3 py-3.5 text-center">
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onDetach(student);
-                    }}
-                    title="Detach from Program"
-                    aria-label={`Detach ${student.name || 'student'} from Program`}
-                    className="w-7 h-7 rounded-lg inline-flex items-center justify-center text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                  >
-                    <FiTrash2 className="w-3.5 h-3.5" />
-                  </button>
+                <td className="px-3 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => onOpenStudent(student)}
+                      title="View Student Report"
+                      className="p-1 rounded-lg text-black/40 hover:text-[#3C83F6] dark:text-white/40 dark:hover:text-[#7fb1ff] hover:bg-black/5 dark:hover:bg-white/5 transition-colors inline-block"
+                    >
+                      <FiEye className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDetach(student)}
+                      title="Detach from Program"
+                      aria-label={`Detach ${student.name || 'student'} from Program`}
+                      className="p-1 rounded-lg text-black/40 hover:text-rose-600 dark:text-white/40 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors inline-block"
+                    >
+                      <FiTrash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             );
@@ -323,6 +361,258 @@ const StudentDatabaseTable = ({ students, program, onOpenStudent, onDetach, onEd
     </div>
   </div>
 );
+
+const AttachedEntitiesTable = ({
+  items,
+  typeKey,
+  sectionLabel,
+  onNavigate,
+  onDetach,
+  getItemTitle,
+  getItemSubtitle,
+  getItemLink,
+  statusBadgeClass,
+}) => {
+  const getHeaders = () => {
+    switch (typeKey) {
+      case 'batches':
+        return [
+          { label: '#', width: 'w-12 min-w-12 text-center' },
+          { label: 'Batch Name', width: 'min-w-[200px] text-left' },
+          { label: 'College', width: 'min-w-[140px] text-left' },
+          { label: 'Start Date', width: 'w-28 min-w-28 text-left' },
+          { label: 'Expiry Date', width: 'w-28 min-w-28 text-left' },
+          { label: 'Status', width: 'w-24 min-w-24 text-center' },
+          { label: 'Actions', width: 'w-24 min-w-24 text-center' },
+        ];
+      case 'courses':
+        return [
+          { label: '#', width: 'w-12 min-w-12 text-center' },
+          { label: 'Course Title', width: 'min-w-[220px] text-left' },
+          { label: 'Level', width: 'w-28 min-w-28 text-center' },
+          { label: 'Delivery Type', width: 'w-32 min-w-32 text-center' },
+          { label: 'Topics', width: 'w-24 min-w-24 text-center' },
+          { label: 'Status', width: 'w-24 min-w-24 text-center' },
+          { label: 'Actions', width: 'w-24 min-w-24 text-center' },
+        ];
+      case 'track-templates':
+        return [
+          { label: '#', width: 'w-12 min-w-12 text-center' },
+          { label: 'Template Name', width: 'min-w-[220px] text-left' },
+          { label: 'Track Type', width: 'min-w-[140px] text-center' },
+          { label: 'Created', width: 'w-28 min-w-28 text-left' },
+          { label: 'Status', width: 'w-24 min-w-24 text-center' },
+          { label: 'Actions', width: 'w-24 min-w-24 text-center' },
+        ];
+      case 'roadmaps':
+        return [
+          { label: '#', width: 'w-12 min-w-12 text-center' },
+          { label: 'Roadmap Title', width: 'min-w-[240px] text-left' },
+          { label: 'Created', width: 'w-28 min-w-28 text-left' },
+          { label: 'Status', width: 'w-24 min-w-24 text-center' },
+          { label: 'Actions', width: 'w-24 min-w-24 text-center' },
+        ];
+      case 'projects':
+        return [
+          { label: '#', width: 'w-12 min-w-12 text-center' },
+          { label: 'Project Title', width: 'min-w-[220px] text-left' },
+          { label: 'Category', width: 'min-w-[140px] text-center' },
+          { label: 'Duration', width: 'w-28 min-w-28 text-center' },
+          { label: 'Status', width: 'w-24 min-w-24 text-center' },
+          { label: 'Actions', width: 'w-24 min-w-24 text-center' },
+        ];
+      case 'certificates':
+        return [
+          { label: '#', width: 'w-12 min-w-12 text-center' },
+          { label: 'Certificate Name', width: 'min-w-[220px] text-left' },
+          { label: 'Description', width: 'min-w-[200px] text-left' },
+          { label: 'Status', width: 'w-24 min-w-24 text-center' },
+          { label: 'Actions', width: 'w-24 min-w-24 text-center' },
+        ];
+      default:
+        return [
+          { label: '#', width: 'w-12 min-w-12 text-center' },
+          { label: 'Title', width: 'min-w-[220px] text-left' },
+          { label: 'Details', width: 'min-w-[160px] text-left' },
+          { label: 'Status', width: 'w-24 min-w-24 text-center' },
+          { label: 'Actions', width: 'w-24 min-w-24 text-center' },
+        ];
+    }
+  };
+
+  const headers = getHeaders();
+
+  return (
+    <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] overflow-hidden">
+      <div className="overflow-x-auto w-full">
+        <table className="w-full text-left text-xs border-collapse min-w-[700px]">
+          <caption className="sr-only">Attached {sectionLabel} in this program</caption>
+          <thead className="bg-black/[0.03] dark:bg-white/[0.04]">
+            <tr className="border-b border-black/10 dark:border-white/10">
+              {headers.map(({ label, width }) => (
+                <th
+                  key={label}
+                  scope="col"
+                  className={`${width} px-3.5 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-black/45 dark:text-white/45 whitespace-nowrap`}
+                >
+                  {label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-black/5 dark:divide-white/5">
+            {items.length === 0 ? (
+              <tr>
+                <td colSpan={headers.length} className="px-6 py-12 text-center text-sm text-black/45 dark:text-white/45">
+                  No {sectionLabel.toLowerCase()} match your search criteria.
+                </td>
+              </tr>
+            ) : items.map((item, index) => {
+              const link = getItemLink(item, typeKey);
+              const title = getItemTitle(item, typeKey);
+              const subtitle = getItemSubtitle(item, typeKey);
+              const statusClass = statusBadgeClass(item.status);
+
+              return (
+                <tr
+                  key={item._id || index}
+                  onClick={() => link && onNavigate(link)}
+                  className={`group transition-colors ${
+                    link ? 'cursor-pointer hover:bg-[#3C83F6]/[0.04] dark:hover:bg-white/[0.04]' : 'hover:bg-black/[0.01] dark:hover:bg-white/[0.02]'
+                  }`}
+                >
+                  {/* # */}
+                  <td className="w-12 min-w-12 px-3.5 py-3.5 text-center text-xs font-semibold tabular-nums text-black/45 dark:text-white/45">
+                    {String(index + 1).padStart(3, '0')}
+                  </td>
+
+                  {/* Primary Title + Subtitle */}
+                  <td className="px-3.5 py-3.5">
+                    <div className="max-w-[320px]">
+                      <span className="block truncate text-xs sm:text-sm font-semibold text-slate-800 dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#bceaff] transition-colors">
+                        {title}
+                      </span>
+                      {subtitle && (
+                        <span className="block truncate text-[11px] text-black/40 dark:text-white/40 mt-0.5">
+                          {subtitle}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Dynamic Columns based on entity type */}
+                  {typeKey === 'batches' && (
+                    <>
+                      <td className="px-3.5 py-3.5 text-slate-600 dark:text-slate-300">
+                        <div className="max-w-[160px] truncate" title={item.college || (item.allColleges ? 'All Colleges' : 'Unassigned')}>
+                          {item.college || (item.allColleges ? 'All Colleges' : 'Unassigned')}
+                        </div>
+                      </td>
+                      <td className="px-3.5 py-3.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                        {item.startDate ? new Date(item.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                      </td>
+                      <td className="px-3.5 py-3.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                        {item.expiryDate ? new Date(item.expiryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                      </td>
+                    </>
+                  )}
+
+                  {typeKey === 'courses' && (
+                    <>
+                      <td className="px-3.5 py-3.5 text-center whitespace-nowrap">
+                        <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
+                          {item.level || 'Beginner'}
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-3.5 text-center text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                        {item.courseType || item.deliveryType || 'Self-Paced'}
+                      </td>
+                      <td className="px-3.5 py-3.5 text-center text-slate-700 dark:text-slate-200 font-semibold whitespace-nowrap">
+                        {Array.isArray(item.topicIds) ? item.topicIds.length : (item.numTopics || 0)}
+                      </td>
+                    </>
+                  )}
+
+                  {typeKey === 'track-templates' && (
+                    <>
+                      <td className="px-3.5 py-3.5 text-center whitespace-nowrap">
+                        <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300">
+                          {item.trackType || 'General'}
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-3.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                      </td>
+                    </>
+                  )}
+
+                  {typeKey === 'roadmaps' && (
+                    <td className="px-3.5 py-3.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                    </td>
+                  )}
+
+                  {typeKey === 'projects' && (
+                    <>
+                      <td className="px-3.5 py-3.5 text-center whitespace-nowrap">
+                        <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300">
+                          {item.category || 'Standard'}
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-3.5 text-center text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                        {item.duration_days ? `${item.duration_days} Days` : '—'}
+                      </td>
+                    </>
+                  )}
+
+                  {typeKey === 'certificates' && (
+                    <td className="px-3.5 py-3.5 text-slate-600 dark:text-slate-300">
+                      <div className="max-w-[260px] truncate" title={item.description || 'Certificate template'}>
+                        {item.description || '—'}
+                      </div>
+                    </td>
+                  )}
+
+                  {/* Status Badge */}
+                  <td className="px-3.5 py-3.5 text-center whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${statusClass}`}>
+                      {item.status || 'Active'}
+                    </span>
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-3.5 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-center gap-1">
+                      {link && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigate(link)}
+                          title="View Details"
+                          className="p-1 rounded-lg text-black/40 hover:text-[#3C83F6] dark:text-white/40 dark:hover:text-[#7fb1ff] hover:bg-black/5 dark:hover:bg-white/5 transition-colors inline-block"
+                        >
+                          <FiEye className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => onDetach(item)}
+                        title="Detach from Program"
+                        className="p-1 rounded-lg text-black/40 hover:text-rose-600 dark:text-white/40 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors inline-block"
+                      >
+                        <FiTrash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 
 const ReportActivity = ({ label, activity, tone }) => (
   <div className="flex items-center justify-between gap-2 text-[10px] leading-tight">
@@ -1055,6 +1345,9 @@ export default function ProgramDetails() {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const dropdownOptionClass = isDarkMode ? 'bg-[#0f1f43] text-white' : 'bg-white text-slate-800';
+
   const [program, setProgram] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1062,6 +1355,7 @@ export default function ProgramDetails() {
     const requestedSection = searchParams.get('attachType');
     return SECTIONS.some((section) => section.key === requestedSection) ? requestedSection : 'overview';
   });
+  const currentSection = useMemo(() => SECTIONS.find((s) => s.key === activeTab) || SECTIONS[0], [activeTab]);
   const [studentsSubTab, setStudentsSubTab] = useState('students');
   const [studentSearch, setStudentSearch] = useState('');
   const [studentPeriodFilter, setStudentPeriodFilter] = useState('all');
@@ -1069,6 +1363,9 @@ export default function ProgramDetails() {
   const [studentAccessFilter, setStudentAccessFilter] = useState('all');
   const [studentPlanFilter, setStudentPlanFilter] = useState('all');
   const [studentSort, setStudentSort] = useState('latest');
+  const [sectionSearch, setSectionSearch] = useState('');
+  const [sectionStatusFilter, setSectionStatusFilter] = useState('all');
+  const [sectionSort, setSectionSort] = useState('default');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [performance, setPerformance] = useState(null);
   const [performanceLoading, setPerformanceLoading] = useState(false);
@@ -1286,6 +1583,52 @@ export default function ProgramDetails() {
     });
   }, [program, studentSearch, studentPeriodFilter, studentStatusFilter, studentAccessFilter, studentPlanFilter, studentSort]);
 
+  // Reset sectionSearch and filter on tab change
+  useEffect(() => {
+    setSectionSearch('');
+    setSectionStatusFilter('all');
+    setSectionSort('default');
+  }, [activeTab]);
+
+  const visibleAttachedItems = useMemo(() => {
+    if (!program || !currentSection || !currentSection.field) return [];
+    const items = Array.isArray(program[currentSection.field]) ? program[currentSection.field] : [];
+    const search = sectionSearch.trim().toLowerCase();
+
+    const filtered = items.filter((item) => {
+      const title = getItemTitle(item, currentSection.key).toLowerCase();
+      const subtitle = getItemSubtitle(item, currentSection.key).toLowerCase();
+      if (search && !title.includes(search) && !subtitle.includes(search)) {
+        return false;
+      }
+      if (sectionStatusFilter !== 'all') {
+        const itemStatus = String(item.status || 'Active').toLowerCase();
+        if (itemStatus !== sectionStatusFilter.toLowerCase()) return false;
+      }
+      return true;
+    });
+
+    return filtered.sort((a, b) => {
+      if (sectionSort === 'name-asc') {
+        return getItemTitle(a, currentSection.key).localeCompare(getItemTitle(b, currentSection.key));
+      }
+      if (sectionSort === 'name-desc') {
+        return getItemTitle(b, currentSection.key).localeCompare(getItemTitle(a, currentSection.key));
+      }
+      if (sectionSort === 'newest') {
+        const timeA = new Date(a.createdAt || a.startDate || 0).getTime();
+        const timeB = new Date(b.createdAt || b.startDate || 0).getTime();
+        return timeB - timeA;
+      }
+      if (sectionSort === 'oldest') {
+        const timeA = new Date(a.createdAt || a.startDate || 0).getTime();
+        const timeB = new Date(b.createdAt || b.startDate || 0).getTime();
+        return timeA - timeB;
+      }
+      return 0;
+    });
+  }, [program, currentSection, sectionSearch, sectionStatusFilter, sectionSort]);
+
   const fetchAvailableEntities = async (entityType, search = '') => {
     try {
       setAvailableLoading(true);
@@ -1458,37 +1801,6 @@ export default function ProgramDetails() {
     navigate(`${section.route}?returnTo=${returnUrl}&programId=${programId}&attachType=${section.key}`);
   };
 
-  const getItemTitle = (item, typeKey) => {
-    if (typeKey === 'students') return item.name || item.email || 'Unnamed Student';
-    if (typeKey === 'courses') return item.title || 'Untitled Course';
-    if (typeKey === 'roadmaps') return item.title || 'Untitled Roadmap';
-    if (typeKey === 'track-templates') return item.name || 'Untitled Track Template';
-    if (typeKey === 'certificates') return item.name || 'Untitled Certificate';
-    if (typeKey === 'projects') return item.title || 'Untitled Project';
-    return item.name || item.title || 'Untitled Item';
-  };
-
-  const getItemSubtitle = (item, typeKey) => {
-    if (typeKey === 'students') return `${item.email || ''} ${item.rollNo ? `(${item.rollNo})` : ''}`;
-    if (typeKey === 'batches') return `Start: ${item.startDate ? new Date(item.startDate).toLocaleDateString() : 'N/A'}`;
-    if (typeKey === 'courses') return `${item.level || ''} • ${item.courseType || ''}`;
-    if (typeKey === 'track-templates') return `Type: ${item.trackType || 'N/A'}`;
-    if (typeKey === 'projects') return `Category: ${item.category || 'N/A'} • ${item.duration_days ? `${item.duration_days} Days` : ''}`;
-    if (typeKey === 'certificates') return item.description || 'Certificate Template';
-    return item.description || '';
-  };
-
-  const getItemLink = (item, typeKey) => {
-    if (typeKey === 'batches') return `/batches/${item._id}`;
-    if (typeKey === 'students') return `/students`;
-    if (typeKey === 'courses') return `/admin/courses`;
-    if (typeKey === 'roadmaps') return `/admin/roadmaps`;
-    if (typeKey === 'track-templates') return `/track-templates/${item._id}`;
-    if (typeKey === 'certificates') return `/certificates`;
-    if (typeKey === 'projects') return `/admin/projects/edit/${item._id}`;
-    return null;
-  };
-
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -1522,7 +1834,6 @@ export default function ProgramDetails() {
     );
   }
 
-  const currentSection = SECTIONS.find((s) => s.key === activeTab) || SECTIONS[0];
   const CurrentSectionIcon = currentSection.icon;
   const attachedItems = program[currentSection.field] || [];
   const programStats = program.programStats || {};
@@ -1574,7 +1885,7 @@ export default function ProgramDetails() {
       {/* Background Gradient — identical to Programs / Question Bank */}
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
 
-      <Sidebar />
+      <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
       <StudentReportModal
         studentId={selectedStudent?._id || selectedStudent?.id}
@@ -1911,8 +2222,10 @@ export default function ProgramDetails() {
       )}
 
       {/* ── Main Content ────────────────────────────────────────────────────── */}
-      <main className="flex-1 h-screen z-10 lg:ml-64 pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden">
-        <div className="max-w-[1400px] mx-auto space-y-4">
+      <main
+        className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-24 pb-6 px-3 sm:px-5 lg:px-8 overflow-y-auto overflow-x-hidden flex flex-col justify-between`}
+      >
+        <div className="max-w-[1600px] w-full mx-auto space-y-4">
 
           {/* Toast */}
           {toastMessage && (
@@ -1936,49 +2249,41 @@ export default function ProgramDetails() {
             Back to Programs
           </button>
 
-          {/* ── Compact Program Header ─────────────────────────────────────── */}
-          <div className="rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl px-5 py-4 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${statusBadgeClass(program.status)}`}>
-                    {program.status}
-                  </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black/40 dark:text-white/40">
-                    Program
-                  </span>
-                </div>
-                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-snug truncate">
-                  {program.name}
-                </h1>
-              </div>
-              <div className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
-                {getProgramType(program.programType)} · {program.duration || '—'} · {programPrice} · {totalEnrolled} Students
-              </div>
+          {/* ── Header ─────────────────────────────────────── */}
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <h1 className="admin-page-title text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                {program.name}
+              </h1>
+              <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${statusBadgeClass(program.status)}`}>
+                {program.status}
+              </span>
+            </div>
+            <div className="flex flex-col sm:items-end text-xs font-semibold text-slate-500 dark:text-slate-400 space-y-0.5">
+              <div><span className="text-black/40 dark:text-white/40 font-normal">Type: </span>{getProgramType(program.programType)}</div>
+              <div><span className="text-black/40 dark:text-white/40 font-normal">Duration: </span>{program.duration || '—'}</div>
+              <div><span className="text-black/40 dark:text-white/40 font-normal">Fee: </span>{programPrice}</div>
             </div>
           </div>
 
-          {/* ── Program Monitoring Stats ───────────────────────────────────── */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          {/* ── Dynamic Metric Cards (Compact) ───────────────────────────────────── */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {[
-              { label: 'Total Enrolled', value: totalEnrolled, icon: FiUsers },
-              { label: 'Current Enrolled', value: programStats.currentEnrolled ?? 0, icon: FiClock },
-              { label: 'Active Today', value: programStats.activeToday ?? 0, icon: FiActivity },
-              { label: 'Completed', value: programStats.completed ?? 0, icon: FiCheckCircle },
-              { label: 'Accuracy', value: programStats.accuracy === null || programStats.accuracy === undefined ? '—' : `${programStats.accuracy}%`, icon: FiBarChart2 },
-            ].map((stat) => (
-              <div key={stat.label} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/75 dark:bg-[#0f1f43] px-4 py-3 shadow-[0_3px_10px_rgba(15,23,42,0.03)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.12)]">
-                <p className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white">{stat.value}</p>
-                <div className="mt-1 flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45">{stat.label}</span>
-                  {createElement(stat.icon, { className: 'w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]' })}
-                </div>
+              { label: 'Total Enrolled', count: totalEnrolled, color: 'text-[#3C83F6] dark:text-blue-400' },
+              { label: 'Current Enrolled', count: programStats.currentEnrolled ?? 0, color: 'text-emerald-600 dark:text-emerald-400' },
+              { label: 'Active Today', count: programStats.activeToday ?? 0, color: 'text-purple-600 dark:text-purple-400' },
+              { label: 'Completed', count: programStats.completed ?? 0, color: 'text-indigo-600 dark:text-indigo-400' },
+              { label: 'Accuracy', count: programStats.accuracy === null || programStats.accuracy === undefined ? '—' : `${programStats.accuracy}%`, color: 'text-[#3C83F6] dark:text-blue-400' },
+            ].map(({ label, count, color }) => (
+              <div key={label} className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-3 py-2 flex flex-col items-start text-left shadow-sm">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-black/40 dark:text-white/40">{label}</p>
+                <p className={`text-base sm:text-xl font-semibold tracking-tight mt-0.5 ${color}`}>{count}</p>
               </div>
             ))}
           </div>
 
-          {/* ── Section Navigation Tabs ──────────────────────────────────────── */}
-          <div className="-mt-1 flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+          {/* ── Navigation Tabs ──────────────────────────────────────── */}
+          <div className="flex border-b border-black/10 dark:border-white/10 gap-1 overflow-x-auto">
             {SECTIONS.map((sec) => {
               const Icon = sec.icon;
               const count = sec.key === 'blueprints'
@@ -1993,19 +2298,19 @@ export default function ProgramDetails() {
                 <button
                   key={sec.key}
                   onClick={() => setActiveTab(sec.key)}
-                  className={`flex items-center gap-1.5 h-8 px-3 rounded-xl font-bold text-[11px] transition-all whitespace-nowrap shrink-0 ${
+                  className={`px-3 py-2 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${
                     isActive
-                      ? 'bg-[#3C83F6] dark:bg-[#bceaff] text-white dark:text-[#06224d] shadow-sm'
-                      : 'border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-white/90 dark:hover:bg-white/10'
+                      ? 'border-[#3C83F6] text-[#3C83F6] dark:text-[#7fb1ff]'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
-                  <Icon className="w-3 h-3" />
+                  <Icon className="w-3.5 h-3.5" />
                   <span>{sec.label}</span>
                   {count !== null && (
-                    <span className={`px-1.5 py-0 rounded-full text-[10px] font-bold ${
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
                       isActive
-                        ? 'bg-white/25 dark:bg-black/20 text-white dark:text-[#06224d]'
-                        : 'bg-black/8 dark:bg-white/10 text-slate-600 dark:text-slate-300'
+                        ? 'bg-[#3C83F6]/15 text-[#3C83F6] dark:bg-blue-400/20 dark:text-[#7fb1ff]'
+                        : 'bg-black/5 dark:bg-white/10 text-slate-500 dark:text-slate-400'
                     }`}>
                       {count}
                     </span>
@@ -2022,7 +2327,7 @@ export default function ProgramDetails() {
               <div>
                 <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                   {currentSection.key === 'overview'
-                    ? 'Program Overview & User Page Controls'
+                    ? 'Program Overview'
                     : currentSection.key === 'students'
                     ? 'Students'
                     : currentSection.key === 'blueprints'
@@ -2036,11 +2341,6 @@ export default function ProgramDetails() {
                     </span>
                   )}
                 </h2>
-                {currentSection.key === 'overview' && (
-                  <p className="text-xs text-black/45 dark:text-white/45 mt-0.5">
-                    Manage all program information displayed on the User-side Program Detail page (Curriculum, Schedule, and Outcomes).
-                  </p>
-                )}
                 {currentSection.key !== 'overview' && currentSection.key !== 'students' && currentSection.key !== 'blueprints' && (
                   <p className="text-xs text-black/45 dark:text-white/45 mt-0.5">
                     {currentSection.key === 'analytics'
@@ -2055,29 +2355,10 @@ export default function ProgramDetails() {
                 )}
               </div>
 
-              {currentSection.key === 'overview' ? (
-                <div className="flex items-center gap-2">
-                  <a
-                    href={`/learn/programs/${program?._id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="h-9 px-3.5 rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 hover:bg-white/90 dark:hover:bg-white/10 transition-colors"
-                  >
-                    <FiEye className="w-3.5 h-3.5" />
-                    Preview User Page
-                  </a>
-                  <button
-                    onClick={() => setActiveTab('courses')}
-                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white px-4 text-xs font-bold transition-colors shadow-sm"
-                  >
-                    <FiBookOpen className="w-3.5 h-3.5" />
-                    Manage Courses
-                  </button>
-                </div>
-              ) : currentSection.key === 'students' ? (
+              {currentSection.key === 'overview' ? null : currentSection.key === 'students' ? (
                 <button
                   onClick={() => handleOpenAttachModal('students')}
-                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white px-4 text-xs font-bold transition-colors shadow-sm"
+                  className="h-8 px-3.5 rounded-xl bg-[#3C83F6] text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-[#2f73e0] transition-colors whitespace-nowrap"
                 >
                   <FiPlus className="w-3.5 h-3.5" />
                   Add Student
@@ -2086,14 +2367,14 @@ export default function ProgramDetails() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleCreateNewResource(currentSection)}
-                    className="h-9 px-3.5 rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 hover:bg-white/90 dark:hover:bg-white/10 transition-colors"
+                    className="h-8 px-3.5 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors whitespace-nowrap"
                   >
                     <FiExternalLink className="w-3.5 h-3.5" />
                     Create New
                   </button>
                   <button
                     onClick={() => handleOpenAttachModal(currentSection.key)}
-                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white px-4 text-xs font-bold transition-colors shadow-sm"
+                    className="h-8 px-3.5 rounded-xl bg-[#3C83F6] text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-[#2f73e0] transition-colors whitespace-nowrap"
                   >
                     <FiPlus className="w-3.5 h-3.5" />
                     Attach Existing
@@ -2139,54 +2420,67 @@ export default function ProgramDetails() {
                   ))}
                 </div>
 
-                <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#0f1f43]/80 p-3 shadow-[0_3px_10px_rgba(15,23,42,0.03)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.1)]">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="relative min-w-[220px] flex-1">
-                      <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/40 dark:text-white/40 pointer-events-none" />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-1 w-full">
+                    {/* Search Input */}
+                    <div className="relative flex-1 min-w-0">
+                      <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
                       <input
                         type="search"
                         value={studentSearch}
                         onChange={(event) => setStudentSearch(event.target.value)}
                         placeholder="Search students..."
                         aria-label="Search students"
-                        className="w-full h-9 pl-9 pr-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                        className="w-full h-8 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-8 pr-3 text-xs text-black/80 dark:text-white placeholder:text-black/35 outline-none"
                       />
                     </div>
-                    <select
-                      value={studentSort}
-                      onChange={(event) => setStudentSort(event.target.value)}
-                      aria-label="Sort students"
-                      className="h-9 min-w-[155px] px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
-                    >
-                      <option value="latest">Latest Joined</option>
-                      <option value="oldest">Oldest Joined</option>
-                      <option value="name-asc">Name A–Z</option>
-                      <option value="name-desc">Name Z–A</option>
-                      <option value="progress-high">Progress Highest</option>
-                      <option value="progress-low">Progress Lowest</option>
-                    </select>
-                    <select
-                      value={studentPeriodFilter}
-                      onChange={(event) => setStudentPeriodFilter(event.target.value)}
-                      aria-label="Student period filter"
-                      className="h-9 min-w-[125px] px-3 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
-                    >
-                      <option value="active">Current Active</option>
-                      <option value="current">Current Month</option>
-                      <option value="all">All Time</option>
-                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                    {/* Sort Dropdown */}
+                    <div className="relative min-w-[155px]">
+                      <select
+                        value={studentSort}
+                        onChange={(event) => setStudentSort(event.target.value)}
+                        aria-label="Sort students"
+                        className="w-full h-8 px-2.5 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-xs font-semibold text-slate-800 dark:text-white outline-none cursor-pointer"
+                      >
+                        <option className={dropdownOptionClass} value="latest">Latest Joined</option>
+                        <option className={dropdownOptionClass} value="oldest">Oldest Joined</option>
+                        <option className={dropdownOptionClass} value="name-asc">Name A–Z</option>
+                        <option className={dropdownOptionClass} value="name-desc">Name Z–A</option>
+                        <option className={dropdownOptionClass} value="progress-high">Progress Highest</option>
+                        <option className={dropdownOptionClass} value="progress-low">Progress Lowest</option>
+                      </select>
+                    </div>
+
+                    {/* Period Filter Dropdown */}
+                    <div className="relative min-w-[125px]">
+                      <select
+                        value={studentPeriodFilter}
+                        onChange={(event) => setStudentPeriodFilter(event.target.value)}
+                        aria-label="Student period filter"
+                        className="w-full h-8 px-2.5 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-xs font-semibold text-slate-800 dark:text-white outline-none cursor-pointer"
+                      >
+                        <option className={dropdownOptionClass} value="active">Current Active</option>
+                        <option className={dropdownOptionClass} value="current">Current Month</option>
+                        <option className={dropdownOptionClass} value="all">All Time</option>
+                      </select>
+                    </div>
+
+                    {/* Filter Button */}
                     <div className="relative">
                       <button
                         type="button"
                         aria-expanded={filtersOpen}
                         aria-haspopup="true"
                         onClick={() => setFiltersOpen((open) => !open)}
-                        className="inline-flex h-9 min-w-[105px] items-center justify-center gap-1.5 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none hover:bg-white dark:hover:bg-white/10 focus:ring-2 focus:ring-[#3C83F6]/30"
+                        className="inline-flex h-8 min-w-[105px] items-center justify-center gap-1.5 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] px-3 text-xs font-semibold text-slate-800 dark:text-white outline-none hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                       >
                         <FiFilter className="w-3.5 h-3.5" />
                         Filter
                         {activeStudentFilterCount > 0 && (
-                          <span className="inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-[#3C83F6] px-1 text-[10px] font-bold text-white dark:bg-[#bceaff] dark:text-[#06224d]">
+                          <span className="inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-[#3C83F6] px-1 text-[10px] font-bold text-white">
                             {activeStudentFilterCount}
                           </span>
                         )}
@@ -2283,54 +2577,71 @@ export default function ProgramDetails() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {attachedItems.map((item) => {
-                  const link = getItemLink(item, currentSection.key);
-                  const statusClass = statusBadgeClass(item.status);
-                  return (
-                    <article
-                      key={item._id}
-                      className="rounded-xl overflow-hidden border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-200"
-                    >
-                      {/* Tinted top */}
-                      <div className="px-4 pt-4 pb-3 bg-[#d8e6ef] dark:bg-[#24384e] border-b border-black/10 dark:border-white/10">
-                        {item.status && (
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase mb-1.5 ${statusClass}`}>
-                            {item.status}
-                          </span>
-                        )}
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-1">
-                          {getItemTitle(item, currentSection.key)}
-                        </h4>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                          {getItemSubtitle(item, currentSection.key)}
-                        </p>
-                      </div>
+              <div className="space-y-3">
+                {/* Search & Filter Toolbar for attached entities */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-1 w-full">
+                    {/* Search Input */}
+                    <div className="relative flex-1 min-w-0">
+                      <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
+                      <input
+                        type="search"
+                        value={sectionSearch}
+                        onChange={(event) => setSectionSearch(event.target.value)}
+                        placeholder={`Search attached ${currentSection.label.toLowerCase()}...`}
+                        aria-label={`Search ${currentSection.label.toLowerCase()}`}
+                        className="w-full h-8 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-8 pr-3 text-xs text-black/80 dark:text-white placeholder:text-black/35 outline-none"
+                      />
+                    </div>
+                  </div>
 
-                      {/* Bottom actions */}
-                      <div className="px-4 py-3 flex items-center justify-between gap-2 bg-white/70 dark:bg-transparent">
-                        {link ? (
-                          <button
-                            onClick={() => navigate(link)}
-                            className="text-xs font-semibold text-[#3C83F6] dark:text-[#bceaff] hover:underline flex items-center gap-1"
-                          >
-                            <FiEye className="w-3.5 h-3.5" />
-                            View Details
-                          </button>
-                        ) : (
-                          <span />
-                        )}
-                        <button
-                          onClick={() => setDetachItem({ typeKey: currentSection.key, item })}
-                          title="Detach from Program"
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                        >
-                          <FiTrash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </article>
-                  );
-                })}
+                  <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                    {/* Status Dropdown */}
+                    <div className="relative min-w-[125px]">
+                      <select
+                        value={sectionStatusFilter}
+                        onChange={(event) => setSectionStatusFilter(event.target.value)}
+                        aria-label="Filter by status"
+                        className="w-full h-8 px-2.5 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-xs font-semibold text-slate-800 dark:text-white outline-none cursor-pointer"
+                      >
+                        <option className={dropdownOptionClass} value="all">All Status</option>
+                        <option className={dropdownOptionClass} value="active">Active</option>
+                        <option className={dropdownOptionClass} value="draft">Draft</option>
+                        <option className={dropdownOptionClass} value="completed">Completed</option>
+                        <option className={dropdownOptionClass} value="archived">Archived</option>
+                      </select>
+                    </div>
+
+                    {/* Sort Dropdown */}
+                    <div className="relative min-w-[145px]">
+                      <select
+                        value={sectionSort}
+                        onChange={(event) => setSectionSort(event.target.value)}
+                        aria-label="Sort items"
+                        className="w-full h-8 px-2.5 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-xs font-semibold text-slate-800 dark:text-white outline-none cursor-pointer"
+                      >
+                        <option className={dropdownOptionClass} value="default">Default Order</option>
+                        <option className={dropdownOptionClass} value="name-asc">Name A–Z</option>
+                        <option className={dropdownOptionClass} value="name-desc">Name Z–A</option>
+                        <option className={dropdownOptionClass} value="newest">Newest First</option>
+                        <option className={dropdownOptionClass} value="oldest">Oldest First</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table View */}
+                <AttachedEntitiesTable
+                  items={visibleAttachedItems}
+                  typeKey={currentSection.key}
+                  sectionLabel={currentSection.label}
+                  onNavigate={navigate}
+                  onDetach={(item) => setDetachItem({ typeKey: currentSection.key, item })}
+                  getItemTitle={getItemTitle}
+                  getItemSubtitle={getItemSubtitle}
+                  getItemLink={getItemLink}
+                  statusBadgeClass={statusBadgeClass}
+                />
               </div>
             )}
           </section>

@@ -801,8 +801,8 @@ export default function Programs() {
   const [selectedType, setSelectedType] = useState(searchParams.get('programType') || '');
   const [selectedStatus, setSelectedStatus] = useState(searchParams.get('status') || '');
   const [selectedMonth] = useState(searchParams.get('month') || '');
-  const [sortBy] = useState('createdAt');
-  const [sortOrder] = useState('desc');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
   const [activeTab, setActiveTab] = useState('list'); // 'list' | 'overview'
   const [selectedOverviewProgramId, setSelectedOverviewProgramId] = useState('');
 
@@ -2190,43 +2190,10 @@ export default function Programs() {
 
               <button
                 onClick={handleOpenCreateModal}
-                className="dashboard-primary-btn h-9 sm:h-10 px-4 sm:px-5 text-xs sm:text-sm font-semibold shrink-0 w-full sm:w-auto flex items-center justify-center gap-2"
+                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white px-4 text-xs font-bold transition-colors shadow-sm shrink-0 w-full sm:w-auto"
               >
-                <FiPlus className="w-4 h-4" />
+                <FiPlus className="w-3.5 h-3.5" />
                 Add Program
-              </button>
-            </div>
-
-            {/* Programs Page Navigation Tabs: List vs Overview */}
-            <div className="flex items-center gap-2 border-b border-black/10 dark:border-white/10 pb-2">
-              <button
-                type="button"
-                onClick={() => setActiveTab('list')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                  activeTab === 'list'
-                    ? 'bg-[#3C83F6] text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5'
-                }`}
-              >
-                <FiGrid className="w-4 h-4" />
-                Programs List ({pagination.total || programs.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('overview');
-                  if (!selectedOverviewProgramId && programs.length > 0) {
-                    setSelectedOverviewProgramId(programs[0]._id);
-                  }
-                }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                  activeTab === 'overview'
-                    ? 'bg-[#3C83F6] text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5'
-                }`}
-              >
-                <FiInfo className="w-4 h-4" />
-                Overview & Controls
               </button>
             </div>
 
@@ -2278,62 +2245,78 @@ export default function Programs() {
             </div>
           </div>
 
-          {activeTab === 'overview' ? (
-            /* Overview Tab: Program Selection and Complete Details Display */
-            <ProgramOverviewView
-              programs={programs}
-              selectedProgramId={selectedOverviewProgramId}
-              onSelectProgram={(id) => setSelectedOverviewProgramId(id)}
-              onProgramUpdated={fetchPrograms}
-              onOpenEditModal={(p) => handleOpenEditModal(p)}
-              navigate={navigate}
-            />
-          ) : (
-            /* Program Listing Section */
+            {/* Program Listing Section */}
             <section className="space-y-4">
             {/* Toolbar: Program Type Filter + Status Filter Pills + Search Bar */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full scrollbar-none">
-                {/* Program Type Pills */}
-                <div className="flex items-center rounded-lg border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 p-0.5 text-xs shrink-0">
-                  {["All", ...PROGRAM_TYPES].map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => {
-                        setSelectedType(type === "All" ? "" : type);
-                        setPagination((prev) => ({ ...prev, page: 1 }));
-                      }}
-                      className={`px-2.5 py-1.5 rounded-md transition font-semibold whitespace-nowrap ${
-                        (selectedType === "" && type === "All") || selectedType === type
-                          ? "bg-[#3C83F6] text-white shadow-xs"
-                          : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Program Type Dropdown */}
+                <div className="relative">
+                  <select
+                    value={selectedType === "" ? "All" : selectedType}
+                    onChange={(e) => {
+                      setSelectedType(e.target.value === "All" ? "" : e.target.value);
+                      setPagination((prev) => ({ ...prev, page: 1 }));
+                    }}
+                    className="appearance-none h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-3 pr-8 text-xs font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 cursor-pointer shadow-xs"
+                  >
+                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="All">All Types</option>
+                    {PROGRAM_TYPES.map((type) => (
+                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
                 </div>
 
-                {/* Status Pills */}
-                <div className="flex items-center rounded-lg border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 p-0.5 text-xs shrink-0">
-                  {["All", "Published", "Draft", "Archived"].map((st) => (
-                    <button
-                      key={st}
-                      type="button"
-                      onClick={() => {
-                        setSelectedStatus(st === "All" ? "" : st);
-                        setPagination((prev) => ({ ...prev, page: 1 }));
-                      }}
-                      className={`px-2.5 py-1.5 rounded-md transition font-semibold whitespace-nowrap ${
-                        (selectedStatus === "" && st === "All") || selectedStatus === st
-                          ? "bg-[#3C83F6] text-white shadow-xs"
-                          : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
-                      }`}
-                    >
-                      {st}
-                    </button>
-                  ))}
+                {/* Status Dropdown */}
+                <div className="relative">
+                  <select
+                    value={selectedStatus === "" ? "All" : selectedStatus}
+                    onChange={(e) => {
+                      setSelectedStatus(e.target.value === "All" ? "" : e.target.value);
+                      setPagination((prev) => ({ ...prev, page: 1 }));
+                    }}
+                    className="appearance-none h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-3 pr-8 text-xs font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 cursor-pointer shadow-xs"
+                  >
+                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="All">All Statuses</option>
+                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Published">Published</option>
+                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Draft">Draft</option>
+                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Archived">Archived</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                </div>
+
+                {/* Sort Dropdown */}
+                <div className="relative">
+                  <select
+                    value={`${sortBy}-${sortOrder}`}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'newest') {
+                        setSortBy('createdAt');
+                        setSortOrder('desc');
+                      } else if (val === 'oldest') {
+                        setSortBy('createdAt');
+                        setSortOrder('asc');
+                      } else if (val === 'name-asc') {
+                        setSortBy('name');
+                        setSortOrder('asc');
+                      } else if (val === 'name-desc') {
+                        setSortBy('name');
+                        setSortOrder('desc');
+                      }
+                      setPagination((prev) => ({ ...prev, page: 1 }));
+                    }}
+                    className="appearance-none h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-3 pr-8 text-xs font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 cursor-pointer shadow-xs"
+                  >
+                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="newest">Newest First</option>
+                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="oldest">Oldest First</option>
+                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="name-asc">Name: A to Z</option>
+                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="name-desc">Name: Z to A</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
                 </div>
               </div>
 
@@ -2463,7 +2446,6 @@ export default function Programs() {
               </>
             )}
           </section>
-          )}
 
           {/* Floating Bulk Action Bar — identical to Question Bank */}
           {selectedProgramIds.length > 0 && (
