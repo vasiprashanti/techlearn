@@ -21,7 +21,6 @@ const menuGroups = [
     items: [
       { id: "programs", title: "Programs", icon: <FiFolder className="w-4 h-4" /> },
       { id: "question-bank", title: "Question Bank", icon: <FiCode className="w-4 h-4" /> },
-      { id: "admin/codingroundupload", title: "Coding Rounds", icon: <FiTerminal className="w-4 h-4" /> },
       { id: "track-templates", title: "Track Templates", icon: <FiGitCommit className="w-4 h-4" /> },
       { id: "admin/roadmaps", title: "Roadmaps", icon: <FiFileText className="w-4 h-4" /> },
       { id: "admin/courses", title: "Courses", icon: <FiBookOpen className="w-4 h-4" /> },
@@ -36,6 +35,7 @@ const menuGroups = [
       { id: "batches", title: "Batches", icon: <FiLayers className="w-4 h-4" /> },
       { id: "students", title: "Students", icon: <FiUsers className="w-4 h-4" /> },
       { id: "colleges", title: "Colleges", icon: <FiHome className="w-4 h-4" /> },
+      { id: "admin/hiring", title: "Companies", icon: <FiBriefcase className="w-4 h-4" /> },
     ]
   },
   {
