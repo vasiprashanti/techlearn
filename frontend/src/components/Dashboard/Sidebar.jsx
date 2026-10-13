@@ -16,13 +16,13 @@ const menuGroups = [
   {
     title: "MAIN",
     items: [
-      { id: "dashboard", title: "Dashboard", icon: <LayoutDashboard className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
-      { id: "learn", title: "Learn", icon: <BookOpen className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
-      { id: "jobs", title: "Hiring", icon: <BriefcaseBusiness className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
-      { id: "roadmaps", title: "Roadmaps", icon: <Map className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
-      { id: "dashboard/leaderboard", title: "Leaderboard", icon: <Award className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
-      { id: "dashboard/performance", title: "Performance", icon: <BarChart3 className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
-      { id: "dashboard/profile", title: "Profile", icon: <User className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "dashboard", title: "Dashboard", icon: <LayoutDashboard className="w-4 h-4 md:w-[17px] md:h-[17px]" /> },
+      { id: "learn", title: "Learn", icon: <BookOpen className="w-4 h-4 md:w-[17px] md:h-[17px]" /> },
+      { id: "jobs", title: "Hiring", icon: <BriefcaseBusiness className="w-4 h-4 md:w-[17px] md:h-[17px]" /> },
+      { id: "roadmaps", title: "Roadmaps", icon: <Map className="w-4 h-4 md:w-[17px] md:h-[17px]" /> },
+      { id: "dashboard/leaderboard", title: "Leaderboard", icon: <Award className="w-4 h-4 md:w-[17px] md:h-[17px]" /> },
+      { id: "dashboard/performance", title: "Performance", icon: <BarChart3 className="w-4 h-4 md:w-[17px] md:h-[17px]" /> },
+      { id: "dashboard/profile", title: "Profile", icon: <User className="w-4 h-4 md:w-[17px] md:h-[17px]" /> },
     ]
   }
 ];
@@ -59,12 +59,15 @@ const Sidebar = () => {
   useEffect(() => {
     if (!isDashboardRoute) {
       document.body.classList.add('dashboard-sidebar-disabled');
+      document.body.classList.remove('has-app-sidebar');
     } else {
       document.body.classList.remove('dashboard-sidebar-disabled');
+      document.body.classList.add('has-app-sidebar');
     }
 
     return () => {
       document.body.classList.remove('dashboard-sidebar-disabled');
+      document.body.classList.remove('has-app-sidebar');
     };
   }, [isDashboardRoute]);
 
@@ -75,7 +78,7 @@ const Sidebar = () => {
   };
 
   const renderNavLinks = (onClickAction = () => {}) => (
-    <div className="flex flex-col items-center gap-3.5 py-4 w-full">
+    <div className="flex flex-col items-center gap-2 py-3 w-full">
       {menuGroups[0].items.map((item) => (
         <NavLink
           key={item.id}
@@ -87,7 +90,7 @@ const Sidebar = () => {
               ? ["/roadmaps", "/resources/roadmaps", "/dashboard/roadmap"].some((p) => location.pathname.startsWith(p))
               : isActive;
 
-            return `flex flex-col items-center justify-center gap-1.5 w-[3.65rem] h-[3.65rem] md:w-[4.15rem] md:h-[4.15rem] rounded-[1.1rem] transition-all duration-300 ease-out select-none
+            return `flex flex-col items-center justify-center gap-1 w-[3.35rem] h-[3.35rem] md:w-[3.65rem] md:h-[3.65rem] rounded-[0.95rem] transition-all duration-300 ease-out select-none
             ${
               isCurrent
                 ? "bg-[#b2e96a] text-[#0a1128] font-bold shadow-md shadow-[#b2e96a]/25 border border-[#b2e96a]/50 dark:bg-[#b2e96a] dark:text-[#0a1128] dark:font-bold dark:shadow-md dark:shadow-[#b2e96a]/25 dark:border-[#b2e96a]/50"
@@ -96,7 +99,7 @@ const Sidebar = () => {
           }}
         >
           <div className="shrink-0">{item.icon}</div>
-          <span className="text-[8px] md:text-[9.5px] font-semibold tracking-wide text-center max-w-[80px] truncate leading-none">
+          <span className="text-[7.5px] md:text-[8.5px] font-semibold tracking-tight text-center max-w-[70px] truncate leading-none">
             {item.title}
           </span>
         </NavLink>

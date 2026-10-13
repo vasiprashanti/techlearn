@@ -98,9 +98,9 @@
 ========================= */
 
 .learn-page-container .academy-header {
-  text-align: center;
-  max-width: 850px;
-  margin: 0 auto;
+  text-align: left;
+  max-width: 100%;
+  margin: 0 0 28px 0;
 }
 
 .learn-page-container .eyebrow {
@@ -109,15 +109,15 @@
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--heading);
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 /* EXACT FIXED GRADIENT IN BOTH MODES FROM learn.html */
 .learn-page-container .academy-title {
   font-family: "Press Start 2P", monospace;
-  font-size: clamp(28px, 5vw, 52px);
-  line-height: 1.1;
-  letter-spacing: -2px;
+  font-size: clamp(20px, 3.5vw, 32px);
+  line-height: 1.25;
+  letter-spacing: -1px;
   background: linear-gradient(
     90deg,
     #02107a,
@@ -126,15 +126,27 @@
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
+}
+
+.learn-page-container.dark-mode .academy-title {
+  background: linear-gradient(
+    90deg,
+    #60a5fa,
+    #3b82f6 50%,
+    #a78bfa 100%
+  ) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
 }
 
 .learn-page-container .academy-subtitle {
-  max-width: 650px;
-  margin: 0 auto;
-  font-size: 16px;
-  line-height: 1.7;
-  color: var(--heading);
+  max-width: 700px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--secondary);
 }
 
 /* =========================
@@ -142,8 +154,9 @@
 ========================= */
 
 .learn-page-container .search-wrapper {
-  max-width: 650px;
-  margin: 42px auto 0;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   position: relative;
 }
 
@@ -192,7 +205,7 @@
   display: flex;
   font-family: "Press Start 2P", monospace;
   width: fit-content;
-  margin: 60px auto 0;
+  margin: 36px auto 0;
   padding: 4px;
   background: var(--switch-bg);
   border: 1px solid var(--switch-border);
@@ -1011,11 +1024,68 @@
    SEARCH & FILTER BAR ROW
 ========================= */
 .learn-page-container .search-row-container {
-  max-width: 720px;
-  margin: 40px auto 0;
+  width: 100%;
+  max-width: 100%;
+  margin: 32px 0 0 0;
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+/* ==================================================
+   YOUR SKILLS / ALL SKILLS TOGGLE ROW (LOGGED IN)
+================================================== */
+.learn-page-container .learn-row-skills-toggle {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 24px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+}
+
+.learn-page-container .skills-category-toggle {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.learn-page-container .toggle-tab-btn {
+  position: relative;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 8px 4px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s ease;
+  white-space: nowrap;
+}
+
+.learn-page-container .toggle-tab-btn:hover {
+  color: var(--page-text);
+}
+
+.learn-page-container .toggle-tab-btn.active {
+  color: var(--heading);
+}
+
+.learn-page-container .toggle-tab-btn.active::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #3c83f6;
+  border-radius: 9999px;
+}
+
+.learn-page-container.light-mode .toggle-tab-btn.active::after {
+  background: #00113b;
 }
 
 .learn-page-container .search-row-container .search-wrapper {

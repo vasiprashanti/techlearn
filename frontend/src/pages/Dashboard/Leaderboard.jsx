@@ -172,21 +172,14 @@ const Leaderboard = () => {
         }`}
       >
         <div className="w-full max-w-[1400px] space-y-4 md:space-y-5">
-          <MotionDiv
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.65 }}
-            className="mx-auto max-w-4xl pt-2 text-center md:pt-4"
-          >
-            <h1 className="font-press-start leading-normal">
-              <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
-                LEADERBOARD
-              </span>
+          <header className="user-page-header">
+            <h1 className="user-page-title">
+              LEADERBOARD
             </h1>
-            <p className="mt-3 text-sm text-black/55 dark:text-white/55">
+            <p className="user-page-subtitle">
               {leaderboardData.personalized ? "A benchmark based on your learning direction." : "Global all-time benchmark."}
             </p>
-          </MotionDiv>
+          </header>
 
           <div className="grid gap-4 pt-1 lg:grid-cols-2 lg:items-stretch">
             <MotionDiv

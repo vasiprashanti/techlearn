@@ -264,17 +264,17 @@ function RoadmapRow({ roadmap, isDarkMode, onOpen }) {
   }
 
   return (
-    <div className={`grid min-h-[128px] grid-cols-1 items-start sm:items-center gap-4 sm:gap-5 rounded-[15px] border p-4 sm:px-[26px] sm:py-[22px] transition-all duration-200 lg:grid-cols-[366px_minmax(0,1fr)_250px_172px] lg:gap-0 ${
+    <div className={`grid min-h-[128px] grid-cols-1 items-start sm:items-center gap-4 sm:gap-5 rounded-[16px] border-0 p-4 sm:px-[26px] sm:py-[22px] transition-all duration-200 lg:grid-cols-[366px_minmax(0,1fr)_250px_172px] lg:gap-0 ${
       isDarkMode
-        ? "border-white/10 bg-white/5 hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/10"
-        : "border-[#c5dfe6] bg-[#d9eef3] shadow-sm hover:-translate-y-[1px] hover:border-[#00113b]/20 hover:bg-[#e0f2f5] hover:shadow-md"
+        ? "bg-[#0a1238] text-slate-100 hover:bg-[#101b47] hover:-translate-y-[2px] shadow-sm hover:shadow-md"
+        : "bg-white/80 text-[#00113b] hover:bg-white hover:-translate-y-[2px] shadow-sm hover:shadow-md"
     }`}
     >
       <div className="min-w-0 pr-2">
         <div className={`mb-1 sm:mb-[7px] text-base sm:text-[17px] font-bold leading-snug sm:leading-[1.35] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
           {title}
         </div>
-        <div className={`text-xs sm:text-[12px] ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
+        <div className={`text-xs sm:text-[12px] ${isDarkMode ? "text-[#8d9bc4]" : "text-[#5b6b8a]"}`}>
           {getRoadmapCategory(roadmap)}
         </div>
       </div>
@@ -302,7 +302,7 @@ function RoadmapRow({ roadmap, isDarkMode, onOpen }) {
         <div className={`text-base sm:text-[18px] font-bold leading-[1.4] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
           {formatRoadmapSalary(roadmap)}
         </div>
-        <span className={`text-[10px] font-medium ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+        <span className={`text-[10px] font-medium ${isDarkMode ? "text-[#8d9bc4]" : "text-[#5b6b8a]"}`}>
           Estimated Salary
         </span>
       </div>
@@ -311,7 +311,7 @@ function RoadmapRow({ roadmap, isDarkMode, onOpen }) {
         <button
           type="button"
           onClick={() => onOpen(roadmap)}
-          className="inline-flex min-h-[40px] sm:min-h-[45px] w-full items-center justify-center rounded-[8px] border-none bg-[#b2e96a] px-[10px] py-[11px] sm:py-[13px] font-['Press_Start_2P'] text-[7px] sm:text-[8px] font-bold leading-[1.5] text-[#0a1128] transition-all hover:-translate-y-[2px] hover:shadow-[0_5px_0_rgba(0,17,59,0.15)] active:translate-y-0 active:shadow-none"
+          className="inline-flex min-h-[40px] sm:min-h-[45px] w-full items-center justify-center rounded-[10px] border-none bg-[#89c638] px-[10px] py-[11px] sm:py-[13px] font-['Press_Start_2P'] text-[7px] sm:text-[8px] font-bold leading-[1.5] text-[#17230c] transition-all hover:bg-[#a2dc59] hover:-translate-y-[2px] hover:shadow-[0_4px_12px_rgba(137,198,56,0.3)] active:translate-y-0 active:shadow-none"
         >
           SHOW ROADMAP
         </button>
@@ -455,52 +455,80 @@ export default function Roadmaps() {
 
   const listContent = (
     <>
-      <header className="mb-6 sm:mb-[34px]">
-        <h1 className={`font-['Press_Start_2P'] text-[20px] leading-[1.35] tracking-[-1px] sm:text-[32px] ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
-          Roadmaps
+      <header className="user-page-header">
+        <h1 className="user-page-title">
+          ROADMAPS
         </h1>
-        <p className={`mt-2 sm:mt-[10px] text-xs sm:text-[15px] ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
+        <p className="user-page-subtitle">
           Opportunities matched to your career goals.
         </p>
       </header>
 
-      <div className={`mb-5 sm:mb-[29px] flex h-12 sm:h-[62px] w-full items-center rounded-xl sm:rounded-[13px] border px-3 sm:px-[20px] transition-colors ${isDarkMode ? "border-white/10 bg-white/5 text-white focus-within:border-white/20 focus-within:bg-white/10" : "border-[#c4dfe6] bg-[#def0f4] text-[#00113b] shadow-sm focus-within:border-[#00113b]/30 focus-within:bg-[#e5f4f7]"}`}>
-        <Search className={`mr-2.5 sm:mr-[12px] h-4 w-4 sm:h-5 sm:w-5 shrink-0 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`} />
-        <input
-          id="roadmapSearchInput"
-          type="text"
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search roadmaps, skills, roles or companies..."
-          className={`w-full border-none bg-transparent text-xs sm:text-[13px] outline-none placeholder:text-slate-400 ${isDarkMode ? "text-white" : "text-[#00113b]"}`}
-        />
+      {/* SEARCH BAR, SORTING, AND FILTERS IN A SINGLE ROW */}
+      <div className="mb-4 sm:mb-5 flex items-center gap-2 sm:gap-3 w-full">
+        <div className={`flex flex-1 h-11 sm:h-12 items-center rounded-xl border px-3 sm:px-4 transition-colors min-w-0 ${isDarkMode ? "border-white/10 bg-white/5 text-white focus-within:border-white/20 focus-within:bg-white/10" : "border-[#c4dfe6] bg-[#def0f4] text-[#00113b] shadow-sm focus-within:border-[#00113b]/30 focus-within:bg-[#e5f4f7]"}`}>
+          <Search className={`mr-2 sm:mr-3 h-4 w-4 shrink-0 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`} />
+          <input
+            id="roadmapSearchInput"
+            type="text"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search roadmaps, skills, roles or companies..."
+            className={`w-full border-none bg-transparent text-xs sm:text-[13px] outline-none placeholder:text-slate-400 ${isDarkMode ? "text-white" : "text-[#00113b]"}`}
+          />
+        </div>
+
+        <select
+          aria-label="Sort roadmaps"
+          value={sortBy}
+          onChange={(event) => setSortBy(event.target.value)}
+          className={`h-11 sm:h-12 shrink-0 cursor-pointer rounded-xl border px-2.5 sm:px-3 text-xs sm:text-[11px] font-semibold outline-none transition-colors ${isDarkMode ? "border-white/10 bg-[#071532] text-white hover:bg-white/10" : "border-[#c6e0e6] bg-[#def0f4] text-[#00113b] shadow-xs hover:bg-[#e8f6f8]"}`}
+        >
+          <option value="newest">Newest</option>
+          <option value="duration">Shortest</option>
+          <option value="title">A–Z</option>
+        </select>
+
+        <button
+          type="button"
+          onClick={() => setFilterDrawerOpen(true)}
+          className={`flex h-11 sm:h-12 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border px-3 sm:px-4 text-xs sm:text-[11px] font-semibold transition-colors ${
+            selectedFilterCount
+              ? isDarkMode ? "border-[#b2e96a] bg-[#b2e96a]/20 text-[#b2e96a]" : "border-[#00113b] bg-[#00113b] text-white shadow-sm"
+              : isDarkMode ? "border-white/10 bg-white/5 text-white hover:bg-white/10" : "border-[#c6e0e6] bg-[#def0f4] text-[#00113b] shadow-xs hover:bg-[#e8f6f8]"
+          }`}
+        >
+          <span>Filters</span>
+          {selectedFilterCount ? <span className="inline-block w-1.5 h-1.5 rounded-full bg-current" /> : null}
+        </button>
       </div>
 
-      <div className={`mb-4 sm:mb-[20px] flex items-center gap-[7px] border-b ${isDarkMode ? "border-white/10" : "border-[#00113b]/15"}`}>
-        {[{ id: "for-you", label: "For You" }, { id: "all", label: "All Roadmaps" }].map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`-mb-[1px] cursor-pointer border-b-2 px-3 sm:px-[14px] py-2 sm:py-[11px] text-[11px] font-bold transition-colors ${
-              activeTab === tab.id
-                ? isDarkMode ? "border-white text-white" : "border-[#00113b] text-[#00113b]"
-                : isDarkMode ? "border-transparent text-slate-400 hover:text-white" : "border-transparent text-slate-500 hover:text-[#00113b]"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* FOR YOU / ALL ROADMAPS TOGGLE & CATEGORIES */}
+      <div className="mb-5 sm:mb-6 space-y-3">
+        <div className={`flex items-center gap-[7px] border-b ${isDarkMode ? "border-white/10" : "border-[#00113b]/15"}`}>
+          {[{ id: "for-you", label: "For You" }, { id: "all", label: "All Roadmaps" }].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`-mb-[1px] cursor-pointer border-b-2 px-3 sm:px-[14px] py-2 sm:py-[11px] text-[11px] font-bold transition-colors ${
+                activeTab === tab.id
+                  ? isDarkMode ? "border-white text-white" : "border-[#00113b] text-[#00113b]"
+                  : isDarkMode ? "border-transparent text-slate-400 hover:text-white" : "border-transparent text-slate-500 hover:text-[#00113b]"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-      <div className="mb-5 sm:mb-[28px] flex flex-wrap items-center justify-between gap-3 sm:gap-[15px] md:flex-nowrap">
         <div className="flex max-w-full gap-1.5 sm:gap-[7px] overflow-x-auto scrollbar-none pb-1">
           {roadmapCategories.map((category) => (
             <button
               key={category.id}
               type="button"
               onClick={() => setActiveCategory(category.id)}
-              className={`whitespace-nowrap rounded-[100px] border px-3 sm:px-[13px] py-1.5 sm:py-[9px] text-[10px] transition-colors ${
+              className={`whitespace-nowrap rounded-[100px] border px-3 sm:px-[13px] py-1.5 sm:py-[8px] text-[10px] transition-colors ${
                 activeCategory === category.id
                   ? isDarkMode ? "border-[#b2e96a] bg-[#b2e96a] font-bold text-[#0a1128]" : "border-[#00113b] bg-[#00113b] font-semibold text-white shadow-sm"
                   : isDarkMode ? "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10" : "border-[#c6e0e6] bg-[#def0f4] text-[#00113b] shadow-xs hover:bg-[#e8f6f8]"
@@ -509,31 +537,6 @@ export default function Roadmaps() {
               {category.label}
             </button>
           ))}
-        </div>
-
-        <div className="flex shrink-0 items-center gap-2 sm:gap-[8px]">
-          <button
-            type="button"
-            onClick={() => setFilterDrawerOpen(true)}
-            className={`flex h-9 sm:h-[42px] cursor-pointer items-center gap-1.5 rounded-[8px] border px-3 sm:px-[12px] text-[10px] transition-colors ${
-              selectedFilterCount
-                ? isDarkMode ? "border-[#b2e96a] bg-[#b2e96a]/20 font-bold text-[#b2e96a]" : "border-[#00113b] bg-[#00113b] font-bold text-white shadow-sm"
-                : isDarkMode ? "border-white/10 bg-white/5 text-white hover:bg-white/15" : "border-[#c6e0e6] bg-[#def0f4] text-[#00113b] shadow-xs hover:bg-[#e8f6f8]"
-            }`}
-          >
-            Filters{selectedFilterCount ? " •" : ""}
-          </button>
-
-          <select
-            aria-label="Sort roadmaps"
-            value={sortBy}
-            onChange={(event) => setSortBy(event.target.value)}
-            className={`h-9 sm:h-[42px] cursor-pointer rounded-[8px] border pl-2.5 sm:pl-[10px] pr-6 sm:pr-[28px] text-[10px] outline-none transition-colors ${isDarkMode ? "border-white/10 bg-[#071532] text-white" : "border-[#c6e0e6] bg-[#def0f4] text-[#00113b] shadow-xs hover:bg-[#e8f6f8]"}`}
-          >
-            <option value="newest">Newest</option>
-            <option value="duration">Shortest</option>
-            <option value="title">A–Z</option>
-          </select>
         </div>
       </div>
 

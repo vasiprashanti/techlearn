@@ -34,6 +34,12 @@
     color: #e0e6f5;
     background-color: #020b23;
   }
+
+  @media (min-width: 761px) {
+    body.has-app-sidebar .tl-nav-links {
+      display: none !important;
+    }
+  }
 }
 
 /* Custom component styles */
@@ -392,6 +398,50 @@
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
+  }
+
+  /* Shared User-Side Page Header Standard */
+  .user-page-header {
+    text-align: left;
+    margin-bottom: 28px;
+    width: 100%;
+  }
+
+  .user-page-title {
+    font-family: "Press Start 2P", monospace;
+    font-size: clamp(20px, 3.5vw, 32px);
+    line-height: 1.25;
+    letter-spacing: -1px;
+    text-transform: uppercase;
+    text-align: left;
+    margin: 0 0 8px 0;
+    /* Light mode: blue used by Academy/hiring (#02107a -> #1c31ed) */
+    background: linear-gradient(90deg, #02107a 0%, #1c31ed 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
+  }
+
+  .dark .user-page-title {
+    /* Dark mode: existing blue used in Profile Page Header (brand-heading-primary dark) */
+    background: linear-gradient(90deg, #60a5fa 0%, #3b82f6 50%, #a78bfa 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
+  }
+
+  .user-page-subtitle {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    text-align: left;
+    color: #4c6f9a;
+  }
+
+  .dark .user-page-subtitle {
+    color: #7fb8e2;
   }
 }
 

@@ -5,6 +5,7 @@ import "./hiringPage.css";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 import { hiringAPI } from "../services/api";
+import Sidebar from "../components/Dashboard/Sidebar";
 
 export default function Jobs() {
   const { theme } = useTheme();
@@ -473,8 +474,11 @@ export default function Jobs() {
 
   return (
     <div
-      className={`hiring-page-container ${!isDarkMode ? "light-mode" : ""}`}
+      className={`hiring-page-container ${!isDarkMode ? "light-mode" : ""} ${isAuthenticated ? "has-sidebar" : ""}`}
     >
+      {/* Sidebar for authenticated learners */}
+      {isAuthenticated && <Sidebar />}
+
       <main className="page">
         {/* =========================
              HERO HEADER (Left-aligned)

@@ -574,7 +574,7 @@ const Profile = () => {
 
   return shell(
     <>
-      <header className="page-heading"><h1 className="font-press-start leading-normal"><span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">PROFILE</span></h1></header>
+      <header className="user-page-header"><h1 className="user-page-title">PROFILE</h1></header>
       {hero}
 
       {view === "overview" && (

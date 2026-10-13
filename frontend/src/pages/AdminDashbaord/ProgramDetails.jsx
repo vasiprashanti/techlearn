@@ -891,440 +891,1161 @@ const ProgramPerformancePanel = ({ performance, loading, error }) => {
   );
 };
 
-const PHASE_TITLES = {
-  learning: 'Phase 1: Foundational & Core Learning',
-  revision: 'Phase 2: Comprehensive Revision & Deep Dive',
-  company_preparation: 'Phase 3: Company Preparation & Industry Focus',
-  mock_interview: 'Phase 4: Rigorous Mock Interviews & Evaluations',
-  final_assessment: 'Phase 5: Final Assessment & Placement Readiness',
+const PROGRAM_TYPES = ['Placement', 'Skill'];
+const PHASE_TYPES = ['learning', 'revision', 'company_preparation', 'mock_interview', 'final_assessment'];
+const PHASE_LABELS = {
+  learning: 'Learning',
+  revision: 'Revision',
+  company_preparation: 'Company Preparation',
+  mock_interview: 'Mock Interview',
+  final_assessment: 'Final Assessment',
 };
 
-const ProgramOverviewPanel = ({ program, onProgramUpdated, onNavigateToTab }) => {
-  const [editingOutcomes, setEditingOutcomes] = useState(false);
-  const [outcomesText, setOutcomesText] = useState(() => (program?.learningGoals || []).join('\n'));
-  const [savingOutcomes, setSavingOutcomes] = useState(false);
-  const [outcomesError, setOutcomesError] = useState('');
-  const [expandedCourseIds, setExpandedCourseIds] = useState(new Set());
+const SKILL_TAG_OPTIONS = [
+  'Java', 'Python', 'JavaScript', 'TypeScript', 'React', 'Node.js',
+  'HTML/CSS', 'SQL', 'DSA', 'Aptitude', 'System Design', 'Cloud',
+];
+
+const TARGET_COMPANY_OPTIONS = [
+  'Google', 'Amazon', 'Microsoft', 'Apple', 'Meta', 'Netflix', 'Adobe', 'Uber',
+  'Salesforce', 'Oracle', 'Cisco', 'Intel', 'IBM', 'NVIDIA', 'Twitter / X',
+  'LinkedIn', 'PayPal', 'Stripe', 'Atlassian', 'Spotify', 'Flipkart', 'Walmart',
+  'Swiggy', 'Zomato', 'Paytm', 'Razorpay', 'CRED', 'PhonePe', 'Meesho', 'Ola',
+  'Zerodha', 'Groww', 'TCS', 'Infosys', 'Wipro', 'Accenture', 'Cognizant',
+  'Capgemini', 'Deloitte', 'HCL Tech', 'Tech Mahindra', 'LTIMindtree', 'EY',
+  'PwC', 'KPMG', 'JPMorgan Chase', 'Goldman Sachs', 'Morgan Stanley', 'Barclays', 'Deutsche Bank',
+];
+
+const TARGET_ROLE_OPTIONS = [
+  'Software Developer', 'Full Stack Developer', 'Backend Developer', 'Frontend Developer',
+  'Data Analyst', 'AI / ML Engineer', 'Data Scientist', 'DevOps Engineer', 'Cloud Engineer',
+  'QA / Test Engineer', 'System Engineer',
+];
+
+const normalizeSearchString = (str) => String(str || '').trim().toLowerCase().replace(/\s+/g, ' ');
+const parseCommaString = (str) => (str || '').split(',').map((item) => item.trim()).filter(Boolean);
+
+const validatePhaseCoverage = (phases, totalDays) => {
+  if (!totalDays || totalDays <= 0) return { valid: false, message: 'Duration must be greater than 0.' };
+  if (!phases || !phases.length) return { valid: false, message: 'Phases must be configured.' };
+  let expectedStart = 1;
+  for (let i = 0; i < phases.length; i++) {
+    const p = phases[i];
+    const s = Number(p.startDay);
+    const e = Number(p.endDay);
+    const name = PHASE_LABELS[p.phase] || p.phase;
+    if (!Number.isInteger(s) || !Number.isInteger(e) || s < 1 || e < 1) {
+      return { valid: false, message: `${name}: Start and End must be positive whole numbers.` };
+    }
+    if (s > e) {
+      return { valid: false, message: `${name}: Start Day (${s}) cannot exceed End Day (${e}).` };
+    }
+    if (s < expectedStart) {
+      return { valid: false, message: `Overlap: ${name} starts on Day ${s}, but previous phase ends on Day ${expectedStart - 1}.` };
+    }
+    if (s > expectedStart) {
+      return { valid: false, message: `Gap: Days ${expectedStart} to ${s - 1} are not covered before ${name}.` };
+    }
+    expectedStart = e + 1;
+  }
+  if (expectedStart - 1 !== totalDays) {
+    return { valid: false, message: `Phases end at Day ${expectedStart - 1}, but total duration is ${totalDays} Days.` };
+  }
+  return { valid: true, message: `Phases cover all ${totalDays} days exactly once (no gaps or overlaps).` };
+};
+
+const getDefaultPhases = (programType, value) => {
+  const durationDays = Number(value);
+  if (!Number.isInteger(durationDays) || durationDays < 5) return [];
+  const baseLengths = programType === 'Placement' ? [Math.max(1, durationDays - 8), 2, 4, 1, 1] : [Math.max(1, durationDays - 4), 1, 1, 1, 1];
+  const lengths = [...baseLengths];
+  const total = lengths.reduce((sum, item) => sum + item, 0);
+  lengths[0] += durationDays - total;
+  let nextStartDay = 1;
+
+  return PHASE_TYPES.map((phase, index) => {
+    const startDay = nextStartDay;
+    const endDay = startDay + lengths[index] - 1;
+    nextStartDay = endDay + 1;
+    return { phase, startDay: String(startDay), endDay: String(endDay) };
+  });
+};
+
+const normalizePhases = (phases, programType, durationDays) => {
+  const defaults = getDefaultPhases(programType, durationDays);
+  if (!Array.isArray(phases) || phases.length !== defaults.length) return defaults;
+  return defaults.map((fallback, index) => ({
+    phase: fallback.phase,
+    startDay: String(phases[index]?.startDay ?? fallback.startDay),
+    endDay: String(phases[index]?.endDay ?? fallback.endDay),
+  }));
+};
+
+const ProgramOverviewPanel = ({ program, onProgramUpdated }) => {
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
+
+  const [programOptions, setProgramOptions] = useState({
+    skills: SKILL_TAG_OPTIONS,
+    companies: TARGET_COMPANY_OPTIONS,
+    roles: TARGET_ROLE_OPTIONS,
+  });
+
+  const [formData, setFormData] = useState(() => {
+    const existingRoles = Array.isArray(program?.targetRoles)
+      ? program.targetRoles
+      : parseCommaString(program?.targetRolesText || '');
+    const existingGoals = Array.isArray(program?.learningGoals) ? program.learningGoals : [];
+    const pType = getProgramType(program?.programType);
+    const dDays = String(program?.durationDays || parseDurationDays(program?.duration) || 30);
+    const dUnit = String(program?.duration || '').toLowerCase().includes('week') ? 'Weeks' : 'Days';
+
+    return {
+      name: program?.name || '',
+      description: program?.description || '',
+      programType: pType,
+      durationDays: dDays,
+      durationUnit: dUnit,
+      phases: normalizePhases(program?.phases, pType, Number(dDays) || 30),
+      status: program?.status || 'Draft',
+      visibility: program?.visibility || 'Public',
+      pricingType: program?.pricingType || 'Free',
+      availability: program?.availability || 'Structured',
+      billingOptions: (Array.isArray(program?.billingOptions) && program.billingOptions.length)
+        ? program.billingOptions
+        : (Array.isArray(program?.pricingPlans) && program.pricingPlans.length)
+          ? [...new Set(program.pricingPlans.map(p => p.billingPeriod).filter(Boolean))]
+          : [],
+      monthlyStructuredFee: String(program?.monthlyStructuredFee ?? (program?.pricingPlans?.find(p => p.billingPeriod === 'Monthly' || p.key?.includes('basic'))?.price || '')),
+      monthlyTrainerLedFee: String(program?.monthlyTrainerLedFee ?? (program?.pricingPlans?.find(p => p.billingPeriod === 'Monthly' && p.availability === 'Trainer-Led')?.price || '')),
+      annualStructuredFee: String(program?.annualStructuredFee ?? (program?.pricingPlans?.find(p => p.billingPeriod === 'Annual' || p.key?.includes('pro'))?.price || program?.programFee || '')),
+      annualTrainerLedFee: String(program?.annualTrainerLedFee ?? (program?.pricingPlans?.find(p => p.billingPeriod === 'Annual' && p.availability === 'Trainer-Led')?.price || '')),
+      programFee: String(program?.programFee || 0),
+      learningGoalsText: existingGoals.join('\n'),
+      targetCompanies: Array.isArray(program?.targetCompanies) ? program.targetCompanies : [],
+      skillTags: Array.isArray(program?.skillTags) ? program.skillTags : [],
+      targetRoles: existingRoles,
+    };
+  });
 
   useEffect(() => {
-    setOutcomesText((program?.learningGoals || []).join('\n'));
-  }, [program?.learningGoals]);
+    if (!program) return;
+    const existingRoles = Array.isArray(program.targetRoles)
+      ? program.targetRoles
+      : parseCommaString(program.targetRolesText || '');
+    const existingGoals = Array.isArray(program.learningGoals) ? program.learningGoals : [];
+    const pType = getProgramType(program.programType);
+    const dDays = String(program.durationDays || parseDurationDays(program.duration) || 30);
+    const dUnit = String(program.duration || '').toLowerCase().includes('week') ? 'Weeks' : 'Days';
 
-  const toggleCourseExpand = (courseId) => {
-    setExpandedCourseIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(courseId)) next.delete(courseId);
-      else next.add(courseId);
-      return next;
+    setFormData({
+      name: program.name || '',
+      description: program.description || '',
+      programType: pType,
+      durationDays: dDays,
+      durationUnit: dUnit,
+      phases: normalizePhases(program.phases, pType, Number(dDays) || 30),
+      status: program.status || 'Draft',
+      visibility: program.visibility || 'Public',
+      pricingType: program.pricingType || 'Free',
+      availability: program.availability || 'Structured',
+      billingOptions: (Array.isArray(program.billingOptions) && program.billingOptions.length)
+        ? program.billingOptions
+        : (Array.isArray(program.pricingPlans) && program.pricingPlans.length)
+          ? [...new Set(program.pricingPlans.map(p => p.billingPeriod).filter(Boolean))]
+          : [],
+      monthlyStructuredFee: String(program.monthlyStructuredFee ?? (program.pricingPlans?.find(p => p.billingPeriod === 'Monthly' || p.key?.includes('basic'))?.price || '')),
+      monthlyTrainerLedFee: String(program.monthlyTrainerLedFee ?? (program.pricingPlans?.find(p => p.billingPeriod === 'Monthly' && p.availability === 'Trainer-Led')?.price || '')),
+      annualStructuredFee: String(program.annualStructuredFee ?? (program.pricingPlans?.find(p => p.billingPeriod === 'Annual' || p.key?.includes('pro'))?.price || program.programFee || '')),
+      annualTrainerLedFee: String(program.annualTrainerLedFee ?? (program.pricingPlans?.find(p => p.billingPeriod === 'Annual' && p.availability === 'Trainer-Led')?.price || '')),
+      programFee: String(program.programFee || 0),
+      learningGoalsText: existingGoals.join('\n'),
+      targetCompanies: Array.isArray(program.targetCompanies) ? program.targetCompanies : [],
+      skillTags: Array.isArray(program.skillTags) ? program.skillTags : [],
+      targetRoles: existingRoles,
     });
+  }, [program]);
+
+  useEffect(() => {
+    adminAPI.getProgramOptions().then((res) => {
+      if (res && res.success) {
+        const response = res.data || res;
+        const fetchedSkills = (response.skills || response.skillTags || []).filter(Boolean);
+        const fetchedCompanies = (response.companies || response.targetCompanies || []).filter(Boolean);
+        const fetchedRoles = (response.roles || response.targetRoles || []).filter(Boolean);
+        setProgramOptions({
+          skills: fetchedSkills.length ? fetchedSkills : SKILL_TAG_OPTIONS,
+          companies: Array.from(new Set([...TARGET_COMPANY_OPTIONS, ...fetchedCompanies])),
+          roles: fetchedRoles.length ? fetchedRoles : TARGET_ROLE_OPTIONS,
+        });
+      }
+    }).catch(() => {});
+  }, []);
+
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // Dropdown states
+  const [skillSearch, setSkillSearch] = useState('');
+  const [otherSkillDraft, setOtherSkillDraft] = useState('');
+  const [skillDropdownOpen, setSkillDropdownOpen] = useState(false);
+
+  const [companySearch, setCompanySearch] = useState('');
+  const [otherCompanyDraft, setOtherCompanyDraft] = useState('');
+  const [companyDropdownOpen, setCompanyDropdownOpen] = useState(false);
+
+  const [roleSearch, setRoleSearch] = useState('');
+  const [otherRoleDraft, setOtherRoleDraft] = useState('');
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+
+  const programFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-slate-50 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35 shadow-xs';
+  const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
+
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'programType') {
+      setFormData((prev) => ({
+        ...prev,
+        programType: value,
+        phases: getDefaultPhases(value, prev.durationDays),
+      }));
+      return;
+    }
+    if (name === 'durationDays' || name === 'durationUnit') {
+      setFormData((prev) => {
+        const next = { ...prev, [name]: value };
+        const num = Number(name === 'durationDays' ? value : prev.durationDays) || 0;
+        const multiplier = (name === 'durationUnit' ? value : prev.durationUnit) === 'Weeks' ? 7 : 1;
+        const totalDurationDays = num * multiplier;
+        next.phases = getDefaultPhases(prev.programType, totalDurationDays);
+        return next;
+      });
+      return;
+    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveOutcomes = async () => {
-    try {
-      setSavingOutcomes(true);
-      setOutcomesError('');
-      const goals = outcomesText
-        .split('\n')
-        .map((s) => s.trim())
-        .filter(Boolean);
+  const handlePhaseChange = (index, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      phases: prev.phases.map((phase, phaseIndex) => (
+        phaseIndex === index ? { ...phase, [field]: value } : phase
+      )),
+    }));
+  };
 
-      const res = await adminAPI.updateProgram(program._id, { learningGoals: goals });
+  const handleAddSkill = (skillName) => {
+    const raw = String(skillName || '').trim();
+    if (!raw) return;
+    const normalized = normalizeSearchString(raw);
+    const existing = (programOptions.skills.length ? programOptions.skills : SKILL_TAG_OPTIONS).find(
+      (s) => normalizeSearchString(s) === normalized
+    );
+    const finalSkill = existing || raw;
+    setFormData((prev) => {
+      const already = prev.skillTags.some((s) => normalizeSearchString(s) === normalized);
+      if (already) return prev;
+      return { ...prev, skillTags: [...prev.skillTags, finalSkill] };
+    });
+    setSkillSearch('');
+    setOtherSkillDraft('');
+    setSkillDropdownOpen(false);
+  };
+
+  const handleRemoveSkill = (skillToRemove) => {
+    setFormData((prev) => ({
+      ...prev,
+      skillTags: prev.skillTags.filter((s) => s !== skillToRemove),
+    }));
+  };
+
+  const handleAddCompany = (companyName) => {
+    const raw = String(companyName || '').trim();
+    if (!raw) return;
+    const normalized = normalizeSearchString(raw);
+    const existing = programOptions.companies.find(
+      (c) => normalizeSearchString(c) === normalized
+    );
+    const finalCompany = existing || raw;
+    setFormData((prev) => {
+      const already = prev.targetCompanies.some((c) => normalizeSearchString(c) === normalized);
+      if (already) return prev;
+      return { ...prev, targetCompanies: [...prev.targetCompanies, finalCompany] };
+    });
+    setCompanySearch('');
+    setOtherCompanyDraft('');
+    setCompanyDropdownOpen(false);
+  };
+
+  const handleRemoveCompany = (companyToRemove) => {
+    setFormData((prev) => ({
+      ...prev,
+      targetCompanies: prev.targetCompanies.filter((c) => c !== companyToRemove),
+    }));
+  };
+
+  const handleAddRole = (roleName) => {
+    const raw = String(roleName || '').trim();
+    if (!raw) return;
+    const normalized = normalizeSearchString(raw);
+    const existing = programOptions.roles.find(
+      (r) => normalizeSearchString(r) === normalized
+    );
+    const finalRole = existing || raw;
+    setFormData((prev) => {
+      const rolesList = Array.isArray(prev.targetRoles) ? prev.targetRoles : [];
+      const already = rolesList.some((r) => normalizeSearchString(r) === normalized);
+      if (already) return prev;
+      return { ...prev, targetRoles: [...rolesList, finalRole] };
+    });
+    setRoleSearch('');
+    setOtherRoleDraft('');
+    setRoleDropdownOpen(false);
+  };
+
+  const handleRemoveRole = (roleToRemove) => {
+    setFormData((prev) => ({
+      ...prev,
+      targetRoles: (Array.isArray(prev.targetRoles) ? prev.targetRoles : []).filter((r) => r !== roleToRemove),
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setFormError('');
+    setSuccessMessage('');
+
+    if (!formData.name.trim()) { setFormError('Program name is required.'); return; }
+    if (!formData.description.trim()) { setFormError('Program description is required.'); return; }
+    if (!formData.skillTags.length) { setFormError('At least one skill tag is required.'); return; }
+    if (formData.programType === 'Placement' && !formData.targetCompanies.length) {
+      setFormError('At least one target company is required for Placement programs.');
+      return;
+    }
+
+    const durationDays = (Number(formData.durationDays) || 0) * (formData.durationUnit === 'Weeks' ? 7 : 1);
+    if (!Number.isInteger(durationDays) || durationDays < 5) {
+      setFormError('Duration must be at least 5 days.');
+      return;
+    }
+
+    const phases = (formData.phases || []).map((phase) => ({
+      phase: phase.phase,
+      startDay: Number(phase.startDay),
+      endDay: Number(phase.endDay),
+    }));
+
+    let expectedStartDay = 1;
+    for (const phase of phases) {
+      if (!Number.isInteger(phase.startDay) || !Number.isInteger(phase.endDay) || phase.startDay < 1 || phase.endDay < 1) {
+        setFormError('Phase day values must be positive integers.');
+        return;
+      }
+      if (phase.startDay > phase.endDay) {
+        setFormError(`Phase ${PHASE_LABELS[phase.phase] || phase.phase} has invalid range: start day exceeds end day.`);
+        return;
+      }
+      if (phase.startDay !== expectedStartDay) {
+        setFormError(`Phases must be contiguous without gaps or overlaps. Expected ${phase.phase} to start on Day ${expectedStartDay}.`);
+        return;
+      }
+      expectedStartDay = phase.endDay + 1;
+    }
+    if (expectedStartDay - 1 !== durationDays) {
+      setFormError(`Phases must cover exactly days 1 through ${durationDays}.`);
+      return;
+    }
+
+    if (formData.pricingType === 'Paid') {
+      if (!formData.billingOptions.length) { setFormError('Select at least one billing option for Paid programs.'); return; }
+      const availabilityFields = {
+        Structured: ['monthlyStructuredFee', 'annualStructuredFee'],
+        'Trainer-Led': ['monthlyTrainerLedFee', 'annualTrainerLedFee'],
+        Both: ['monthlyStructuredFee', 'monthlyTrainerLedFee', 'annualStructuredFee', 'annualTrainerLedFee'],
+      }[formData.availability] || [];
+      const requiredFields = availabilityFields.filter((field) => field.startsWith('monthly') ? formData.billingOptions.includes('Monthly') : formData.billingOptions.includes('Annual'));
+      if (requiredFields.some((field) => !Number.isFinite(Number(formData[field])) || Number(formData[field]) < 0)) {
+        setFormError('Enter a valid fee for every selected billing and delivery option.');
+        return;
+      }
+    }
+
+    try {
+      setSaving(true);
+      const payload = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        programType: formData.programType,
+        duration: `${formData.durationDays} ${formData.durationUnit}`,
+        durationDays,
+        phases,
+        status: formData.status,
+        visibility: formData.visibility,
+        pricingType: formData.pricingType,
+        availability: formData.availability,
+        billingOptions: formData.pricingType === 'Paid' ? formData.billingOptions : [],
+        monthlyStructuredFee: Number(formData.monthlyStructuredFee) || 0,
+        monthlyTrainerLedFee: Number(formData.monthlyTrainerLedFee) || 0,
+        annualStructuredFee: Number(formData.annualStructuredFee) || 0,
+        annualTrainerLedFee: Number(formData.annualTrainerLedFee) || 0,
+        programFee: formData.pricingType === 'Paid' ? Number(formData.monthlyStructuredFee || formData.monthlyTrainerLedFee || formData.annualStructuredFee || formData.annualTrainerLedFee) : 0,
+        learningGoals: formData.learningGoalsText
+          ? formData.learningGoalsText.split('\n').map((g) => g.trim()).filter(Boolean)
+          : [],
+        targetCompanies: formData.targetCompanies,
+        skillTags: formData.skillTags,
+        targetRoles: Array.isArray(formData.targetRoles) ? formData.targetRoles : parseCommaString(formData.targetRoles || ''),
+      };
+
+      const res = await adminAPI.updateProgram(program._id, payload);
       if (res && res.success) {
-        setEditingOutcomes(false);
+        setSuccessMessage('Program updated successfully.');
         if (onProgramUpdated) onProgramUpdated();
       } else {
-        setOutcomesError(res?.message || 'Failed to save outcomes');
+        setFormError(res?.message || 'Failed to update program.');
       }
     } catch (err) {
-      setOutcomesError(err.message || 'Failed to save outcomes');
+      console.error('Error updating program:', err);
+      setFormError(err.message || 'Failed to update program.');
     } finally {
-      setSavingOutcomes(false);
+      setSaving(false);
     }
   };
 
-  const attachedCourses = Array.isArray(program?.courseIds) ? program.courseIds : [];
-  const phases = Array.isArray(program?.phases) && program.phases.length > 0
-    ? program.phases
-    : [
-        { phase: 'learning', startDay: 1, endDay: 10 },
-        { phase: 'revision', startDay: 11, endDay: 15 },
-        { phase: 'company_preparation', startDay: 16, endDay: 20 },
-        { phase: 'mock_interview', startDay: 21, endDay: 25 },
-        { phase: 'final_assessment', startDay: 26, endDay: 30 },
-      ];
-
-  const outcomes = Array.isArray(program?.learningGoals) && program.learningGoals.length > 0
-    ? program.learningGoals
-    : [
-        'Master essential role-specific algorithms and industry software design patterns',
-        'Build production-grade projects demonstrating full stack architecture',
-        'Ace technical and behavioral rounds through targeted mock assessments',
-        'Gain confidence and verified credentials recognized by hiring partners',
-      ];
-
-  const pricingDisplay = program?.pricingType === 'Paid'
-    ? `₹${Number(program?.programFee || 0).toLocaleString('en-IN')}`
-    : 'Free';
+  const formDurationDays = (Number(formData.durationDays) || 0) * (formData.durationUnit === 'Weeks' ? 7 : 1);
+  const phaseValidation = validatePhaseCoverage(formData.phases, formDurationDays);
 
   return (
-    <div className="space-y-6">
-      {/* ── Top Overview Banner: Info Cards ───────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-4 shadow-sm">
-          <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45 block mb-1">
-            Program Type & Duration
-          </span>
-          <p className="text-base font-bold text-slate-800 dark:text-white">
-            {getProgramType(program?.programType)} Program
-          </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {program?.duration || `${program?.durationDays || 30} Days`} · {program?.availability || 'Structured'}
-          </p>
+    <form onSubmit={handleSubmit} className="space-y-5 pb-12 max-w-4xl mx-auto">
+      {formError && (
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-600 dark:text-red-400">
+          <FiAlertCircle className="w-4 h-4 shrink-0" />
+          <span>{formError}</span>
         </div>
+      )}
 
-        <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-4 shadow-sm">
-          <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45 block mb-1">
-            Pricing & Visibility
-          </span>
-          <p className="text-base font-bold text-slate-800 dark:text-white">
-            {pricingDisplay}
-          </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Visibility: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{program?.visibility || 'Public'}</span>
-          </p>
+      {successMessage && (
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-sm text-emerald-600 dark:text-emerald-400">
+          <FiCheckCircle className="w-4 h-4 shrink-0" />
+          <span>{successMessage}</span>
         </div>
+      )}
 
-        <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-4 shadow-sm">
-          <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45 block mb-1">
-            Attached Content
-          </span>
-          <p className="text-base font-bold text-slate-800 dark:text-white">
-            {attachedCourses.length} Course{attachedCourses.length === 1 ? '' : 's'}
-          </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            5 Learning Phases · {(program?.learningGoals || []).length} Outcomes
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-4 shadow-sm flex flex-col justify-between">
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/45 dark:text-white/45 block mb-1">
-              Live Learner Preview
-            </span>
-            <p className="text-xs text-slate-600 dark:text-slate-300">
-              Preview the User-side Program Detail page live.
-            </p>
-          </div>
-          <a
-            href={`/learn/programs/${program?._id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#3C83F6]/10 dark:bg-[#bceaff]/15 text-[#3C83F6] dark:text-[#bceaff] text-xs font-bold hover:bg-[#3C83F6]/20 transition-colors"
-          >
-            <FiEye className="w-3.5 h-3.5" />
-            Open Live Detail Page
-          </a>
-        </div>
-      </div>
-
-      {/* Description & Target Roles/Skills */}
-      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-5 shadow-sm space-y-4">
+      {/* ── PROGRAM INFORMATION ── */}
+      <div className="space-y-3">
         <div>
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1.5">Program Description</h3>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            {program?.description || 'No description provided for this program.'}
-          </p>
+          <label className="admin-micro-label text-black/45 dark:text-white/45">Program Name*</label>
+          <input
+            type="text"
+            name="name"
+            required
+            placeholder="e.g. Full Stack Development Placement Sprint"
+            value={formData.name}
+            onChange={handleFormChange}
+            className={programFormInputClass}
+          />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 border-t border-black/5 dark:border-white/5">
+        <div>
+          <label className="admin-micro-label text-black/45 dark:text-white/45">Description*</label>
+          <textarea
+            name="description"
+            rows={3}
+            required
+            placeholder="Description of the program, curriculum coverage, and learner outcomes..."
+            value={formData.description}
+            onChange={handleFormChange}
+            className={programFormInputClass}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-black/45 dark:text-white/45 block mb-1.5">
-              Target Roles
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {(program?.targetRoles || []).length > 0 ? (
-                program.targetRoles.map((role) => (
-                  <span
-                    key={role}
-                    className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]"
-                  >
-                    {role}
-                  </span>
-                ))
-              ) : (
-                <span className="text-xs text-slate-400">All Engineering Roles</span>
-              )}
+            <label className="admin-micro-label text-black/45 dark:text-white/45">Program Type*</label>
+            <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs">
+              <select
+                name="programType"
+                value={formData.programType}
+                onChange={handleFormChange}
+                className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+              >
+                {PROGRAM_TYPES.map((t) => (
+                  <option key={t} className={dropdownOptionClass} value={t}>{t}</option>
+                ))}
+              </select>
+              <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
             </div>
           </div>
 
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-black/45 dark:text-white/45 block mb-1.5">
-              Skills Covered
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {(program?.skillTags || []).length > 0 ? (
-                program.skillTags.map((skill) => (
-                  <span
-                    key={skill}
-                    className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
-                  >
-                    {skill}
-                  </span>
-                ))
-              ) : (
-                <span className="text-xs text-slate-400">General Technical Skills</span>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-black/45 dark:text-white/45 block mb-1.5">
-              Target Companies
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {(program?.targetCompanies || []).length > 0 ? (
-                program.targetCompanies.map((comp) => (
-                  <span
-                    key={comp}
-                    className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800"
-                  >
-                    {comp}
-                  </span>
-                ))
-              ) : (
-                <span className="text-xs text-slate-400">Tier 1 & Top Tech Companies</span>
-              )}
+            <label className="admin-micro-label text-black/45 dark:text-white/45">Status*</label>
+            <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs">
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleFormChange}
+                className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+              >
+                <option className={dropdownOptionClass} value="Published">Published</option>
+                <option className={dropdownOptionClass} value="Draft">Draft</option>
+                <option className={dropdownOptionClass} value="Archived">Archived</option>
+              </select>
+              <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Section 1: Attached Courses & Curriculum (Controls User Tab 1) ───── */}
-      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-5 shadow-sm space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 dark:border-white/5 pb-3">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <FiBookOpen className="w-4 h-4 text-[#3C83F6]" />
-              Attached Courses & Curriculum (Controls User Tab 1: Curriculum)
-            </h3>
-            <p className="text-xs text-black/45 dark:text-white/45 mt-0.5">
-              Courses attached to this program control what learners see under &ldquo;What You&apos;ll Learn&rdquo;. Clicking any course reveals its topics.
-            </p>
+      {/* ── DURATION ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+        <div>
+          <label className="admin-micro-label text-black/45 dark:text-white/45">Duration*</label>
+          <input
+            type="number"
+            name="durationDays"
+            min="1"
+            step="1"
+            required
+            placeholder="e.g. 30"
+            value={formData.durationDays}
+            onChange={handleFormChange}
+            className={programFormInputClass}
+          />
+        </div>
+        <div>
+          <label className="admin-micro-label text-black/45 dark:text-white/45">Duration Unit*</label>
+          <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs">
+            <select
+              name="durationUnit"
+              value={formData.durationUnit}
+              onChange={handleFormChange}
+              className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+            >
+              <option className={dropdownOptionClass} value="Days">Days</option>
+              <option className={dropdownOptionClass} value="Weeks">Weeks</option>
+            </select>
+            <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
           </div>
-          <button
-            onClick={() => onNavigateToTab('courses')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#3C83F6]/30 bg-[#3C83F6]/10 text-[#3C83F6] dark:text-[#bceaff] text-xs font-bold hover:bg-[#3C83F6]/20 transition-colors"
-          >
-            <FiPlus className="w-3.5 h-3.5" />
-            Manage Attached Courses
-          </button>
+        </div>
+      </div>
+
+      {/* ── DELIVERY & PRICING ── */}
+      <div className="space-y-3 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="admin-micro-label text-black/45 dark:text-white/45">Availability*</label>
+            <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs">
+              <select
+                name="availability"
+                value={formData.availability}
+                onChange={handleFormChange}
+                className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+              >
+                <option className={dropdownOptionClass} value="Structured">Structured</option>
+                <option className={dropdownOptionClass} value="Trainer-Led">Trainer-Led</option>
+                <option className={dropdownOptionClass} value="Both">Both</option>
+              </select>
+              <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+            </div>
+          </div>
+          <div>
+            <label className="admin-micro-label text-black/45 dark:text-white/45">Pricing*</label>
+            <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs">
+              <select
+                name="pricingType"
+                value={formData.pricingType}
+                onChange={handleFormChange}
+                className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+              >
+                <option className={dropdownOptionClass} value="Free">Free</option>
+                <option className={dropdownOptionClass} value="Paid">Paid</option>
+              </select>
+              <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+            </div>
+          </div>
         </div>
 
-        {attachedCourses.length === 0 ? (
-          <div className="p-8 text-center rounded-xl border border-dashed border-black/15 dark:border-white/15">
-            <FiBookOpen className="w-8 h-8 text-slate-400 mx-auto mb-2 opacity-50" />
-            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">No courses attached yet.</p>
-            <p className="text-[11px] text-slate-400 mt-0.5 mb-3">Attach courses to power the user-side Curriculum tab.</p>
-            <button
-              onClick={() => onNavigateToTab('courses')}
-              className="px-3.5 py-1.5 rounded-lg bg-[#3C83F6] text-white text-xs font-bold hover:bg-[#2f73e0] transition-colors"
-            >
-              Attach Courses Now
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {attachedCourses.map((course, idx) => {
-              const cId = course?._id || course;
-              const isExpanded = expandedCourseIds.has(cId);
-              const topics = Array.isArray(course?.topicIds) ? course.topicIds : [];
+        {formData.pricingType === 'Paid' && (
+          <div className="space-y-3 pt-2">
+            <div>
+              <label className="admin-micro-label text-black/45 dark:text-white/45">Billing Options* (Select at least one)</label>
+              <div className="flex gap-4 text-sm font-medium text-slate-700 dark:text-slate-200 mt-1">
+                {['Monthly', 'Annual'].map((option) => (
+                  <label key={option} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.billingOptions.includes(option)}
+                      onChange={() =>
+                        setFormData((current) => ({
+                          ...current,
+                          billingOptions: current.billingOptions.includes(option)
+                            ? current.billingOptions.filter((item) => item !== option)
+                            : [...current.billingOptions, option],
+                        }))
+                      }
+                      className="h-4 w-4 rounded border-black/20 text-[#3C83F6] focus:ring-[#3C83F6]"
+                    />
+                    {option}
+                  </label>
+                ))}
+              </div>
+            </div>
 
-              return (
-                <div
-                  key={cId}
-                  className="rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] overflow-hidden"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleCourseExpand(cId)}
-                    className="w-full px-4 py-3 text-left flex items-center justify-between gap-3 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition-colors"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="w-6 h-6 rounded-md bg-[#3C83F6]/10 text-[#3C83F6] dark:text-[#bceaff] text-xs font-bold flex items-center justify-center shrink-0">
-                        {idx + 1}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
-                          {course?.title || course?.name || 'Untitled Course'}
-                        </p>
-                        <p className="text-[11px] text-slate-400 truncate">
-                          {topics.length} Curriculum Topics · {course?.level || 'All Levels'}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-xs text-slate-400 font-semibold flex items-center gap-1">
-                      {isExpanded ? 'Hide Topics' : 'View Topics'}
-                      <FiChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                    </span>
-                  </button>
-
-                  {isExpanded && (
-                    <div className="px-4 pb-3 pt-1 border-t border-black/5 dark:border-white/5 bg-white/40 dark:bg-black/20">
-                      {topics.length === 0 ? (
-                        <p className="text-xs text-slate-400 py-2">No individual topics listed for this course.</p>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                          {topics.map((topic, topicIdx) => (
-                            <div
-                              key={topic?._id || topicIdx}
-                              className="flex items-center gap-2 p-2 rounded-lg border border-black/5 dark:border-white/5 bg-white/70 dark:bg-[#0f1f43]/70 text-xs text-slate-700 dark:text-slate-200"
-                            >
-                              <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-300 text-[10px] font-bold flex items-center justify-center shrink-0">
-                                {topicIdx + 1}
-                              </span>
-                              <span className="truncate">{topic?.title || topic?.name || topic}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {formData.billingOptions.includes('Monthly') && (formData.availability === 'Structured' || formData.availability === 'Both') && (
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Monthly Structured Fee (₹)*</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    name="monthlyStructuredFee"
+                    value={formData.monthlyStructuredFee}
+                    onChange={handleFormChange}
+                    placeholder="e.g. 499"
+                    className={programFormInputClass}
+                  />
                 </div>
-              );
-            })}
+              )}
+              {formData.billingOptions.includes('Monthly') && (formData.availability === 'Trainer-Led' || formData.availability === 'Both') && (
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Monthly Trainer-Led Fee (₹)*</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    name="monthlyTrainerLedFee"
+                    value={formData.monthlyTrainerLedFee}
+                    onChange={handleFormChange}
+                    placeholder="e.g. 999"
+                    className={programFormInputClass}
+                  />
+                </div>
+              )}
+              {formData.billingOptions.includes('Annual') && (formData.availability === 'Structured' || formData.availability === 'Both') && (
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Annual Structured Fee (₹)*</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    name="annualStructuredFee"
+                    value={formData.annualStructuredFee}
+                    onChange={handleFormChange}
+                    placeholder="e.g. 4999"
+                    className={programFormInputClass}
+                  />
+                </div>
+              )}
+              {formData.billingOptions.includes('Annual') && (formData.availability === 'Trainer-Led' || formData.availability === 'Both') && (
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Annual Trainer-Led Fee (₹)*</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    name="annualTrainerLedFee"
+                    value={formData.annualTrainerLedFee}
+                    onChange={handleFormChange}
+                    placeholder="e.g. 9999"
+                    className={programFormInputClass}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      {/* ── Section 2: Program Schedule (Controls User Tab 2: Schedule) ─────── */}
-      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-5 shadow-sm space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 dark:border-white/5 pb-3">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <FiCalendar className="w-4 h-4 text-emerald-500" />
-              Learning Schedule Phases (Controls User Tab 2: Schedule)
-            </h3>
-            <p className="text-xs text-black/45 dark:text-white/45 mt-0.5">
-              These 5 configured learning phases display in a clean single left-aligned column on the User-side Program Detail page.
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          {phases.map((phase, idx) => {
-            const phaseTitle = PHASE_TITLES[phase.phase] || `Phase ${idx + 1}: ${phase.phase}`;
-            const dayRange = `Day ${phase.startDay} - Day ${phase.endDay}`;
-            const durationDays = Number(phase.endDay) - Number(phase.startDay) + 1;
-
-            return (
-              <div
-                key={phase.phase || idx}
-                className="flex items-start sm:items-center justify-between p-3.5 rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02]"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center justify-center shrink-0">
-                    {idx + 1}
-                  </div>
-                  <div>
-                    <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">
-                      {phaseTitle}
-                    </p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      Configured range: {dayRange} ({durationDays} days)
-                    </p>
-                  </div>
-                </div>
-                <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 whitespace-nowrap shrink-0">
-                  {dayRange}
-                </span>
-              </div>
-            );
-          })}
+      {/* ── VISIBILITY ── */}
+      <div>
+        <label className="admin-micro-label text-black/45 dark:text-white/45">Visibility*</label>
+        <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs">
+          <select
+            name="visibility"
+            value={formData.visibility}
+            onChange={handleFormChange}
+            className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+          >
+            <option className={dropdownOptionClass} value="Public">Public</option>
+            <option className={dropdownOptionClass} value="Private">Private</option>
+          </select>
+          <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
         </div>
       </div>
 
-      {/* ── Section 3: Program Outcomes (Controls User Tab 3: Outcomes) ─────── */}
-      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0f1f43] p-5 shadow-sm space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 dark:border-white/5 pb-3">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <FiTarget className="w-4 h-4 text-indigo-500" />
-              Program Outcomes (Controls User Tab 3: Outcomes)
-            </h3>
-            <p className="text-xs text-black/45 dark:text-white/45 mt-0.5">
-              Admin-managed outcomes displayed directly on the User-side Program Detail page.
-            </p>
-          </div>
-          {!editingOutcomes ? (
-            <button
-              onClick={() => setEditingOutcomes(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-black/10 dark:border-white/15 bg-white/80 dark:bg-white/5 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+      {/* ── SKILL TAGS ── */}
+      <div>
+        <label className="admin-micro-label text-black/45 dark:text-white/45">Skill Tags*</label>
+        <div className="relative mt-1">
+          <button
+            type="button"
+            onClick={() => setSkillDropdownOpen((prev) => !prev)}
+            className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs text-slate-800 dark:text-white"
+          >
+            <span className="truncate">
+              {formData.skillTags.length === 0
+                ? 'Select Skill Tags'
+                : `${formData.skillTags.length} skill${formData.skillTags.length > 1 ? 's' : ''} selected: ${formData.skillTags.slice(0, 3).join(', ')}${formData.skillTags.length > 3 ? '...' : ''}`}
+            </span>
+            <FiChevronDown className={`w-4 h-4 text-black/45 dark:text-white/60 shrink-0 transition-transform ${skillDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {skillDropdownOpen && (
+            <div
+              className="absolute left-0 right-0 top-full mt-1.5 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-3 shadow-2xl space-y-3"
+              style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
             >
-              <FiEdit2 className="w-3.5 h-3.5" />
-              Edit Outcomes
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  setEditingOutcomes(false);
-                  setOutcomesText((program?.learningGoals || []).join('\n'));
-                  setOutcomesError('');
-                }}
-                disabled={savingOutcomes}
-                className="px-3 py-1.5 rounded-lg border border-black/10 dark:border-white/15 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveOutcomes}
-                disabled={savingOutcomes}
-                className="px-3.5 py-1.5 rounded-lg bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-xs font-bold transition-colors disabled:opacity-50"
-              >
-                {savingOutcomes ? 'Saving...' : 'Save Outcomes'}
-              </button>
+              {formData.skillTags.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-semibold text-black/50 dark:text-white/50">
+                      Selected ({formData.skillTags.length})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, skillTags: [] }))}
+                      className="text-[10px] text-red-500 hover:underline"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                    {formData.skillTags.map((skill) => (
+                      <span
+                        key={skill}
+                        className="inline-flex items-center gap-1 rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-xs font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]"
+                      >
+                        {skill}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSkill(skill)}
+                          className="hover:opacity-75 focus:outline-none ml-0.5"
+                          aria-label={`Remove ${skill}`}
+                        >
+                          <FiX className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <input
+                    type="text"
+                    value={skillSearch}
+                    onChange={(e) => setSkillSearch(e.target.value)}
+                    placeholder="Search skills..."
+                    className={programFormInputClass}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={otherSkillDraft}
+                    onChange={(e) => setOtherSkillDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddSkill(otherSkillDraft);
+                      }
+                    }}
+                    placeholder="Other Skill (new)"
+                    className={programFormInputClass}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddSkill(otherSkillDraft)}
+                    className="shrink-0 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-xs font-bold text-white transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              <div className="border-t border-black/5 dark:border-white/10 pt-2">
+                <span className="text-[11px] font-semibold text-black/50 dark:text-white/50 block mb-1">
+                  Available Skills
+                </span>
+                <div className="max-h-40 overflow-y-auto space-y-0.5">
+                  {((programOptions.skills.length ? programOptions.skills : SKILL_TAG_OPTIONS).filter((s) =>
+                    !formData.skillTags.includes(s) && (!skillSearch.trim() || normalizeSearchString(s).includes(normalizeSearchString(skillSearch)))
+                  )).length === 0 ? (
+                    <p className="px-2 py-1.5 text-xs text-black/45 dark:text-white/45">
+                      {skillSearch.trim() ? 'No matching skills found.' : 'All standard skills selected.'}
+                    </p>
+                  ) : (
+                    (programOptions.skills.length ? programOptions.skills : SKILL_TAG_OPTIONS)
+                      .filter((s) => !formData.skillTags.includes(s) && (!skillSearch.trim() || normalizeSearchString(s).includes(normalizeSearchString(skillSearch))))
+                      .map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => handleAddSkill(tag)}
+                          className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition-colors flex items-center justify-between"
+                        >
+                          <span>+ {tag}</span>
+                          <span className="text-[10px] text-black/30 dark:text-white/30">Add</span>
+                        </button>
+                      ))
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
-
-        {outcomesError && (
-          <div className="p-3 rounded-lg bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300 text-xs font-medium">
-            {outcomesError}
-          </div>
-        )}
-
-        {editingOutcomes ? (
-          <div className="space-y-2">
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Enter program outcomes (one outcome per line):
-            </label>
-            <textarea
-              rows={5}
-              value={outcomesText}
-              onChange={(e) => setOutcomesText(e.target.value)}
-              placeholder="Master essential algorithms...&#10;Build full stack production apps...&#10;Ace technical interviews..."
-              className="w-full p-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/90 dark:bg-[#0a1737] text-xs sm:text-sm text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30 font-sans"
-            />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {outcomes.map((goal, idx) => (
-              <div
-                key={idx}
-                className="flex items-start gap-3 p-3.5 rounded-xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]"
-              >
-                <div className="w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
-                  <FiCheck className="w-3.5 h-3.5" />
-                </div>
-                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-medium">
-                  {goal}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
-    </div>
+
+      {/* ── PLACEMENT TARGETING (Placement only) ── */}
+      {formData.programType === 'Placement' && (
+        <div className="space-y-4 pt-1">
+          {/* Target Companies */}
+          <div>
+            <label className="admin-micro-label text-black/45 dark:text-white/45">Target Companies*</label>
+            <div className="relative mt-1">
+              <button
+                type="button"
+                onClick={() => setCompanyDropdownOpen((prev) => !prev)}
+                className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs text-slate-800 dark:text-white"
+              >
+                <span className="truncate">
+                  {formData.targetCompanies.length === 0
+                    ? 'Select Target Companies'
+                    : `${formData.targetCompanies.length} compan${formData.targetCompanies.length > 1 ? 'ies' : 'y'} selected: ${formData.targetCompanies.slice(0, 3).join(', ')}${formData.targetCompanies.length > 3 ? '...' : ''}`}
+                </span>
+                <FiChevronDown className={`w-4 h-4 text-black/45 dark:text-white/60 shrink-0 transition-transform ${companyDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {companyDropdownOpen && (
+                <div
+                  className="absolute left-0 right-0 top-full mt-1.5 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-3 shadow-2xl space-y-3"
+                  style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
+                >
+                  {formData.targetCompanies.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[11px] font-semibold text-black/50 dark:text-white/50">
+                          Selected ({formData.targetCompanies.length})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, targetCompanies: [] }))}
+                          className="text-[10px] text-red-500 hover:underline"
+                        >
+                          Clear all
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                        {formData.targetCompanies.map((comp) => (
+                          <span
+                            key={comp}
+                            className="inline-flex items-center gap-1 rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-xs font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]"
+                          >
+                            {comp}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCompany(comp)}
+                              className="hover:opacity-75 focus:outline-none ml-0.5"
+                              aria-label={`Remove ${comp}`}
+                            >
+                              <FiX className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <input
+                        type="text"
+                        value={companySearch}
+                        onChange={(e) => setCompanySearch(e.target.value)}
+                        placeholder="Search companies..."
+                        className={programFormInputClass}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={otherCompanyDraft}
+                        onChange={(e) => setOtherCompanyDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddCompany(otherCompanyDraft);
+                          }
+                        }}
+                        placeholder="Other Company (new)"
+                        className={programFormInputClass}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddCompany(otherCompanyDraft)}
+                        className="shrink-0 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-xs font-bold text-white transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-black/5 dark:border-white/10 pt-2">
+                    <span className="text-[11px] font-semibold text-black/50 dark:text-white/50 block mb-1">
+                      Available Companies
+                    </span>
+                    <div className="max-h-40 overflow-y-auto space-y-0.5">
+                      {(((programOptions.companies && programOptions.companies.length ? programOptions.companies : TARGET_COMPANY_OPTIONS)).filter((c) =>
+                        !formData.targetCompanies.includes(c) && (!companySearch.trim() || normalizeSearchString(c).includes(normalizeSearchString(companySearch)))
+                      )).length === 0 ? (
+                        <p className="px-2 py-1.5 text-xs text-black/45 dark:text-white/45">
+                          {companySearch.trim() ? 'No matching companies found.' : 'All companies selected.'}
+                        </p>
+                      ) : (
+                        ((programOptions.companies && programOptions.companies.length ? programOptions.companies : TARGET_COMPANY_OPTIONS))
+                          .filter((c) => !formData.targetCompanies.includes(c) && (!companySearch.trim() || normalizeSearchString(c).includes(normalizeSearchString(companySearch))))
+                          .map((comp) => (
+                            <button
+                              key={comp}
+                              type="button"
+                              onClick={() => handleAddCompany(comp)}
+                              className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition-colors flex items-center justify-between"
+                            >
+                              <span>+ {comp}</span>
+                              <span className="text-[10px] text-black/30 dark:text-white/30">Add</span>
+                            </button>
+                          ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Target Roles */}
+          <div>
+            <label className="admin-micro-label text-black/45 dark:text-white/45">Target Roles*</label>
+            <div className="relative mt-1">
+              <button
+                type="button"
+                onClick={() => setRoleDropdownOpen((prev) => !prev)}
+                className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs text-slate-800 dark:text-white"
+              >
+                <span className="truncate">
+                  {(Array.isArray(formData.targetRoles) ? formData.targetRoles : []).length === 0
+                    ? 'Select Target Roles'
+                    : `${(formData.targetRoles || []).length} role${(formData.targetRoles || []).length > 1 ? 's' : ''} selected: ${(formData.targetRoles || []).slice(0, 3).join(', ')}${(formData.targetRoles || []).length > 3 ? '...' : ''}`}
+                </span>
+                <FiChevronDown className={`w-4 h-4 text-black/45 dark:text-white/60 shrink-0 transition-transform ${roleDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {roleDropdownOpen && (
+                <div
+                  className="absolute left-0 right-0 top-full mt-1.5 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-3 shadow-2xl space-y-3"
+                  style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
+                >
+                  {((Array.isArray(formData.targetRoles) ? formData.targetRoles : [])).length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[11px] font-semibold text-black/50 dark:text-white/50">
+                          Selected ({(formData.targetRoles || []).length})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, targetRoles: [] }))}
+                          className="text-[10px] text-red-500 hover:underline"
+                        >
+                          Clear all
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                        {(formData.targetRoles || []).map((role) => (
+                          <span
+                            key={role}
+                            className="inline-flex items-center gap-1 rounded-full bg-[#3C83F6]/10 px-2.5 py-1 text-xs font-semibold text-[#3C83F6] dark:bg-[#bceaff]/15 dark:text-[#bceaff]"
+                          >
+                            {role}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveRole(role)}
+                              className="hover:opacity-75 focus:outline-none ml-0.5"
+                              aria-label={`Remove ${role}`}
+                            >
+                              <FiX className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <input
+                        type="text"
+                        value={roleSearch}
+                        onChange={(e) => setRoleSearch(e.target.value)}
+                        placeholder="Search roles..."
+                        className={programFormInputClass}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={otherRoleDraft}
+                        onChange={(e) => setOtherRoleDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddRole(otherRoleDraft);
+                          }
+                        }}
+                        placeholder="Other Role (new)"
+                        className={programFormInputClass}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddRole(otherRoleDraft)}
+                        className="shrink-0 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-xs font-bold text-white transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-black/5 dark:border-white/10 pt-2">
+                    <span className="text-[11px] font-semibold text-black/50 dark:text-white/50 block mb-1">
+                      Available Roles
+                    </span>
+                    <div className="max-h-40 overflow-y-auto space-y-0.5">
+                      {(((programOptions.roles && programOptions.roles.length ? programOptions.roles : TARGET_ROLE_OPTIONS)).filter((r) =>
+                        !(Array.isArray(formData.targetRoles) ? formData.targetRoles : []).includes(r) && (!roleSearch.trim() || normalizeSearchString(r).includes(normalizeSearchString(roleSearch)))
+                      )).length === 0 ? (
+                        <p className="px-2 py-1.5 text-xs text-black/45 dark:text-white/45">
+                          {roleSearch.trim() ? 'No matching roles found.' : 'All roles selected.'}
+                        </p>
+                      ) : (
+                        ((programOptions.roles && programOptions.roles.length ? programOptions.roles : TARGET_ROLE_OPTIONS))
+                          .filter((r) => !(Array.isArray(formData.targetRoles) ? formData.targetRoles : []).includes(r) && (!roleSearch.trim() || normalizeSearchString(r).includes(normalizeSearchString(roleSearch))))
+                          .map((role) => (
+                            <button
+                              key={role}
+                              type="button"
+                              onClick={() => handleAddRole(role)}
+                              className="w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition-colors flex items-center justify-between"
+                            >
+                              <span>+ {role}</span>
+                              <span className="text-[10px] text-black/30 dark:text-white/30">Add</span>
+                            </button>
+                          ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── PROGRAM OUTCOMES (What you'll achieve) ── */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <label className="admin-micro-label text-black/45 dark:text-white/45">Program Outcomes / Learning Goals</label>
+          <span className="text-[10px] text-black/40 dark:text-white/40">One outcome per line</span>
+        </div>
+        <textarea
+          name="learningGoalsText"
+          rows={4}
+          placeholder={"e.g.\nMaster core data structures and algorithms\nBuild production-ready full stack web applications\nAce technical interviews with confidence"}
+          value={formData.learningGoalsText}
+          onChange={handleFormChange}
+          className={programFormInputClass}
+        />
+        <p className="text-[11px] text-black/45 dark:text-white/45">
+          These outcomes are displayed directly on the User-side Program Detail page under the Outcomes tab.
+        </p>
+      </div>
+
+      {/* ── PROGRAM STRUCTURE: LEARNING PHASES ── */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#3C83F6] dark:text-[#bceaff]">Program Structure — Learning Phases</p>
+            <p className="mt-0.5 text-xs text-black/55 dark:text-white/55">Phases must cover every day exactly once.</p>
+          </div>
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+            phaseValidation.valid
+              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+              : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
+          }`}>
+            {phaseValidation.valid ? <FiCheckCircle className="w-3.5 h-3.5" /> : <FiAlertCircle className="w-3.5 h-3.5" />}
+            {phaseValidation.valid ? 'Coverage Valid' : 'Coverage Issue'}
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          {formData.phases.map((phase, index) => (
+            <div key={phase.phase} className="grid grid-cols-[minmax(0,1fr)_100px_100px] items-end gap-2">
+              <div className="min-w-0">
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Phase</span>
+                <div className="flex h-10 items-center rounded-lg border border-black/10 bg-white/70 px-3 text-xs font-semibold text-slate-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-white">
+                  {PHASE_LABELS[phase.phase] || phase.phase}
+                </div>
+              </div>
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">Start Day</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={phase.startDay}
+                  onChange={(event) => handlePhaseChange(index, 'startDay', event.target.value)}
+                  className={programFormInputClass}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/40 dark:text-white/40">End Day</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={phase.endDay}
+                  onChange={(event) => handlePhaseChange(index, 'endDay', event.target.value)}
+                  className={programFormInputClass}
+                />
+              </label>
+            </div>
+          ))}
+        </div>
+
+        <div className={`text-xs flex items-center gap-1.5 font-medium ${
+          phaseValidation.valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+        }`}>
+          {phaseValidation.valid ? <FiCheckCircle className="w-3.5 h-3.5 shrink-0" /> : <FiAlertCircle className="w-3.5 h-3.5 shrink-0" />}
+          <span>{phaseValidation.message}</span>
+        </div>
+      </div>
+
+      {/* ── SUBMIT BUTTON ── */}
+      <div className="pt-4 flex items-center justify-end gap-3 border-t border-black/10 dark:border-white/10">
+        <button
+          type="submit"
+          disabled={saving}
+          className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#3C83F6] hover:bg-[#2f73e0] text-white transition-colors disabled:opacity-70 shadow-sm"
+        >
+          {saving ? 'Saving Changes...' : 'Save Changes'}
+        </button>
+      </div>
+    </form>
   );
 };
 

@@ -159,6 +159,7 @@ const LearnMain = () => {
   });
 
   const [activeTab, setActiveTab] = useState('courses'); // 'courses' | 'programs'
+  const [skillTab, setSkillTab] = useState('all'); // 'your-skills' | 'all'
   const [courseFilter, setCourseFilter] = useState('all'); // 'all' | 'free' | 'skill' | 'placement'
   const [programFilter, setProgramFilter] = useState('all'); // 'all' | 'free' | 'self-paced' | 'trainer-led'
   const [searchQuery, setSearchQuery] = useState('');
@@ -356,8 +357,50 @@ const LearnMain = () => {
     return 'skill';
   };
 
+  // Extract all user skills from profile, onboarding, or auth user
+  const userSkills = useMemo(() => {
+    if (!isAuthenticated || !user) return [];
+    const collected = new Set();
+    const addValues = (val) => {
+      if (!val) return;
+      if (Array.isArray(val)) {
+        val.forEach((item) => {
+          if (typeof item === 'string' && item.trim()) {
+            collected.add(item.trim().toLowerCase());
+          }
+        });
+      } else if (typeof val === 'string') {
+        val.split(/[,/]+/).forEach((item) => {
+          if (item.trim()) collected.add(item.trim().toLowerCase());
+        });
+      }
+    };
+
+    addValues(user.skills);
+    addValues(user.currentSkills);
+    addValues(user.skillsOfInterest);
+    addValues(user.learningGoal);
+    addValues(user.targetRole);
+    addValues(user.branch);
+
+    return Array.from(collected);
+  }, [isAuthenticated, user]);
+
   const filteredCourses = useMemo(() => {
     return coursesData.filter(course => {
+      // Your Skills filter for logged-in users
+      if (skillTab === 'your-skills' && isAuthenticated) {
+        if (userSkills.length > 0) {
+          const courseSkills = (course.skills || []).map(s => String(s).toLowerCase());
+          const courseText = `${course.title || ''} ${course.description || ''} ${courseSkills.join(' ')}`.toLowerCase();
+          const matchesUserSkill = userSkills.some(skill => 
+            courseSkills.some(cs => cs.includes(skill) || skill.includes(cs)) ||
+            courseText.includes(skill)
+          );
+          if (!matchesUserSkill) return false;
+        }
+      }
+
       const category = getCourseCategory(course);
       if (courseFilter === 'free') {
         if (!isFreeCourseItem(course)) return false;
@@ -405,7 +448,7 @@ const LearnMain = () => {
       }
       return true;
     });
-  }, [coursesData, courseFilter, selectedSkills, selectedDeliveryTypes, selectedLevels, selectedAccessTypes, searchQuery]);
+  }, [coursesData, courseFilter, selectedSkills, selectedDeliveryTypes, selectedLevels, selectedAccessTypes, searchQuery, skillTab, isAuthenticated, userSkills]);
 
   // Filter & Search Logic for Programs
   const getProgramDeliveryType = (program) => {
@@ -419,12 +462,53 @@ const LearnMain = () => {
 
   const filteredPrograms = useMemo(() => {
     return publicPrograms.filter(program => {
+      // Your Skills filter for logged-in users
+      if (skillTab === 'your-skills' && isAuthenticated) {
+        if (userSkills.length > 0) {
+          const progSkills = Array.isArray(program.skills) ? program.skills.map(s => String(s).toLowerCase()) : [];
+          const progText = `${program.name || program.title || ''} ${program.description || ''} ${program.instructor || ''} ${progSkills.join(' ')}`.toLowerCase();
+          const matchesUserSkill = userSkills.some(skill => 
+            progSkills.some(ps => ps.includes(skill) || skill.includes(ps)) ||
+            progText.includes(skill)
+          );
+          if (!matchesUserSkill) return false;
+        }
+      }
+
       const delivery = getProgramDeliveryType(program);
       if (programFilter === 'free') {
         if (!isFreeProgramItem(program)) return false;
       } else if (programFilter !== 'all' && delivery !== programFilter) {
         return false;
       }
+
+      // Drawer: Delivery Type filter (applied to programs as well)
+      if (selectedDeliveryTypes.length > 0) {
+        const matchesDelivery = selectedDeliveryTypes.some(d => d.toLowerCase() === delivery);
+        if (!matchesDelivery) return false;
+      }
+
+      // Drawer: Access Type filter (applied to programs as well)
+      if (selectedAccessTypes.length > 0) {
+        const isFree = isFreeProgramItem(program);
+        const matchesAccess = selectedAccessTypes.some(a => {
+          if (a === 'Free') return isFree;
+          if (a === 'Paid') return !isFree;
+          return true;
+        });
+        if (!matchesAccess) return false;
+      }
+
+      // Drawer: Skills filter (applied to programs as well)
+      if (selectedSkills.length > 0) {
+        const progSkills = Array.isArray(program.skills) ? program.skills.map(s => String(s).toLowerCase()) : [];
+        const progText = `${program.name || program.title || ''} ${program.description || ''}`.toLowerCase();
+        const hasSkillMatch = selectedSkills.some(s => 
+          progSkills.includes(s.toLowerCase()) || progText.includes(s.toLowerCase())
+        );
+        if (!hasSkillMatch) return false;
+      }
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const searchTarget = `${program.name || program.title || ''} ${program.description || ''} ${program.instructor || ''} ${delivery} ${program.programType || ''}`.toLowerCase();
@@ -432,7 +516,7 @@ const LearnMain = () => {
       }
       return true;
     });
-  }, [publicPrograms, programFilter, searchQuery]);
+  }, [publicPrograms, programFilter, searchQuery, selectedDeliveryTypes, selectedAccessTypes, selectedSkills, skillTab, isAuthenticated, userSkills]);
 
   return (
     <div className={`learn-page-container ${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
@@ -440,8 +524,25 @@ const LearnMain = () => {
 
       <main className="page">
         {/* =========================
-             SEARCH & FILTER (Directly below Navbar, above Heading)
+             HEADER
         ========================= */}
+        <header className="academy-header">
+          <div className="eyebrow">
+            TECHLEARN
+          </div>
+
+          <h1 className="academy-title">
+            ACADEMY
+          </h1>
+
+          <p className="academy-subtitle">
+            Learn the skills to build things worth noticing.
+          </p>
+        </header>
+
+        {/* ==================================================
+             SEARCH & FILTER (In one row immediately below header)
+        ================================================== */}
         <div className="search-row-container">
           <div className="search-wrapper">
             <span className="search-icon" aria-hidden="true">
@@ -458,37 +559,42 @@ const LearnMain = () => {
             />
           </div>
 
-          {activeTab === 'courses' && (
-            <button
-              type="button"
-              className={`drawer-trigger-btn ${activeDrawerFiltersCount > 0 ? 'active' : ''}`}
-              onClick={openFilterDrawer}
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>Filters</span>
-              {activeDrawerFiltersCount > 0 && (
-                <span className="filter-badge-count">{activeDrawerFiltersCount}</span>
-              )}
-            </button>
-          )}
+          <button
+            type="button"
+            className={`drawer-trigger-btn ${activeDrawerFiltersCount > 0 ? 'active' : ''}`}
+            onClick={openFilterDrawer}
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span>Filters</span>
+            {activeDrawerFiltersCount > 0 && (
+              <span className="filter-badge-count">{activeDrawerFiltersCount}</span>
+            )}
+          </button>
         </div>
 
-        {/* =========================
-             HEADER
-        ========================= */}
-        <header className="academy-header" style={{ marginTop: '40px' }}>
-          <div className="eyebrow">
-            TECHLEARN
+        {/* ==================================================
+             YOUR SKILLS / ALL SKILLS TOGGLE (Logged-in users)
+        ================================================== */}
+        {isAuthenticated && (
+          <div className="learn-row-skills-toggle">
+            <div className="skills-category-toggle">
+              <button
+                type="button"
+                className={`toggle-tab-btn ${skillTab === 'your-skills' ? 'active' : ''}`}
+                onClick={() => setSkillTab('your-skills')}
+              >
+                Your Skills
+              </button>
+              <button
+                type="button"
+                className={`toggle-tab-btn ${skillTab === 'all' ? 'active' : ''}`}
+                onClick={() => setSkillTab('all')}
+              >
+                All Skills
+              </button>
+            </div>
           </div>
-
-          <h1 className="academy-title">
-            ACADEMY
-          </h1>
-
-          <p className="academy-subtitle">
-            Learn the skills to build things worth noticing.
-          </p>
-        </header>
+        )}
 
         {/* =========================
              COURSE / PROGRAM SWITCH
@@ -522,48 +628,6 @@ const LearnMain = () => {
         ================================================== */}
         {activeTab === 'courses' && (
           <section className="catalog active" id="courses">
-            <div className="catalog-header">
-              <div className="catalog-heading-wrap">
-                <h2 className="catalog-heading">
-                  Learn at your own pace
-                </h2>
-              </div>
-
-              {/* FILTERS */}
-              <div className="filters">
-                <button
-                  type="button"
-                  className={`filter-button ${courseFilter === 'all' ? 'active' : ''}`}
-                  onClick={() => setCourseFilter('all')}
-                >
-                  ALL
-                </button>
-
-                <button
-                  type="button"
-                  className={`filter-button ${courseFilter === 'free' ? 'active' : ''}`}
-                  onClick={() => setCourseFilter('free')}
-                >
-                  FREE
-                </button>
-
-                <button
-                  type="button"
-                  className={`filter-button ${courseFilter === 'skill' ? 'active' : ''}`}
-                  onClick={() => setCourseFilter('skill')}
-                >
-                  SKILL
-                </button>
-
-                <button
-                  type="button"
-                  className={`filter-button ${courseFilter === 'placement' ? 'active' : ''}`}
-                  onClick={() => setCourseFilter('placement')}
-                >
-                  PLACEMENT
-                </button>
-              </div>
-            </div>
 
             {/* SKELETON LOADING STATE */}
             {loading ? (
@@ -676,49 +740,6 @@ const LearnMain = () => {
         ================================================== */}
         {activeTab === 'programs' && (
           <section className="catalog active" id="programs">
-            <div className="catalog-header">
-              <div className="catalog-heading-wrap">
-                <h2 className="catalog-heading">
-                  Follow a structured path.
-                </h2>
-              </div>
-
-              {/* FILTERS */}
-              <div className="filters">
-                <button
-                  type="button"
-                  className={`filter-button ${programFilter === 'all' ? 'active' : ''}`}
-                  onClick={() => setProgramFilter('all')}
-                >
-                  ALL
-                </button>
-
-                <button
-                  type="button"
-                  className={`filter-button ${programFilter === 'free' ? 'active' : ''}`}
-                  onClick={() => setProgramFilter('free')}
-                >
-                  FREE
-                </button>
-
-                <button
-                  type="button"
-                  className={`filter-button ${programFilter === 'self-paced' ? 'active' : ''}`}
-                  onClick={() => setProgramFilter('self-paced')}
-                >
-                  SELF-PACED
-                </button>
-
-                <button
-                  type="button"
-                  className={`filter-button ${programFilter === 'trainer-led' ? 'active' : ''}`}
-                  onClick={() => setProgramFilter('trainer-led')}
-                >
-                  TRAINER-LED
-                </button>
-              </div>
-            </div>
-
             {/* SKELETON OR PROGRAM CARDS */}
             {loading ? (
               <div className="card-grid" id="programGrid">

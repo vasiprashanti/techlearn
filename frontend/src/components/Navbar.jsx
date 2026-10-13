@@ -588,6 +588,12 @@ export default function Navbar() {
           transform: scale(1.08);
         }
 
+        @media (min-width: 761px) {
+          body.has-app-sidebar .tl-nav-links {
+            display: none !important;
+          }
+        }
+
         @media (max-width: 760px) {
           .tl-nav {
             height: 68px;
