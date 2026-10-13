@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Lock, Search, ChevronDown } from "lucide-react";
+import { Lock, Search, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import "./hiringPage.css";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
@@ -477,7 +477,7 @@ export default function Jobs() {
     >
       <main className="page">
         {/* =========================
-             HERO HEADER
+             HERO HEADER (Left-aligned)
         ========================= */}
         <header className="hiring-header">
           <div className="eyebrow">
@@ -491,87 +491,89 @@ export default function Jobs() {
           <p className="hiring-subtitle">
             Discover opportunities worth applying for.
           </p>
-
-          {/* SEARCH */}
-          <div className="search-wrapper">
-            <span className="search-icon" aria-hidden="true">
-              <Search className="w-4 h-4" />
-            </span>
-
-            <input
-              type="text"
-              className="search-input"
-              id="searchInput"
-              placeholder="Search jobs, companies, roles..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
         </header>
 
-        {/* =========================
-             LIST / CALENDAR SWITCH
-        ========================= */}
-        <div className="text-center">
-          <div className="content-switch">
-            <button
-              type="button"
-              className={`switch-button ${viewMode === "list" ? "active" : ""}`}
-              onClick={() => {
-                setViewMode("list");
-              }}
-            >
-              LIST
-            </button>
+        {/* ========================================================
+             SEARCH AND CONTROLS LAYOUT
+             Row 1: Full-width search bar
+             Row 2: List view, Calendar view, and Filters in same row
+             Row 3: Your Jobs / All Jobs toggle
+        ======================================================== */}
+        <div className="hiring-controls-container">
+          {/* ROW 1: FULL-WIDTH SEARCH BAR */}
+          <div className="hiring-row-search">
+            <div className="search-wrapper">
+              <span className="search-icon" aria-hidden="true">
+                <Search className="w-4 h-4" />
+              </span>
 
-            <button
-              type="button"
-              className={`switch-button ${viewMode === "calendar" ? "active" : ""}`}
-              onClick={() => {
-                setViewMode("calendar");
-              }}
-            >
-              CALENDAR
-            </button>
+              <input
+                type="text"
+                className="search-input"
+                id="searchInput"
+                placeholder="Search jobs, companies, roles..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
           </div>
-        </div>
 
-        {/* =========================
-             CONTROLS ROW (All, For You, Filters)
-        ========================= */}
-        <div className="controls-row">
-          <div className="filters">
-            <button
-              type="button"
-              className={`filter-button ${activeTab === "all" ? "active" : ""}`}
-              onClick={() => {
-                setActiveTab("all");
-                setPage(1);
-              }}
-            >
-              ALL
-            </button>
-            <button
-              type="button"
-              className={`filter-button ${activeTab === "for-you" ? "active" : ""}`}
-              onClick={() => {
-                setActiveTab("for-you");
-                setPage(1);
-              }}
-            >
-              FOR YOU
-            </button>
+          {/* ROW 2: LIST VIEW, CALENDAR VIEW, FILTERS */}
+          <div className="hiring-row-view-filters">
+            <div className="view-mode-buttons">
+              <button
+                type="button"
+                className={`view-btn ${viewMode === "list" ? "active" : ""}`}
+                onClick={() => setViewMode("list")}
+              >
+                List view
+              </button>
+              <button
+                type="button"
+                className={`view-btn ${viewMode === "calendar" ? "active" : ""}`}
+                onClick={() => setViewMode("calendar")}
+              >
+                Calendar view
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={handleOpenFilterDrawer}
-              className={`filter-button flex items-center gap-1.5 ${hasActiveFilters ? "active" : ""}`}
+              className={`filter-button-control ${hasActiveFilters ? "active" : ""}`}
             >
-              <span>FILTERS</span>
-              {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-current inline-block"></span>}
+              <span>Filters</span>
+              {hasActiveFilters && <span className="active-dot"></span>}
             </button>
+          </div>
+
+          {/* ROW 3: YOUR JOBS / ALL JOBS TOGGLE */}
+          <div className="hiring-row-jobs-toggle">
+            <div className="jobs-category-toggle">
+              <button
+                type="button"
+                className={`toggle-tab-btn ${activeTab === "for-you" ? "active" : ""}`}
+                onClick={() => {
+                  setActiveTab("for-you");
+                  setPage(1);
+                }}
+              >
+                Your Jobs
+              </button>
+              <button
+                type="button"
+                className={`toggle-tab-btn ${activeTab === "all" ? "active" : ""}`}
+                onClick={() => {
+                  setActiveTab("all");
+                  setPage(1);
+                }}
+              >
+                All Jobs
+              </button>
+            </div>
           </div>
         </div>
 
@@ -801,6 +803,59 @@ export default function Jobs() {
           {/* VIEW: CALENDAR */}
           {viewMode === "calendar" && (
             <section id="calendarView" className="mt-8">
+              {/* CALENDAR MONTH HEADER */}
+              <div className="flex items-center justify-between mb-4 px-1">
+                <h3 className={`text-sm sm:text-base font-bold ${isDarkMode ? "text-white" : "text-[#00113b]"}`}>
+                  {new Date(calendarYear, calendarMonth).toLocaleDateString("en-US", {
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </h3>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (calendarMonth === 0) {
+                        setCalendarMonth(11);
+                        setCalendarYear((prev) => prev - 1);
+                      } else {
+                        setCalendarMonth((prev) => prev - 1);
+                      }
+                    }}
+                    className="p-1.5 rounded-lg border border-black/10 dark:border-white/10 bg-white/40 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 transition-colors"
+                    aria-label="Previous Month"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      setCalendarMonth(now.getMonth());
+                      setCalendarYear(now.getFullYear());
+                    }}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-black/10 dark:border-white/10 bg-white/40 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 transition-colors"
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (calendarMonth === 11) {
+                        setCalendarMonth(0);
+                        setCalendarYear((prev) => prev + 1);
+                      } else {
+                        setCalendarMonth((prev) => prev + 1);
+                      }
+                    }}
+                    className="p-1.5 rounded-lg border border-black/10 dark:border-white/10 bg-white/40 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 transition-colors"
+                    aria-label="Next Month"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
               {/* CALENDAR GRID */}
               <div className="grid grid-cols-7 gap-[6px]">
                 {weekdays.map((day) => (
