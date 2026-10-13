@@ -187,11 +187,13 @@ export default function OnboardingPrograms() {
         actionLabel: 'ENROLL NOW',
       }));
 
-  const handleCheckPricing = (e) => {
+  const handleHeroEnroll = (e) => {
     e.preventDefault();
-    const el = document.getElementById('pricing');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!selectedCatalogProgram) return;
+    if (freeProgram) {
+      handleEnrollNow('free');
+    } else {
+      navigate(`/learn/programs/${selectedProgramId}/pricing`);
     }
   };
 
@@ -332,11 +334,12 @@ export default function OnboardingPrograms() {
           >
             <button
               type="button"
-              onClick={handleCheckPricing}
-              className="group inline-flex h-12 items-center justify-center rounded-xl bg-[#a3e635] hover:bg-[#86efac] text-slate-950 px-8 text-[10px] sm:text-xs tracking-widest uppercase transition-all duration-300 hover:-translate-y-0.5 shadow-lg shadow-[#a3e635]/25 active:scale-95 cursor-pointer ob-pixel-heading font-normal"
+              disabled={loading}
+              onClick={handleHeroEnroll}
+              className="group inline-flex h-12 items-center justify-center rounded-xl bg-[#a3e635] hover:bg-[#86efac] text-slate-950 px-8 text-[10px] sm:text-xs tracking-widest uppercase transition-all duration-300 hover:-translate-y-0.5 shadow-lg shadow-[#a3e635]/25 active:scale-95 cursor-pointer ob-pixel-heading font-normal disabled:opacity-50"
             >
-              <span>CHECK PRICING</span>
-              <ArrowDown className="ml-2.5 h-4 w-4 transition-transform group-hover:translate-y-1" />
+              <span>{loading ? "PROCESSING..." : freeProgram ? "START FREE PROGRAM" : "ENROLL NOW"}</span>
+              <span className="ml-2.5 font-sans font-bold text-sm">→</span>
             </button>
           </Motion.div>
 

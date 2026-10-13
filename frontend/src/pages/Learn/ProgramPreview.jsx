@@ -344,52 +344,8 @@ export default function ProgramPreview() {
       return;
     }
 
-    if (!selectedPlan) {
-      setPaymentMessage('This Program has no available pricing plan.');
-      return;
-    }
-
-    setIsPaying(true);
-    setPaymentMessage("");
-
-    initiateRazorpayPayment({
-      programId: program._id,
-      planId: selectedPlan.key,
-      programType: program.programType,
-      user,
-      onSuccess: async () => {
-        setIsPaying(false);
-        setPaymentSuccess(true);
-        if (typeof refetchUserData === 'function') {
-          await refetchUserData();
-        }
-        navigate('/dashboard');
-      },
-      onPending: (data) => {
-        setIsPaying(false);
-        navigate("/payment-status", {
-          state: {
-            status: "pending",
-            programId: program._id,
-            programName: program.name,
-            amount: currentPrice,
-            message: data?.message || "Payment is pending confirmation. Your access will activate once verification completes.",
-          },
-        });
-      },
-      onFailure: (err) => {
-        setIsPaying(false);
-        const errMsg =
-          err?.response?.data?.message ||
-          err?.message ||
-          "Payment was not completed. Please retry checkout.";
-        setPaymentMessage(errMsg);
-      },
-      onCancel: () => {
-        setIsPaying(false);
-        setPaymentMessage("Checkout was closed. You can retry anytime.");
-      },
-    });
+    // If paid, redirect user directly to the new dedicated Pricing Page
+    navigate(`/learn/programs/${program._id}/pricing`);
   };
 
   return (
@@ -436,49 +392,14 @@ export default function ProgramPreview() {
               <div className="meta-item">
                 <span className="meta-label">Access</span>
                 <span className="meta-value">
-                  {isPaid ? `₹${currentPrice} (${effectiveBilling})` : "Free"}
+                  {isPaid
+                    ? (pricingPlans.length > 1
+                        ? `From ₹${Math.min(...pricingPlans.map((p) => Number(p.price) || 0))}`
+                        : `₹${currentPrice}`)
+                    : "Free"}
                 </span>
               </div>
             </div>
-
-            {/* BILLING SELECTION (Only when BOTH Monthly and Annual are configured) */}
-            {isPaid && hasMonthlyOption && hasAnnualOption && (
-              <div className="mt-4 mb-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider opacity-60 mb-2 font-mono">
-                  SELECT BILLING OPTION:
-                </p>
-                <div className="inline-flex rounded-xl p-1 bg-black/10 dark:bg-white/10 gap-1 border border-black/10 dark:border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedBilling("Monthly");
-                      setPaymentMessage("");
-                    }}
-                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-                      effectiveBilling === "Monthly"
-                        ? "bg-[#3c83f6] text-white shadow"
-                        : "opacity-70 hover:opacity-100"
-                    }`}
-                  >
-                    Pay Monthly {monthlyDisplayPrice ? `(₹${monthlyDisplayPrice})` : ""}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedBilling("Annual");
-                      setPaymentMessage("");
-                    }}
-                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-                      effectiveBilling === "Annual"
-                        ? "bg-[#3c83f6] text-white shadow"
-                        : "opacity-70 hover:opacity-100"
-                    }`}
-                  >
-                    Pay Annually {annualDisplayPrice ? `(₹${annualDisplayPrice})` : ""}
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* SKILLS */}
             {program.skillTags && program.skillTags.length > 0 && (
@@ -525,7 +446,7 @@ export default function ProgramPreview() {
                   : isEnrolled
                   ? (isDay1 ? "START LEARNING" : "RESUME LEARNING")
                   : isPaid
-                  ? `PAY ₹${currentPrice} WITH RAZORPAY`
+                  ? "ENROLL NOW"
                   : "START FREE PROGRAM"}
               </span>
               <span className="button-arrow">→</span>
