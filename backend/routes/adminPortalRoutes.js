@@ -42,6 +42,7 @@ import {
   resetStudentXpAdmin,
   bulkDeleteBatchesAdmin,
   bulkUploadStudentsAdmin,
+  markStudentsReadAdmin,
 } from "../controllers/admin/adminEntityController.js";
 import {
   assignTrackTemplateDay,
@@ -140,6 +141,7 @@ router.patch("/students/:studentId/payment", updateStudentPaymentAdmin);
 router.patch("/students/:studentId/programs/:programId/start-date", updateStudentProgramStartDateAdmin);
 router.post("/students/:studentId/reset-xp", resetStudentXpAdmin);
 router.patch("/students/:studentId/remove-batch", removeStudentFromBatchAdmin);
+router.post("/students/mark-read", markStudentsReadAdmin);
 router.delete("/students/:studentId", deleteStudentAdmin);
 
 router.get("/questions/categories", listQuestionCategories);

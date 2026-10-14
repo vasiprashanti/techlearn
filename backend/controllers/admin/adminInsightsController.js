@@ -368,6 +368,9 @@ export const listSubmissionsPage = async (req, res) => {
     if (req.query.studentId) {
       filter.studentId = req.query.studentId;
     }
+    if (req.query.programId) {
+      filter.programId = req.query.programId;
+    }
 
     const reportStudent = req.query.studentId
       ? await Student.findById(req.query.studentId).select("email").lean()
@@ -380,6 +383,9 @@ export const listSubmissionsPage = async (req, res) => {
           ],
         }
       : {};
+    if (req.query.programId) {
+      codingStudentFilter.programId = req.query.programId;
+    }
 
     const [total, submissions, totalToday, acceptedToday, averageExecution, pendingStudents, challengeCodingSubmissions] = await Promise.all([
       Submission.countDocuments(filter),
