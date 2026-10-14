@@ -1,7 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
-import { SESSION_EXPIRED_EVENT, expireSession, isTokenExpired } from '../utils/session';
-
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const DASHBOARD_CACHE_KEY = 'techlearn-dashboard-cache-v1';
 const DASHBOARD_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -165,11 +163,6 @@ export const UserProvider = ({ children }) => {
       });
       const data = await response.json().catch(() => ({ message: 'Network error' }));
 
-      if (response.status === 401) {
-        expireSession();
-        return;
-      }
-
       if (!response.ok) {
         throw new Error(data.message || `HTTP error! status: ${response.status}`);
       }
@@ -188,10 +181,6 @@ export const UserProvider = ({ children }) => {
   // Initialize user data
   useEffect(() => {
     const initializeUser = async () => {
-      const storedToken = localStorage.getItem('token');
-      if (storedToken && isTokenExpired(storedToken)) {
-        expireSession();
-      }
       const hasToken = Boolean(localStorage.getItem('token'));
       const hasLocalUser = loadUserFromStorage();
 
@@ -216,22 +205,6 @@ export const UserProvider = ({ children }) => {
     };
 
     initializeUser();
-  }, []);
-
-  // Session ended elsewhere (expired token / rejected request): drop the signed-in data
-  useEffect(() => {
-    const handleExpired = () => {
-      setUser({ firstName: 'Guest', lastName: '', email: '' });
-      setXp(0);
-      setRecentExercises([]);
-      setActivities({});
-      setProgram(null);
-      setLatestDailyChallenge(null);
-      setError(null);
-      setIsLoading(false);
-    };
-    window.addEventListener(SESSION_EXPIRED_EVENT, handleExpired);
-    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleExpired);
   }, []);
 
   // Listen for XP updates to sync dashboard context data

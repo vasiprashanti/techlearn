@@ -1,8 +1,6 @@
 // API Service Layer for TechLearn Solutions
 // This handles all communication with the backend
 
-import { expireSession } from '../utils/session';
-
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 
@@ -15,8 +13,9 @@ const handleResponse = async (response) => {
     // Do not redirect globally on 401. Public pages make optional requests
     // for learner-only data (for example, the course sidebar); a guest
     // should remain on the public page when those requests are unauthorized.
-    if (response.status === 401 && (localStorage.getItem('token') || localStorage.getItem('authToken'))) {
-      expireSession();
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken'); // Also clear backup token
     }
 
     throw new Error(error.message || `HTTP error! status: ${response.status}`);

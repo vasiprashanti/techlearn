@@ -1,6 +1,5 @@
 // src/services/api/api.js
 import axios from 'axios';
-import { expireSession } from '../utils/session';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
@@ -20,8 +19,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token rejected: end the session in-app (AuthContext sends protected pages to login)
-      expireSession();
+      // Clear invalid token
+      localStorage.removeItem('token');
+      // Redirect to login page
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }

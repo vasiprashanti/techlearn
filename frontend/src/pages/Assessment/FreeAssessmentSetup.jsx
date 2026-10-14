@@ -4,8 +4,6 @@ import { ArrowRight } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { programLearningAPI } from '../../services/programLearningApi';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
 
 export default function FreeAssessmentSetup() {
   const { isDark } = useTheme();
@@ -36,7 +34,6 @@ export default function FreeAssessmentSetup() {
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [unavailable, setUnavailable] = useState(false);
 
   // Pick up saved profile values once the user loads (without overriding choices already made)
   useEffect(() => {
@@ -67,14 +64,6 @@ export default function FreeAssessmentSetup() {
     setError('');
     if (step < 2) setStep(step + 1);
     else setConfirmed(true);
-  };
-
-  // Fallback CTA: back to the first question of the questionnaire
-  const restartQuestionnaire = () => {
-    setError('');
-    setUnavailable(false);
-    setConfirmed(false);
-    setStep(0);
   };
 
   const goBack = () => {
@@ -132,8 +121,8 @@ export default function FreeAssessmentSetup() {
       }
     } catch (err) {
       console.error('Error starting Free Assessment:', err);
+      setError(err.message || 'Failed to start Free Assessment. Please try again.');
       setLoading(false);
-      setUnavailable(true);
     }
   };
 
@@ -172,46 +161,6 @@ export default function FreeAssessmentSetup() {
             </button>
           </div>
         </main>
-      </div>
-    );
-  }
-
-  if (unavailable) {
-    return (
-      <div className={`tl-pre-assessment-root ${isDark ? 'dark-mode' : ''}`}>
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap');
-          .tl-pre-assessment-root { --bg: #c0e9ff; --text: #050a5b; --muted: #68718b; --lime: #8dd035; min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: flex; flex-direction: column; }
-          .tl-pre-assessment-root.dark-mode { --bg: #01071e; --text: #f5f7ff; --muted: #9da7c2; --lime: #b2e96a; }
-          .tl-pre-assessment-root .bail { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 120px 24px 72px; }
-          .tl-pre-assessment-root .bail-eyebrow { font-family: 'Press Start 2P', cursive; font-size: 8px; letter-spacing: .8px; color: var(--muted); margin: 22px 0 14px; }
-          .tl-pre-assessment-root .bail-title { font-size: clamp(28px, 3vw, 44px); line-height: 1.1; letter-spacing: -1.2px; font-weight: 600; margin-bottom: 26px; }
-          .tl-pre-assessment-root .bail-title i { font-style: italic; }
-          .tl-pre-assessment-root .bail-cta { height: 44px; padding: 0 22px; border: none; border-radius: 10px; background: var(--lime); color: #07101b; font-size: 13px; font-weight: 700; cursor: pointer; transition: transform .18s ease; }
-          .tl-pre-assessment-root .bail-cta:hover { transform: translateY(-1px); }
-          .glitch { position: relative; width: 150px; height: 150px; }
-          .glitch img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
-          .glitch .g-red, .glitch .g-cyan { mix-blend-mode: screen; opacity: .85; }
-          .glitch .g-red { filter: hue-rotate(140deg) saturate(3) brightness(1.3); animation: glitchRed 2.6s infinite steps(1); }
-          .glitch .g-cyan { filter: hue-rotate(-60deg) saturate(3) brightness(1.4); animation: glitchCyan 2.6s infinite steps(1); }
-          .glitch .g-main { animation: glitchMain 2.6s infinite steps(1); }
-          @keyframes glitchMain { 0%, 88%, 100% { transform: none; clip-path: none; } 90% { transform: translateX(-4px); clip-path: inset(10% 0 55% 0); } 93% { transform: translateX(5px); clip-path: inset(55% 0 12% 0); } 96% { transform: translateX(-2px); clip-path: none; } }
-          @keyframes glitchRed { 0%, 86%, 100% { transform: none; clip-path: inset(0 0 100% 0); } 88% { transform: translate(-7px, 1px); clip-path: inset(20% 0 50% 0); } 92% { transform: translate(6px, -1px); clip-path: inset(60% 0 8% 0); } 96% { transform: translate(-4px, 0); clip-path: inset(35% 0 35% 0); } }
-          @keyframes glitchCyan { 0%, 86%, 100% { transform: none; clip-path: inset(0 0 100% 0); } 89% { transform: translate(7px, -1px); clip-path: inset(45% 0 30% 0); } 93% { transform: translate(-6px, 1px); clip-path: inset(8% 0 70% 0); } 97% { transform: translate(4px, 0); clip-path: inset(70% 0 5% 0); } }
-          @media (prefers-reduced-motion: reduce) { .glitch img { animation: none !important; } .glitch .g-red, .glitch .g-cyan { display: none; } }
-        `}</style>
-        <Navbar />
-        <main className="bail">
-          <div className="glitch" aria-hidden="true">
-            <img className="g-main" src="/profile_avatars/default-avatar.png" alt="" />
-            <img className="g-red" src="/profile_avatars/default-avatar.png" alt="" />
-            <img className="g-cyan" src="/profile_avatars/default-avatar.png" alt="" />
-          </div>
-          <div className="bail-eyebrow">NOT TODAY</div>
-          <h1 className="bail-title"><i>Your</i> interview said, “BRB.”</h1>
-          <button type="button" className="bail-cta" onClick={restartQuestionnaire}>Try Another Role →</button>
-        </main>
-        <Footer />
       </div>
     );
   }
