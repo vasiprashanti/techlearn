@@ -1,15 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ChevronLeft,
-  ChevronRight,
   Play,
   Square,
   RotateCcw,
   Settings,
   Download,
   Share2,
-  Menu,
   Code,
   Eye
 } from 'lucide-react';
@@ -17,7 +13,6 @@ import Editor from '@monaco-editor/react';
 import { useTheme } from '../../context/ThemeContext';
 import { compilerAPI } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
-import Navbar from '../../components/Navbar';
 import ScrollProgress from '../../components/ScrollProgress';
 
 // Language configurations
@@ -141,8 +136,7 @@ const OnlineCompiler = () => {
   const initialDraftRef = useRef(readCompilerDraft());
   const preserveInitialDraftRef = useRef(Boolean(initialDraftRef.current));
   const [selectedLanguage, setSelectedLanguage] = useState(() => initialDraftRef.current?.language || 'html');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0);
   const [code, setCode] = useState(() => initialDraftRef.current?.code || LANGUAGES.html.defaultCode);
   const [output, setOutput] = useState('');
   const [customInput, setCustomInput] = useState('');
@@ -189,7 +183,7 @@ const OnlineCompiler = () => {
       base: 'vs-dark',
       inherit: true,
       rules: [
-        { token: '', foreground: 'e2e8f0', background: '1e293b' },
+        { token: '', foreground: 'e2e8f0', background: '0a1238' },
         { token: 'comment', foreground: '64748b', fontStyle: 'italic' },
         { token: 'keyword', foreground: '60a5fa' },
         { token: 'string', foreground: '34d399' },
@@ -200,14 +194,14 @@ const OnlineCompiler = () => {
         { token: 'function', foreground: 'fbbf24' },
       ],
       colors: {
-        'editor.background': '#1e293b',
+        'editor.background': '#0a1238',
         'editor.foreground': '#e2e8f0',
         'editorLineNumber.foreground': '#64748b',
         'editorLineNumber.activeForeground': '#94a3b8',
         'editor.selectionBackground': '#334155',
         'editor.selectionHighlightBackground': '#475569',
         'editorCursor.foreground': '#60a5fa',
-        'editor.lineHighlightBackground': '#334155',
+        'editor.lineHighlightBackground': '#101b47',
         'editorWhitespace.foreground': '#475569',
         'editorIndentGuide.background': '#475569',
         'editorIndentGuide.activeBackground': '#64748b',
@@ -233,11 +227,6 @@ const OnlineCompiler = () => {
 
   const handleLanguageSelect = (languageId) => {
     setSelectedLanguage(languageId);
-    setMobileMenuOpen(false);
-  };
-
-  const handleToggleSidebar = () => {
-    setSidebarCollapsed(prev => !prev);
   };
 
   const handleRunCode = async () => {
@@ -305,9 +294,10 @@ const OnlineCompiler = () => {
     setOutput(prev => prev + '\n\n⚠️ Execution stopped by user');
   };
 
-  const handleResetCode = () => {
-    setCode(LANGUAGES[selectedLanguage].defaultCode);
-    setOutput('');
+  // Refresh touches only the output area: the preview reloads / the terminal clears. The code stays.
+  const handleRefreshOutput = () => {
+    setPreviewKey((key) => key + 1);
+    if (!LANGUAGES[selectedLanguage].isWebLanguage) setOutput('');
   };
 
   // Function to render output with styled status
@@ -357,156 +347,33 @@ const OnlineCompiler = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] online-compiler-container">
       <ScrollProgress />
-      <Navbar />
-      
+      {/* Language navigation: horizontal, scrollable, starts directly below the global navbar */}
+      <div className="fixed left-0 right-0 top-[72px] z-30 border-b border-black/5 bg-[#d8eef5] dark:border-white/10 dark:bg-[#01071e]">
+        <nav aria-label="Languages" className="flex gap-2 overflow-x-auto px-4 py-2 lg:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {Object.values(LANGUAGES).map((language) => (
+            <button
+              key={language.id}
+              type="button"
+              onClick={() => handleLanguageSelect(language.id)}
+              aria-current={selectedLanguage === language.id ? 'true' : undefined}
+              className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                selectedLanguage === language.id
+                  ? 'border-[#8dd035] bg-[#8dd035]/20 text-[#04103d] dark:text-white'
+                  : 'border-transparent text-gray-700 hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/10'
+              }`}
+            >
+              <img src={language.icon} alt="" className="h-5 w-5 object-contain" />
+              {language.name}
+            </button>
+          ))}
+        </nav>
+      </div>
+
       <div className="flex min-h-screen overflow-x-hidden">
-        {/* Desktop Sidebar */}
-        <motion.div
-          initial={false}
-          animate={{
-            width: sidebarCollapsed ? "60px" : "160px",
-            transition: { duration: 0.3, ease: "easeInOut" }
-          }}
-          className="hidden lg:flex flex-col bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl border-r border-white/20 dark:border-gray-700/20 relative z-40 overflow-x-hidden"
-        >
-          {/* Sidebar Header */}
-          <div className="p-2 border-b border-white/10 dark:border-gray-700/20 pt-24 relative z-50">
-            <div className="flex items-center justify-end relative z-50">
-              <button
-                type="button"
-                onClick={handleToggleSidebar}
-                className="p-1.5 rounded-lg bg-blue-500/20 dark:bg-blue-600/20 hover:bg-blue-500/30 dark:hover:bg-blue-600/30 transition-all duration-200 border border-blue-500/50 dark:border-blue-400/50 flex-shrink-0 cursor-pointer z-[60] relative shadow-lg active:scale-95"
-                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              >
-                {sidebarCollapsed ? (
-                  <ChevronRight className="w-3 h-3 text-blue-700 dark:text-blue-300" />
-                ) : (
-                  <ChevronLeft className="w-3 h-3 text-blue-700 dark:text-blue-300" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Sidebar Content */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-2">
-            <div className="space-y-2">
-              {Object.values(LANGUAGES).map((language) => (
-                <motion.button
-                  key={language.id}
-                  onClick={() => handleLanguageSelect(language.id)}
-                  whileHover={{ scale: sidebarCollapsed ? 1.05 : 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`sidebar-button group relative w-full text-left rounded-lg transition-all duration-300 ${
-                    selectedLanguage === language.id
-                      ? 'bg-blue-500/20 border border-blue-500/50 text-blue-700 dark:text-blue-300 shadow-lg'
-                      : 'bg-white/40 dark:bg-gray-800/40 border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/60 dark:hover:bg-gray-700/50 hover:shadow-md'
-                  } ${sidebarCollapsed ? 'p-2 mx-1' : 'p-3'}`}
-                >
-                  <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-                    <div className={`${sidebarCollapsed ? 'w-10 h-10' : 'w-9 h-9'} flex items-center justify-center`}>
-                      <img
-                        src={language.icon}
-                        alt={`${language.name} logo`}
-                        className={`${sidebarCollapsed ? 'w-8 h-8' : 'w-7 h-7'} object-contain`}
-                      />
-                    </div>
-
-                    <AnimatePresence mode="wait">
-                      {!sidebarCollapsed && (
-                        <motion.div
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          transition={{ duration: 0.2 }}
-                          className="flex-1 min-w-0"
-                        >
-                          <h4 className="font-medium text-gray-900 dark:text-white text-sm truncate">
-                            {language.name}
-                          </h4>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-
-                  {/* Tooltip for collapsed state */}
-                  {sidebarCollapsed && (
-                    <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 dark:bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                      {language.name}
-                    </div>
-                  )}
-                </motion.button>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-
-
-
-        {/* Mobile Sidebar Overlay */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setMobileMenuOpen(false)}
-                className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
-              />
-              <motion.div
-                initial={{ x: -300 }}
-                animate={{ x: 0 }}
-                exit={{ x: -300 }}
-                transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="lg:hidden fixed left-0 top-0 h-full w-80 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-r border-white/20 dark:border-gray-700/20 z-50 overflow-y-auto"
-              >
-                <div className="p-4 pt-24">
-                  <h3 className="font-poppins font-semibold text-gray-900 dark:text-white text-lg mb-4">
-                    Select Language
-                  </h3>
-                  <div className="space-y-3">
-                    {Object.values(LANGUAGES).map((language) => (
-                      <button
-                        key={language.id}
-                        onClick={() => handleLanguageSelect(language.id)}
-                        className={`w-full text-left p-4 rounded-xl transition-all duration-300 ${
-                          selectedLanguage === language.id
-                            ? 'bg-blue-500/20 border-2 border-blue-500/50 text-blue-700 dark:text-blue-300'
-                            : 'bg-white/40 dark:bg-gray-800/40 border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/60 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 flex items-center justify-center">
-                            <img
-                              src={language.icon}
-                              alt={`${language.name} logo`}
-                              className="w-8 h-8 object-contain"
-                            />
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-gray-900 dark:text-white">
-                              {language.name}
-                            </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              {language.extension}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-
         {/* Main Content */}
         <div className="flex-1 relative min-w-0">
-          <div className="relative z-10 pt-20 pb-2">
-            <div className={`h-[calc(100vh-5.5rem)] transition-all duration-300 ${
-              sidebarCollapsed ? 'px-4' : 'px-4 lg:px-6'
-            }`}>
+          <div className="relative z-10 pt-[124px] pb-2">
+            <div className="h-[calc(100vh-8rem)] px-4 lg:px-6">
 
               {/* Header */}
               <div className="mb-2 flex items-center justify-between">
@@ -527,17 +394,6 @@ const OnlineCompiler = () => {
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2">
-                  {/* Mobile Menu Button - moved here from fixed position */}
-                  <button
-                    onClick={() => setMobileMenuOpen(true)}
-                    className="lg:hidden p-2 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 text-gray-700 dark:text-gray-300 transition-all duration-200"
-                    title="Language Menu"
-                  >
-                    <Menu className="w-4 h-4" />
-                  </button>
-
-
-
                   {/* Removed Run button from header - moved to code editor section */}
                 </div>
               </div>
@@ -592,10 +448,10 @@ const OnlineCompiler = () => {
                     )}
                     {/* Code Editor Panel */}
                     <div
-                      className="bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/20 overflow-hidden"
+                      className="bg-white/50 dark:bg-[#0a1238] rounded-xl border border-black/5 dark:border-white/10 overflow-hidden"
                       style={{ width: `calc(${splitPos}% - 8px)` }}
                     >
-                      <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-white/10 dark:bg-gray-800/20 min-h-[4rem]">
+                      <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-transparent min-h-[4rem]">
                         <div className="flex items-center justify-between h-full">
                           <h3 className="font-medium text-gray-900 dark:text-white">
                             Code Editor
@@ -608,7 +464,7 @@ const OnlineCompiler = () => {
                               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                                 isRunning
                                   ? 'bg-red-500/20 hover:bg-red-500/30 text-red-700 dark:text-red-300'
-                                  : 'bg-green-500/20 hover:bg-green-500/30 text-green-700 dark:text-green-300'
+                                  : 'bg-[#8dd035] hover:bg-[#a2d354] text-[#04103d] font-semibold'
                               } disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
                               {isRunning ? (
@@ -673,18 +529,18 @@ const OnlineCompiler = () => {
 
                     {/* Output Panel */}
                     <div
-                      className="bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/20 overflow-hidden flex-1"
+                      className="bg-white/50 dark:bg-[#0a1238] rounded-xl border border-black/5 dark:border-white/10 overflow-hidden flex-1"
                       style={{ width: `calc(${100 - splitPos}% - 8px)` }}
                     >
-                      <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-white/10 dark:bg-gray-800/20 min-h-[4rem]">
+                      <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-transparent min-h-[4rem]">
                         <div className="flex items-center justify-between h-full">
                           <h3 className="font-medium text-gray-900 dark:text-white">
                             {currentLanguage.isWebLanguage ? 'Live Preview' : 'Output'}
                           </h3>
                           <button
-                            onClick={handleResetCode}
+                            onClick={handleRefreshOutput}
                             className="p-1.5 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 text-gray-700 dark:text-gray-300 transition-all duration-200"
-                            title="Reset Code"
+                            title="Refresh output"
                           >
                             <RotateCcw className="w-4 h-4" />
                           </button>
@@ -693,6 +549,7 @@ const OnlineCompiler = () => {
                       <div className="h-[calc(100%-4rem)] overflow-hidden flex flex-col">
                         {currentLanguage.isWebLanguage ? (
                           <iframe
+                            key={previewKey}
                             srcDoc={getPreviewContent()}
                             className="w-full h-full border-0 bg-white"
                             sandbox="allow-scripts"
@@ -705,7 +562,7 @@ const OnlineCompiler = () => {
                               <textarea value={customInput} onChange={(event) => setCustomInput(event.target.value)} rows={4} placeholder="Enter stdin values here, one line at a time" className="w-full resize-y rounded-lg border border-gray-300/70 bg-white/70 px-3 py-2 font-mono text-sm text-gray-900 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950/60 dark:text-gray-100" />
                             </div>
                             <div className="min-h-0 flex-1 p-4 overflow-auto">
-                              <pre className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap">{renderOutput(output)}</pre>
+                              <pre className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{renderOutput(output)}</pre>
                             </div>
                           </>
                         )}
@@ -718,8 +575,8 @@ const OnlineCompiler = () => {
                 <div className="lg:hidden h-full relative">
                   {activeView === 'editor' ? (
                     /* Code Editor Panel */
-                    <div className="bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/20 overflow-hidden h-full">
-                      <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-white/10 dark:bg-gray-800/20">
+                    <div className="bg-white/50 dark:bg-[#0a1238] rounded-xl border border-black/5 dark:border-white/10 overflow-hidden h-full">
+                      <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-transparent">
                         <div className="flex items-center justify-between">
                           <h3 className="font-medium text-gray-900 dark:text-white">
                             Code Editor
@@ -767,7 +624,7 @@ const OnlineCompiler = () => {
                             className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                               isRunning
                                 ? 'bg-red-500 hover:bg-red-600 text-white'
-                                : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                                : 'bg-[#8dd035] hover:bg-[#a2d354] text-[#04103d]'
                             } disabled:opacity-50 disabled:cursor-not-allowed`}
                           >
                             {isRunning ? (
@@ -787,16 +644,16 @@ const OnlineCompiler = () => {
                     </div>
                   ) : (
                     /* Output/Preview Panel */
-                    <div className="bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/20 overflow-hidden h-full">
-                      <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-white/10 dark:bg-gray-800/20">
+                    <div className="bg-white/50 dark:bg-[#0a1238] rounded-xl border border-black/5 dark:border-white/10 overflow-hidden h-full">
+                      <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-transparent">
                         <div className="flex items-center justify-between">
                           <h3 className="font-medium text-gray-900 dark:text-white">
                             {currentLanguage.isWebLanguage ? 'Live Preview' : 'Output'}
                           </h3>
                           <button
-                            onClick={handleResetCode}
+                            onClick={handleRefreshOutput}
                             className="p-1.5 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 text-gray-700 dark:text-gray-300 transition-all duration-200"
-                            title="Reset Code"
+                            title="Refresh output"
                           >
                             <RotateCcw className="w-4 h-4" />
                           </button>
@@ -805,6 +662,7 @@ const OnlineCompiler = () => {
                       <div className="h-[calc(100%-3.5rem)] overflow-hidden flex flex-col">
                         {currentLanguage.isWebLanguage ? (
                           <iframe
+                            key={previewKey}
                             srcDoc={getPreviewContent()}
                             className="w-full h-full border-0 bg-white"
                             sandbox="allow-scripts"
@@ -817,7 +675,7 @@ const OnlineCompiler = () => {
                               <textarea value={customInput} onChange={(event) => setCustomInput(event.target.value)} rows={3} placeholder="Enter stdin values here" className="w-full resize-y rounded-lg border border-gray-300/70 bg-white/70 px-3 py-2 font-mono text-sm text-gray-900 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950/60 dark:text-gray-100" />
                             </div>
                             <div className="min-h-0 flex-1 p-4 overflow-auto">
-                              <pre className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap">{renderOutput(output)}</pre>
+                              <pre className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{renderOutput(output)}</pre>
                             </div>
                           </>
                         )}

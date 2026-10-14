@@ -382,8 +382,8 @@ export default function Navbar() {
         }
 
         .tl-get-started {
-          height: 38px;
-          padding: 0 16px;
+          height: 32px;
+          padding: 0 14px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -391,7 +391,7 @@ export default function Navbar() {
           background: var(--green);
           color: var(--green-text);
           text-decoration: none;
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 700;
           white-space: nowrap;
           border: none;
@@ -753,6 +753,43 @@ export default function Navbar() {
             font-size: 13px;
             font-weight: 500;
           }
+          .tl-mobile-footer.guest {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+            border-top: none;
+            padding: 18px 12px 8px;
+          }
+          .tl-mobile-menu .tl-mobile-footer.guest .tl-mobile-cta,
+          .tl-mobile-menu .tl-mobile-footer.guest .tl-mobile-login {
+            width: 100%;
+            min-height: 0;
+            height: 46px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            justify-content: center;
+            text-align: center;
+            padding: 0;
+          }
+          .tl-mobile-menu .tl-mobile-footer.guest .tl-mobile-cta {
+            background: var(--green);
+            color: var(--green-text);
+            border: none;
+          }
+          .tl-mobile-menu .tl-mobile-footer.guest .tl-mobile-login {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+          }
+          .tl-mobile-footer.guest .tl-mobile-socials {
+            justify-content: center;
+            margin-top: 14px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            margin-left: -12px;
+            margin-right: -12px;
+          }
           .tl-mobile-socials {
             display: flex;
             gap: 12px;
@@ -968,19 +1005,26 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                <Link to="/learn">Learn</Link>
-                <Link to="/roadmaps">Roadmaps</Link>
-                <Link to="/jobs">Hiring</Link>
-                <button type="button" onClick={handleLoginClick}>
-                  Log in
-                </button>
-                <button
-                  type="button"
-                  onClick={handleGetStartedClick}
-                  style={{ color: 'var(--green)', fontWeight: '700' }}
-                >
-                  Get started →
-                </button>
+                <div className="tl-mobile-links">
+                  {[['Dashboard', '/dashboard'], ['Learn', '/learn'], ['Roadmaps', '/roadmaps'], ['Hiring', '/jobs']].map(([label, to]) => (
+                    <Link key={to} to={to} className={location.pathname.startsWith(to) ? 'active' : ''}>{label}</Link>
+                  ))}
+                </div>
+                <div className="tl-mobile-footer guest">
+                  <button type="button" className="tl-mobile-cta" onClick={handleGetStartedClick}>
+                    Get Started →
+                  </button>
+                  <button type="button" className="tl-mobile-login" onClick={handleLoginClick}>
+                    Log In
+                  </button>
+                  <div className="tl-mobile-socials">
+                    {SOCIAL_LINKS.map(({ label, href, icon }) => (
+                      <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}>
+                        <img src={icon} alt="" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
               </>
             )}
           </div>

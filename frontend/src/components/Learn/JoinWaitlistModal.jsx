@@ -1,204 +1,192 @@
-import React, { useState } from 'react';
-import { X, Users, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { programLearningAPI } from '../../services/programLearningApi';
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Pixel avatars from the waitlist design: [rects as x, y, width, height, fill]
+const AVATARS = [
+  [[2, 16, 20, 13, '#0f42ce'], [0, 21, 2, 8, '#1d5ef2'], [22, 21, 2, 8, '#1d5ef2'], [2, 28, 20, 2, '#84adff'], [10, 13, 4, 3, '#6992f7'], [5, 3, 14, 11, '#1d5ef2'], [4, 5, 1, 7, '#1d5ef2'], [19, 5, 1, 7, '#1d5ef2'], [5, 7, 14, 3, '#000000'], [7, 8, 2, 1, '#ffffff'], [15, 8, 2, 1, '#ffffff']],
+  [[2, 15, 20, 14, '#0d8554'], [0, 20, 2, 9, '#13ad6f'], [22, 20, 2, 9, '#13ad6f'], [2, 28, 20, 2, '#a3f7cb'], [10, 13, 4, 2, '#8bf2b9'], [5, 2, 14, 11, '#2fd18a'], [7, 4, 4, 6, '#ffffff'], [13, 4, 4, 6, '#ffffff'], [8, 5, 2, 4, '#000000'], [14, 5, 2, 4, '#000000'], [9, 5, 1, 1, '#ffffff'], [15, 5, 1, 1, '#ffffff']],
+  [[2, 15, 20, 14, '#d92b2b'], [0, 20, 2, 9, '#ff4d4d'], [22, 20, 2, 9, '#ff4d4d'], [2, 28, 20, 2, '#ffb3b3'], [10, 13, 4, 2, '#ffe0e0'], [6, 4, 12, 10, '#f74343'], [5, 1, 14, 2, '#2d283e'], [4, 2, 2, 3, '#2d283e'], [18, 2, 2, 3, '#2d283e'], [3, 4, 3, 7, '#e2e8f0'], [18, 4, 3, 7, '#e2e8f0'], [4, 5, 1, 5, '#2d283e'], [19, 5, 1, 5, '#2d283e']],
+  [[2, 16, 20, 13, '#181a24'], [0, 20, 2, 9, '#2c2f40'], [22, 20, 2, 9, '#2c2f40'], [2, 28, 20, 2, '#60678a'], [10, 14, 4, 2, '#4d5370'], [6, 6, 12, 8, '#181a24'], [5, 1, 14, 5, '#3b82f6'], [3, 5, 18, 2, '#2563eb']],
+  [[2, 15, 20, 14, '#0d9488'], [0, 20, 2, 9, '#14b8a6'], [22, 20, 2, 9, '#14b8a6'], [2, 28, 20, 2, '#99f6e4'], [10, 13, 4, 2, '#ccfbf1'], [6, 5, 12, 9, '#14b8a6'], [4, 1, 16, 5, '#0f172a'], [3, 3, 3, 7, '#0f172a'], [18, 3, 3, 7, '#0f172a']],
+];
+
 export default function JoinWaitlistModal({ isOpen, onClose, program }) {
   const { user } = useAuth();
-
-  const [name, setName] = useState(
-    user?.name || (user?.firstName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : '')
-  );
   const [email, setEmail] = useState(user?.email || '');
-  const [phone, setPhone] = useState(user?.phoneNumber || '');
-  const [targetRole, setTargetRole] = useState(user?.targetRole || '');
-  const [targetCompany, setTargetCompany] = useState(user?.targetCompanies?.[0] || '');
-
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const submittingRef = useRef(false);
+
+  // fresh state each time the page opens
+  useEffect(() => {
+    if (isOpen) {
+      setEmail(user?.email || '');
+      setError('');
+      setLoading(false);
+      setSubmitted(false);
+      submittingRef.current = false;
+    }
+  }, [isOpen, user?.email]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (event) => { if (event.key === 'Escape') onClose?.(); };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen || !program) return null;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!email.trim()) {
-      setError('Email address is required.');
-      return;
-    }
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (submittingRef.current) return; // ignore double clicks / repeated Enter
 
+    const value = email.trim();
+    if (!value) return setError('Please enter your email address.');
+    if (!EMAIL_PATTERN.test(value)) return setError('Please enter a valid email address.');
+
+    submittingRef.current = true;
     setLoading(true);
     setError('');
-
     try {
+      const fullName = user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(' ');
       await programLearningAPI.joinWaitlist(program._id || program.id, {
-        name: name.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        targetRole: targetRole.trim(),
-        targetCompany: targetCompany.trim(),
+        email: value,
+        ...(fullName ? { name: fullName.trim() } : {}),
+        ...(user?.phoneNumber ? { phone: user.phoneNumber } : {}),
       });
       setSubmitted(true);
     } catch (err) {
       console.error('Error joining waitlist:', err);
-      setError(err.message || 'Failed to join waitlist. Please try again.');
+      setError(err.message || 'Something went wrong. Please try again.');
+      submittingRef.current = false;
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto font-sans">
+    <div className="wl-root" role="dialog" aria-modal="true" aria-label="Join our waitlist">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Press+Start+2P&display=swap');
-        .press-start-font {
-          font-family: 'Press Start 2P', cursive !important;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap');
+        .wl-root { position: fixed; inset: 0; z-index: 300; overflow-y: auto; background: #080c1d; color: #fff; font-family: 'Inter', sans-serif; display: flex; align-items: center; padding: 2rem 5% 2rem 12%; -webkit-font-smoothing: antialiased; }
+        .wl-root * { box-sizing: border-box; }
+        .wl-close { position: fixed; top: 24px; right: 28px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; border-radius: 8px; color: #fff; cursor: pointer; z-index: 2; transition: opacity .2s, background-color .2s; }
+        .wl-close:hover { opacity: .75; background: rgba(255,255,255,.08); }
+        .wl-close:focus-visible { outline: 2px solid #b8f041; outline-offset: 3px; }
+        .wl-container { width: 100%; max-width: 650px; }
+        .wl-avatars { display: flex; align-items: flex-end; gap: 1.25rem; margin-bottom: 2rem; }
+        .wl-avatar { width: 84px; height: 110px; flex-shrink: 0; animation: wlFloat 3s ease-in-out infinite; }
+        .wl-avatar:nth-child(2) { animation-delay: .4s; } .wl-avatar:nth-child(3) { animation-delay: .8s; } .wl-avatar:nth-child(4) { animation-delay: 1.2s; } .wl-avatar:nth-child(5) { animation-delay: 1.6s; }
+        .wl-avatar svg { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+        @keyframes wlFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+        .wl-eyebrow { font-family: 'Press Start 2P', monospace; font-size: .75rem; line-height: 1.8; color: #e2e8f0; margin-bottom: .6rem; display: block; }
+        .wl-heading { font-size: clamp(2.5rem, 5.5vw, 4rem); font-weight: 700; line-height: 1.15; letter-spacing: -.03em; margin: 0 0 1.5rem; overflow-wrap: anywhere; }
+        .wl-pixel-our { font-family: 'Press Start 2P', monospace; font-size: .72em; letter-spacing: -.05em; display: inline-block; transform: translateY(-2px); margin: 0 .1em; }
+        .wl-pixel-youre { font-family: 'Press Start 2P', monospace; font-size: .48em; font-style: italic; font-weight: 400; letter-spacing: -.05em; display: inline-block; vertical-align: middle; margin-right: .12em; }
+        .wl-subtitle { font-size: 1.05rem; line-height: 1.6; color: #94a3b8; margin: 0 0 2.75rem; max-width: 700px; }
+        .wl-container.is-success .wl-subtitle { margin-bottom: 0; }
+        .wl-form { display: flex; gap: .875rem; width: 100%; max-width: 540px; }
+        .wl-input { display: block; flex: 1; min-width: 0; width: 100%; height: 56px; padding: 0 1.25rem; background: #0d122b; border: 1px solid #1d2545; border-radius: 10px; color: #fff; font-family: inherit; font-size: 1rem; outline: none; transition: border-color .2s, box-shadow .2s; }
+        .wl-input::placeholder { color: #4a5578; }
+        .wl-input:focus { border-color: #384570; box-shadow: 0 0 0 3px rgba(56,69,112,.25); }
+        .wl-input.error { border-color: #f87171; }
+        .wl-join { flex-shrink: 0; height: 56px; padding: 0 2.25rem; background: #b8f041; color: #080c1d; border: none; border-radius: 10px; font-family: inherit; font-size: .9375rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; white-space: nowrap; transition: background-color .2s, transform .2s, opacity .2s; }
+        .wl-join:hover { background: #a5d936; transform: translateY(-1px); }
+        .wl-join:disabled { cursor: not-allowed; opacity: .7; transform: none; }
+        .wl-feedback { margin-top: .875rem; font-size: .875rem; min-height: 20px; line-height: 1.5; color: #f87171; }
+        @media (max-width: 1024px) {
+          .wl-root { justify-content: center; padding: 4rem 2rem 2rem; }
+          .wl-container { max-width: 560px; margin: 0 auto; text-align: center; }
+          .wl-avatars { justify-content: center; gap: 1rem; margin-bottom: 1.75rem; }
+          .wl-eyebrow { font-size: .65rem; margin-bottom: 1rem; }
+          .wl-heading { font-size: clamp(2.25rem, 5.5vw, 3.25rem); margin-bottom: 1rem; }
+          .wl-subtitle { max-width: 460px; margin: 0 auto 1.75rem; font-size: .95rem; }
+          .wl-form { max-width: 420px; margin: 0 auto; gap: .65rem; }
         }
+        @media (max-width: 640px) {
+          .wl-root { padding: 4rem 1.25rem 2rem; }
+          .wl-container { max-width: 420px; }
+          .wl-avatars { gap: .65rem; margin-bottom: 1.5rem; }
+          .wl-avatar { width: 44px; height: 58px; }
+          .wl-eyebrow { font-size: .55rem; margin-bottom: .75rem; }
+          .wl-heading { font-size: clamp(1.9rem, 7.5vw, 2.6rem); line-height: 1.2; letter-spacing: -.04em; margin-bottom: .85rem; overflow-wrap: normal; }
+          .wl-pixel-our { font-size: .65em; } .wl-pixel-youre { font-size: .42em; }
+          .wl-subtitle { max-width: 350px; margin: 0 auto 1.5rem; font-size: .875rem; }
+          .wl-form { max-width: 340px; gap: .5rem; }
+          .wl-input { height: 44px; padding: 0 .75rem; font-size: .8rem; border-radius: 8px; }
+          .wl-join { height: 44px; padding: 0 .9rem; font-size: .7rem; letter-spacing: .03em; border-radius: 8px; }
+          .wl-feedback { max-width: 340px; margin: .65rem auto 0; font-size: .75rem; }
+          .wl-close { top: 10px; right: 10px; width: 36px; height: 36px; }
+        }
+        @media (prefers-reduced-motion: reduce) { .wl-avatar { animation: none; } }
       `}</style>
 
-      <div className="relative w-full max-w-[480px] rounded-3xl bg-white dark:bg-[#071330] p-6 sm:p-7 shadow-[0_16px_40px_rgba(0,0,0,0.3)] border border-black/5 dark:border-[#15366f]/50 transition-all text-slate-900 dark:text-slate-100 my-auto">
-        {/* Close Button */}
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={loading}
-          className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-white transition cursor-pointer"
-        >
-          <X className="h-4 w-4" />
-        </button>
+      <button type="button" className="wl-close" aria-label="Close" onClick={onClose}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+          <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+        </svg>
+      </button>
 
-        {submitted ? (
-          <div className="py-6 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500 mb-3">
-              <CheckCircle2 className="h-8 w-8" />
+      <main className={`wl-container ${submitted ? 'is-success' : ''}`}>
+        <div className="wl-avatars" aria-hidden="true">
+          {AVATARS.map((rects, index) => (
+            <div className="wl-avatar" key={index}>
+              <svg viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {rects.map(([x, y, w, h, fill], i) => <rect key={i} x={x} y={y} width={w} height={h} fill={fill} />)}
+              </svg>
             </div>
-            <h3 className="press-start-font text-[12px] sm:text-[14px] uppercase tracking-wider text-[#00113b] dark:text-[#8fd9ff] mt-2">
-              You're on the Waitlist!
-            </h3>
-            <p className="mt-2.5 text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-sm mx-auto">
-              We've reserved your spot for <strong className="text-slate-900 dark:text-white">{program.name || program.title}</strong>. Our team will reach out with early batch schedules and enrollment details.
-            </p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-[#a3e635] hover:bg-[#86efac] py-3 press-start-font text-[10px] font-bold text-[#0a1128] shadow-md shadow-[#a3e635]/25 transition cursor-pointer"
-            >
-              DONE
-            </button>
-          </div>
-        ) : (
-          <div>
-            {/* Header matching Signup modal typography */}
-            <div className="text-center pb-1">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-[#8fd9ff] text-[10px] font-bold uppercase tracking-wider mb-2">
-                <Users className="h-3.5 w-3.5" />
-                <span>Trainer-Led Program</span>
-              </div>
-              <h2 className="press-start-font text-[12px] sm:text-[13px] uppercase tracking-wider text-[#00113b] dark:text-white leading-relaxed">
-                Join Program Waitlist
-              </h2>
-              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 line-clamp-1 max-w-sm mx-auto font-medium">
-                {program.name || program.title}
-              </p>
-            </div>
+          ))}
+        </div>
 
-            {error && (
-              <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 p-2.5 text-xs text-red-600 dark:text-red-400 font-semibold text-center">
-                {error}
-              </div>
-            )}
+        <span className="wl-eyebrow">{submitted ? "It's Official!" : 'Good things take time.'}</span>
 
-            <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300 mb-1">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. John Doe"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/20 px-3.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
-                />
-              </div>
+        <h1 className="wl-heading">
+          {submitted ? (
+            <><span className="wl-pixel-youre">You’re </span> on the List.</>
+          ) : (
+            <>Join <span className="wl-pixel-our">our</span> Waitlist.</>
+          )}
+        </h1>
 
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300 mb-1">
-                  Email Address <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/20 px-3.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
-                />
-              </div>
+        <p className="wl-subtitle">
+          {submitted
+            ? "Keep an eye on your inbox! We'll hit you up when it's time. No Spam, No Cap."
+            : 'Get notified when your selected TechLearn program opens for enrollment.'}
+        </p>
 
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300 mb-1">
-                  Phone / WhatsApp
-                </label>
-                <input
-                  type="tel"
-                  placeholder="+91 9876543210"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/20 px-3.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300 mb-1">
-                    Target Role
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Full Stack"
-                    value={targetRole}
-                    onChange={(e) => setTargetRole(e.target.value)}
-                    className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/20 px-3.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300 mb-1">
-                    Target Company
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. TCS, Amazon"
-                    value={targetCompany}
-                    onChange={(e) => setTargetCompany(e.target.value)}
-                    className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/20 px-3.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-xl bg-[#a3e635] hover:bg-[#86efac] press-start-font text-[9.5px] sm:text-[10px] font-bold text-[#0a1128] shadow-md shadow-[#a3e635]/25 transition hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 cursor-pointer"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>SUBMITTING...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>JOIN WAITLIST</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </>
-                  )}
-                </button>
-              </div>
+        {!submitted && (
+          <>
+            <form className="wl-form" onSubmit={handleSubmit} noValidate>
+              <input
+                type="email"
+                className={`wl-input ${error ? 'error' : ''}`}
+                placeholder="Enter your email address"
+                autoComplete="email"
+                aria-label="Email address"
+                aria-describedby="wl-feedback"
+                aria-invalid={error ? 'true' : undefined}
+                value={email}
+                onChange={(event) => { setEmail(event.target.value); if (error) setError(''); }}
+                required
+              />
+              <button type="submit" className="wl-join" disabled={loading}>
+                {loading ? 'JOINING...' : 'JOIN'}
+              </button>
             </form>
-          </div>
+            <div id="wl-feedback" className="wl-feedback" role="status" aria-live="polite">{error}</div>
+          </>
         )}
-      </div>
+      </main>
     </div>
   );
 }
