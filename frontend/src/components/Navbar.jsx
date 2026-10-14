@@ -137,7 +137,7 @@ export default function Navbar() {
   const defaultLightSurface = '#daf0fa';
   const navSurface = isAppRoute
     ? (isDarkMode ? '#050b2f' : defaultLightSurface)
-    : (sectionBackground || (isDarkNav ? '#050b2f' : '#daf0fa'));
+    : (sectionBackground || (isDarkNav ? '#04083d' : '#daf0fa'));
 
   // Close menus on outside click
   useEffect(() => {
@@ -264,7 +264,7 @@ export default function Navbar() {
         }
 
         .tl-navbar-root.dark-theme {
-          background-color: #050b2f;
+          background-color: var(--navbar-bg, #04083d);
         }
 
         .tl-nav {
