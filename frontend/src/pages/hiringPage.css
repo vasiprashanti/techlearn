@@ -664,3 +664,34 @@
     padding: 5px 2px 8px;
   }
 }
+
+/* ==================================================
+   CONTROLS ROW: search + Filters + List/Calendar icons in one row
+   Search and Filters match the Learn page; the search bar is not full width.
+================================================== */
+.hiring-page-container .hiring-controls-row { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 780px; }
+.hiring-page-container .hiring-controls-row .search-wrapper { flex: 1; min-width: 0; max-width: none; margin: 0; }
+.hiring-page-container .hiring-controls-row .search-input { height: 54px; border-radius: 12px; font-size: 12px; font-weight: 500; background: #0a1238; border: 1px solid var(--border-subtle); box-shadow: none; }
+.hiring-page-container.light-mode .hiring-controls-row .search-input { background: #e2f7ff; border-color: rgba(0, 3, 12, .14); }
+.hiring-page-container .hiring-controls-row .search-input:focus { border-color: #9bd45a; box-shadow: 0 0 0 1px #9bd45a; }
+.hiring-page-container .hiring-controls-row .filter-button-control,
+.hiring-page-container .hiring-controls-row .view-icon-btn { height: 54px; flex-shrink: 0; border-radius: 12px; background: #0a1238; border: 1px solid var(--border-subtle); color: var(--heading); box-shadow: none; display: inline-flex; align-items: center; justify-content: center; gap: 9px; font-size: 12px; font-weight: 600; transition: border-color .2s ease; }
+.hiring-page-container.light-mode .hiring-controls-row .filter-button-control,
+.hiring-page-container.light-mode .hiring-controls-row .view-icon-btn { background: #e2f7ff; border-color: rgba(0, 3, 12, .14); color: #02107a; }
+.hiring-page-container .hiring-controls-row .filter-button-control { padding: 0 18px; }
+.hiring-page-container .hiring-controls-row .view-icon-btn { width: 54px; padding: 0; }
+.hiring-page-container .hiring-controls-row .filter-button-control:hover,
+.hiring-page-container .hiring-controls-row .view-icon-btn:hover,
+.hiring-page-container .hiring-controls-row .filter-button-control.active,
+.hiring-page-container .hiring-controls-row .view-icon-btn.active { border-color: #9bd45a; background: #0a1238; color: var(--heading); }
+.hiring-page-container.light-mode .hiring-controls-row .filter-button-control:hover,
+.hiring-page-container.light-mode .hiring-controls-row .view-icon-btn:hover,
+.hiring-page-container.light-mode .hiring-controls-row .filter-button-control.active,
+.hiring-page-container.light-mode .hiring-controls-row .view-icon-btn.active { background: #e2f7ff; color: #02107a; }
+.hiring-page-container .hiring-controls-row .view-icon-btn.active { box-shadow: 0 0 0 1px #9bd45a; }
+@media (max-width: 760px) {
+  .hiring-page-container .hiring-controls-row { gap: 6px; }
+  .hiring-page-container .hiring-controls-row .search-input { height: 48px; border-radius: 11px; font-size: 10px; }
+  .hiring-page-container .hiring-controls-row .filter-button-control { height: 48px; padding: 0 10px; gap: 5px; border-radius: 11px; font-size: 11px; }
+  .hiring-page-container .hiring-controls-row .view-icon-btn { width: 40px; height: 48px; border-radius: 11px; }
+}

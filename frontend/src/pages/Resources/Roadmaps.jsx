@@ -7,6 +7,8 @@ import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { resourceAPI } from "../../services/api";
 import Sidebar from "../../components/Dashboard/Sidebar";
+import FilterDrawer from "../../components/common/FilterDrawer";
+import StateFallback from "../../components/common/StateFallback";
 
 const unwrap = (payload) => payload?.data ?? payload;
 
@@ -338,6 +340,7 @@ export default function Roadmaps() {
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState(null);
   const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -381,7 +384,7 @@ export default function Roadmaps() {
 
     void load();
     return () => { cancelled = true; };
-  }, [hasUser, roadmapId, user?.targetRole]);
+  }, [hasUser, roadmapId, user?.targetRole, reloadKey]);
 
   const filterOptions = useMemo(
     () => ({ searchQuery, activeCategory, durationFilter, sortBy }),
@@ -544,7 +547,15 @@ export default function Roadmaps() {
         {loading ? (
           <div className="py-[70px] text-center text-slate-500"><p className="text-[14px]">Loading roadmaps...</p></div>
         ) : error ? (
-          <div className="py-[70px] text-center text-red-500"><p className="text-[14px] font-semibold">{error}</p></div>
+          <StateFallback state="unavailable" onAction={() => setReloadKey((key) => key + 1)} />
+        ) : visibleRoadmaps.length === 0 && (searchQuery.trim() || selectedFilterCount > 0) ? (
+          <StateFallback
+            state="no-matches"
+            onAction={() => {
+              setSearchQuery("");
+              clearFilters();
+            }}
+          />
         ) : visibleRoadmaps.length === 0 ? (
           <div className="py-[70px] text-center text-slate-500">
             <BookOpen className={`mx-auto mb-4 h-9 w-9 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`} />
@@ -597,68 +608,22 @@ export default function Roadmaps() {
         </div>
       </main>
 
-      <div
-        onClick={() => setFilterDrawerOpen(false)}
-        className={`fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs transition-opacity duration-250 ${filterDrawerOpen ? "visible opacity-100" : "pointer-events-none invisible opacity-0"}`}
+      <FilterDrawer
+        open={filterDrawerOpen}
+        onClose={() => setFilterDrawerOpen(false)}
+        groups={[
+          { id: "category", label: "Roadmap type", type: "radio", defaultValue: "all", options: roadmapCategories.map((c) => ({ value: c.id, label: c.label })) },
+          { id: "duration", label: "Duration", type: "radio", defaultValue: "all", options: durationFilters.map((d) => ({ value: d.id, label: d.label })) },
+        ]}
+        applied={{ category: activeCategory, duration: durationFilter }}
+        onApply={(values) => {
+          setActiveCategory(values.category || "all");
+          setDurationFilter(values.duration || "all");
+          setFilterDrawerOpen(false);
+        }}
+        onClear={clearFilters}
+        description="Find the right roadmap for your learning goals."
       />
-      <aside
-        aria-label="Roadmap filters"
-        className={`fixed bottom-0 right-0 top-0 z-[160] flex w-[390px] max-w-[90%] flex-col shadow-2xl transition-transform duration-300 ease-in-out ${isDarkMode ? "bg-[#0b1934] text-white" : "bg-[#daf0fa] text-[#00113b]"} ${filterDrawerOpen ? "translate-x-0" : "translate-x-full"}`}
-      >
-        <div className="flex items-center justify-between border-b border-black/10 p-[22px] dark:border-white/10">
-          <h3 className="font-['Press_Start_2P'] text-[11px] leading-[1.6]">Filters</h3>
-          <button
-            type="button"
-            onClick={() => setFilterDrawerOpen(false)}
-            className="flex h-[32px] w-[32px] cursor-pointer items-center justify-center rounded-[7px] border-none bg-white/60 text-[18px] text-[#00113b] shadow-xs dark:bg-white/10 dark:text-white"
-            aria-label="Close filters"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="flex-1 space-y-[27px] overflow-y-auto p-[22px]">
-          <div>
-            <h4 className="mb-[11px] text-[10px] font-bold uppercase tracking-[1px]">Roadmap type</h4>
-            {roadmapCategories.map((category) => (
-              <label key={category.id} className="flex cursor-pointer items-center gap-[9px] py-[7px] text-[12px] text-[#00113b]/80 dark:text-slate-300">
-                <input
-                  type="radio"
-                  name="roadmap-category"
-                  checked={activeCategory === category.id}
-                  onChange={() => setActiveCategory(category.id)}
-                  className="accent-[#00113b] dark:accent-[#b2e96a]"
-                />
-                {category.label}
-              </label>
-            ))}
-          </div>
-
-          <div>
-            <h4 className="mb-[11px] text-[10px] font-bold uppercase tracking-[1px]">Duration</h4>
-            {durationFilters.map((duration) => (
-              <label key={duration.id} className="flex cursor-pointer items-center gap-[9px] py-[7px] text-[12px] text-[#00113b]/80 dark:text-slate-300">
-                <input
-                  type="radio"
-                  name="roadmap-duration"
-                  checked={durationFilter === duration.id}
-                  onChange={() => setDurationFilter(duration.id)}
-                  className="accent-[#00113b] dark:accent-[#b2e96a]"
-                />
-                {duration.label}
-              </label>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={clearFilters}
-            className={`rounded-[8px] border px-4 py-2 text-[10px] font-bold transition ${isDarkMode ? "border-white/15 text-white hover:bg-white/10" : "border-[#00113b]/20 text-[#00113b] hover:bg-white/60"}`}
-          >
-            Clear filters
-          </button>
-        </div>
-      </aside>
     </div>
   );
 }

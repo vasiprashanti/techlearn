@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from "react-router-dom";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import { courseAPI, dataAdapters, placementLearningAPI } from "../../services/api";
 import { programLearningAPI } from "../../services/programLearningApi";
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import JoinWaitlistModal from '../../components/Learn/JoinWaitlistModal';
 import ScrollProgress from '../../components/ScrollProgress';
+import FilterDrawer from '../../components/common/FilterDrawer';
+import StateFallback from '../../components/common/StateFallback';
 import { readCachedCourseDetails, writeCachedCourseDetails } from '../../utils/courseCache';
 import { getProgramPriceLabel, isFreeProgramItem } from '../../utils/programDisplay';
 import './learnPage.css';
@@ -134,11 +136,22 @@ const isFreeCourseItem = (course) => {
   );
 };
 
-const STANDARD_SKILLS = [
-  'Python', 'Java', 'C++', 'Data Structures', 'Algorithms',
-  'Frontend', 'Backend', 'Full Stack', 'Machine Learning', 'GenAI',
-  'SQL', 'DevOps', 'Cloud', 'System Design'
+const LEVEL_OPTIONS = [
+  { value: 'all', label: 'All levels' },
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'advanced', label: 'Advanced' },
 ];
+
+const MODE_OPTIONS = [
+  { value: 'all', label: 'All modes' },
+  { value: 'self-paced', label: 'Self-paced' },
+  { value: 'structured', label: 'Structured' },
+  { value: 'trainer-led', label: 'Trainer-led' },
+];
+
+const DEFAULT_FILTERS = { level: 'all', mode: 'all', skills: [] };
+const normalizeKey = (value = '') => String(value).trim().toLowerCase().replace(/[\s_]+/g, '-');
 
 const LearnMain = () => {
   const { theme } = useTheme();
@@ -158,11 +171,12 @@ const LearnMain = () => {
     return new Set();
   });
 
-  const [activeTab, setActiveTab] = useState('courses'); // 'courses' | 'programs'
+  const [view, setView] = useState('explore'); // 'explore' | 'enrolled'
+  const [catalogTab, setCatalogTab] = useState('all'); // 'all' | 'courses' | 'programs'
   const [skillTab, setSkillTab] = useState('all'); // 'your-skills' | 'all'
-  const [courseFilter, setCourseFilter] = useState('all'); // 'all' | 'free' | 'skill' | 'placement'
-  const [programFilter, setProgramFilter] = useState('all'); // 'all' | 'free' | 'self-paced' | 'trainer-led'
   const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
   const [selectedWaitlistProgram, setSelectedWaitlistProgram] = useState(null);
 
@@ -170,80 +184,46 @@ const LearnMain = () => {
   const [coursesData, setCoursesData] = useState(cachedCourses || []);
   const [publicPrograms, setPublicPrograms] = useState([]);
   const [loading, setLoading] = useState(!cachedCourses);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  // Drawer filters state (applied)
-  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
-  const [selectedSkills, setSelectedSkills] = useState([]);
-  const [selectedDeliveryTypes, setSelectedDeliveryTypes] = useState([]);
-  const [selectedLevels, setSelectedLevels] = useState([]);
-  const [selectedAccessTypes, setSelectedAccessTypes] = useState([]);
+  const activeFilterCount = (filters.level !== 'all' ? 1 : 0) + (filters.mode !== 'all' ? 1 : 0) + filters.skills.length;
+  const hasActiveCriteria = activeFilterCount > 0 || Boolean(searchQuery.trim());
 
-  // Staged filter state (in drawer before apply)
-  const [stagedSkills, setStagedSkills] = useState([]);
-  const [stagedDeliveryTypes, setStagedDeliveryTypes] = useState([]);
-  const [stagedLevels, setStagedLevels] = useState([]);
-  const [stagedAccessTypes, setStagedAccessTypes] = useState([]);
-
-  const openFilterDrawer = () => {
-    setStagedSkills(selectedSkills);
-    setStagedDeliveryTypes(selectedDeliveryTypes);
-    setStagedLevels(selectedLevels);
-    setStagedAccessTypes(selectedAccessTypes);
-    setFilterDrawerOpen(true);
-  };
-
-  const handleApplyDrawerFilters = () => {
-    setSelectedSkills(stagedSkills);
-    setSelectedDeliveryTypes(stagedDeliveryTypes);
-    setSelectedLevels(stagedLevels);
-    setSelectedAccessTypes(stagedAccessTypes);
-    setFilterDrawerOpen(false);
-  };
-
-  const handleClearDrawerFilters = () => {
-    setStagedSkills([]);
-    setStagedDeliveryTypes([]);
-    setStagedLevels([]);
-    setStagedAccessTypes([]);
-    setSelectedSkills([]);
-    setSelectedDeliveryTypes([]);
-    setSelectedLevels([]);
-    setSelectedAccessTypes([]);
-    setFilterDrawerOpen(false);
-  };
-
-  const activeDrawerFiltersCount = useMemo(() => {
-    return (
-      selectedSkills.length +
-      selectedDeliveryTypes.length +
-      selectedLevels.length +
-      selectedAccessTypes.length
-    );
-  }, [selectedSkills, selectedDeliveryTypes, selectedLevels, selectedAccessTypes]);
-
-  // Aggregate dynamic skills from loaded courses
+  // skill chips come from the skills actually attached to the catalog
   const availableSkills = useMemo(() => {
-    const set = new Set(STANDARD_SKILLS);
-    coursesData.forEach((c) => {
-      if (Array.isArray(c.skills)) {
-        c.skills.forEach((s) => {
-          if (s && s.trim()) set.add(s.trim());
-        });
-      }
+    const set = new Set();
+    const add = (list) => (Array.isArray(list) ? list : []).forEach((skill) => {
+      if (skill && String(skill).trim()) set.add(String(skill).trim());
     });
-    return Array.from(set).sort();
-  }, [coursesData]);
+    coursesData.forEach((course) => add(course.skills));
+    publicPrograms.forEach((program) => add(program.skills));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [coursesData, publicPrograms]);
+
+  const drawerGroups = useMemo(() => [
+    { id: 'level', label: 'Difficulty level', type: 'radio', options: LEVEL_OPTIONS, defaultValue: 'all' },
+    { id: 'mode', label: 'Learning mode', type: 'radio', options: MODE_OPTIONS, defaultValue: 'all' },
+    { id: 'skills', label: 'Skills', type: 'chips', options: availableSkills },
+  ], [availableSkills]);
+
+  const clearAllCriteria = () => {
+    setFilters(DEFAULT_FILTERS);
+    setSearchQuery('');
+  };
 
   useEffect(() => {
     const fetchCoursesAndPrograms = async () => {
       try {
-        if (!cachedCourses) {
+        if (!cachedCourses || reloadKey > 0) {
           setLoading(true);
         }
         const [backendCourses, programsRes] = await Promise.allSettled([
           courseAPI.getAllCourses(),
           programLearningAPI.getPublicPrograms(),
         ]);
+
+        setLoadError(backendCourses.status === 'rejected' && programsRes.status === 'rejected');
 
         if (backendCourses.status === 'fulfilled' && Array.isArray(backendCourses.value)) {
           const adapted = backendCourses.value
@@ -300,7 +280,7 @@ const LearnMain = () => {
     };
 
     fetchCoursesAndPrograms();
-  }, [isAuthenticated, user?.programId]);
+  }, [isAuthenticated, user?.programId, reloadKey]);
 
   const prefetchCourseTopics = (course) => {
     const topicCourseId = getCourseTopicsId(course);
@@ -386,626 +366,293 @@ const LearnMain = () => {
     return Array.from(collected);
   }, [isAuthenticated, user]);
 
-  const filteredCourses = useMemo(() => {
-    return coursesData.filter(course => {
-      // Your Skills filter for logged-in users
-      if (skillTab === 'your-skills' && isAuthenticated) {
-        if (userSkills.length > 0) {
-          const courseSkills = (course.skills || []).map(s => String(s).toLowerCase());
-          const courseText = `${course.title || ''} ${course.description || ''} ${courseSkills.join(' ')}`.toLowerCase();
-          const matchesUserSkill = userSkills.some(skill => 
-            courseSkills.some(cs => cs.includes(skill) || skill.includes(cs)) ||
-            courseText.includes(skill)
-          );
-          if (!matchesUserSkill) return false;
-        }
-      }
+  const matchesUserSkills = (skillList, text) => {
+    if (userSkills.length === 0) return true;
+    const lowered = (skillList || []).map((skill) => String(skill).toLowerCase());
+    return userSkills.some((skill) => lowered.some((entry) => entry.includes(skill) || skill.includes(entry)) || text.includes(skill));
+  };
 
-      const category = getCourseCategory(course);
-      if (courseFilter === 'free') {
-        if (!isFreeCourseItem(course)) return false;
-      } else if (courseFilter !== 'all' && category !== courseFilter) {
-        return false;
-      }
+  const matchesLevel = (level) => {
+    if (filters.level === 'all') return true;
+    const value = normalizeKey(level);
+    return value === filters.level || (filters.level === 'beginner' && value === 'basic');
+  };
 
-      // Drawer: Skills filter
-      if (selectedSkills.length > 0) {
-        const courseSkills = (course.skills || []).map(s => s.toLowerCase());
-        const hasSkillMatch = selectedSkills.some(s => courseSkills.includes(s.toLowerCase()));
-        if (!hasSkillMatch) return false;
-      }
+  const matchesMode = (mode) => filters.mode === 'all' || normalizeKey(mode) === filters.mode;
 
-      // Drawer: Delivery Type filter
-      if (selectedDeliveryTypes.length > 0) {
-        const delivery = (course.deliveryType || 'Self-Paced').toLowerCase();
-        const matchesDelivery = selectedDeliveryTypes.some(d => d.toLowerCase() === delivery);
-        if (!matchesDelivery) return false;
-      }
+  const matchesSkillChips = (skillList, text) => {
+    if (filters.skills.length === 0) return true;
+    const lowered = (skillList || []).map((skill) => String(skill).toLowerCase());
+    return filters.skills.some((skill) => lowered.includes(skill.toLowerCase()) || text.includes(skill.toLowerCase()));
+  };
 
-      // Drawer: Level / Difficulty filter
-      if (selectedLevels.length > 0) {
-        const lvl = (course.level || 'Beginner').toLowerCase();
-        const matchesLevel = selectedLevels.some(l => l.toLowerCase() === lvl);
-        if (!matchesLevel) return false;
-      }
-
-      // Drawer: Access Type filter (Free / Paid)
-      if (selectedAccessTypes.length > 0) {
-        const isFree = isFreeCourseItem(course);
-        const matchesAccess = selectedAccessTypes.some(a => {
-          if (a === 'Free') return isFree;
-          if (a === 'Paid') return !isFree;
-          return true;
-        });
-        if (!matchesAccess) return false;
-      }
-
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const skillsText = (course.skills || []).join(' ');
-        const searchTarget = `${course.title || ''} ${course.description || ''} ${category} ${skillsText} ${course.level || ''} ${course.deliveryType || ''}`.toLowerCase();
-        if (!searchTarget.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [coursesData, courseFilter, selectedSkills, selectedDeliveryTypes, selectedLevels, selectedAccessTypes, searchQuery, skillTab, isAuthenticated, userSkills]);
-
-  // Filter & Search Logic for Programs
   const getProgramDeliveryType = (program) => {
-    if (program.deliveryType) return program.deliveryType.toLowerCase();
+    if (program.deliveryType) return program.deliveryType;
     const t = (program.name || program.title || '').toLowerCase();
-    if (t.includes('sprint') || t.includes('bootcamp') || t.includes('aptitude') || t.includes('full stack')) {
-      return 'self-paced';
-    }
+    if (t.includes('sprint') || t.includes('bootcamp') || t.includes('aptitude') || t.includes('full stack')) return 'self-paced';
     return 'trainer-led';
   };
 
-  const filteredPrograms = useMemo(() => {
-    return publicPrograms.filter(program => {
-      // Your Skills filter for logged-in users
-      if (skillTab === 'your-skills' && isAuthenticated) {
-        if (userSkills.length > 0) {
-          const progSkills = Array.isArray(program.skills) ? program.skills.map(s => String(s).toLowerCase()) : [];
-          const progText = `${program.name || program.title || ''} ${program.description || ''} ${program.instructor || ''} ${progSkills.join(' ')}`.toLowerCase();
-          const matchesUserSkill = userSkills.some(skill => 
-            progSkills.some(ps => ps.includes(skill) || skill.includes(ps)) ||
-            progText.includes(skill)
-          );
-          if (!matchesUserSkill) return false;
-        }
-      }
-
-      const delivery = getProgramDeliveryType(program);
-      if (programFilter === 'free') {
-        if (!isFreeProgramItem(program)) return false;
-      } else if (programFilter !== 'all' && delivery !== programFilter) {
-        return false;
-      }
-
-      // Drawer: Delivery Type filter (applied to programs as well)
-      if (selectedDeliveryTypes.length > 0) {
-        const matchesDelivery = selectedDeliveryTypes.some(d => d.toLowerCase() === delivery);
-        if (!matchesDelivery) return false;
-      }
-
-      // Drawer: Access Type filter (applied to programs as well)
-      if (selectedAccessTypes.length > 0) {
-        const isFree = isFreeProgramItem(program);
-        const matchesAccess = selectedAccessTypes.some(a => {
-          if (a === 'Free') return isFree;
-          if (a === 'Paid') return !isFree;
-          return true;
-        });
-        if (!matchesAccess) return false;
-      }
-
-      // Drawer: Skills filter (applied to programs as well)
-      if (selectedSkills.length > 0) {
-        const progSkills = Array.isArray(program.skills) ? program.skills.map(s => String(s).toLowerCase()) : [];
-        const progText = `${program.name || program.title || ''} ${program.description || ''}`.toLowerCase();
-        const hasSkillMatch = selectedSkills.some(s => 
-          progSkills.includes(s.toLowerCase()) || progText.includes(s.toLowerCase())
-        );
-        if (!hasSkillMatch) return false;
-      }
-
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const searchTarget = `${program.name || program.title || ''} ${program.description || ''} ${program.instructor || ''} ${delivery} ${program.programType || ''}`.toLowerCase();
-        if (!searchTarget.includes(q)) return false;
+  const filteredCourses = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return coursesData.filter((course) => {
+      const text = `${course.title || ''} ${course.description || ''}`.toLowerCase();
+      if (skillTab === 'your-skills' && isAuthenticated && !matchesUserSkills(course.skills, text)) return false;
+      if (!matchesLevel(course.level || 'Beginner')) return false;
+      if (!matchesMode(course.deliveryType || 'Self-Paced')) return false;
+      if (!matchesSkillChips(course.skills, text)) return false;
+      if (q) {
+        const target = `${text} ${getCourseCategory(course)} ${(course.skills || []).join(' ')} ${course.level || ''} ${course.deliveryType || ''}`.toLowerCase();
+        if (!target.includes(q)) return false;
       }
       return true;
     });
-  }, [publicPrograms, programFilter, searchQuery, selectedDeliveryTypes, selectedAccessTypes, selectedSkills, skillTab, isAuthenticated, userSkills]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coursesData, filters, searchQuery, skillTab, isAuthenticated, userSkills]);
+
+  const filteredPrograms = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return publicPrograms.filter((program) => {
+      const text = `${program.name || program.title || ''} ${program.description || ''} ${program.instructor || ''}`.toLowerCase();
+      if (skillTab === 'your-skills' && isAuthenticated && !matchesUserSkills(program.skills, text)) return false;
+      if (filters.level !== 'all' && !matchesLevel(program.level || program.difficulty || '')) return false;
+      if (!matchesMode(getProgramDeliveryType(program))) return false;
+      if (!matchesSkillChips(program.skills, text)) return false;
+      if (q) {
+        const target = `${text} ${getProgramDeliveryType(program)} ${program.programType || ''} ${(program.skills || []).join(' ')}`.toLowerCase();
+        if (!target.includes(q)) return false;
+      }
+      return true;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [publicPrograms, filters, searchQuery, skillTab, isAuthenticated, userSkills]);
+
+  const isProgramEnrolled = (program) => {
+    const progId = String(program._id || program.id || '');
+    const activeProgId = String(placementLearning?.program?.id || placementLearning?.program?._id || '');
+    return Boolean((activeProgId && activeProgId === progId) || enrolledProgramIds.has(progId));
+  };
+
+  // Enrolled view: only programs the learner is enrolled in (courses have no enrollment of their own)
+  const enrolledPrograms = useMemo(
+    () => filteredPrograms.filter(isProgramEnrolled),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filteredPrograms, enrolledProgramIds, placementLearning]
+  );
+
+  const visibleCourses = view === 'explore' && catalogTab !== 'programs' ? filteredCourses : [];
+  const visiblePrograms = view === 'explore'
+    ? (catalogTab !== 'courses' ? filteredPrograms : [])
+    : (catalogTab !== 'courses' ? enrolledPrograms : []);
+  const totalVisible = visibleCourses.length + visiblePrograms.length;
+
+  const renderSkeletons = () => (
+    <div className="card-grid" id="courseGrid">
+      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+        <article key={i} className="card skeleton-shimmer" style={{ border: '1px solid var(--border)', minHeight: '355px' }}>
+          <div className="card-banner skeleton-shimmer" style={{ opacity: 0.6 }} />
+          <div className="card-content">
+            <div className="skeleton-shimmer" style={{ height: '20px', width: '70%', borderRadius: '6px', marginBottom: '12px' }} />
+            <div className="skeleton-shimmer" style={{ height: '12px', width: '90%', borderRadius: '4px', marginBottom: '8px' }} />
+            <div className="skeleton-shimmer" style={{ height: '12px', width: '60%', borderRadius: '4px' }} />
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+
+  const renderCourseCard = (course) => {
+    const isFree = isFreeCourseItem(course);
+    const rawPrice = course.price;
+    const displayPrice = isFree ? 'FREE' : String(rawPrice).startsWith('₹') ? rawPrice : `₹${rawPrice}`;
+    const categoryLabel = getCourseCategory(course) === 'placement' ? 'Placement' : 'Skill';
+    return (
+      <article
+        key={`course-${course.id || course._id}`}
+        className="card"
+        onMouseEnter={() => prefetchCourseTopics(course)}
+        onClick={() => handleCourseClick(course)}
+      >
+        <div className="card-banner">
+          <img
+            src={getCourseImage(course)}
+            alt={course.title}
+            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/python.jpg'; }}
+          />
+          <div className="category-badge">{categoryLabel}</div>
+        </div>
+        <div className="card-content">
+          <h2 className="title">{course.title}</h2>
+          <p className="description">{cleanDescription(course.description)}</p>
+          {Array.isArray(course.skills) && course.skills.length > 0 && (
+            <div className="card-skills-row">
+              {course.skills.slice(0, 3).map((skill, idx) => <span key={idx} className="card-skill-tag">{skill}</span>)}
+              {course.skills.length > 3 && <span className="card-skill-tag">+{course.skills.length - 3}</span>}
+            </div>
+          )}
+          <div className="card-bottom">
+            <div className="content-divider" />
+            <div className="card-footer">
+              {isFree ? <div className="free-label">FREE</div> : <div className="price">{displayPrice}</div>}
+              <span className="start-link">View Course<span className="arrow">→</span></span>
+            </div>
+          </div>
+        </div>
+      </article>
+    );
+  };
+
+  const renderProgramCard = (program) => {
+    const isFree = isFreeProgramItem(program);
+    const displayPrice = getProgramPriceLabel(program);
+    const enrolled = isProgramEnrolled(program);
+    const currentDay = placementLearning?.batch?.currentDay || placementLearning?.todayTopic?.day || 1;
+    const metaItems = program.metaTags || [
+      program.duration || `${program.durationDays || 30} Days`,
+      program.level || 'Roadmap',
+      program.programType || 'Projects',
+    ];
+    return (
+      <article key={`program-${program._id || program.id}`} className="card" onClick={() => handleProgramClick(program)}>
+        <div className="card-banner">
+          <img
+            src={getProgramImage(program)}
+            alt={program.name || program.title}
+            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/c-programming.jpg'; }}
+          />
+          <div className="category-badge">Program</div>
+        </div>
+        <div className="card-content">
+          <h2 className="title">{program.name || program.title}</h2>
+          <p className="description">{cleanDescription(program.description)}</p>
+          <div className="program-meta">
+            {metaItems.map((meta, idx) => (
+              <React.Fragment key={idx}>
+                <span className="meta-item">{meta}</span>
+                {idx < metaItems.length - 1 && <span className="meta-dot">·</span>}
+              </React.Fragment>
+            ))}
+          </div>
+          {Array.isArray(program.skills) && program.skills.length > 0 && (
+            <div className="card-skills-row">
+              {program.skills.slice(0, 4).map((skill, idx) => <span key={idx} className="card-skill-tag">{skill}</span>)}
+              {program.skills.length > 4 && <span className="card-skill-tag">+{program.skills.length - 4}</span>}
+            </div>
+          )}
+          <div className="card-bottom">
+            <div className="content-divider" />
+            <div className="card-footer">
+              {enrolled ? <div className="free-label enrolled-label">ENROLLED</div> : isFree ? <div className="free-label">FREE</div> : <div className="price">{displayPrice}</div>}
+              <span className="start-link">
+                {enrolled ? (currentDay <= 1 ? 'Start Learning' : 'Resume Learning') : 'View Program'}
+                <span className="arrow">→</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </article>
+    );
+  };
+
+  // exactly one of these states shows; loading, error, locked, empty and not-found never overlap
+  const renderCatalogBody = () => {
+    if (view === 'enrolled' && !isAuthenticated) {
+      return <StateFallback state="login-required" onAction={() => navigate('/login')} />;
+    }
+    if (loading) return renderSkeletons();
+    if (loadError) return <StateFallback state="unavailable" onAction={() => setReloadKey((key) => key + 1)} />;
+    if (totalVisible > 0) {
+      return (
+        <div className="card-grid" id="courseGrid">
+          {visibleCourses.map(renderCourseCard)}
+          {visiblePrograms.map(renderProgramCard)}
+        </div>
+      );
+    }
+    if (hasActiveCriteria) return <StateFallback state="no-matches" onAction={clearAllCriteria} />;
+    if (view === 'enrolled') return <StateFallback state="not-enrolled" onAction={() => setView('explore')} />;
+    if (catalogTab === 'programs') return <StateFallback state="no-programs" onAction={() => setCatalogTab('courses')} />;
+    return <StateFallback state="no-courses" onAction={() => setCatalogTab('programs')} />;
+  };
 
   return (
     <div className={`learn-page-container ${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
       <ScrollProgress />
 
       <main className="page">
-        {/* =========================
-             HEADER
-        ========================= */}
         <header className="academy-header">
-          <div className="eyebrow">
-            TECHLEARN
-          </div>
-
-          <h1 className="academy-title">
-            ACADEMY
-          </h1>
-
-          <p className="academy-subtitle">
-            Learn the skills to build things worth noticing.
-          </p>
+          <div className="eyebrow">TECHLEARN</div>
+          <h1 className="academy-title">ACADEMY</h1>
+          <p className="academy-subtitle">Learn the skills to build things worth noticing.</p>
         </header>
 
-        {/* ==================================================
-             SEARCH & FILTER (In one row immediately below header)
-        ================================================== */}
         <div className="search-row-container">
           <div className="search-wrapper">
-            <span className="search-icon" aria-hidden="true">
-              <Search className="w-4 h-4" />
-            </span>
-
+            <span className="search-icon" aria-hidden="true"><Search className="w-4 h-4" /></span>
             <input
               type="text"
               className="search-input"
               id="searchInput"
               placeholder="Search courses, programs, skills..."
+              aria-label="Search courses and programs"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-
           <button
             type="button"
-            className={`drawer-trigger-btn ${activeDrawerFiltersCount > 0 ? 'active' : ''}`}
-            onClick={openFilterDrawer}
+            className={`drawer-trigger-btn ${activeFilterCount > 0 ? 'active' : ''}`}
+            onClick={() => setFilterDrawerOpen(true)}
+            aria-expanded={filterDrawerOpen}
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
             <span>Filters</span>
-            {activeDrawerFiltersCount > 0 && (
-              <span className="filter-badge-count">{activeDrawerFiltersCount}</span>
-            )}
+            {activeFilterCount > 0 && <span className="filter-badge-count">{activeFilterCount}</span>}
           </button>
         </div>
 
-        {/* ==================================================
-             YOUR SKILLS / ALL SKILLS TOGGLE (Logged-in users)
-        ================================================== */}
-        {isAuthenticated && (
+        {isAuthenticated && view === 'explore' && (
           <div className="learn-row-skills-toggle">
             <div className="skills-category-toggle">
-              <button
-                type="button"
-                className={`toggle-tab-btn ${skillTab === 'your-skills' ? 'active' : ''}`}
-                onClick={() => setSkillTab('your-skills')}
-              >
-                Your Skills
-              </button>
-              <button
-                type="button"
-                className={`toggle-tab-btn ${skillTab === 'all' ? 'active' : ''}`}
-                onClick={() => setSkillTab('all')}
-              >
-                All Skills
-              </button>
+              <button type="button" className={`toggle-tab-btn ${skillTab === 'your-skills' ? 'active' : ''}`} onClick={() => setSkillTab('your-skills')}>Your Skills</button>
+              <button type="button" className={`toggle-tab-btn ${skillTab === 'all' ? 'active' : ''}`} onClick={() => setSkillTab('all')}>All Skills</button>
             </div>
           </div>
         )}
 
-        {/* =========================
-             COURSE / PROGRAM SWITCH
-        ========================= */}
-        <div className="content-switch">
-          <button
-            type="button"
-            className={`switch-button ${activeTab === 'courses' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveTab('courses');
-              setSearchQuery('');
-            }}
-          >
-            COURSES
-          </button>
-
-          <button
-            type="button"
-            className={`switch-button ${activeTab === 'programs' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveTab('programs');
-              setSearchQuery('');
-            }}
-          >
-            PROGRAMS
-          </button>
+        <div className="content-switch" role="group" aria-label="Learning catalogue view">
+          <button type="button" className={`switch-button ${view === 'enrolled' ? 'active' : ''}`} aria-pressed={view === 'enrolled'} onClick={() => setView('enrolled')}>ENROLLED</button>
+          <button type="button" className={`switch-button ${view === 'explore' ? 'active' : ''}`} aria-pressed={view === 'explore'} onClick={() => setView('explore')}>EXPLORE</button>
         </div>
 
-        {/* ==================================================
-             COURSES CATALOG
-        ================================================== */}
-        {activeTab === 'courses' && (
-          <section className="catalog active" id="courses">
+        <div className="catalog-tabs" role="tablist" aria-label="Learning type">
+          {[['all', 'All'], ['courses', 'Courses'], ['programs', 'Programs']].map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={catalogTab === key}
+              className={`catalog-tab ${catalogTab === key ? 'active' : ''}`}
+              onClick={() => setCatalogTab(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-            {/* SKELETON LOADING STATE */}
-            {loading ? (
-              <div className="card-grid" id="courseGrid">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <article key={i} className="card skeleton-shimmer" style={{ border: '1px solid var(--border)', minHeight: '380px' }}>
-                    <div className="card-banner skeleton-shimmer" style={{ opacity: 0.6 }} />
-                    <div className="card-content">
-                      <div className="skeleton-shimmer" style={{ height: '22px', width: '70%', borderRadius: '6px', marginBottom: '12px' }} />
-                      <div className="skeleton-shimmer" style={{ height: '14px', width: '90%', borderRadius: '4px', marginBottom: '8px' }} />
-                      <div className="skeleton-shimmer" style={{ height: '14px', width: '60%', borderRadius: '4px', marginBottom: '16px' }} />
-                      <div className="card-bottom">
-                        <div className="content-divider" />
-                        <div className="card-footer">
-                          <div className="skeleton-shimmer" style={{ height: '18px', width: '40px', borderRadius: '4px' }} />
-                          <div className="skeleton-shimmer" style={{ height: '18px', width: '60px', borderRadius: '4px' }} />
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : filteredCourses.length > 0 ? (
-              <div className="card-grid" id="courseGrid">
-                {filteredCourses.map((course) => {
-                  const rawPrice = course.price;
-                  const isFree = isFreeCourseItem(course);
-                  const displayPrice = isFree
-                    ? 'FREE'
-                    : String(rawPrice).startsWith('₹')
-                    ? rawPrice
-                    : `₹${rawPrice}`;
-
-                  const categoryLabel = getCourseCategory(course) === 'placement' ? 'Placement' : 'Skill';
-
-                  return (
-                    <article
-                      key={course.id || course._id}
-                      className="card"
-                      onMouseEnter={() => prefetchCourseTopics(course)}
-                      onClick={() => handleCourseClick(course)}
-                    >
-                      <div className="card-banner">
-                        <img
-                          src={getCourseImage(course)}
-                          alt={course.title}
-                          onError={(e) => {
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.src = '/python.jpg';
-                          }}
-                        />
-                        <div className="category-badge">
-                          {categoryLabel}
-                        </div>
-                      </div>
-
-                      <div className="card-content">
-                        <h2 className="title">
-                          {course.title}
-                        </h2>
-
-                        <p className="description">
-                          {cleanDescription(course.description)}
-                        </p>
-
-                        {/* SKILLS TAGS */}
-                        {Array.isArray(course.skills) && course.skills.length > 0 && (
-                          <div className="card-skills-row">
-                            {course.skills.slice(0, 3).map((s, idx) => (
-                              <span key={idx} className="card-skill-tag">{s}</span>
-                            ))}
-                            {course.skills.length > 3 && (
-                              <span className="card-skill-tag">+{course.skills.length - 3}</span>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="card-bottom">
-                          <div className="content-divider" />
-
-                          <div className="card-footer">
-                            {isFree ? (
-                              <div className="free-label">FREE</div>
-                            ) : (
-                              <div className="price">{displayPrice}</div>
-                            )}
-
-                            <span className="start-link">
-                              View Course
-                              <span className="arrow">→</span>
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="empty-state" id="courseEmpty" style={{ display: 'block' }}>
-                <h3>No courses found.</h3>
-                <p>Try searching for another skill or clearing filters.</p>
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* ==================================================
-             PROGRAMS CATALOG
-        ================================================== */}
-        {activeTab === 'programs' && (
-          <section className="catalog active" id="programs">
-            {/* SKELETON OR PROGRAM CARDS */}
-            {loading ? (
-              <div className="card-grid" id="programGrid">
-                {[1, 2, 3, 4].map((i) => (
-                  <article key={i} className="card skeleton-shimmer" style={{ border: '1px solid var(--border)', minHeight: '380px' }}>
-                    <div className="card-banner skeleton-shimmer" style={{ opacity: 0.6 }} />
-                    <div className="card-content">
-                      <div className="skeleton-shimmer" style={{ height: '22px', width: '70%', borderRadius: '6px', marginBottom: '12px' }} />
-                      <div className="skeleton-shimmer" style={{ height: '14px', width: '90%', borderRadius: '4px', marginBottom: '8px' }} />
-                      <div className="card-bottom">
-                        <div className="content-divider" />
-                        <div className="card-footer">
-                          <div className="skeleton-shimmer" style={{ height: '18px', width: '40px', borderRadius: '4px' }} />
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : filteredPrograms.length > 0 ? (
-              <div className="card-grid" id="programGrid">
-                {filteredPrograms.map((program) => {
-                  const isFree = isFreeProgramItem(program);
-                  const displayPrice = getProgramPriceLabel(program);
-
-                  const progId = String(program._id || program.id || "");
-                  const activeProgId = String(placementLearning?.program?.id || placementLearning?.program?._id || "");
-                  const isEnrolledInProg = Boolean((activeProgId && activeProgId === progId) || enrolledProgramIds.has(progId));
-                  const currentDay = placementLearning?.batch?.currentDay || placementLearning?.todayTopic?.day || 1;
-                  const isDay1 = currentDay <= 1;
-
-                  const metaItems = program.metaTags || [
-                    program.duration || `${program.durationDays || 30} Days`,
-                    program.level || 'Roadmap',
-                    program.programType || 'Projects'
-                  ];
-
-                  return (
-                    <article
-                      key={program._id || program.id}
-                      className="card"
-                      onClick={() => handleProgramClick(program)}
-                    >
-                      <div className="card-banner">
-                        <img
-                          src={getProgramImage(program)}
-                          alt={program.name || program.title}
-                          onError={(e) => {
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.src = '/c-programming.jpg';
-                          }}
-                        />
-                        <div className="category-badge">
-                          Program
-                        </div>
-                      </div>
-
-                      <div className="card-content">
-                        <h2 className="title">
-                          {program.name || program.title}
-                        </h2>
-
-                        <p className="description">
-                          {cleanDescription(program.description)}
-                        </p>
-
-                        <div className="card-bottom">
-                          <div className="program-meta">
-                            {metaItems.map((meta, idx) => (
-                              <React.Fragment key={idx}>
-                                <span className="meta-item">{meta}</span>
-                                {idx < metaItems.length - 1 && (
-                                  <span className="meta-dot">·</span>
-                                )}
-                              </React.Fragment>
-                            ))}
-                          </div>
-
-                          <div className="content-divider" />
-
-                          <div className="card-footer">
-                            {isEnrolledInProg ? (
-                              <div className="free-label enrolled-label">ENROLLED</div>
-                            ) : isFree ? (
-                              <div className="free-label">FREE</div>
-                            ) : (
-                              <div className="price">{displayPrice}</div>
-                            )}
-
-                            <span className="start-link">
-                              {isEnrolledInProg ? (isDay1 ? "Start Learning" : "Resume Learning") : "View Program"}
-                              <span className="arrow">→</span>
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="empty-state" id="programEmpty" style={{ display: 'block' }}>
-                <h3>No programs found.</h3>
-                <p>Try searching for another program.</p>
-              </div>
-            )}
-          </section>
-        )}
+        <section className="catalog active" id="catalog">{renderCatalogBody()}</section>
       </main>
 
-      {/* ==================================================
-           FILTER DRAWER (Sliding from Right)
-      ================================================== */}
-      {/* Overlay */}
-      <div
-        onClick={() => setFilterDrawerOpen(false)}
-        className={`fixed inset-0 bg-black/40 backdrop-blur-xs z-[150] transition-opacity duration-250 ${
-          filterDrawerOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
-        }`}
+      <FilterDrawer
+        open={filterDrawerOpen}
+        onClose={() => setFilterDrawerOpen(false)}
+        groups={drawerGroups}
+        applied={filters}
+        onApply={(values) => { setFilters({ level: values.level, mode: values.mode, skills: values.skills }); setFilterDrawerOpen(false); }}
+        onClear={() => { setFilters(DEFAULT_FILTERS); setFilterDrawerOpen(false); }}
+        description="Find the right course or program for your learning goals."
       />
 
-      {/* Drawer */}
-      <aside
-        style={{ backgroundColor: "var(--page-bg)" }}
-        className={`fixed right-0 top-0 bottom-0 w-[380px] max-w-[90%] z-[160] transition-transform duration-300 ease-in-out shadow-2xl flex flex-col ${
-          isDarkMode ? "text-white" : "text-[#00113b]"
-        } ${filterDrawerOpen ? "translate-x-0" : "translate-x-full"}`}
-      >
-        <div className="p-[20px] flex justify-between items-center border-b border-black/10 dark:border-white/10">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="w-4 h-4 text-blue-500" />
-            <h3 className="font-['Press_Start_2P'] text-[11px] leading-[1.6]">Course Filters</h3>
-          </div>
-          <button
-            onClick={() => setFilterDrawerOpen(false)}
-            className="w-[32px] h-[32px] border-none bg-white/60 dark:bg-white/10 text-[#00113b] dark:text-white rounded-[7px] text-[18px] cursor-pointer flex items-center justify-center shadow-xs"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-[20px] space-y-[24px] learn-filter-scroll">
-          {/* ACCESS TYPE */}
-          <div>
-            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[10px] opacity-75">Access Type</h4>
-            <div className="flex flex-wrap gap-2">
-              {['Free', 'Paid'].map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => {
-                    if (stagedAccessTypes.includes(type)) {
-                      setStagedAccessTypes(stagedAccessTypes.filter(t => t !== type));
-                    } else {
-                      setStagedAccessTypes([...stagedAccessTypes, type]);
-                    }
-                  }}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                    stagedAccessTypes.includes(type)
-                      ? 'bg-blue-600 border-blue-600 text-white'
-                      : 'border-black/15 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
-                  }`}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* DELIVERY TYPE */}
-          <div>
-            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[10px] opacity-75">Delivery Type</h4>
-            <div className="flex flex-wrap gap-2">
-              {['Self-Paced', 'Structured', 'Trainer-Led'].map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => {
-                    if (stagedDeliveryTypes.includes(type)) {
-                      setStagedDeliveryTypes(stagedDeliveryTypes.filter(t => t !== type));
-                    } else {
-                      setStagedDeliveryTypes([...stagedDeliveryTypes, type]);
-                    }
-                  }}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                    stagedDeliveryTypes.includes(type)
-                      ? 'bg-blue-600 border-blue-600 text-white'
-                      : 'border-black/15 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
-                  }`}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* LEVEL / DIFFICULTY */}
-          <div>
-            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[10px] opacity-75">Difficulty Level</h4>
-            <div className="flex flex-wrap gap-2">
-              {['Beginner', 'Basic', 'Intermediate', 'Advanced'].map((lvl) => (
-                <button
-                  key={lvl}
-                  type="button"
-                  onClick={() => {
-                    if (stagedLevels.includes(lvl)) {
-                      setStagedLevels(stagedLevels.filter(l => l !== lvl));
-                    } else {
-                      setStagedLevels([...stagedLevels, lvl]);
-                    }
-                  }}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                    stagedLevels.includes(lvl)
-                      ? 'bg-blue-600 border-blue-600 text-white'
-                      : 'border-black/15 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
-                  }`}
-                >
-                  {lvl}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* SKILLS MULTI-SELECT */}
-          <div>
-            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[10px] opacity-75">Skills</h4>
-            <div className="space-y-1.5 pr-1">
-              {availableSkills.map((skill) => (
-                <label
-                  key={skill}
-                  className="flex items-center gap-2.5 py-1 text-xs cursor-pointer opacity-85 hover:opacity-100"
-                >
-                  <input
-                    type="checkbox"
-                    checked={stagedSkills.includes(skill)}
-                    onChange={(e) => {
-                      if (e.target.checked) setStagedSkills([...stagedSkills, skill]);
-                      else setStagedSkills(stagedSkills.filter(s => s !== skill));
-                    }}
-                    className="accent-blue-600 w-3.5 h-3.5 rounded"
-                  />
-                  <span>{skill}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* DRAWER FOOTER */}
-        <div className="p-[16px_20px] border-t border-black/10 dark:border-white/10 flex gap-[10px]">
-          <button
-            onClick={handleClearDrawerFilters}
-            className="flex-1 h-[40px] rounded-[10px] text-xs font-bold cursor-pointer bg-white/70 dark:bg-white/10 border border-black/15 dark:border-white/10 text-current hover:bg-white dark:hover:bg-white/20 transition-all"
-          >
-            Clear All
-          </button>
-          <button
-            onClick={handleApplyDrawerFilters}
-            className="flex-1 h-[40px] rounded-[10px] text-xs font-bold cursor-pointer bg-blue-600 text-white border border-blue-600 shadow-md hover:bg-blue-500 active:scale-[0.98] transition-all"
-          >
-            Apply Filters
-          </button>
-        </div>
-      </aside>
-
-      {/* Join Waitlist Modal */}
       <JoinWaitlistModal
         isOpen={Boolean(selectedWaitlistProgram)}
         onClose={() => setSelectedWaitlistProgram(null)}
