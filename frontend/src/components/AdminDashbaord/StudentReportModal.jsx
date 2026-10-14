@@ -33,11 +33,20 @@ export default function StudentReportModal({ studentId, batchId, programId, stud
   const [expandedMcqId, setExpandedMcqId] = useState(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  const effectiveProgramId = programId
+  const initialProgramId = programId
     || studentBasic?.programId
     || studentBasic?.activeProgramId
     || studentBasic?.enrollment?.programId?._id
-    || studentBasic?.enrollment?.programId;
+    || studentBasic?.enrollment?.programId
+    || null;
+
+  const [selectedProgramId, setSelectedProgramId] = useState(initialProgramId);
+
+  useEffect(() => {
+    setSelectedProgramId(initialProgramId);
+  }, [initialProgramId, studentId]);
+
+  const effectiveProgramId = selectedProgramId || initialProgramId;
 
   const handleViewCode = async (sub) => {
     setLoadingCode(true);
@@ -62,16 +71,19 @@ export default function StudentReportModal({ studentId, batchId, programId, stud
       setLoading(true);
       setError('');
       try {
-        // Fetch basic student info
+        // Fetch basic student info with selected programId
         const studentRes = await adminAPI.getStudent(
           studentId,
           effectiveProgramId ? { programId: effectiveProgramId } : {}
         );
         setStudentDetails(studentRes);
 
-        // Fetch submissions
+        // Fetch program-scoped submissions
         try {
-          const subs = await adminAPI.getStudentSubmissions(studentId);
+          const subs = await adminAPI.getStudentSubmissions(
+            studentId,
+            effectiveProgramId ? { programId: effectiveProgramId } : {}
+          );
           const submissionsList = Array.isArray(subs) ? subs : (subs?.submissions || []);
           setSubmissions(submissionsList);
         } catch (subErr) {
@@ -323,8 +335,31 @@ export default function StudentReportModal({ studentId, batchId, programId, stud
           <div className="flex flex-col flex-1 min-h-0">
             {/* Header & Sub-tabs static container */}
             <div className="px-6 pt-5 pb-3 space-y-4 border-b border-black/10 dark:border-white/10 shrink-0 bg-white dark:bg-[#0a1737]">
-              {/* College, Batch, Track Details */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 dark:bg-white/5 p-3 rounded-xl border border-black/5 dark:border-white/5">
+              {/* College, Batch, Track, Program Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-50 dark:bg-white/5 p-3 rounded-xl border border-black/5 dark:border-white/5">
+                <div>
+                  <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-white/45">Program Context</span>
+                  {studentDetails?.allEnrollments && studentDetails.allEnrollments.length > 1 ? (
+                    <div className="relative mt-0.5">
+                      <select
+                        value={effectiveProgramId || ''}
+                        onChange={(e) => setSelectedProgramId(e.target.value)}
+                        className="w-full appearance-none bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg pr-6 pl-2 py-1 text-xs font-semibold outline-none cursor-pointer truncate"
+                      >
+                        {studentDetails.allEnrollments.map((enr) => (
+                          <option key={String(enr.programId)} value={String(enr.programId)} className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">
+                            {enr.programName || 'Program'} ({enr.status || 'Active'})
+                          </option>
+                        ))}
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-blue-600 dark:text-blue-400" />
+                    </div>
+                  ) : (
+                    <span className="block mt-0.5 font-bold text-xs text-blue-600 dark:text-blue-400 truncate">
+                      {effectiveProgramName}
+                    </span>
+                  )}
+                </div>
                 <div>
                   <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-white/45">College</span>
                   <span className="block mt-0.5 font-semibold text-xs truncate">{college}</span>
@@ -371,9 +406,9 @@ export default function StudentReportModal({ studentId, batchId, programId, stud
                 </div>
               </div>
 
-              {/* Sub-tabs selection row */}
+              {/* Sub-tabs selection row: 7 scoped tabs */}
               <div className="flex -mb-3 pt-1 overflow-x-auto minimal-scrollbar gap-1">
-                {['Overview', 'Profile', 'Day-wise Report', 'Coding Submissions', 'MCQ Summary', 'Day-wise Performance'].map(tab => (
+                {['Overview', 'Profile', 'MCQ Submissions', 'Coding Submissions', 'Day-wise Report', 'Day-wise Performance', 'Payment History'].map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -953,8 +988,8 @@ export default function StudentReportModal({ studentId, batchId, programId, stud
                 </div>
               )}
 
-              {/* TAB 4: MCQ SUMMARY */}
-              {activeTab === 'MCQ Summary' && (
+              {/* TAB 4: MCQ SUBMISSIONS / SUMMARY */}
+              {(activeTab === 'MCQ Submissions' || activeTab === 'MCQ Summary') && (
                 <div className="space-y-4">
                   <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">MCQ Practice Metrics</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -1040,6 +1075,87 @@ export default function StudentReportModal({ studentId, batchId, programId, stud
                       </tbody>
                     </table>
                   </div>
+                </div>
+              )}
+
+              {/* TAB 7: PAYMENT HISTORY */}
+              {activeTab === 'Payment History' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Payment Records</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Payments associated with <strong className="text-slate-800 dark:text-white">{effectiveProgramName}</strong>
+                      </p>
+                    </div>
+                    <span className={`font-bold px-2.5 py-1 rounded text-xs ${
+                      authoritativePaymentStatus === 'Paid'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : authoritativePaymentStatus === 'Pending'
+                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                          : 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
+                    }`}>
+                      Current Status: {authoritativePaymentStatus}
+                    </span>
+                  </div>
+
+                  {studentDetails?.paymentHistory && studentDetails.paymentHistory.length > 0 ? (
+                    <div className="border border-black/5 dark:border-white/10 rounded-xl overflow-hidden bg-white/60 dark:bg-white/[0.03]">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-50 dark:bg-white/5 border-b border-black/5 dark:border-white/10 text-[10px] uppercase tracking-wider text-slate-400">
+                            <th className="p-3">Order / Payment ID</th>
+                            <th className="p-3">Program</th>
+                            <th className="p-3">Amount</th>
+                            <th className="p-3">Method</th>
+                            <th className="p-3">Status</th>
+                            <th className="p-3 text-right">Date</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                          {studentDetails.paymentHistory.map((pmt) => (
+                            <tr key={pmt.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
+                              <td className="p-3 font-mono text-[11px] font-semibold text-slate-800 dark:text-slate-200">
+                                {pmt.orderId}
+                              </td>
+                              <td className="p-3 font-medium text-slate-700 dark:text-slate-300">
+                                {pmt.programName || effectiveProgramName}
+                              </td>
+                              <td className="p-3 font-bold text-slate-900 dark:text-white">
+                                {pmt.currency} {pmt.amount?.toLocaleString()}
+                              </td>
+                              <td className="p-3 text-slate-500">
+                                {pmt.method}
+                              </td>
+                              <td className="p-3">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  ['captured', 'approved', 'Paid'].includes(pmt.status)
+                                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                    : ['pending', 'created', 'Pending'].includes(pmt.status)
+                                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                                      : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                                }`}>
+                                  {pmt.status}
+                                </span>
+                              </td>
+                              <td className="p-3 text-right text-slate-400 whitespace-nowrap text-[11px]">
+                                {formatDateValue(pmt.createdAt)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="border border-dashed border-black/10 dark:border-white/10 rounded-xl p-8 text-center bg-black/[0.01] dark:bg-white/[0.01]">
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        No payment transactions recorded for this program.
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Access Tier: {studentDetails?.access || 'Free'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1372,6 +1488,8 @@ export default function StudentReportModal({ studentId, batchId, programId, stud
           </div>
         </div>
       )}
+
+
 
       {/* Confirmation Modal for Reset XP */}
       {showResetConfirm && (

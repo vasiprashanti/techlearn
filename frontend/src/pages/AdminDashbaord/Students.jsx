@@ -172,9 +172,20 @@ export default function Students() {
 
   // Data states
   const [studentsData, setStudentsData] = useState({ items: [], total: 0 });
+  const [unreadCounts, setUnreadCounts] = useState({
+    all: 0,
+    enrolled: 0,
+    placement: 0,
+    skill: 0,
+    leads: 0,
+    exploring: 0,
+    completed: 0,
+    waitlist: 0,
+  });
   const [stats, setStats] = useState({ totalEnrolled: 0, activeThisMonth: 0, collegeCount: 0, individualCount: 0, completedCount: 0, leadFeedbackReasonCounts: [] });
   const [filterOptions, setFilterOptions] = useState({ colleges: [], programs: [] });
   const [isLoading, setIsLoading] = useState(true);
+  const [isMarkingRead, setIsMarkingRead] = useState(false);
 
   // Modals & Actions
   const [selectedReportStudent, setSelectedReportStudent] = useState(null);
@@ -216,6 +227,7 @@ export default function Students() {
       if (response) {
         setStudentsData({ items: response.items || [], total: response.total || 0 });
         if (response.stats) setStats(response.stats);
+        if (response.unreadCounts) setUnreadCounts(response.unreadCounts);
         if (response.filterOptions) setFilterOptions(response.filterOptions);
       }
     } catch (err) {
@@ -434,6 +446,38 @@ export default function Students() {
       alert(err.message || 'Bulk delete failed.');
     } finally {
       setIsBulkDeleting(false);
+    }
+  };
+
+  const handleMarkAsRead = async () => {
+    if (!selectedStudentIds.length) return;
+    setIsMarkingRead(true);
+    try {
+      await adminAPI.markStudentsRead(selectedStudentIds, activeTab);
+      // Optimistically update local rows
+      setStudentsData((prev) => ({
+        ...prev,
+        items: prev.items.map((s) =>
+          selectedStudentIds.includes(s.id) ? { ...s, isRead: true } : s
+        ),
+      }));
+      // Decrement unread count
+      setUnreadCounts((prev) => {
+        const markedCount = selectedStudentIds.length;
+        const nextCount = Math.max(0, (prev[activeTab] || 0) - markedCount);
+        return {
+          ...prev,
+          [activeTab]: nextCount,
+          all: Math.max(0, (prev.all || 0) - markedCount),
+        };
+      });
+      setSelectedStudentIds([]);
+    } catch (err) {
+      console.error('Failed to mark items as read:', err);
+      alert(err.message || 'Failed to mark as read.');
+      loadGlobalStudents();
+    } finally {
+      setIsMarkingRead(false);
     }
   };
 
@@ -804,20 +848,28 @@ export default function Students() {
                   { id: 'exploring', label: 'Exploring', icon: FiCompass },
                   { id: 'completed', label: 'Completed', icon: FiCheckCircle },
                   { id: 'waitlist', label: 'Waitlist', icon: FiClock },
-                ].map(({ id, label, icon: TabIcon }) => (
-                  <button
-                    key={id}
-                    onClick={() => setActiveTab(id)}
-                    className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg flex items-center gap-1.5 transition-all whitespace-nowrap ${
-                      activeTab === id
-                        ? 'bg-[#3C83F6]/10 text-[#3C83F6] dark:text-[#7fb1ff] font-bold'
-                        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5'
-                    }`}
-                  >
-                    <TabIcon className="w-3 h-3" />
-                    {label}
-                  </button>
-                ))}
+                ].map(({ id, label, icon: TabIcon }) => {
+                  const unread = unreadCounts[id] || 0;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => setActiveTab(id)}
+                      className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                        activeTab === id
+                          ? 'bg-[#3C83F6]/10 text-[#3C83F6] dark:text-[#7fb1ff] font-bold'
+                          : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5'
+                      }`}
+                    >
+                      <TabIcon className="w-3 h-3" />
+                      <span>{label}</span>
+                      {unread > 0 && (
+                        <span className="ml-0.5 px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-blue-500 text-white dark:bg-blue-600 shadow-sm">
+                          {unread > 99 ? '99+' : unread}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Bulk Import and Add Student buttons placed to the right of section selection */}
@@ -1174,9 +1226,17 @@ export default function Students() {
                               <div
                                 className="text-left group block truncate max-w-full"
                               >
-                                <span className="font-bold text-slate-800 dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#7fb1ff] transition-colors truncate block" title={student.name}>
-                                  {student.name}
-                                </span>
+                                <div className="flex items-center gap-1.5 truncate">
+                                  {student.isRead === false && (
+                                    <span
+                                      className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 inline-block"
+                                      title="Unread"
+                                    />
+                                  )}
+                                  <span className={`text-slate-800 dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#7fb1ff] transition-colors truncate block ${student.isRead === false ? 'font-black' : 'font-semibold'}`} title={student.name}>
+                                    {student.name}
+                                  </span>
+                                </div>
                                 <span className="block text-[11px] text-slate-400 dark:text-slate-500 font-normal truncate" title={student.email}>
                                   {student.email}
                                 </span>
@@ -1513,6 +1573,14 @@ export default function Students() {
                   className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
                 >
                   Clear
+                </button>
+                <button
+                  onClick={handleMarkAsRead}
+                  disabled={isMarkingRead}
+                  className="px-3.5 py-1 rounded-full bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50"
+                >
+                  <FiCheckCircle className="w-3 h-3" />
+                  {isMarkingRead ? 'Marking...' : 'Mark as Read'}
                 </button>
                 <button
                   onClick={() => setIsBulkDeleteConfirmOpen(true)}

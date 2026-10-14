@@ -328,6 +328,7 @@ export const adminAPI = {
   ),
   resetStudentXp: (studentId) => request(`/admin/students/${studentId}/reset-xp`, { method: 'POST' }),
   removeStudentFromBatch: (studentId, batchId) => request(`/admin/students/${studentId}/remove-batch`, { method: 'PATCH', body: JSON.stringify({ batchId }) }),
+  markStudentsRead: (studentIds, category = '') => request('/admin/students/mark-read', { method: 'POST', body: JSON.stringify({ studentIds, category }) }),
   deleteStudent: (studentId) => request(`/admin/students/${studentId}`, { method: 'DELETE' }),
   bulkUploadStudents: async (payload) => {
     if (payload instanceof FormData) {
@@ -447,7 +448,10 @@ export const adminAPI = {
   }),
 
   getSubmissions: () => request('/admin/submissions'),
-  getStudentSubmissions: (studentId) => request(`/admin/submissions?studentId=${studentId}`, { noCache: true }),
+  getStudentSubmissions: (studentId, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/admin/submissions?studentId=${studentId}${query ? `&${query}` : ''}`, { noCache: true });
+  },
   getSubmission: (submissionId) => request(`/admin/submissions/${submissionId}`),
   updateSubmissionScore: (submissionId, body) => request(`/admin/submissions/${submissionId}/score`, { method: 'PUT', body: JSON.stringify(body) }),
   getNotifications: () => request('/admin/notifications'),

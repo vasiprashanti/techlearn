@@ -24,6 +24,7 @@ import Payment from "../../models/Payment.js";
 import PricingExitFeedback from "../../models/PricingExitFeedback.js";
 import ProgramWaitlist from "../../models/ProgramWaitlist.js";
 import ProgramWaitlistLead from "../../models/ProgramWaitlistLead.js";
+import AdminReadState from "../../models/AdminReadState.js";
 import { writeAuditLog } from "../../utils/auditLogger.js";
 import { assertObjectId, formatDateLabel, invalidateAdminMetricsCache } from "./adminCommon.js";
 import {
@@ -3663,6 +3664,18 @@ export const getStudentDetailAdmin = async (req, res) => {
           )
         : 0;
 
+    // Fetch all payment records for this student
+    const allStudentPayments = paymentIdentifiers.length
+      ? await Payment.find({ $or: paymentIdentifiers })
+          .populate("programId", "name programType")
+          .sort({ createdAt: -1 })
+          .lean()
+      : [];
+
+    const programPayments = enrollmentProgId
+      ? allStudentPayments.filter((p) => String(p.programId?._id || p.programId) === String(enrollmentProgId))
+      : allStudentPayments;
+
     return res.status(200).json({
       success: true,
       data: {
@@ -3692,6 +3705,39 @@ export const getStudentDetailAdmin = async (req, res) => {
         programStatus: enrollment?.status || student.status || "Active",
         joined: student.createdAt,
         createdAt: student.createdAt,
+        allEnrollments: studentEnrollments.map((e) => ({
+          enrollmentId: e._id,
+          programId: e.programId?._id || e.programId,
+          programName: e.programId?.name || "Untitled Program",
+          programType: e.programId?.programType || "Placement",
+          status: e.status || "Active",
+          batchName: e.batchId?.name || null,
+          batchId: e.batchId?._id || e.batchId || null,
+          startDate: e.batchId?.startDate || e.individualStartDate || e.assignedAt || e.createdAt,
+          accessTier: e.accessTier || "Free",
+        })),
+        paymentHistory: programPayments.map((p) => ({
+          id: p._id,
+          orderId: p.orderId || p.razorpayOrderId || p._id,
+          amount: p.amount ? p.amount / 100 : 0,
+          currency: p.currency || "INR",
+          status: p.status,
+          method: p.method || "Online",
+          programId: p.programId?._id || p.programId,
+          programName: p.programId?.name || "Program Enrollment",
+          createdAt: p.createdAt,
+        })),
+        allPaymentHistory: allStudentPayments.map((p) => ({
+          id: p._id,
+          orderId: p.orderId || p.razorpayOrderId || p._id,
+          amount: p.amount ? p.amount / 100 : 0,
+          currency: p.currency || "INR",
+          status: p.status,
+          method: p.method || "Online",
+          programId: p.programId?._id || p.programId,
+          programName: p.programId?.name || "Program Enrollment",
+          createdAt: p.createdAt,
+        })),
         userProfile: {
           id: user?._id || student.userId || student._id,
           name: user?.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : student.name,
@@ -4774,14 +4820,54 @@ export const getGlobalStudentsAdmin = async (req, res) => {
       return (Number.isFinite(right) ? right : 0) - (Number.isFinite(left) ? left : 0);
     });
 
+    // Fetch read state for authenticated Admin
+    const adminId = req.user?._id;
+    let readEntityIds = new Set();
+    if (adminId) {
+      const readStates = await AdminReadState.find({ adminId }).select("entityId").lean();
+      readEntityIds = new Set(readStates.map((r) => String(r.entityId)));
+    }
+
+    // Compute unread counts per category
+    const categoryUnreadCounts = {
+      all: 0,
+      enrolled: 0,
+      placement: 0,
+      skill: 0,
+      leads: 0,
+      exploring: 0,
+      completed: 0,
+      waitlist: 0,
+    };
+
+    processedStudents.forEach((s) => {
+      const isUnread = !readEntityIds.has(String(s.id));
+      if (isUnread) {
+        categoryUnreadCounts.all++;
+        if (s.isEnrolled) categoryUnreadCounts.enrolled++;
+        if (s.hasPlacement) categoryUnreadCounts.placement++;
+        if (s.hasSkill) categoryUnreadCounts.skill++;
+        if (s.isLead) categoryUnreadCounts.leads++;
+        if (s.isExploring) categoryUnreadCounts.exploring++;
+        if (s.hasCompleted) categoryUnreadCounts.completed++;
+        if (s.isWaitlisted) categoryUnreadCounts.waitlist++;
+      }
+    });
+
     // Pagination
     const total = tabStudents.length;
-    const paginatedItems = tabStudents.slice((page - 1) * limit, page * limit);
+    const paginatedItems = tabStudents
+      .slice((page - 1) * limit, page * limit)
+      .map((item) => ({
+        ...item,
+        isRead: readEntityIds.has(String(item.id)),
+      }));
 
     return res.status(200).json({
       success: true,
       data: {
         stats,
+        unreadCounts: categoryUnreadCounts,
         items: paginatedItems,
         page,
         limit,
@@ -4796,6 +4882,49 @@ export const getGlobalStudentsAdmin = async (req, res) => {
   } catch (error) {
     console.error("getGlobalStudentsAdmin error:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch global students.", error: error.message, stack: error.stack });
+  }
+};
+
+export const markStudentsReadAdmin = async (req, res) => {
+  try {
+    const adminId = req.user?._id;
+    if (!adminId) {
+      return res.status(401).json({ success: false, message: "Authentication required." });
+    }
+
+    const { studentIds, category } = req.body;
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ success: false, message: "studentIds array is required." });
+    }
+
+    const bulkOps = studentIds.map((id) => ({
+      updateOne: {
+        filter: { adminId, entityId: String(id) },
+        update: {
+          $setOnInsert: {
+            adminId,
+            entityId: String(id),
+            entityType: "student",
+            category: category || "",
+            readAt: new Date(),
+          },
+        },
+        upsert: true,
+      },
+    }));
+
+    if (bulkOps.length > 0) {
+      await AdminReadState.bulkWrite(bulkOps);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `${studentIds.length} item(s) marked as read.`,
+      markedCount: studentIds.length,
+    });
+  } catch (error) {
+    console.error("markStudentsReadAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Failed to mark items as read." });
   }
 };
 
@@ -4827,6 +4956,7 @@ export const deleteStudentAdmin = async (req, res) => {
       deleteStudentProjectProgress([studentId]),
       userId ? User.findByIdAndDelete(userId) : Promise.resolve(),
       studentEmail ? User.deleteMany({ email: studentEmail }) : Promise.resolve(),
+      AdminReadState.deleteMany({ entityId: String(studentId) }),
     ]);
 
     await Student.findByIdAndDelete(studentId);
