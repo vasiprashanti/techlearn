@@ -1225,3 +1225,40 @@
   .learn-page-container .card-banner { height: 84px !important; }
   .learn-page-container .card-content { padding: 9px 8px 10px; }
 }
+
+/* ==================================================
+   CENTRED LAYOUT (version B)
+================================================== */
+.learn-page-container .page { padding-top: 120px; }
+.learn-page-container .academy-header { max-width: 850px; margin: 0 auto; text-align: center; }
+.learn-page-container .eyebrow { margin-bottom: 20px; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; color: var(--heading); }
+.learn-page-container .academy-title { margin-bottom: 14px; font-size: clamp(28px, 5vw, 52px); line-height: 1.2; letter-spacing: -2px; }
+.learn-page-container.light-mode .academy-title { background: none !important; -webkit-text-fill-color: #02107a !important; color: #02107a !important; }
+.learn-page-container .academy-subtitle { max-width: 650px; margin: 0 auto; font-size: 15px; line-height: 1.7; color: var(--heading); }
+.learn-page-container .search-row-container { margin: 42px auto 0; }
+.learn-page-container .content-switch { margin: 60px auto 0; }
+.learn-page-container .catalog-tabs { justify-content: flex-start; }
+
+/* card typography from the reference */
+.learn-page-container .title { font-size: 16px; font-weight: 700; line-height: 1.4; letter-spacing: -.35px; margin-top: 4px; }
+.learn-page-container .description { font-size: 11px; line-height: 1.7; margin-top: 10px; margin-bottom: 13px; }
+.learn-page-container .start-link { font-size: 11px; font-weight: 700; }
+.learn-page-container .card-banner { background: #03185a; }
+.learn-page-container .card-banner img.banner-icon { object-fit: contain; padding: 22px 0; }
+
+@media (max-width: 760px) {
+  .learn-page-container .page { padding-top: 100px; }
+  .learn-page-container .academy-title { font-size: 25px; letter-spacing: -1.5px; }
+  .learn-page-container .academy-subtitle { font-size: 13px; }
+  .learn-page-container .search-row-container { margin-top: 28px; }
+  .learn-page-container .content-switch { margin-top: 34px; }
+  .learn-page-container .title { font-size: 12px; }
+  .learn-page-container .description { font-size: 9px; line-height: 1.55; margin-top: 7px; margin-bottom: 10px; }
+  .learn-page-container .start-link { font-size: 9px; }
+  .learn-page-container .card-banner img.banner-icon { padding: 14px 0; }
+}
+@media (max-width: 500px) {
+  .learn-page-container .title { font-size: 11px; }
+  .learn-page-container .description { font-size: 8.5px; line-height: 1.5; }
+  .learn-page-container .start-link { font-size: 8.5px; }
+}

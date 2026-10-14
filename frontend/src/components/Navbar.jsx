@@ -143,7 +143,7 @@ export default function Navbar() {
 
       const resolved = detectPageSurface();
       setSectionBackground(resolved.color || (isDarkMode ? '#050b2f' : '#daf0fa'));
-      setNavBgImage(resolved.image);
+      setNavBgImage(location.pathname === '/learn' ? null : resolved.image);
 
       const hasSections = allSections.length > 0;
       if (!hasSections) {
@@ -826,7 +826,8 @@ export default function Navbar() {
         style={{
           '--navbar-bg': navSurface,
           '--navbar-bg-image': navBgImage || 'none',
-          '--dropdown-bg': isDarkMode ? '#050b2f' : '#ffffff',
+          // the account dropdown takes the navbar's own colour so it is never blank over the hero
+          '--dropdown-bg': /^(#|rgb\()/.test(String(navSurface).trim()) ? navSurface : (isDarkNav ? '#050b2f' : '#ffffff'),
           '--menu-page-bg': navSurface,
         }}
       >

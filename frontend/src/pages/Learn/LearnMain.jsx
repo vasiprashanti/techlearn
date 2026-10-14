@@ -59,7 +59,20 @@ const getCourseTopicsId = (course) => {
   return course?.id || course?._id || course?.courseId;
 };
 
+// Language courses use the icon artwork on the blue banner; other subjects keep their banner image.
+const getLanguageIcon = (text = '') => {
+  const t = String(text).toLowerCase();
+  if (t.includes('javascript') || /\bjs\b/.test(t)) return '/js.png';
+  if (t.includes('java') && !t.includes('full')) return '/java.png';
+  if (t.includes('python')) return '/python.png';
+  if (t.includes('sql') || t.includes('database')) return '/sql.png';
+  if (/\bc programming\b|^c$|^basics: c\b|^c /.test(t)) return '/c.png';
+  return null;
+};
+
 const getCourseImage = (course) => {
+  const icon = getLanguageIcon(course?.title);
+  if (icon) return icon;
   if (course?.bannerImage) return course.bannerImage;
   if (course?.image && !course.image.includes('/python.jpg')) return course.image;
   const t = (course?.title || '').toLowerCase();
@@ -102,6 +115,8 @@ const writeCachedCourses = (courses) => {
 };
 
 const getProgramImage = (program) => {
+  const icon = getLanguageIcon(program?.name || program?.title);
+  if (icon) return icon;
   if (program?.bannerImage && !program.bannerImage.includes('expert-led-banner') && !program.bannerImage.includes('auth-hero')) {
     return program.bannerImage;
   }
@@ -173,7 +188,7 @@ const LearnMain = () => {
 
   const [view, setView] = useState('explore'); // 'explore' | 'enrolled'
   const [catalogTab, setCatalogTab] = useState('all'); // 'all' | 'courses' | 'programs'
-  const [skillTab, setSkillTab] = useState('all'); // 'your-skills' | 'all'
+  const skillTab = 'all'; // the Your Skills / All Skills toggle was removed from the design
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
@@ -197,7 +212,7 @@ const LearnMain = () => {
       if (skill && String(skill).trim()) set.add(String(skill).trim());
     });
     coursesData.forEach((course) => add(course.skills));
-    publicPrograms.forEach((program) => add(program.skills));
+    publicPrograms.forEach((program) => add((program.skills || program.skillTags)));
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [coursesData, publicPrograms]);
 
@@ -378,19 +393,27 @@ const LearnMain = () => {
     return value === filters.level || (filters.level === 'beginner' && value === 'basic');
   };
 
-  const matchesMode = (mode) => filters.mode === 'all' || normalizeKey(mode) === filters.mode;
+  // Self-paced: self-paced courses + structured programs. Structured: structured programs only.
+  // Trainer-led: trainer-led courses only.
+  const courseMatchesMode = (course) => {
+    if (filters.mode === 'all') return true;
+    const mode = normalizeKey(course.deliveryType || 'Self-Paced');
+    if (filters.mode === 'self-paced') return mode === 'self-paced';
+    if (filters.mode === 'trainer-led') return mode === 'trainer-led';
+    return false;
+  };
+
+  const programMatchesMode = (program) => {
+    if (filters.mode === 'all') return true;
+    const availability = normalizeKey(program.availability || 'Structured');
+    if (filters.mode === 'self-paced' || filters.mode === 'structured') return availability === 'structured' || availability === 'both';
+    return false;
+  };
 
   const matchesSkillChips = (skillList, text) => {
     if (filters.skills.length === 0) return true;
     const lowered = (skillList || []).map((skill) => String(skill).toLowerCase());
     return filters.skills.some((skill) => lowered.includes(skill.toLowerCase()) || text.includes(skill.toLowerCase()));
-  };
-
-  const getProgramDeliveryType = (program) => {
-    if (program.deliveryType) return program.deliveryType;
-    const t = (program.name || program.title || '').toLowerCase();
-    if (t.includes('sprint') || t.includes('bootcamp') || t.includes('aptitude') || t.includes('full stack')) return 'self-paced';
-    return 'trainer-led';
   };
 
   const filteredCourses = useMemo(() => {
@@ -399,7 +422,7 @@ const LearnMain = () => {
       const text = `${course.title || ''} ${course.description || ''}`.toLowerCase();
       if (skillTab === 'your-skills' && isAuthenticated && !matchesUserSkills(course.skills, text)) return false;
       if (!matchesLevel(course.level || 'Beginner')) return false;
-      if (!matchesMode(course.deliveryType || 'Self-Paced')) return false;
+      if (!courseMatchesMode(course)) return false;
       if (!matchesSkillChips(course.skills, text)) return false;
       if (q) {
         const target = `${text} ${getCourseCategory(course)} ${(course.skills || []).join(' ')} ${course.level || ''} ${course.deliveryType || ''}`.toLowerCase();
@@ -414,12 +437,12 @@ const LearnMain = () => {
     const q = searchQuery.toLowerCase().trim();
     return publicPrograms.filter((program) => {
       const text = `${program.name || program.title || ''} ${program.description || ''} ${program.instructor || ''}`.toLowerCase();
-      if (skillTab === 'your-skills' && isAuthenticated && !matchesUserSkills(program.skills, text)) return false;
+      if (skillTab === 'your-skills' && isAuthenticated && !matchesUserSkills((program.skills || program.skillTags), text)) return false;
       if (filters.level !== 'all' && !matchesLevel(program.level || program.difficulty || '')) return false;
-      if (!matchesMode(getProgramDeliveryType(program))) return false;
-      if (!matchesSkillChips(program.skills, text)) return false;
+      if (!programMatchesMode(program)) return false;
+      if (!matchesSkillChips((program.skills || program.skillTags), text)) return false;
       if (q) {
-        const target = `${text} ${getProgramDeliveryType(program)} ${program.programType || ''} ${(program.skills || []).join(' ')}`.toLowerCase();
+        const target = `${text} ${program.availability || ''} ${program.programType || ''} ${((program.skills || program.skillTags) || []).join(' ')}`.toLowerCase();
         if (!target.includes(q)) return false;
       }
       return true;
@@ -475,6 +498,7 @@ const LearnMain = () => {
       >
         <div className="card-banner">
           <img
+            className={getCourseImage(course).endsWith('.png') ? 'banner-icon' : undefined}
             src={getCourseImage(course)}
             alt={course.title}
             onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/python.jpg'; }}
@@ -516,6 +540,7 @@ const LearnMain = () => {
       <article key={`program-${program._id || program.id}`} className="card" onClick={() => handleProgramClick(program)}>
         <div className="card-banner">
           <img
+            className={getProgramImage(program).endsWith('.png') ? 'banner-icon' : undefined}
             src={getProgramImage(program)}
             alt={program.name || program.title}
             onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/c-programming.jpg'; }}
@@ -533,10 +558,10 @@ const LearnMain = () => {
               </React.Fragment>
             ))}
           </div>
-          {Array.isArray(program.skills) && program.skills.length > 0 && (
+          {Array.isArray((program.skills || program.skillTags)) && (program.skills || program.skillTags).length > 0 && (
             <div className="card-skills-row">
-              {program.skills.slice(0, 4).map((skill, idx) => <span key={idx} className="card-skill-tag">{skill}</span>)}
-              {program.skills.length > 4 && <span className="card-skill-tag">+{program.skills.length - 4}</span>}
+              {(program.skills || program.skillTags).slice(0, 4).map((skill, idx) => <span key={idx} className="card-skill-tag">{skill}</span>)}
+              {(program.skills || program.skillTags).length > 4 && <span className="card-skill-tag">+{(program.skills || program.skillTags).length - 4}</span>}
             </div>
           )}
           <div className="card-bottom">
@@ -610,15 +635,6 @@ const LearnMain = () => {
             {activeFilterCount > 0 && <span className="filter-badge-count">{activeFilterCount}</span>}
           </button>
         </div>
-
-        {isAuthenticated && view === 'explore' && (
-          <div className="learn-row-skills-toggle">
-            <div className="skills-category-toggle">
-              <button type="button" className={`toggle-tab-btn ${skillTab === 'your-skills' ? 'active' : ''}`} onClick={() => setSkillTab('your-skills')}>Your Skills</button>
-              <button type="button" className={`toggle-tab-btn ${skillTab === 'all' ? 'active' : ''}`} onClick={() => setSkillTab('all')}>All Skills</button>
-            </div>
-          </div>
-        )}
 
         <div className="content-switch" role="group" aria-label="Learning catalogue view">
           <button type="button" className={`switch-button ${view === 'enrolled' ? 'active' : ''}`} aria-pressed={view === 'enrolled'} onClick={() => setView('enrolled')}>ENROLLED</button>

@@ -37,7 +37,7 @@ export const getPublicPrograms = async (req, res) => {
       status: "Active",
       visibility: "Public",
     })
-      .select("_id name description programType duration durationDays phases pricingType programFee courseIds roadmapIds projectIds targetRoles targetCompanies skillTags learningGoals pricingPlans")
+      .select("_id name description programType availability duration durationDays phases pricingType programFee courseIds roadmapIds projectIds targetRoles targetCompanies skillTags learningGoals pricingPlans")
       .populate("courseIds", "_id title level courseType numTopics")
       .populate("roadmapIds", "_id title status")
       .sort({ createdAt: -1 })
