@@ -47,36 +47,53 @@ export default function Navbar() {
 
   useEffect(() => {
     const checkDarkSection = () => {
-      setScrollY(window.scrollY);
+      const scrollPos = window.scrollY || document.documentElement.scrollTop || 0;
+      setScrollY(scrollPos);
 
-      // In Dark mode, determine if current section is dark or light.
-      // Dark sections in light mode (e.g. Hero, Pricing, and in dark mode: Hero, Journey, Pricing)
-      // Light sections (Problem #problem, Results #results, FAQs #faqs, CTA #start-program)
-      const darkSectionSelectors = '#start, .tl-hero, #pricing, .tl-pricing-section, footer' + (isDarkMode ? ', #journey, .journey-scroll' : '');
-      const darkSections = document.querySelectorAll(darkSectionSelectors);
-      let isOverDark = false;
-
-      darkSections.forEach((section) => {
+      // Section under the navbar center (navbar height is ~72px, so sample at Y = 36px)
+      const sampleY = 36;
+      const allSections = Array.from(document.querySelectorAll('.tl-landing > section, footer'));
+      
+      let currentSection = allSections.find((section) => {
         const rect = section.getBoundingClientRect();
-        // Navbar is at top 0-72px; detect if section intersects with navbar
-        if (rect.top <= 65 && rect.bottom >= 35) {
-          isOverDark = true;
-        }
+        return rect.top <= sampleY && rect.bottom >= sampleY;
       });
 
+      // Fallback: if between sections or gap, find section that overlaps the navbar area (0 to 72)
+      if (!currentSection) {
+        currentSection = allSections.find((section) => {
+          const rect = section.getBoundingClientRect();
+          return rect.top < 72 && rect.bottom > 0;
+        });
+      }
 
-      // Transparent only while the landing hero is under the navbar; opaque everywhere else.
+      // Check whether current section is a dark section:
+      // Hero (#start / .tl-hero), Pricing (#pricing / .tl-pricing-section), Footer (footer) are always dark (#04083d / #00113b).
+      // Journey (#journey / .journey-scroll) is dark in dark mode (#04083d) and light in light mode (#e0eef4).
+      // Problem (#problem), Results (#results), FAQs (#faqs), CTA (#start-program) are light (#d6ebf4) in light mode.
+      // Decide from the section's actual painted background (landing sections stay light even when the
+      // site theme is dark), so the navbar never depends on the global theme here.
+      let isOverDark = scrollPos < 100;
+      if (currentSection) {
+        const paintEl = currentSection.matches('#journey, .journey-scroll')
+          ? (currentSection.querySelector('.journey-sticky') || currentSection)
+          : currentSection;
+        const m = getComputedStyle(paintEl).backgroundColor.match(/[\d.]+/g);
+        if (m && m.length >= 3 && !(m.length >= 4 && parseFloat(m[3]) === 0)) {
+          const lum = (0.299 * m[0] + 0.587 * m[1] + 0.114 * m[2]) / 255;
+          isOverDark = lum < 0.5;
+        } else {
+          isOverDark = currentSection.matches('#start, .tl-hero, #pricing, .tl-pricing-section, footer');
+        }
+      }
+
+      // Hero check for transparent navbar background
       const heroEl = document.querySelector("#start, .tl-hero");
       const heroRect = heroEl ? heroEl.getBoundingClientRect() : null;
-      setIsOverHero(location.pathname === "/" && (heroRect ? heroRect.top <= 65 && heroRect.bottom >= 72 : window.scrollY < 10));
-      const currentSection = [...document.querySelectorAll(".tl-landing > section, footer")].find(section => {
-        const rect = section.getBoundingClientRect();
-        return rect.top <= 65 && rect.bottom >= 35;
-      });
+      setIsOverHero(location.pathname === "/" && (heroRect ? heroRect.top <= 65 && heroRect.bottom >= 72 : scrollPos < 10));
+
       const sectionColor = currentSection ? getComputedStyle(currentSection).backgroundColor : null;
       const pageSurface = () => {
-        // Inner pages paint their colour on a full-screen fixed layer; use it so the navbar matches the page.
-        // the page layer mounted last is the visible one; skip hidden layers left by other layouts
         const layers = Array.from(document.querySelectorAll(".fixed.inset-0.-z-10")).filter((el) => el.offsetParent !== null || getComputedStyle(el).position === "fixed").reverse();
         for (const el of layers) {
           const cs = getComputedStyle(el);
@@ -91,32 +108,31 @@ export default function Navbar() {
       const resolved = sectionColor && sectionColor !== "rgba(0, 0, 0, 0)" ? sectionColor : pageSurface();
       setSectionBackground(resolved);
 
-      // If we are not on the landing page (no sections found), fallback to current theme
-      const hasSections = document.querySelectorAll('#start, #problem, #journey, #results, #pricing, #faqs, #start-program').length > 0;
+      const hasSections = allSections.length > 0;
       if (!hasSections) {
-        // HomePage is lazy-loaded, so its hero may not exist on the first
-        // navbar check. The landing route always opens over the dark hero.
         setIsOverDarkSection(location.pathname === '/' || isDarkMode);
       } else {
         setIsOverDarkSection(isOverDark);
       }
     };
 
-    window.addEventListener('scroll', checkDarkSection, { passive: true });
+    window.addEventListener('scroll', checkDarkSection, { passive: true, capture: true });
     window.addEventListener('resize', checkDarkSection);
     checkDarkSection();
-    const resample = [setTimeout(checkDarkSection, 400), setTimeout(checkDarkSection, 1500)];
+    const resample = [setTimeout(checkDarkSection, 100), setTimeout(checkDarkSection, 400), setTimeout(checkDarkSection, 1200)];
 
     return () => {
       resample.forEach(clearTimeout);
-      window.removeEventListener('scroll', checkDarkSection);
+      window.removeEventListener('scroll', checkDarkSection, { capture: true });
       window.removeEventListener('resize', checkDarkSection);
     };
   }, [location.pathname, isDarkMode]);
 
   // If over dark section -> use dark theme styling (white text / dark dropdown)
   // If over light section -> use light theme styling (dark text / light dropdown)
-  const isDarkNav = isDarkMode || isOverDarkSection;
+  // On landing page (/), adaptive styling detects section under navbar (hero vs problem vs results etc.)
+  const isLandingPage = location.pathname === '/';
+  const isDarkNav = isLandingPage ? isOverDarkSection : isDarkMode;
   const isAppRoute = /^\/(dashboard|admin|colleges|batches|students|programs|track-templates|certificates|reports|settings)/.test(location.pathname);
   const defaultLightSurface = '#bceaff';
   const navSurface = isAppRoute

@@ -1,7 +1,28 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import './ProblemSection.css'
 
 export default function ProblemSection() {
+  const [isVisible, setIsVisible] = useState(false)
+  const gridRef = useRef(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.25 }
+    )
+
+    if (gridRef.current) {
+      observer.observe(gridRef.current)
+    }
+
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <section className="tl-problem-section" id="problem">
       <div className="tl-problem-container">
@@ -12,14 +33,14 @@ export default function ProblemSection() {
         </h2>
 
         {/* STATS */}
-        <div className="tl-problem-stats-grid">
-          <div className="tl-problem-stat-item">
+        <div className={`tl-problem-stats-grid ${isVisible ? 'is-visible' : ''}`} ref={gridRef}>
+          <div className="tl-problem-stat-item" style={{ '--item-index': 0 }}>
             We jump between multiple platforms just to prepare for one course or placement.
           </div>
-          <div className="tl-problem-stat-item">
+          <div className="tl-problem-stat-item" style={{ '--item-index': 1 }}>
             Resources are everywhere, but there’s no clear path telling you what to do next.
           </div>
-          <div className="tl-problem-stat-item">
+          <div className="tl-problem-stat-item" style={{ '--item-index': 2 }}>
             Too much time is spent searching, switching, and deciding instead of preparing.
           </div>
         </div>
