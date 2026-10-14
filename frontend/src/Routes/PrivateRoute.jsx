@@ -2,9 +2,12 @@ import { Outlet } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthModalContext } from '../context/AuthModalContext';
+import { expireSession, isTokenExpired } from '../utils/session';
 
 const PrivateRoute = () => {
-  const token = localStorage.getItem('token');
+  const rawToken = localStorage.getItem('token');
+  const tokenExpired = Boolean(rawToken && isTokenExpired(rawToken));
+  const token = tokenExpired ? null : rawToken;
   const { openLogin } = useAuthModalContext();
   const navigate = useNavigate();
   const location = useLocation();
@@ -23,6 +26,7 @@ const PrivateRoute = () => {
   );
 
   useEffect(() => {
+    if (tokenExpired) expireSession();
     if (!token) {
       openLogin();
       return;
@@ -34,7 +38,7 @@ const PrivateRoute = () => {
         state: { resumeOnboarding: true, from: location.pathname },
       });
     }
-  }, [token, onboardingIncomplete, location.pathname, navigate, openLogin]);
+  }, [token, tokenExpired, onboardingIncomplete, location.pathname, navigate, openLogin]);
 
   return token && !onboardingIncomplete ? <Outlet /> : null;
 };
