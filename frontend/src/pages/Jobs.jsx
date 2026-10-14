@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Lock, Search, ChevronDown, ChevronLeft, ChevronRight, List, CalendarDays, SlidersHorizontal } from "lucide-react";
+import { Lock, Search, ChevronDown, ChevronLeft, ChevronRight, List, CalendarDays } from "lucide-react";
 import "./hiringPage.css";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
@@ -521,7 +521,6 @@ export default function Jobs() {
               className={`filter-button-control ${hasActiveFilters ? "active" : ""}`}
               aria-expanded={filterDrawerOpen}
             >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
               <span>Filters</span>
               {hasActiveFilters && <span className="active-dot"></span>}
             </button>

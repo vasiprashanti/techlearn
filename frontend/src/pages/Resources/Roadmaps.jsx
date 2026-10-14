@@ -7,6 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { resourceAPI } from "../../services/api";
 import Sidebar from "../../components/Dashboard/Sidebar";
+import "../hiringPage.css";
 import FilterDrawer from "../../components/common/FilterDrawer";
 import StateFallback from "../../components/common/StateFallback";
 
@@ -458,52 +459,49 @@ export default function Roadmaps() {
 
   const listContent = (
     <>
-      <header className="user-page-header">
-        <h1 className="user-page-title">
-          ROADMAPS
-        </h1>
-        <p className="user-page-subtitle">
-          Opportunities matched to your career goals.
-        </p>
+      <header className="hiring-header">
+        <div className="eyebrow">TECHLEARN</div>
+        <h1 className="hiring-title">ROADMAPS</h1>
+        <p className="hiring-subtitle">Opportunities matched to your career goals.</p>
       </header>
 
-      {/* SEARCH BAR, SORTING, AND FILTERS IN A SINGLE ROW */}
-      <div className="mb-4 sm:mb-5 flex items-center gap-2 sm:gap-3 w-full">
-        <div className={`flex flex-1 h-11 sm:h-12 items-center rounded-xl border px-3 sm:px-4 transition-colors min-w-0 ${isDarkMode ? "border-white/10 bg-white/5 text-white focus-within:border-white/20 focus-within:bg-white/10" : "border-[#c4dfe6] bg-[#def0f4] text-[#00113b] shadow-sm focus-within:border-[#00113b]/30 focus-within:bg-[#e5f4f7]"}`}>
-          <Search className={`mr-2 sm:mr-3 h-4 w-4 shrink-0 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`} />
-          <input
-            id="roadmapSearchInput"
-            type="text"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search roadmaps, skills, roles or companies..."
-            className={`w-full border-none bg-transparent text-xs sm:text-[13px] outline-none placeholder:text-slate-400 ${isDarkMode ? "text-white" : "text-[#00113b]"}`}
-          />
+      {/* SEARCH, SORTING AND FILTERS IN A SINGLE ROW (same size and colours as Hiring) */}
+      <div className="hiring-controls-container">
+        <div className="hiring-controls-row">
+          <div className="search-wrapper">
+            <span className="search-icon" aria-hidden="true"><Search className="w-4 h-4" /></span>
+            <input
+              id="roadmapSearchInput"
+              type="text"
+              className="search-input"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search roadmaps, skills, roles or companies..."
+              aria-label="Search roadmaps"
+            />
+          </div>
+
+          <select
+            aria-label="Sort roadmaps"
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value)}
+            className="filter-button-control roadmap-sort"
+          >
+            <option value="newest">Newest</option>
+            <option value="duration">Shortest</option>
+            <option value="title">A–Z</option>
+          </select>
+
+          <button
+            type="button"
+            onClick={() => setFilterDrawerOpen(true)}
+            className={`filter-button-control ${selectedFilterCount ? "active" : ""}`}
+            aria-expanded={filterDrawerOpen}
+          >
+            <span>Filters</span>
+            {selectedFilterCount ? <span className="active-dot"></span> : null}
+          </button>
         </div>
-
-        <select
-          aria-label="Sort roadmaps"
-          value={sortBy}
-          onChange={(event) => setSortBy(event.target.value)}
-          className={`h-11 sm:h-12 shrink-0 cursor-pointer rounded-xl border px-2.5 sm:px-3 text-xs sm:text-[11px] font-semibold outline-none transition-colors ${isDarkMode ? "border-white/10 bg-[#071532] text-white hover:bg-white/10" : "border-[#c6e0e6] bg-[#def0f4] text-[#00113b] shadow-xs hover:bg-[#e8f6f8]"}`}
-        >
-          <option value="newest">Newest</option>
-          <option value="duration">Shortest</option>
-          <option value="title">A–Z</option>
-        </select>
-
-        <button
-          type="button"
-          onClick={() => setFilterDrawerOpen(true)}
-          className={`flex h-11 sm:h-12 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border px-3 sm:px-4 text-xs sm:text-[11px] font-semibold transition-colors ${
-            selectedFilterCount
-              ? isDarkMode ? "border-[#b2e96a] bg-[#b2e96a]/20 text-[#b2e96a]" : "border-[#00113b] bg-[#00113b] text-white shadow-sm"
-              : isDarkMode ? "border-white/10 bg-white/5 text-white hover:bg-white/10" : "border-[#c6e0e6] bg-[#def0f4] text-[#00113b] shadow-xs hover:bg-[#e8f6f8]"
-          }`}
-        >
-          <span>Filters</span>
-          {selectedFilterCount ? <span className="inline-block w-1.5 h-1.5 rounded-full bg-current" /> : null}
-        </button>
       </div>
 
       {/* FOR YOU / ALL ROADMAPS TOGGLE & CATEGORIES */}
@@ -602,11 +600,22 @@ export default function Roadmaps() {
       {/* Logged-in learners get the dashboard sidebar here too */}
       {hasUser && <Sidebar />}
 
-      <main className={`min-h-screen w-full ${hasUser ? "md:pl-[90px]" : ""}`}>
-        <div className="mx-auto w-[calc(100%-1.5rem)] sm:w-[calc(100%-3rem)] lg:w-[86%] max-w-none px-0 pb-16 pt-20 sm:pt-28">
-          {roadmapId ? detailContent : listContent}
-        </div>
-      </main>
+      {roadmapId ? (
+        <main className={`min-h-screen w-full ${hasUser ? "md:pl-[90px]" : ""}`}>
+          <div className="mx-auto w-[calc(100%-1.5rem)] sm:w-[calc(100%-3rem)] lg:w-[86%] max-w-none px-0 pb-16 pt-20 sm:pt-28">
+            {detailContent}
+          </div>
+        </main>
+      ) : (
+        <main className="min-h-screen w-full">
+          <div
+            className={`hiring-page-container ${isDarkMode ? "" : "light-mode"} ${hasUser ? "has-sidebar" : ""}`}
+            style={{ background: "transparent", minHeight: 0 }}
+          >
+            <div className="page">{listContent}</div>
+          </div>
+        </main>
+      )}
 
       <FilterDrawer
         open={filterDrawerOpen}

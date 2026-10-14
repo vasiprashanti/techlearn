@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Program from "../models/Program.js";
+import Course from "../models/Course.js";
 import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import ProgramAssignment from "../models/ProgramAssignment.js";
 import ProgramWaitlistLead from "../models/ProgramWaitlistLead.js";
@@ -232,8 +233,10 @@ export const joinProgramWaitlist = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid program ID." });
     }
 
+    // The waitlist page is shared by programs and trainer-led courses, so the id may be either.
     const program = await Program.findById(programId).lean();
-    if (!program) {
+    const course = program ? null : await Course.findById(programId).select("_id title").lean();
+    if (!program && !course) {
       return res.status(404).json({ success: false, message: "Program not found." });
     }
 
@@ -250,6 +253,7 @@ export const joinProgramWaitlist = async (req, res) => {
           targetCompany: targetCompany ? String(targetCompany).trim() : "",
           userId,
           status: "Waitlisted",
+          ...(course ? { metadata: { kind: "course", courseId: String(course._id), courseTitle: course.title || "" } } : {}),
         },
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }

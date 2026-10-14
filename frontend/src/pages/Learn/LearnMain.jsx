@@ -167,6 +167,8 @@ const MODE_OPTIONS = [
 
 const DEFAULT_FILTERS = { level: 'all', mode: 'all', skills: [] };
 const normalizeKey = (value = '') => String(value).trim().toLowerCase().replace(/[\s_]+/g, '-');
+const isTrainerLedCourse = (course) => normalizeKey(course?.deliveryType || '') === 'trainer-led';
+const isTrainerLedProgram = (program) => normalizeKey(program?.availability || '') === 'trainer-led';
 
 const LearnMain = () => {
   const { theme } = useTheme();
@@ -307,6 +309,10 @@ const LearnMain = () => {
   };
 
   const handleCourseClick = (course) => {
+    if (isTrainerLedCourse(course)) {
+      navigate(`/waitlist/${getCourseTopicsId(course)}`);
+      return;
+    }
     prefetchCourseTopics(course);
     navigate(`/learn/courses/${getCourseTopicsId(course)}`);
   };
@@ -315,6 +321,11 @@ const LearnMain = () => {
     const progId = String(program._id || program.id || "");
     const activeProgId = String(placementLearning?.program?.id || placementLearning?.program?._id || "");
     const isEnrolledInProg = Boolean((activeProgId && activeProgId === progId) || enrolledProgramIds.has(progId));
+
+    if (!isEnrolledInProg && isTrainerLedProgram(program) && program._id) {
+      navigate(`/waitlist/${program._id}`);
+      return;
+    }
     
     if (isEnrolledInProg) {
       if (activeProgId === progId) {
@@ -518,7 +529,7 @@ const LearnMain = () => {
             <div className="content-divider" />
             <div className="card-footer">
               {isFree ? <div className="free-label">FREE</div> : <div className="price">{displayPrice}</div>}
-              <span className="start-link">View Course<span className="arrow">→</span></span>
+              <span className="start-link">{isTrainerLedCourse(course) ? 'Join Waitlist' : 'View Course'}<span className="arrow">→</span></span>
             </div>
           </div>
         </div>
@@ -569,7 +580,7 @@ const LearnMain = () => {
             <div className="card-footer">
               {enrolled ? <div className="free-label enrolled-label">ENROLLED</div> : isFree ? <div className="free-label">FREE</div> : <div className="price">{displayPrice}</div>}
               <span className="start-link">
-                {enrolled ? (currentDay <= 1 ? 'Start Learning' : 'Resume Learning') : 'View Program'}
+                {enrolled ? (currentDay <= 1 ? 'Start Learning' : 'Resume Learning') : isTrainerLedProgram(program) ? 'Join Waitlist' : 'View Program'}
                 <span className="arrow">→</span>
               </span>
             </div>
