@@ -33,6 +33,7 @@ export default function Navbar() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [sectionBackground, setSectionBackground] = useState(null);
+  const [navBgImage, setNavBgImage] = useState(null);
   const [isOverHero, setIsOverHero] = useState(() => location.pathname === '/');
 
 
@@ -92,53 +93,57 @@ export default function Navbar() {
       const heroRect = heroEl ? heroEl.getBoundingClientRect() : null;
       setIsOverHero(location.pathname === "/" && (heroRect ? heroRect.top <= 65 && heroRect.bottom >= 72 : scrollPos < 10));
 
-      const getDirectColor = (el) => {
+      const readPaint = (el) => {
         if (!el) return null;
         const cs = getComputedStyle(el);
         if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return null;
-        const bg = cs.backgroundColor;
-        if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") return bg;
-        const match = cs.backgroundImage.match(/rgba?\([^)]+\)/);
-        if (match) return match[0];
-        return null;
+        const color = cs.backgroundColor;
+        const hasColor = color && color !== "rgba(0, 0, 0, 0)" && color !== "transparent";
+        const hasImage = cs.backgroundImage && cs.backgroundImage !== "none";
+        if (!hasColor && !hasImage) return null;
+        return { color: hasColor ? color : null, image: hasImage ? cs.backgroundImage : null };
       };
 
       const detectPageSurface = () => {
-        // 1. Landing page section under navbar
+        // 1. Landing page section under navbar (sections scroll, so solid color only)
         if (currentSection) {
           const paintEl = currentSection.matches('#journey, .journey-scroll')
             ? (currentSection.querySelector('.journey-sticky') || currentSection)
             : currentSection;
-          const direct = getDirectColor(paintEl);
-          if (direct) return direct;
+          const p = readPaint(paintEl);
+          if (p && p.color) return { color: p.color, image: null };
         }
 
-        // 2. Fixed/absolute full-screen background layers (-z-10 / fixed backdrop)
-        const layers = Array.from(document.querySelectorAll(".fixed.inset-0, .-z-10, [class*='fixed inset-0']"))
-          .filter((el) => el !== heroEl && (el.offsetParent !== null || getComputedStyle(el).position === "fixed"))
+        // 2. Full-viewport fixed backdrop (what every page paints behind its content).
+        //    Copy color AND gradient so the navbar is a continuation of the page background.
+        const fixedEls = Array.from(document.querySelectorAll("div"))
+          .filter((el) => {
+            const cs = getComputedStyle(el);
+            if (cs.position !== "fixed") return false;
+            const r = el.getBoundingClientRect();
+            return r.width >= window.innerWidth * 0.95 && r.height >= window.innerHeight * 0.95 && r.top <= 1 && r.left <= 1;
+          })
           .reverse();
-        for (const el of layers) {
-          const color = getDirectColor(el);
-          if (color) return color;
+        for (const el of fixedEls) {
+          const p = readPaint(el);
+          if (p) return p;
         }
 
-        // 3. Inspect main container / router wrapper elements
+        // 3. Main wrappers, then body/html
         const wrappers = Array.from(document.querySelectorAll("main, [class*='min-h-screen'], #root > div"));
         for (const el of wrappers) {
-          const color = getDirectColor(el);
-          if (color) return color;
+          const p = readPaint(el);
+          if (p) return p;
         }
+        const b = readPaint(document.body) || readPaint(document.documentElement);
+        if (b) return b;
 
-        // 4. Fallback to body or html background
-        const bodyColor = getDirectColor(document.body) || getDirectColor(document.documentElement);
-        if (bodyColor) return bodyColor;
-
-        // 5. Default fallback based on theme
-        return isDarkMode ? '#050b2f' : '#daf0fa';
+        return { color: isDarkMode ? '#050b2f' : '#daf0fa', image: null };
       };
 
       const resolved = detectPageSurface();
-      setSectionBackground(resolved);
+      setSectionBackground(resolved.color || (isDarkMode ? '#050b2f' : '#daf0fa'));
+      setNavBgImage(resolved.image);
 
       const hasSections = allSections.length > 0;
       if (!hasSections) {
@@ -292,6 +297,10 @@ export default function Navbar() {
 
         .tl-navbar-root {
           background-color: var(--navbar-bg, #daf0fa);
+          background-image: var(--navbar-bg-image, none);
+          background-size: 100vw 100vh;
+          background-position: 0 0;
+          background-attachment: fixed;
           border-bottom: 1px solid var(--border);
           transition: background-color .2s ease, border-color .2s ease;
         }
@@ -779,6 +788,7 @@ export default function Navbar() {
         className={`tl-navbar-root ${isDarkNav ? 'dark-theme' : ''} ${scrollY > 30 ? 'scrolled' : ''}`}
         style={{
           '--navbar-bg': navSurface,
+          '--navbar-bg-image': navBgImage || 'none',
           '--dropdown-bg': isDarkMode ? '#050b2f' : '#ffffff',
           '--menu-page-bg': navSurface,
         }}
