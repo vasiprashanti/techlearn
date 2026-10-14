@@ -582,16 +582,16 @@ export default function ProgramPreview() {
                   return (
                     <div
                       key={cId}
-                      className="rounded-2xl border border-[var(--border)] overflow-hidden transition-all duration-200 bg-[rgba(255,255,255,0.02)] dark:bg-[rgba(255,255,255,0.02)]"
+                      className="rounded-2xl border border-black/5 dark:border-[#15366f]/45 overflow-hidden transition-all duration-200 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl shadow-sm"
                     >
                       {/* Course Header Bar (Clickable) */}
                       <button
                         type="button"
                         onClick={() => toggleCourseExpand(cId)}
-                        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-[rgba(255,255,255,0.03)] dark:hover:bg-[rgba(255,255,255,0.04)] transition-colors group cursor-pointer"
+                        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors group cursor-pointer"
                       >
                         <div className="flex items-center gap-4 min-w-0">
-                          <span className="chapter-number text-[8px] font-mono opacity-50 shrink-0">
+                          <span className="chapter-number text-[8px] font-mono shrink-0">
                             {String(idx + 1).padStart(2, "0")}
                           </span>
                           <div className="min-w-0">
@@ -616,7 +616,7 @@ export default function ProgramPreview() {
                           <span className="text-xs font-semibold text-[#3c83f6] opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline">
                             {isExpanded ? "Collapse" : "View Curriculum"}
                           </span>
-                          <div className={`p-1.5 rounded-lg border border-[var(--border)] transition-transform duration-200 ${isExpanded ? "rotate-180 bg-[#3c83f6]/10 text-[#3c83f6]" : "opacity-60"}`}>
+                          <div className={`p-1.5 rounded-lg border border-black/10 dark:border-white/10 transition-transform duration-200 ${isExpanded ? "rotate-180 bg-[#3c83f6]/10 text-[#3c83f6]" : "opacity-60"}`}>
                             <FiChevronDown className="w-4 h-4" />
                           </div>
                         </div>
@@ -624,7 +624,7 @@ export default function ProgramPreview() {
 
                       {/* Expandable Course Topics Curriculum List */}
                       {isExpanded && (
-                        <div className="px-6 pb-5 pt-2 border-t border-[var(--border)] bg-black/[0.02] dark:bg-black/20 animate-in fade-in duration-200">
+                        <div className="px-6 pb-5 pt-3 border-t border-black/5 dark:border-white/10 bg-black/[0.02] dark:bg-black/20 animate-in fade-in duration-200">
                           {course.description && (
                             <p className="text-xs text-[var(--muted)] mb-4 leading-relaxed max-w-3xl">
                               {course.description}

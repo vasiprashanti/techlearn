@@ -478,8 +478,8 @@
 .course-details-page .chapter-number {
   font-family: var(--pixel);
   font-size: 7px;
-  color: var(--navy);
-  opacity: 0.45;
+  color: var(--lime);
+  opacity: 1;
 }
 
 .course-details-page .chapter-name {
@@ -530,41 +530,49 @@
 ========================================= */
 
 .course-details-page .outcomes-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  max-width: 100%;
 }
 
 .course-details-page .outcome-card {
   min-height: 80px;
-  padding: 18px;
-  background: rgba(255, 255, 255, 0.025);
-  border: none;
-  border-radius: 0;
-  transition: background 0.25s ease;
+  padding: 20px 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: all 0.25s ease;
+}
+
+.course-details-page.dark-mode .outcome-card,
+.course-details-page:not(.light-mode) .outcome-card {
+  border: 1px solid rgba(21, 54, 111, 0.45);
+  background: linear-gradient(135deg, #020b23 0%, #001233 50%, #0a1128 100%);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.24);
 }
 
 .course-details-page.light-mode .outcome-card {
-  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .course-details-page .outcome-card:hover {
-  background: rgba(255, 255, 255, 0.055);
-}
-
-.course-details-page.light-mode .outcome-card:hover {
-  background: rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
 }
 
 .course-details-page .outcome-number {
   font-family: var(--pixel);
-  font-size: 7px;
-  color: var(--navy);
-  opacity: 0.38;
-  margin-bottom: 48px;
+  font-size: 8px;
+  color: var(--lime);
+  opacity: 1;
+  margin-bottom: 12px;
 }
 
 .course-details-page .outcome-title {
@@ -572,7 +580,7 @@
   line-height: 1.5;
   font-weight: 700;
   color: var(--navy);
-  max-width: 220px;
+  max-width: 100%;
 }
 
 /* =========================================
@@ -621,18 +629,6 @@
   .course-details-page .trainer-section {
     grid-template-columns: 1fr;
     gap: 18px;
-  }
-
-  .course-details-page .outcomes-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .course-details-page .outcome-card {
-    min-height: 120px;
-  }
-
-  .course-details-page .outcome-number {
-    margin-bottom: 20px;
   }
 }
 
@@ -748,15 +744,6 @@
 
   .course-details-page .trainer-description {
     font-size: 14px;
-  }
-
-  .course-details-page .outcomes-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .course-details-page .outcome-card {
-    padding: 24px;
-    min-height: 145px;
   }
 }
 
