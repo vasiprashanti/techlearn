@@ -1,8 +1,9 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
-import { AlertCircle, ArrowLeft, BookOpen, Loader2, Search, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, BookOpen, ChevronDown, Loader2, Search, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { resourceAPI } from "../../services/api";
@@ -375,6 +376,9 @@ export default function Roadmaps() {
         if (!cancelled) {
           setPublishedRoadmaps(nextPublished);
           setForYouRoadmap(nextForYou);
+          if (!nextForYou) {
+            setActiveTab("all");
+          }
         }
       } catch (loadError) {
         if (!cancelled) setError(loadError?.message || "Unable to load roadmaps right now.");
@@ -413,46 +417,357 @@ export default function Roadmaps() {
     setFilterDrawerOpen(false);
   };
 
+  // Parse checkpoints from detail (using markdown sections or structured curriculum)
+  const roadmapCheckpoints = useMemo(() => {
+    if (!detail) return [];
+
+    const checkpoints = [];
+    const body = detail.markdownBody || "";
+
+    // Split markdown by headings (## or ###) to form checkpoints if present
+    const sectionRegex = /^#{2,3}\s+(.+)$/gm;
+    let match;
+    const matches = [];
+    while ((match = sectionRegex.exec(body)) !== null) {
+      matches.push({ title: match[1].trim(), index: match.index });
+    }
+
+    if (matches.length > 0) {
+      matches.forEach((m, idx) => {
+        const nextIndex = matches[idx + 1] ? matches[idx + 1].index : body.length;
+        const rawContent = body.slice(m.index, nextIndex).replace(/^#{2,3}\s+.+$/m, "").trim();
+        const firstPara = rawContent.split("\n\n")[0]?.replace(/[#*`_]/g, "").trim() || detail.description || "";
+
+        const dayNum = idx + 1;
+        const levelNum = Math.floor(idx / 7) + 1;
+        checkpoints.push({
+          day: dayNum,
+          title: m.title,
+          desc: firstPara || `Master ${m.title} core concepts and hands-on implementation.`,
+          level: `Level ${levelNum}`,
+        });
+      });
+    }
+
+    // Fallback if markdown has fewer than 3 sections: generate standard checkpoint progression from techStack and duration
+    if (checkpoints.length < 3) {
+      const techStack = getRoadmapTechStack(detail);
+      const totalDays = Math.max(7, Math.min(60, (detail.duration ? Number(detail.duration) : 10) * (detail.durationUnit === "weeks" ? 5 : 1)));
+      
+      const topics = techStack.length >= 5 ? techStack : [
+        "Web Fundamentals & Setup",
+        "Core Concepts & Architecture",
+        "Database Persistence & CRUD",
+        "REST APIs & Core Frameworks",
+        "Authentication & Security",
+        "Integration & Testing",
+        "Capstone Implementation",
+        "Advanced Scaling & Microservices",
+        "Cloud Infrastructure & Docker",
+        "CI/CD Automation",
+        "System Architecture & Deployment",
+      ];
+
+      for (let i = 0; i < totalDays; i++) {
+        const topic = topics[i % topics.length];
+        const day = i + 1;
+        const levelNum = Math.floor(i / 7) + 1;
+        checkpoints.push({
+          day,
+          title: (day % 7 === 0) ? `Level ${levelNum} Capstone Project` : `${topic} - Part ${Math.floor(i / topics.length) + 1}`,
+          desc: `Understand ${topic} and build hands-on competency tailored for ${detail.targetRole || "engineering roles"}.`,
+          level: `Level ${levelNum}`,
+        });
+      }
+    }
+
+    return checkpoints;
+  }, [detail]);
+
+  const [activeCheckpointModal, setActiveCheckpointModal] = useState(null);
+  const [currentViewLevel, setCurrentViewLevel] = useState("Level 1");
+  const containerRef = useRef(null);
+  const svgRef = useRef(null);
+
+  // SVG curved path calculation
+  const updateRoadmapPaths = () => {
+    const container = containerRef.current;
+    const svg = svgRef.current;
+    if (!svg || !container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const width = container.clientWidth;
+    const height = container.scrollHeight;
+    if (!width || !height) return;
+
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svg.setAttribute("width", String(width));
+    svg.setAttribute("height", String(height));
+    svg.style.width = `${width}px`;
+    svg.style.height = `${height}px`;
+
+    // Clear previous paths
+    while (svg.firstChild) {
+      svg.removeChild(svg.firstChild);
+    }
+
+    const cards = [...container.querySelectorAll("[data-day][data-level]")]
+      .sort((a, b) => Number(a.dataset.day) - Number(b.dataset.day));
+    if (cards.length >= 2) {
+      const points = cards.map((card) => {
+        const rect = card.getBoundingClientRect();
+        return {
+          x: rect.left - containerRect.left + rect.width / 2,
+          y: rect.top - containerRect.top + rect.height / 2,
+        };
+      });
+
+      let d = `M ${points[0].x} ${points[0].y}`;
+      for (let i = 1; i < points.length; i++) {
+        const previous = points[i - 1];
+        const current = points[i];
+        const middleY = (previous.y + current.y) / 2;
+        d += ` C ${previous.x} ${middleY}, ${current.x} ${middleY}, ${current.x} ${current.y}`;
+      }
+
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", d);
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", isDarkMode ? "#3c83f6" : "#529eff");
+      path.setAttribute("stroke-width", "4");
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("stroke-linejoin", "round");
+      path.setAttribute("stroke-dasharray", "10 6");
+      svg.appendChild(path);
+    }
+  };
+
+  useEffect(() => {
+    if (!roadmapId || !detail) return;
+
+    const handleResize = () => requestAnimationFrame(updateRoadmapPaths);
+    window.addEventListener("resize", handleResize);
+
+    const handleScroll = () => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const levelHeaders = container.querySelectorAll("[data-level-header]");
+      if (levelHeaders.length > 0) {
+        // Find which level section header or its cards are closest to the upper viewport area
+        const triggerY = window.innerHeight * 0.35;
+        let activeLevel = "Level 1";
+
+        levelHeaders.forEach((header) => {
+          const rect = header.getBoundingClientRect();
+          if (rect.top <= triggerY) {
+            activeLevel = header.dataset.levelHeader;
+          }
+        });
+
+        setCurrentViewLevel(activeLevel);
+        return;
+      }
+
+      // Fallback: Check visible cards
+      const cards = container.querySelectorAll("[data-day][data-level]");
+      if (cards.length > 0) {
+        const triggerY = window.innerHeight * 0.4;
+        let activeLevel = "Level 1";
+
+        cards.forEach((card) => {
+          const rect = card.getBoundingClientRect();
+          if (rect.top <= triggerY) {
+            activeLevel = card.dataset.level;
+          }
+        });
+
+        setCurrentViewLevel(activeLevel);
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    const timer = setTimeout(() => {
+      updateRoadmapPaths();
+    }, 100);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("scroll", handleScroll);
+      clearTimeout(timer);
+    };
+  }, [roadmapId, detail, roadmapCheckpoints, isDarkMode]);
+
   const detailContent = (
-    <div className="space-y-6 pb-12">
+    <div className="w-full relative pb-28">
+      {/* Top Left Navigation Back */}
       <button
         type="button"
         onClick={() => navigate("/roadmaps")}
-        className="mb-6 inline-flex cursor-pointer items-center gap-2 rounded-xl border border-black/10 bg-white/40 px-4 py-2 text-xs font-bold text-[#00113b] shadow-sm backdrop-blur-md transition hover:-translate-x-0.5 hover:bg-white/70 dark:border-white/10 dark:bg-white/5 dark:text-[#8fd9ff] dark:hover:bg-white/10"
+        className="mb-4 md:ml-[calc(32px_-_0.07*(100vw_-_90px))] inline-flex cursor-pointer items-center gap-2 rounded-xl border border-black/10 bg-white/40 px-3.5 py-1.5 text-xs font-bold text-[#00113b] shadow-sm backdrop-blur-md transition hover:-translate-x-0.5 hover:bg-white/70 dark:border-white/10 dark:bg-white/5 dark:text-[#8fd9ff] dark:hover:bg-white/10"
       >
         <ArrowLeft className="h-4 w-4" />
         <span>Back to Roadmaps</span>
       </button>
 
+      {/* Fixed Current Level Indicator Card (Matching Tanvika's reference).
+          Rendered inline (not portaled) so it stays inside the app shell's stacking
+          context and the navbar dropdown (z-50) opens above it. */}
+      <div
+        id="level-indicator"
+        style={{ top: "5.5rem" }}
+        className="fixed right-4 sm:right-8 z-20 bg-[#002D93] text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl shadow-lg flex items-center space-x-2 border border-white/20 backdrop-blur-md"
+      >
+        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+        <div className="flex flex-col text-left">
+          <span className="text-[7px] sm:text-[8px] uppercase tracking-wider text-blue-200 font-bold">Current</span>
+          <span className="text-[9px] sm:text-[10px] text-white" style={{ fontFamily: "'Press Start 2P', monospace" }}>{currentViewLevel}</span>
+        </div>
+      </div>
+
+      {/* Header Container: scoped so it picks up the same .hiring-title styling as /roadmaps */}
+      <div
+        className={`hiring-page-container md:ml-[calc(32px_-_0.07*(100vw_-_90px))] ${isDarkMode ? "" : "light-mode"}`}
+        style={{ background: "transparent", minHeight: 0 }}
+      >
+        <header className="hiring-header mb-8 text-left">
+          <h1 className="hiring-title">ROADMAP</h1>
+        </header>
+      </div>
+
+
       {loading && <LoadingState label="Loading roadmap details..." />}
       {!loading && error && <ErrorState message={error} />}
-      {!loading && !error && detail && (
-        <article className={`tl-card overflow-hidden rounded-[14px] border shadow-xl shadow-[#3c83f6]/5 ${isDarkMode ? "border-white/10 bg-[#071a39]/85" : "border-white/80 bg-white/70"}`}>
-          <header className="border-b border-white/15 bg-gradient-to-br from-[#3c83f6] to-[#6366f1] px-6 py-8 text-white sm:px-10 sm:py-10">
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/75">Roadmap learning path</p>
-            <h1 className="mt-3 max-w-4xl text-3xl font-black tracking-tight sm:text-5xl">{detail.title}</h1>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {[getRoadmapCategory(detail), detail.targetRole || "Target role", formatDuration(detail)].map((label) => (
-                <span key={label} className="rounded-[8px] bg-white/15 px-3 py-1.5 text-sm font-semibold">{label}</span>
-              ))}
-            </div>
-          </header>
 
-          <div className="px-6 py-8 sm:px-10">
-            <div className="mb-8 flex flex-wrap gap-[5px]">
-              {getRoadmapTechStack(detail).map((technology, index) => (
-                <RoadmapChip key={`${technology}-${index}`} label={technology} index={index} />
-              ))}
+      {!loading && !error && detail && (
+        <div className="w-full flex flex-col items-center">
+          {/* Curved Roadmap Path Container */}
+          <div
+            ref={containerRef}
+            id="roadmap-container"
+            className="w-full max-w-4xl relative flex flex-col items-center space-y-10 sm:space-y-12 py-6"
+          >
+            {/* SVG Connecting Paths */}
+            <svg
+              ref={svgRef}
+              id="roadmap-svg"
+              className="absolute inset-0 w-full pointer-events-none z-0 overflow-visible"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            />
+
+            {/* Checkpoint Cards */}
+            {roadmapCheckpoints.map((item, index) => {
+              // Highlight the user's active day, fallback to day 1 if no progress is saved yet
+              const activeDayNumber = user?.currentDay || detail?.currentDay || user?.progress?.currentDay || 1;
+              const isCurrent = item.day === activeDayNumber;
+
+              let alignmentClass = "self-center mx-auto";
+              if (index % 3 === 0) {
+                alignmentClass = "self-start ml-2 sm:ml-10";
+              } else if (index % 3 === 2) {
+                alignmentClass = "self-end mr-2 sm:mr-10";
+              }
+
+              const isLevelHeaderNeeded = index === 0 || roadmapCheckpoints[index - 1].level !== item.level;
+
+              return (
+                <React.Fragment key={item.day}>
+                  {isLevelHeaderNeeded && (
+                    <div
+                      data-level-header={item.level}
+                      style={{ fontFamily: "'Press Start 2P', monospace" }}
+                      className="w-full text-left text-xs sm:text-sm text-[#002D93] dark:text-[#8fd9ff] tracking-widest pl-4 sm:pl-12 my-4 z-10 select-none"
+                    >
+                      {item.level.toUpperCase()}
+                    </div>
+                  )}
+
+                  <div
+                    data-day={String(item.day)}
+                    data-level={item.level}
+                    onClick={() => setActiveCheckpointModal(item)}
+                    className={`w-[68%] max-w-[250px] sm:max-w-md transition-all duration-300 cursor-pointer z-10 ${alignmentClass}`}
+                  >
+                    {isCurrent ? (
+                      <div className="bg-[#002D93] text-white p-3.5 sm:p-5 rounded-xl shadow-xl border-2 border-blue-400 flex items-center justify-between transform hover:scale-105 transition">
+                        <div>
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded text-white">
+                              DAY {item.day}
+                            </span>
+                            <span className="text-[7px] sm:text-[9px] bg-green-400 text-[#0A192F] font-bold px-1.5 py-0.5 rounded">
+                              ACTIVE
+                            </span>
+                          </div>
+                          <h4 className="text-xs sm:text-base font-bold text-left">{item.title}</h4>
+                        </div>
+                        <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-white flex-shrink-0 ml-2 sm:ml-3 -rotate-90" />
+                      </div>
+                    ) : (
+                      <div className="bg-white dark:bg-[#071838] hover:bg-blue-50/80 dark:hover:bg-[#0a214d] text-[#002D93] dark:text-white p-3.5 sm:p-5 rounded-xl shadow-md border border-blue-100 dark:border-white/10 flex items-center justify-between transform hover:scale-105 transition">
+                        <div>
+                          <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1 text-left">
+                            DAY {item.day}
+                          </span>
+                          <h4 className="text-xs sm:text-base font-bold text-left">{item.title}</h4>
+                        </div>
+                        <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-[#002D93] dark:text-blue-300 flex-shrink-0 ml-2 sm:ml-3 opacity-70 -rotate-90" />
+                      </div>
+                    )}
+                  </div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Details Modal (Matching Tanvika's reference design) */}
+      {activeCheckpointModal && (
+        <div
+          onClick={() => setActiveCheckpointModal(null)}
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-[#081533] rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl transform transition-all border border-blue-100 dark:border-white/15 relative text-left"
+          >
+            <button
+              onClick={() => setActiveCheckpointModal(null)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-[#002D93] dark:hover:text-white transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-xs font-bold text-[#002D93] dark:text-[#7fb1ff] tracking-wider uppercase mb-1">
+              DAY {activeCheckpointModal.day}
             </div>
-            {detail.description && <p className="mb-8 max-w-3xl text-lg leading-8 opacity-75">{detail.description}</p>}
-            <div className="prose max-w-none">
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                {detail.markdownBody || "No roadmap content is available yet."}
-              </ReactMarkdown>
+
+            <h3 className="text-xl font-bold text-[#002D93] dark:text-white mb-3">
+              {activeCheckpointModal.title}
+            </h3>
+
+            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-6">
+              {activeCheckpointModal.desc}
+            </p>
+
+            <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-white/10">
+              <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 dark:bg-blue-950/60 text-[#002D93] dark:text-blue-300 rounded-md">
+                {activeCheckpointModal.level}
+              </span>
+
+              <button
+                onClick={() => setActiveCheckpointModal(null)}
+                className="px-5 py-2 bg-[#002D93] hover:bg-blue-800 text-white text-xs font-semibold rounded-lg transition"
+              >
+                Got it
+              </button>
             </div>
           </div>
-        </article>
+        </div>
       )}
+
       {!loading && !error && !detail && <ErrorState message="This roadmap is no longer available." />}
     </div>
   );
@@ -481,16 +796,19 @@ export default function Roadmaps() {
             />
           </div>
 
-          <select
-            aria-label="Sort roadmaps"
-            value={sortBy}
-            onChange={(event) => setSortBy(event.target.value)}
-            className="filter-button-control roadmap-sort"
-          >
-            <option value="newest">Newest</option>
-            <option value="duration">Shortest</option>
-            <option value="title">A–Z</option>
-          </select>
+          <div className="relative inline-flex items-center">
+            <select
+              aria-label="Sort roadmaps"
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value)}
+              className="filter-button-control roadmap-sort appearance-none pr-8 cursor-pointer"
+            >
+              <option value="newest">Newest</option>
+              <option value="duration">Shortest</option>
+              <option value="title">A–Z</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 w-3.5 h-3.5 opacity-60 text-current" />
+          </div>
 
           <button
             type="button"
@@ -636,3 +954,5 @@ export default function Roadmaps() {
     </div>
   );
 }
+
+
