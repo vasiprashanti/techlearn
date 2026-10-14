@@ -258,7 +258,7 @@ export default function Navbar() {
         }
 
         .tl-navbar-root {
-          background-color: transparent;
+          background-color: var(--dropdown-bg, #bceaff);
           border-bottom: 1px solid var(--border);
           transition: background-color .2s ease, border-color .2s ease;
         }
