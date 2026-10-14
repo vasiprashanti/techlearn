@@ -10,3 +10,12 @@ html.dark .tl-state-caption { color: rgba(255, 255, 255, .55); }
 .tl-state-cta:hover { background: #a2d354; transform: translateY(-1px); }
 @media (max-width: 760px) { .tl-state { min-height: 300px; padding: 28px 12px; } .tl-state-avatar { width: 66px; height: 86px; } }
 @media (prefers-reduced-motion: reduce) { .tl-state-avatar { animation: none; } }
+
+/* larger on desktop and tablet */
+@media (min-width: 761px) {
+  .tl-state { min-height: 460px; }
+  .tl-state-avatar { width: 140px; height: 184px; }
+  .tl-state-caption { font-size: 9px; margin-top: 24px; }
+  .tl-state-title { margin: 20px 0 28px; font-size: clamp(30px, 3.4vw, 44px); }
+  .tl-state-cta { height: 50px; padding: 0 28px; font-size: 15px; border-radius: 10px; }
+}

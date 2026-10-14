@@ -115,7 +115,7 @@ const Sidebar = () => {
     <>
 
       {/* Slim vertical sidebar (tablet and desktop); the link group is centred in the full page height */}
-      <div className={`hidden md:flex flex-col fixed left-0 top-0 bottom-0 bg-[#ffffff30] dark:bg-[#01071e] border-r-0 z-40 h-screen overflow-hidden w-[90px] ${sidebarShadowClass} justify-center items-center`}>
+      <div className={`tl-sidebar hidden md:flex flex-col fixed left-0 top-0 bottom-0 bg-[#ffffff30] dark:bg-[#01071e] border-r-0 z-40 h-screen overflow-hidden w-[90px] ${sidebarShadowClass} justify-center items-center`}>
         <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="w-full max-h-full overflow-y-auto px-1 custom-scrollbar" style={{ scrollbarWidth: 'none' }}>
           {renderNavLinks()}
         </div>

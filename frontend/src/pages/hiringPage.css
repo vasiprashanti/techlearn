@@ -695,3 +695,21 @@
   .hiring-page-container .hiring-controls-row .filter-button-control { height: 48px; padding: 0 10px; gap: 5px; border-radius: 11px; font-size: 11px; }
   .hiring-page-container .hiring-controls-row .view-icon-btn { width: 40px; height: 48px; border-radius: 11px; }
 }
+
+/* 1px muted borders only: no lime outline on search, Filters or the view icons */
+.hiring-page-container .hiring-controls-row .search-input:focus,
+.hiring-page-container .hiring-controls-row .filter-button-control:hover,
+.hiring-page-container .hiring-controls-row .view-icon-btn:hover,
+.hiring-page-container .hiring-controls-row .filter-button-control.active,
+.hiring-page-container .hiring-controls-row .view-icon-btn.active { border-color: rgba(255, 255, 255, .22); box-shadow: none; }
+.hiring-page-container .hiring-controls-row .view-icon-btn.active { background: #101b47; }
+.hiring-page-container.light-mode .hiring-controls-row .search-input:focus,
+.hiring-page-container.light-mode .hiring-controls-row .filter-button-control:hover,
+.hiring-page-container.light-mode .hiring-controls-row .view-icon-btn:hover,
+.hiring-page-container.light-mode .hiring-controls-row .filter-button-control.active,
+.hiring-page-container.light-mode .hiring-controls-row .view-icon-btn.active { border-color: rgba(0, 3, 12, .3); }
+.hiring-page-container.light-mode .hiring-controls-row .view-icon-btn.active { background: #cbeeff; }
+
+/* sidebar uses the same colour as the cards on this page */
+.hiring-page-container .tl-sidebar { background: #0a1238 !important; }
+.hiring-page-container.light-mode .tl-sidebar { background: #e2f7ff !important; }
