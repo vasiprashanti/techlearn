@@ -391,7 +391,8 @@ const getViewerContext = async (user) => {
 const isRoadmapEligibleForViewer = ({ roadmap, user, student, schedule, programOwned = false }) => {
   // Published roadmaps are public to signed-out visitors. Once a learner is
   // authenticated, branch and legacy batch restrictions are enforced here.
-  if (!user) return true;
+  // Admins always have access to view and test all active roadmaps.
+  if (!user || user.role === "admin") return true;
 
   const assignedBatchIds = normalizeBatchIds(roadmap?.assignedBatchIds);
   if (assignedBatchIds.length && !programOwned) {
