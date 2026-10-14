@@ -67,6 +67,18 @@ const evaluateCoding = async (question, code, language) => {
     return { correct: true, score: 100, accuracy: 100, timeSpentMs: null, details: [] };
   }
 
+  // Reserve global execution for this assignment question run
+  const { reserveGlobalExecution, updateReservationStatus } = await import("./executionController.js");
+  const budgetRes = await reserveGlobalExecution({
+    ownerType: "user",
+    ownerId: String(question._id || "assignment"),
+    activityType: "assessment",
+    priorityTier: "P1",
+    count: 1,
+  });
+
+  const reservationId = budgetRes.reservation?.reservationId;
+
   const details = [];
   let passed = 0;
   let timeSpentMs = 0;
@@ -85,6 +97,10 @@ const evaluateCoding = async (question, code, language) => {
       status: result?.statusDescription || result?.status || "Unknown",
       executionTime: Number(result?.executionTime || 0),
     });
+  }
+
+  if (reservationId) {
+    await updateReservationStatus(reservationId, "completed");
   }
 
   const accuracy = Math.round((passed / testCases.length) * 100);

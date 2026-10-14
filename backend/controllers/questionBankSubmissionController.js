@@ -9,6 +9,14 @@ import { testCodeWithJudge0, LANGUAGE_IDS, extractLineNumber, normalizeOutput } 
 import { normalizeCategoryType } from "../utils/questionBank.js";
 import mongoose from "mongoose";
 import rateLimit from "express-rate-limit";
+import {
+  resolveDeviceIdentity,
+  resolveUserTier,
+  checkAndConsumePersonalAllowance,
+  reserveGlobalExecution,
+  updateReservationStatus,
+  resolvePriorityTier,
+} from "../services/executionController.js";
 
 // ===== EXECUTION CONSTRAINTS =====
 const EXECUTION_CONSTRAINTS = {
@@ -346,6 +354,50 @@ export const runCode = [
           message: "Language mismatch with submission",
         });
       }
+
+      // Check personal allowance and global budget
+      const deviceId = await resolveDeviceIdentity(req);
+      const userTier = await resolveUserTier(req.user);
+      const allowanceResult = await checkAndConsumePersonalAllowance({
+        user: req.user,
+        deviceId,
+        userTier,
+        count: 1,
+      });
+
+      if (!allowanceResult.allowed) {
+        return res.status(429).json({
+          success: false,
+          message:
+            allowanceResult.reason === "device_exhausted"
+              ? "Your daily allowance has been reached for this device. You can continue when your limit resets."
+              : "You've used all your coding submissions for today. Your daily allowance has been reached. You can continue when your limit resets.",
+          reason: allowanceResult.reason,
+          effectiveAllowance: allowanceResult.effectiveAllowance,
+          usedCount: allowanceResult.usedCount,
+          remainingCount: 0,
+          resetAt: allowanceResult.resetAt,
+        });
+      }
+
+      const priorityTier = resolvePriorityTier(userTier, "assessment");
+      const budgetRes = await reserveGlobalExecution({
+        ownerType: "user",
+        ownerId: String(studentId),
+        activityType: "assessment",
+        priorityTier,
+        count: 1,
+      });
+
+      if (!budgetRes.success) {
+        return res.status(429).json({
+          success: false,
+          message: "High demand right now. Our coding environment is handling a high volume of submissions. Please try again shortly.",
+          reason: "global_budget_exhausted",
+        });
+      }
+
+      const reservationId = budgetRes.reservation?.reservationId;
 
       // Run against visible test cases only
       const visibleTestCases = submission.snapshotVisibleTestCases || [];

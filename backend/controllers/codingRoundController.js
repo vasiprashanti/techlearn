@@ -15,6 +15,14 @@ import {
 } from "../utils/mcqCodingUtils.js";
 import { testCodeWithJudge0, LANGUAGE_IDS, extractLineNumber, normalizeOutput } from "../utils/judgeUtil.js";
 import {
+  resolveDeviceIdentity,
+  resolveUserTier,
+  checkAndConsumePersonalAllowance,
+  reserveGlobalExecution,
+  updateReservationStatus,
+  resolvePriorityTier,
+} from "../services/executionController.js";
+import {
   DAILY_CHALLENGE_RULES,
   ensureDailyChallengeAttempt,
   getAttemptTimeRemainingSeconds,
@@ -1376,6 +1384,54 @@ export const submitCodingRoundAnswers = async (req, res) => {
       .lean();
     const isMcq = String(question?.categoryType || "").toUpperCase() === "MCQ" || String(question?.categoryType || "").toUpperCase() === "APTITUDE";
 
+    let reservationId = null;
+    if (!isMcq) {
+      const deviceId = await resolveDeviceIdentity(req);
+      const userTier = await resolveUserTier(req.user);
+      const activityType = codingRound.challengeType === "daily_challenge" ? "daily_task" : "assessment";
+
+      const allowanceResult = await checkAndConsumePersonalAllowance({
+        user: req.user,
+        deviceId,
+        userTier,
+        count: 1,
+      });
+
+      if (!allowanceResult.allowed) {
+        return res.status(429).json({
+          success: false,
+          message:
+            allowanceResult.reason === "device_exhausted"
+              ? "Your daily allowance has been reached for this device. You can continue when your limit resets."
+              : "You've used all your coding submissions for today. Your daily allowance has been reached. You can continue when your limit resets.",
+          reason: allowanceResult.reason,
+          effectiveAllowance: allowanceResult.effectiveAllowance,
+          usedCount: allowanceResult.usedCount,
+          remainingCount: 0,
+          resetAt: allowanceResult.resetAt,
+        });
+      }
+
+      const priorityTier = resolvePriorityTier(userTier, activityType);
+      const budgetRes = await reserveGlobalExecution({
+        ownerType: req.user?._id ? "user" : "device",
+        ownerId: req.user?._id ? String(req.user._id) : deviceId,
+        activityType,
+        priorityTier,
+        count: 1,
+      });
+
+      if (!budgetRes.success) {
+        return res.status(429).json({
+          success: false,
+          message: "High demand right now. Our coding environment is handling a high volume of submissions. Please try again shortly.",
+          reason: "global_budget_exhausted",
+        });
+      }
+
+      reservationId = budgetRes.reservation?.reservationId;
+    }
+
     if (isMcq) {
       totalTests = 1;
       const MCQ_LABELS = ["A", "B", "C", "D"];
@@ -1506,23 +1562,27 @@ export const submitCodingRoundAnswers = async (req, res) => {
               executionTime: Number(testResult.executionTime || 0),
               memoryUsed: Number(testResult.memory || 0),
             });
-          } catch (error) {
-            const targetExpectedOutput = testCase.expectedOutput !== undefined ? testCase.expectedOutput : testCase.output;
-            testsFailed++;
-            testCaseDetails.push({
-              index: testCase.index,
-              visible: testCase.visible,
-              passed: false,
-              expectedOutput: targetExpectedOutput || "",
-              actualOutput: "",
-              status: error?.message || "Execution Error",
-              executionTime: 0,
-              memoryUsed: 0,
-            });
+            } catch (error) {
+              const targetExpectedOutput = testCase.expectedOutput !== undefined ? testCase.expectedOutput : testCase.output;
+              testsFailed++;
+              testCaseDetails.push({
+                index: testCase.index,
+                visible: testCase.visible,
+                passed: false,
+                expectedOutput: targetExpectedOutput || "",
+                actualOutput: "",
+                status: error?.message || "Execution Error",
+                executionTime: 0,
+                memoryUsed: 0,
+              });
+            }
           }
         }
+
+        if (reservationId) {
+          await updateReservationStatus(reservationId, "completed");
+        }
       }
-    }
 
     const accuracy = totalTests > 0 ? Math.round((testsPassed / totalTests) * 100) : 0;
     const problemScore = accuracy;

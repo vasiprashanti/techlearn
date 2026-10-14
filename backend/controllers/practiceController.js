@@ -10,6 +10,14 @@ import {
 import { normalizeCategoryType } from "../utils/questionBank.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
 import { recordProgramPerformanceAttempt } from "../services/programPerformanceService.js";
+import {
+  resolveDeviceIdentity,
+  resolveUserTier,
+  checkAndConsumePersonalAllowance,
+  reserveGlobalExecution,
+  updateReservationStatus,
+  resolvePriorityTier,
+} from "../services/executionController.js";
 
 const TRACKS = ["DSA", "Core CS", "SQL", "Aptitude", "Company Based"];
 const PRACTICE_DAILY_RUN_LIMIT = Math.max(1, Number(process.env.PRACTICE_DAILY_RUN_LIMIT || 50));
@@ -228,22 +236,56 @@ export const recordPracticeSubmission = async (req, res) => {
     const source = ["track_template", "daily_challenge"].includes(req.body.source)
       ? req.body.source
       : "practice";
-    if (source === "practice") {
-      const { start, end } = getIndiaDayWindow();
-      const runsToday = await PracticeSubmission.countDocuments({
-        userId: req.user._id,
-        source: "practice",
-        submittedAt: { $gte: start, $lt: end },
+
+    // Non-MCQ coding submissions must consume shared personal allowance
+    const selectedAnswerCheck = String(req.body.selectedAnswer || "").trim().toUpperCase();
+    const isMcqCheck = ["A", "B", "C", "D"].includes(selectedAnswerCheck);
+
+    if (!isMcqCheck) {
+      const deviceId = await resolveDeviceIdentity(req);
+      const userTier = await resolveUserTier(req.user);
+      const activityType = source === "track_template" ? "daily_task" : "practice";
+
+      const allowanceResult = await checkAndConsumePersonalAllowance({
+        user: req.user,
+        deviceId,
+        userTier,
+        count: 1,
       });
-      if (runsToday >= PRACTICE_DAILY_RUN_LIMIT) {
+
+      if (!allowanceResult.allowed) {
         return res.status(429).json({
           success: false,
-          message: `Daily Practice run limit reached (${PRACTICE_DAILY_RUN_LIMIT} runs). Please try again tomorrow.`,
-          limit: PRACTICE_DAILY_RUN_LIMIT,
-          used: runsToday,
-          resetAt: end.toISOString(),
+          message:
+            allowanceResult.reason === "device_exhausted"
+              ? "Your daily allowance has been reached for this device. You can continue when your limit resets."
+              : "You've used all your coding submissions for today. Your daily allowance has been reached. You can continue when your limit resets.",
+          reason: allowanceResult.reason,
+          effectiveAllowance: allowanceResult.effectiveAllowance,
+          usedCount: allowanceResult.usedCount,
+          remainingCount: 0,
+          resetAt: allowanceResult.resetAt,
         });
       }
+
+      const priorityTier = resolvePriorityTier(userTier, activityType);
+      const budgetRes = await reserveGlobalExecution({
+        ownerType: "user",
+        ownerId: String(req.user._id),
+        activityType,
+        priorityTier,
+        count: 1,
+      });
+
+      if (!budgetRes.success) {
+        return res.status(429).json({
+          success: false,
+          message: "High demand right now. Our coding environment is handling a high volume of submissions. Please try again in a few moments.",
+          reason: "global_budget_exhausted",
+        });
+      }
+
+      req._reservationId = budgetRes.reservation?.reservationId;
     }
 
     let canonicalQuestion = null;
@@ -415,15 +457,9 @@ export const recordPracticeSubmission = async (req, res) => {
             totalTestCases = validTestCases.length;
             evaluatedAccuracy = Math.round((passedTestCases / totalTestCases) * 100);
             evaluatedScore = evaluatedAccuracy / 100;
-            isCorrect = passedTestCases === totalTestCases;
-
-            // Attach success context
-            req._compileError = {
-              compileSuccess: true,
-              consoleOutput: firstResult.actualOutput || "",
-              executionTime: firstResult.executionTime || 0,
-              memory: firstResult.memory || 0,
-            };
+            if (req._reservationId) {
+              await updateReservationStatus(req._reservationId, "completed");
+            }
           }
         } else {
           isCorrect = true;

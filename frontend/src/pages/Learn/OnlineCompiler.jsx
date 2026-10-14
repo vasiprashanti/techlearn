@@ -150,6 +150,31 @@ const OnlineCompiler = () => {
   const [editorTheme, setEditorTheme] = useState(theme === 'dark' ? 'vs-dark' : 'light');
   const [activeView, setActiveView] = useState('editor'); // 'editor' or 'preview'
 
+  // Allowance & Global Queue States
+  const [allowanceInfo, setAllowanceInfo] = useState(null);
+  const [showFiveRunsAlert, setShowFiveRunsAlert] = useState(false);
+  const [exhaustionError, setExhaustionError] = useState(null);
+  const [queueModal, setQueueModal] = useState({ isOpen: false, queueId: null, position: 0, estimatedSeconds: 0 });
+  const queuePollingRef = useRef(null);
+
+  // Fetch initial allowance on mount
+  useEffect(() => {
+    const fetchAllowance = async () => {
+      try {
+        const res = await compilerAPI.getStatus();
+        if (res?.success) {
+          setAllowanceInfo(res);
+          if (res.remainingCount === 5) {
+            setShowFiveRunsAlert(true);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch compiler allowance:", err);
+      }
+    };
+    fetchAllowance();
+  }, []);
+
   // Resizable split state for desktop
   const containerRef = useRef(null);
   const [splitPos, setSplitPos] = useState(50); // percentage width for editor pane
@@ -264,8 +289,64 @@ const OnlineCompiler = () => {
       const result = await compilerAPI.compileCode({
         language: selectedLanguage,
         source_code: code,
-        stdin: customInput
+        stdin: customInput,
       });
+
+      // 1. Check if request was Queued due to high global capacity
+      if (result.queued) {
+        setQueueModal({
+          isOpen: true,
+          queueId: result.queueId,
+          position: result.queuePosition || 1,
+          estimatedSeconds: result.estimatedWaitSeconds || 10,
+        });
+
+        // Poll queue until completion
+        if (queuePollingRef.current) clearInterval(queuePollingRef.current);
+        queuePollingRef.current = setInterval(async () => {
+          try {
+            const qStatus = await compilerAPI.checkQueue(result.queueId);
+            if (qStatus.status === 'completed') {
+              clearInterval(queuePollingRef.current);
+              setQueueModal((prev) => ({ ...prev, isOpen: false }));
+              const compRes = qStatus.result || {};
+              let outputText = '';
+              if (compRes.stdout) outputText += compRes.stdout;
+              if (compRes.stderr) outputText += '\n❌ Error:\n' + compRes.stderr;
+              if (compRes.compile_output) outputText += '\n📝 Compilation Output:\n' + compRes.compile_output;
+              if (compRes.status) outputText += `\n\n📊 Status: ${compRes.status.description || 'Completed'}`;
+              if (!outputText.trim()) outputText = '✅ Code executed successfully (no output)';
+              setOutput(outputText);
+            } else if (qStatus.status === 'failed' || qStatus.status === 'expired' || qStatus.status === 'rejected') {
+              clearInterval(queuePollingRef.current);
+              setQueueModal((prev) => ({ ...prev, isOpen: false }));
+              setOutput(`❌ Execution ${qStatus.status}: ${qStatus.error || qStatus.message || 'Failed'}`);
+            } else if (qStatus.queuePosition) {
+              setQueueModal((prev) => ({
+                ...prev,
+                position: qStatus.queuePosition,
+                estimatedSeconds: qStatus.estimatedWaitSeconds || prev.estimatedSeconds,
+              }));
+            }
+          } catch (pollErr) {
+            console.error('Queue poll error:', pollErr);
+          }
+        }, 2000);
+
+        return;
+      }
+
+      // 2. Handle Usage Updates & 5 runs alert
+      if (result.usage) {
+        setAllowanceInfo(prev => ({
+          ...(prev || {}),
+          ...result.usage,
+        }));
+
+        if (result.usage.remainingCount === 5) {
+          setShowFiveRunsAlert(true);
+        }
+      }
 
       // Format the output
       let outputText = '';
@@ -294,7 +375,12 @@ const OnlineCompiler = () => {
 
     } catch (error) {
       console.error('Code execution error:', error);
-      setOutput(`❌ Execution failed: ${error.message || 'Unknown error occurred'}`);
+      const errMsg = error.message || 'Unknown error occurred';
+
+      if (errMsg.includes('daily allowance has been reached') || errMsg.includes('coding submissions')) {
+        setExhaustionError(errMsg);
+      }
+      setOutput(`❌ Execution failed: ${errMsg}`);
     } finally {
       setIsRunning(false);
     }
@@ -526,7 +612,17 @@ const OnlineCompiler = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  {/* Daily Allowance Indicator */}
+                  {allowanceInfo && (
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs font-semibold text-blue-700 dark:text-blue-300">
+                      <span>Daily Runs:</span>
+                      <span className="font-bold text-blue-600 dark:text-blue-400">
+                        {allowanceInfo.remainingCount} / {allowanceInfo.effectiveAllowance}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Mobile Menu Button - moved here from fixed position */}
                   <button
                     onClick={() => setMobileMenuOpen(true)}
@@ -535,12 +631,99 @@ const OnlineCompiler = () => {
                   >
                     <Menu className="w-4 h-4" />
                   </button>
-
-
-
-                  {/* Removed Run button from header - moved to code editor section */}
                 </div>
               </div>
+
+              {/* 5 Runs Remaining Alert */}
+              <AnimatePresence>
+                {showFiveRunsAlert && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="mb-2 p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200"
+                  >
+                    <div>
+                      <span className="font-bold">You're doing great! </span>
+                      <span>
+                        You have 5 of your {allowanceInfo?.effectiveAllowance || 35} daily coding runs remaining. Make them count!
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setShowFiveRunsAlert(false)}
+                      className="ml-3 px-2 py-1 text-amber-800 dark:text-amber-300 hover:text-black dark:hover:text-white font-bold"
+                    >
+                      ✕
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Exhaustion Banner / Warning */}
+              <AnimatePresence>
+                {exhaustionError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="mb-2 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-between text-xs text-rose-900 dark:text-rose-200"
+                  >
+                    <div>
+                      <span className="font-bold">You've used all your coding submissions for today. </span>
+                      <span>
+                        Your daily allowance has been reached. You can continue when your limit resets at midnight IST.
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setExhaustionError(null)}
+                      className="ml-3 px-2 py-1 text-rose-800 dark:text-rose-300 hover:text-black dark:hover:text-white font-bold"
+                    >
+                      ✕
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Queue Popup Modal */}
+              <AnimatePresence>
+                {queueModal.isOpen && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <motion.div
+                      initial={{ scale: 0.95, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.95, opacity: 0 }}
+                      className="w-full max-w-md p-6 rounded-2xl bg-white dark:bg-[#0a1238] border border-gray-200 dark:border-[#222e55] shadow-2xl space-y-4 text-center"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-500 mx-auto flex items-center justify-center animate-pulse">
+                        <Code className="w-6 h-6" />
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                        High Demand Right Now
+                      </h3>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                        Our coding environment is handling a high volume of submissions. Your request is waiting in the queue, and we'll process it as capacity becomes available.
+                      </p>
+                      <div className="p-3 rounded-xl bg-blue-50 dark:bg-[#060e2c] border border-blue-100 dark:border-[#1a254d] flex justify-around text-xs">
+                        <div>
+                          <div className="text-gray-500 dark:text-gray-400">Queue Position</div>
+                          <div className="font-bold text-blue-600 dark:text-[#89c638] text-sm">#{queueModal.position}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500 dark:text-gray-400">Estimated Wait</div>
+                          <div className="font-bold text-blue-600 dark:text-[#89c638] text-sm">~{queueModal.estimatedSeconds}s</div>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-gray-400">Your code is safe and will not be lost.</p>
+                      <button
+                        onClick={() => setQueueModal(prev => ({ ...prev, isOpen: false }))}
+                        className="px-4 py-2 text-xs font-semibold rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                      >
+                        Run in Background
+                      </button>
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
 
 
 
