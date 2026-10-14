@@ -92,25 +92,57 @@ export default function Navbar() {
       const heroRect = heroEl ? heroEl.getBoundingClientRect() : null;
       setIsOverHero(location.pathname === "/" && (heroRect ? heroRect.top <= 65 && heroRect.bottom >= 72 : scrollPos < 10));
 
-      const sectionColor = currentSection ? getComputedStyle(currentSection).backgroundColor : null;
-      const pageSurface = () => {
-        const layers = Array.from(document.querySelectorAll(".fixed.inset-0.-z-10")).filter((el) => el.offsetParent !== null || getComputedStyle(el).position === "fixed").reverse();
-        for (const el of layers) {
-          const cs = getComputedStyle(el);
-          if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") continue;
-          const solid = cs.backgroundColor;
-          if (solid && solid !== "rgba(0, 0, 0, 0)" && solid !== "transparent") return solid;
-          const first = cs.backgroundImage.match(/rgba?\([^)]+\)/);
-          if (first) return first[0];
-        }
+      const getDirectColor = (el) => {
+        if (!el) return null;
+        const cs = getComputedStyle(el);
+        if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return null;
+        const bg = cs.backgroundColor;
+        if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") return bg;
+        const match = cs.backgroundImage.match(/rgba?\([^)]+\)/);
+        if (match) return match[0];
         return null;
       };
-      const resolved = sectionColor && sectionColor !== "rgba(0, 0, 0, 0)" ? sectionColor : pageSurface();
+
+      const detectPageSurface = () => {
+        // 1. Landing page section under navbar
+        if (currentSection) {
+          const paintEl = currentSection.matches('#journey, .journey-scroll')
+            ? (currentSection.querySelector('.journey-sticky') || currentSection)
+            : currentSection;
+          const direct = getDirectColor(paintEl);
+          if (direct) return direct;
+        }
+
+        // 2. Fixed/absolute full-screen background layers (-z-10 / fixed backdrop)
+        const layers = Array.from(document.querySelectorAll(".fixed.inset-0, .-z-10, [class*='fixed inset-0']"))
+          .filter((el) => el !== heroEl && (el.offsetParent !== null || getComputedStyle(el).position === "fixed"))
+          .reverse();
+        for (const el of layers) {
+          const color = getDirectColor(el);
+          if (color) return color;
+        }
+
+        // 3. Inspect main container / router wrapper elements
+        const wrappers = Array.from(document.querySelectorAll("main, [class*='min-h-screen'], #root > div"));
+        for (const el of wrappers) {
+          const color = getDirectColor(el);
+          if (color) return color;
+        }
+
+        // 4. Fallback to body or html background
+        const bodyColor = getDirectColor(document.body) || getDirectColor(document.documentElement);
+        if (bodyColor) return bodyColor;
+
+        // 5. Default fallback based on theme
+        return isDarkMode ? '#050b2f' : '#daf0fa';
+      };
+
+      const resolved = detectPageSurface();
       setSectionBackground(resolved);
 
       const hasSections = allSections.length > 0;
       if (!hasSections) {
-        setIsOverDarkSection(location.pathname === '/' || isDarkMode);
+        setIsOverDarkSection(isDarkMode);
       } else {
         setIsOverDarkSection(isOverDark);
       }
@@ -119,7 +151,12 @@ export default function Navbar() {
     window.addEventListener('scroll', checkDarkSection, { passive: true, capture: true });
     window.addEventListener('resize', checkDarkSection);
     checkDarkSection();
-    const resample = [setTimeout(checkDarkSection, 100), setTimeout(checkDarkSection, 400), setTimeout(checkDarkSection, 1200)];
+    const resample = [
+      setTimeout(checkDarkSection, 50),
+      setTimeout(checkDarkSection, 150),
+      setTimeout(checkDarkSection, 400),
+      setTimeout(checkDarkSection, 1000)
+    ];
 
     return () => {
       resample.forEach(clearTimeout);
@@ -133,11 +170,7 @@ export default function Navbar() {
   // On landing page (/), adaptive styling detects section under navbar (hero vs problem vs results etc.)
   const isLandingPage = location.pathname === '/';
   const isDarkNav = isLandingPage ? isOverDarkSection : isDarkMode;
-  const isAppRoute = /^\/(dashboard|admin|colleges|batches|students|programs|track-templates|certificates|reports|settings)/.test(location.pathname);
-  const defaultLightSurface = '#daf0fa';
-  const navSurface = isAppRoute
-    ? (isDarkMode ? '#050b2f' : defaultLightSurface)
-    : (sectionBackground || (isDarkNav ? '#04083d' : '#daf0fa'));
+  const navSurface = sectionBackground || (isDarkNav ? (isLandingPage ? '#04083d' : '#050b2f') : '#daf0fa');
 
   // Close menus on outside click
   useEffect(() => {
