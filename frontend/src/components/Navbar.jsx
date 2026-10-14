@@ -134,10 +134,10 @@ export default function Navbar() {
   const isLandingPage = location.pathname === '/';
   const isDarkNav = isLandingPage ? isOverDarkSection : isDarkMode;
   const isAppRoute = /^\/(dashboard|admin|colleges|batches|students|programs|track-templates|certificates|reports|settings)/.test(location.pathname);
-  const defaultLightSurface = '#bceaff';
+  const defaultLightSurface = '#daf0fa';
   const navSurface = isAppRoute
     ? (isDarkMode ? '#050b2f' : defaultLightSurface)
-    : (sectionBackground || (isDarkNav ? '#050b2f' : '#d8eef5'));
+    : (sectionBackground || (isDarkNav ? '#050b2f' : '#daf0fa'));
 
   // Close menus on outside click
   useEffect(() => {
@@ -258,7 +258,7 @@ export default function Navbar() {
         }
 
         .tl-navbar-root {
-          background-color: var(--dropdown-bg, #bceaff);
+          background-color: var(--navbar-bg, #daf0fa);
           border-bottom: 1px solid var(--border);
           transition: background-color .2s ease, border-color .2s ease;
         }
@@ -742,7 +742,14 @@ export default function Navbar() {
         }
       `}</style>
 
-      <div className={`tl-navbar-root ${isDarkNav ? 'dark-theme' : ''} ${scrollY > 30 ? 'scrolled' : ''}`} style={{ '--dropdown-bg': navSurface, '--menu-page-bg': navSurface }}>
+      <div
+        className={`tl-navbar-root ${isDarkNav ? 'dark-theme' : ''} ${scrollY > 30 ? 'scrolled' : ''}`}
+        style={{
+          '--navbar-bg': navSurface,
+          '--dropdown-bg': isDarkMode ? '#050b2f' : '#ffffff',
+          '--menu-page-bg': navSurface,
+        }}
+      >
         <nav className="tl-nav">
           {/* BRAND */}
           <Link
