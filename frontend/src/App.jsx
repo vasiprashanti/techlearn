@@ -256,7 +256,8 @@ function LayoutWrapper() {
                      !location.pathname.startsWith('/coding/') && 
                      !location.pathname.startsWith('/daily-challenge/') &&
                      !location.pathname.startsWith('/free-assessment') &&
-                     !location.pathname.startsWith('/onboarding');
+                     !location.pathname.startsWith('/onboarding') &&
+                     !location.pathname.includes('/pricing');
 
   const showFooter = !['/mcq', '/signup', '/login'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
