@@ -105,6 +105,13 @@ export default function Navbar() {
       };
 
       const detectPageSurface = () => {
+        // Explicit match for Hiring (/jobs) and Learn (/learn) pages in light mode
+        const isHiringRoute = location.pathname === '/jobs' || location.pathname.startsWith('/jobs/');
+        const isLearnRoute = location.pathname === '/learn' || location.pathname.startsWith('/learn/');
+        if (!isDarkMode && (isHiringRoute || isLearnRoute)) {
+          return { color: '#ceeefd', image: null };
+        }
+
         // 1. Landing page section under navbar (sections scroll, so solid color only)
         if (currentSection) {
           const paintEl = currentSection.matches('#journey, .journey-scroll')
@@ -143,7 +150,7 @@ export default function Navbar() {
 
       const resolved = detectPageSurface();
       setSectionBackground(resolved.color || (isDarkMode ? '#050b2f' : '#daf0fa'));
-      setNavBgImage(location.pathname === '/learn' ? null : resolved.image);
+      setNavBgImage((location.pathname === '/learn' || location.pathname.startsWith('/learn/') || location.pathname === '/jobs' || location.pathname.startsWith('/jobs/')) ? null : resolved.image);
 
       const hasSections = allSections.length > 0;
       if (!hasSections) {
@@ -174,8 +181,9 @@ export default function Navbar() {
   // If over light section -> use light theme styling (dark text / light dropdown)
   // On landing page (/), adaptive styling detects section under navbar (hero vs problem vs results etc.)
   const isLandingPage = location.pathname === '/';
+  const isHiringOrLearn = location.pathname === '/jobs' || location.pathname.startsWith('/jobs/') || location.pathname === '/learn' || location.pathname.startsWith('/learn/');
   const isDarkNav = isLandingPage ? isOverDarkSection : isDarkMode;
-  const navSurface = sectionBackground || (isDarkNav ? (isLandingPage ? '#04083d' : '#050b2f') : '#daf0fa');
+  const navSurface = sectionBackground || (isDarkNav ? (isLandingPage ? '#04083d' : '#050b2f') : (isHiringOrLearn ? '#ceeefd' : '#daf0fa'));
 
   // Close menus on outside click
   useEffect(() => {
