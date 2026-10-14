@@ -125,7 +125,61 @@ export const submitExerciseCode = async (req, res) => {
     const expectedProgramOutput = exercise.expectedProgramOutput?.trim(); // For validation
     const inputToUse = input || exercise.input || "";
 
+    const {
+      resolveDeviceIdentity,
+      resolveUserTier,
+      checkAndConsumePersonalAllowance,
+      reserveGlobalExecution,
+      updateReservationStatus,
+      resolvePriorityTier,
+    } = await import("../services/executionController.js");
+
+    const deviceId = await resolveDeviceIdentity(req);
+    const userTier = await resolveUserTier(req.user);
+    const allowanceResult = await checkAndConsumePersonalAllowance({
+      user: req.user,
+      deviceId,
+      userTier,
+      count: 1,
+    });
+
+    if (!allowanceResult.allowed) {
+      return res.status(429).json({
+        success: false,
+        error: "Allowance exhausted",
+        message:
+          allowanceResult.reason === "device_exhausted"
+            ? "Your daily allowance has been reached for this device. You can continue when your limit resets."
+            : "You've used all your coding submissions for today. Your daily allowance has been reached. You can continue when your limit resets.",
+        reason: allowanceResult.reason,
+        effectiveAllowance: allowanceResult.effectiveAllowance,
+        usedCount: allowanceResult.usedCount,
+        remainingCount: 0,
+        resetAt: allowanceResult.resetAt,
+      });
+    }
+
+    const priorityTier = resolvePriorityTier(userTier, "practice");
+    const budgetRes = await reserveGlobalExecution({
+      ownerType: "user",
+      ownerId: String(req.user._id),
+      activityType: "practice",
+      priorityTier,
+      count: 1,
+    });
+
+    if (!budgetRes.success) {
+      return res.status(429).json({
+        success: false,
+        error: "Capacity limit reached",
+        message: "High demand right now. Our coding environment is handling a high volume of submissions. Please try again shortly.",
+      });
+    }
+
+    const reservationId = budgetRes.reservation?.reservationId;
+
     if (!isJudge0Configured()) {
+      if (reservationId) await updateReservationStatus(reservationId, "completed");
       console.warn("WARNING: Judge0 configuration is missing. Returning mock response for practice submission.");
       return res.json({
         success: true,

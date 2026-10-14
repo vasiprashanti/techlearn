@@ -398,16 +398,61 @@ export const exerciseAPI = {
   },
 };
 
+// Helper to get or create persistent device ID on client
+export const getClientDeviceId = () => {
+  let devId = localStorage.getItem('techlearn_device_id');
+  if (!devId || devId.length < 10) {
+    devId = 'dev_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('techlearn_device_id', devId);
+  }
+  return devId;
+};
+
 // Compiler API
 export const compilerAPI = {
   // Compile and execute code
   compileCode: async (codeData) => {
+    const authHeaders = getAuthHeaders();
+    const deviceId = getClientDeviceId();
+
     const response = await fetch(`${API_BASE}/compiler/compile`, {
       method: 'POST',
       headers: {
+        ...authHeaders,
         'Content-Type': 'application/json',
+        'X-Device-Id': deviceId,
       },
       body: JSON.stringify(codeData),
+    });
+    return handleResponse(response);
+  },
+
+  // Get current allowance and usage status
+  getStatus: async () => {
+    const authHeaders = getAuthHeaders();
+    const deviceId = getClientDeviceId();
+
+    const response = await fetch(`${API_BASE}/compiler/status`, {
+      method: 'GET',
+      headers: {
+        ...authHeaders,
+        'X-Device-Id': deviceId,
+      },
+    });
+    return handleResponse(response);
+  },
+
+  // Poll queue status
+  checkQueue: async (queueId) => {
+    const authHeaders = getAuthHeaders();
+    const deviceId = getClientDeviceId();
+
+    const response = await fetch(`${API_BASE}/compiler/queue/${queueId}`, {
+      method: 'GET',
+      headers: {
+        ...authHeaders,
+        'X-Device-Id': deviceId,
+      },
     });
     return handleResponse(response);
   },
