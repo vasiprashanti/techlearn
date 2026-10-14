@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Lock, Search, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Lock, Search, ChevronDown, ChevronLeft, ChevronRight, List, CalendarDays, SlidersHorizontal } from "lucide-react";
 import "./hiringPage.css";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 import { hiringAPI } from "../services/api";
 import Sidebar from "../components/Dashboard/Sidebar";
+import FilterDrawer from "../components/common/FilterDrawer";
+import StateFallback from "../components/common/StateFallback";
 
 export default function Jobs() {
   const { theme } = useTheme();
@@ -21,6 +23,7 @@ export default function Jobs() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -238,6 +241,7 @@ export default function Jobs() {
       isCancelled = true;
     };
   }, [
+    reloadKey,
     viewMode,
     activeTab,
     searchQuery,
@@ -282,18 +286,6 @@ export default function Jobs() {
       isCancelled = true;
     };
   }, [viewMode, calendarMonthKey]);
-
-  // Tag Styling Helper matching jobs.html
-  const getTagClass = (tag = "") => {
-    const value = tag.toLowerCase().trim();
-    if (value === "remote") return "bg-[#d9f4a7] text-[#080830]";
-    if (value === "hybrid") return "bg-[#dceeff] text-[#080830]";
-    if (value === "on-site" || value === "onsite") return "bg-[#ffe3bf] text-[#080830]";
-    if (value === "full-time" || value === "full time") return "bg-[#e8ddff] text-[#080830]";
-    if (value === "internship") return "bg-[#f8dce8] text-[#080830]";
-    if (value === "freelance") return "bg-[#e7eaec] text-[#080830]";
-    return "bg-[#e7eaec] text-[#080830]";
-  };
 
   // Check if job has expired
   const isJobExpired = (job) => {
@@ -504,18 +496,17 @@ export default function Jobs() {
              Row 3: Your Jobs / All Jobs toggle
         ======================================================== */}
         <div className="hiring-controls-container">
-          {/* ROW 1: FULL-WIDTH SEARCH BAR */}
-          <div className="hiring-row-search">
+          <div className="hiring-controls-row">
             <div className="search-wrapper">
               <span className="search-icon" aria-hidden="true">
                 <Search className="w-4 h-4" />
               </span>
-
               <input
                 type="text"
                 className="search-input"
                 id="searchInput"
                 placeholder="Search jobs, companies, roles..."
+                aria-label="Search jobs"
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -523,34 +514,37 @@ export default function Jobs() {
                 }}
               />
             </div>
-          </div>
-
-          {/* ROW 2: LIST VIEW, CALENDAR VIEW, FILTERS */}
-          <div className="hiring-row-view-filters">
-            <div className="view-mode-buttons">
-              <button
-                type="button"
-                className={`view-btn ${viewMode === "list" ? "active" : ""}`}
-                onClick={() => setViewMode("list")}
-              >
-                List view
-              </button>
-              <button
-                type="button"
-                className={`view-btn ${viewMode === "calendar" ? "active" : ""}`}
-                onClick={() => setViewMode("calendar")}
-              >
-                Calendar view
-              </button>
-            </div>
 
             <button
               type="button"
               onClick={handleOpenFilterDrawer}
               className={`filter-button-control ${hasActiveFilters ? "active" : ""}`}
+              aria-expanded={filterDrawerOpen}
             >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
               <span>Filters</span>
               {hasActiveFilters && <span className="active-dot"></span>}
+            </button>
+
+            <button
+              type="button"
+              className={`view-btn view-icon-btn ${viewMode === "list" ? "active" : ""}`}
+              onClick={() => setViewMode("list")}
+              aria-label="List view"
+              aria-pressed={viewMode === "list"}
+              title="List view"
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              className={`view-btn view-icon-btn ${viewMode === "calendar" ? "active" : ""}`}
+              onClick={() => setViewMode("calendar")}
+              aria-label="Calendar view"
+              aria-pressed={viewMode === "calendar"}
+              title="Calendar view"
+            >
+              <CalendarDays className="w-4 h-4" />
             </button>
           </div>
 
@@ -589,9 +583,15 @@ export default function Jobs() {
                   <p className="text-[14px]">Loading opportunities...</p>
                 </div>
               ) : error ? (
-                <div className="text-center py-[70px] text-red-500">
-                  <p className="text-[14px] font-semibold">{error}</p>
-                </div>
+                <StateFallback state="unavailable" onAction={() => setReloadKey((key) => key + 1)} />
+              ) : jobs.length === 0 && (searchQuery.trim() || hasActiveFilters) ? (
+                <StateFallback
+                  state="no-matches"
+                  onAction={() => {
+                    setSearchQuery("");
+                    handleClearFilters();
+                  }}
+                />
               ) : jobs.length === 0 ? (
                 /* EMPTY STATE */
                 <div className="text-center py-[70px] text-slate-500">
@@ -637,7 +637,7 @@ export default function Jobs() {
                               ? "bg-[#060d1f] border-white/5 opacity-60 grayscale-[40%]"
                               : "bg-white/30 border-[#00113b]/10 opacity-60"
                             : isDarkMode
-                            ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:-translate-y-[1px]"
+                            ? "bg-[#0a1238] border-transparent hover:bg-[#101b47] hover:-translate-y-[1px]"
                             : "bg-white/60 border-white/80 hover:bg-white hover:border-[#00113b]/20 hover:-translate-y-[1px] shadow-sm hover:shadow-md"
                         }`}
                       >
@@ -679,9 +679,11 @@ export default function Jobs() {
                             {tags.map((tag, idx) => (
                               <span
                                 key={idx}
-                                className={`inline-flex items-center px-[8px] py-[5px] rounded-[6px] text-[9px] font-bold whitespace-nowrap ${getTagClass(
-                                  tag
-                                )}`}
+                                className={`inline-flex items-center px-2 py-[5px] rounded-full border text-[9px] font-medium leading-[1.3] whitespace-nowrap ${
+                                  isDarkMode
+                                    ? "border-white/10 bg-white/[0.045] text-white/70"
+                                    : "border-[rgba(0,3,12,0.16)] bg-white/55 text-[#02107a]/70"
+                                }`}
                               >
                                 {tag}
                               </span>
@@ -942,201 +944,63 @@ export default function Jobs() {
       <div
         onClick={closeAllDrawers}
         className={`fixed inset-0 bg-black/40 backdrop-blur-xs z-[150] transition-opacity duration-250 ${
-          filterDrawerOpen || deadlineDrawerOpen
+          deadlineDrawerOpen
             ? "opacity-100 visible"
             : "opacity-0 invisible pointer-events-none"
         }`}
       />
 
-      {/* FILTER DRAWER */}
-      <aside
-        style={{ backgroundColor: "var(--page-bg)" }}
-        className={`fixed right-0 top-0 bottom-0 w-[390px] max-w-[90%] z-[160] transition-transform duration-300 ease-in-out shadow-2xl flex flex-col ${
-          isDarkMode ? "text-white" : "text-[#00113b]"
-        } ${filterDrawerOpen ? "translate-x-0" : "translate-x-full"}`}
-      >
-        <div className="p-[22px] flex justify-between items-center border-b border-black/10 dark:border-white/10">
-          <h3 className="font-['Press_Start_2P'] text-[11px] leading-[1.6]">Filters</h3>
-          <button
-            onClick={() => setFilterDrawerOpen(false)}
-            className="w-[32px] h-[32px] border-none bg-white/60 dark:bg-white/10 text-[#00113b] dark:text-white rounded-[7px] text-[18px] cursor-pointer flex items-center justify-center shadow-xs"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="p-[22px] overflow-y-auto flex-1 space-y-[27px]">
-          {/* SORT BY SECTION */}
-          <div>
-            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[11px]">Sort by</h4>
-            <div className="space-y-[8px]">
-              {[
-                { id: "newest", label: "Newest" },
-                { id: "salary", label: "Highest salary" },
-                { id: "company", label: "Company A–Z" },
-              ].map((sortOption) => (
-                <label key={sortOption.id} className="flex items-center gap-[9px] py-[4px] text-[12px] text-[#00113b]/80 dark:text-slate-300 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="sortBy"
-                    value={sortOption.id}
-                    checked={stagedSortBy === sortOption.id}
-                    onChange={(e) => setStagedSortBy(e.target.value)}
-                    className="accent-[#00113b] dark:accent-[#b2e96a]"
-                  />
-                  {sortOption.label}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* CALENDAR MONTH SECTION */}
-          <div>
-            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[11px]">Month & Year</h4>
-            <div className="relative w-full">
-              <select
-                value={stagedCalendarMonth}
-                onChange={(e) => setStagedCalendarMonth(parseInt(e.target.value, 10))}
-                className={`w-full ${
-                  isDarkMode
-                    ? "h-[34px] pl-[14px] pr-[36px] rounded-[9999px] text-[11px] font-semibold cursor-pointer border border-white/20 bg-[#112347] text-white hover:bg-[#162d59] appearance-none outline-none transition-colors"
-                    : "tool-select w-full pr-[36px] appearance-none"
-                }`}
-              >
-                <option value={0} className={isDarkMode ? "bg-[#0b1934] text-white" : ""}>Jan {calendarYear}</option>
-                <option value={1} className={isDarkMode ? "bg-[#0b1934] text-white" : ""}>Feb {calendarYear}</option>
-                <option value={2} className={isDarkMode ? "bg-[#0b1934] text-white" : ""}>Mar {calendarYear}</option>
-                <option value={3} className={isDarkMode ? "bg-[#0b1934] text-white" : ""}>Apr {calendarYear}</option>
-                <option value={4} className={isDarkMode ? "bg-[#0b1934] text-white" : ""}>May {calendarYear}</option>
-                <option value={5} className={isDarkMode ? "bg-[#0b1934] text-white" : ""}>Jun {calendarYear}</option>
-                <option value={6} className={isDarkMode ? "bg-[#0b1934] text-white" : ""}>Jul {calendarYear}</option>
-                <option value={7} className={isDarkMode ? "bg-[#0b1934] text-white" : ""}>Aug {calendarYear}</option>
-                <option value={8} className={isDarkMode ? "bg-[#0b1934] text-white" : ""}>Sep {calendarYear}</option>
-                <option value={9} className={isDarkMode ? "bg-[#0b1934] text-white" : ""}>Oct {calendarYear}</option>
-                <option value={10} className={isDarkMode ? "bg-[#0b1934] text-white" : ""}>Nov {calendarYear}</option>
-                <option value={11} className={isDarkMode ? "bg-[#0b1934] text-white" : ""}>Dec {calendarYear}</option>
-              </select>
-              <div className="absolute right-[14px] top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 dark:text-slate-300">
-                <ChevronDown className="w-3.5 h-3.5" />
-              </div>
-            </div>
-          </div>
-
-          {/* ROLE SECTION */}
-          <div>
-            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[11px]">Role</h4>
-            {availableFilters.roles.map((r) => (
-              <label key={r} className="flex items-center gap-[9px] py-[7px] text-[12px] text-[#00113b]/80 dark:text-slate-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={stagedRoles.includes(r)}
-                  onChange={(e) => {
-                    if (e.target.checked) setStagedRoles([...stagedRoles, r]);
-                    else setStagedRoles(stagedRoles.filter((item) => item !== r));
-                  }}
-                  className="accent-[#00113b] dark:accent-[#b2e96a]"
-                />
-                {r}
-              </label>
-            ))}
-          </div>
-
-          {/* EXPERIENCE SECTION */}
-          <div>
-            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[11px]">Experience</h4>
-            {[
-              { id: "Fresher", label: "Fresher" },
-              { id: "0-1", label: "0–1 years" },
-              { id: "1-3", label: "1–3 years" },
-            ].map((exp) => (
-              <label key={exp.id} className="flex items-center gap-[9px] py-[7px] text-[12px] text-[#00113b]/80 dark:text-slate-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={stagedExperience.includes(exp.id)}
-                  onChange={(e) => {
-                    if (e.target.checked) setStagedExperience([...stagedExperience, exp.id]);
-                    else setStagedExperience(stagedExperience.filter((item) => item !== exp.id));
-                  }}
-                  className="accent-[#00113b] dark:accent-[#b2e96a]"
-                />
-                {exp.label}
-              </label>
-            ))}
-          </div>
-
-          {/* JOB TYPE SECTION */}
-          <div>
-            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[11px]">Job type</h4>
-            {["Full-time", "Internship", "Freelance"].map((jt) => (
-              <label key={jt} className="flex items-center gap-[9px] py-[7px] text-[12px] text-[#00113b]/80 dark:text-slate-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={stagedJobTypes.includes(jt)}
-                  onChange={(e) => {
-                    if (e.target.checked) setStagedJobTypes([...stagedJobTypes, jt]);
-                    else setStagedJobTypes(stagedJobTypes.filter((item) => item !== jt));
-                  }}
-                  className="accent-[#00113b] dark:accent-[#b2e96a]"
-                />
-                {jt}
-              </label>
-            ))}
-          </div>
-
-          {/* WORK MODE SECTION */}
-          <div>
-            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[11px]">Work mode</h4>
-            {["Remote", "Hybrid", "On-site"].map((wm) => (
-              <label key={wm} className="flex items-center gap-[9px] py-[7px] text-[12px] text-[#00113b]/80 dark:text-slate-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={stagedWorkModes.includes(wm)}
-                  onChange={(e) => {
-                    if (e.target.checked) setStagedWorkModes([...stagedWorkModes, wm]);
-                    else setStagedWorkModes(stagedWorkModes.filter((item) => item !== wm));
-                  }}
-                  className="accent-[#00113b] dark:accent-[#b2e96a]"
-                />
-                {wm}
-              </label>
-            ))}
-          </div>
-
-          {/* COMPANY SECTION */}
-          <div>
-            <h4 className="text-[10px] uppercase tracking-[1px] font-bold mb-[11px]">Company</h4>
-            {availableFilters.companies.map((comp) => (
-              <label key={comp} className="flex items-center gap-[9px] py-[7px] text-[12px] text-[#00113b]/80 dark:text-slate-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={stagedCompanies.includes(comp)}
-                  onChange={(e) => {
-                    if (e.target.checked) setStagedCompanies([...stagedCompanies, comp]);
-                    else setStagedCompanies(stagedCompanies.filter((item) => item !== comp));
-                  }}
-                  className="accent-[#00113b] dark:accent-[#b2e96a]"
-                />
-                {comp}
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="p-[16px_22px] border-t border-black/10 dark:border-white/10 flex gap-[8px]">
-          <button
-            onClick={handleClearFilters}
-            className="flex-1 h-[42px] rounded-[8px] text-[11px] font-bold cursor-pointer bg-white/70 dark:bg-transparent border border-black/15 dark:border-white/10 text-[#00113b] dark:text-white hover:bg-white"
-          >
-            Clear
-          </button>
-          <button
-            onClick={handleApplyFilters}
-            className="flex-1 h-[42px] rounded-[8px] text-[11px] font-bold cursor-pointer bg-[#b2e96a] text-[#0a1128] border border-[#b2e96a]/50 shadow-md hover:bg-[#a6e257] active:scale-[0.98] transition-all"
-          >
-            Apply filters
-          </button>
-        </div>
-      </aside>
+      <FilterDrawer
+        open={filterDrawerOpen}
+        onClose={() => setFilterDrawerOpen(false)}
+        groups={[
+          {
+            id: "sort",
+            label: "Sort by",
+            type: "radio",
+            defaultValue: "newest",
+            options: [
+              { value: "newest", label: "Newest" },
+              { value: "salary", label: "Highest salary" },
+              { value: "company", label: "Company A–Z" },
+            ],
+          },
+          { id: "roles", label: "Role", type: "chips", options: availableFilters.roles },
+          {
+            id: "experience",
+            label: "Experience",
+            type: "chips",
+            options: [
+              { value: "Fresher", label: "Fresher" },
+              { value: "0-1", label: "0–1 years" },
+              { value: "1-3", label: "1–3 years" },
+            ],
+          },
+          { id: "jobTypes", label: "Job type", type: "chips", options: ["Full-time", "Internship", "Freelance"] },
+          { id: "workModes", label: "Work mode", type: "chips", options: ["Remote", "Hybrid", "On-site"] },
+          { id: "companies", label: "Company", type: "chips", options: availableFilters.companies },
+        ]}
+        applied={{
+          sort: appliedSortBy,
+          roles: appliedRoles,
+          experience: appliedExperience,
+          jobTypes: appliedJobTypes,
+          workModes: appliedWorkModes,
+          companies: appliedCompanies,
+        }}
+        onApply={(values) => {
+          setAppliedSortBy(values.sort || "newest");
+          setAppliedRoles(values.roles);
+          setAppliedExperience(values.experience);
+          setAppliedJobTypes(values.jobTypes);
+          setAppliedWorkModes(values.workModes);
+          setAppliedCompanies(values.companies);
+          setPage(1);
+          setFilterDrawerOpen(false);
+        }}
+        onClear={handleClearFilters}
+        description="Find the right job for your goals."
+      />
 
       {/* DEADLINE DRAWER */}
       <aside

@@ -1,0 +1,12 @@
+.tl-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 380px; padding: 40px 20px; color: #02107a; }
+html.dark .tl-state { color: #fff; }
+.tl-state-avatar { width: 84px; height: 110px; object-fit: contain; image-rendering: pixelated; animation: tlStateFloat 3s ease-in-out infinite; }
+@keyframes tlStateFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.tl-state-caption { margin-top: 18px; font-family: "Press Start 2P", monospace; font-size: 7px; letter-spacing: .6px; color: rgba(7, 16, 47, .55); }
+html.dark .tl-state-caption { color: rgba(255, 255, 255, .55); }
+.tl-state-title { margin: 14px 0 20px; font-size: clamp(20px, 2.4vw, 30px); font-weight: 600; line-height: 1.2; letter-spacing: -.8px; }
+.tl-state-title i { font-style: italic; margin-right: .22em; }
+.tl-state-cta { height: 38px; padding: 0 18px; border: none; border-radius: 8px; background: #8dd035; color: #04103d; font: 700 12px Inter, sans-serif; cursor: pointer; transition: transform .18s ease, background .18s ease; }
+.tl-state-cta:hover { background: #a2d354; transform: translateY(-1px); }
+@media (max-width: 760px) { .tl-state { min-height: 300px; padding: 28px 12px; } .tl-state-avatar { width: 66px; height: 86px; } }
+@media (prefers-reduced-motion: reduce) { .tl-state-avatar { animation: none; } }
