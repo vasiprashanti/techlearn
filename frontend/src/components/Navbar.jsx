@@ -136,8 +136,8 @@ export default function Navbar() {
   const isAppRoute = /^\/(dashboard|admin|colleges|batches|students|programs|track-templates|certificates|reports|settings)/.test(location.pathname);
   const defaultLightSurface = '#bceaff';
   const navSurface = isAppRoute
-    ? (isDarkMode ? '#01071e' : defaultLightSurface)
-    : (sectionBackground || (isDarkNav ? '#01071e' : '#d8eef5'));
+    ? (isDarkMode ? '#050b2f' : defaultLightSurface)
+    : (sectionBackground || (isDarkNav ? '#050b2f' : '#d8eef5'));
 
   // Close menus on outside click
   useEffect(() => {
@@ -242,7 +242,7 @@ export default function Navbar() {
           --text-hover: #ffffff;
           --muted: rgba(255, 255, 255, 0.65);
           --border: rgba(255, 255, 255, 0.12);
-          --dropdown-bg: #01071e;
+          --dropdown-bg: #050b2f;
           --dropdown-border: rgba(255, 255, 255, 0.12);
           --dropdown-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
           --dropdown-action-bg: rgba(255, 255, 255, 0.04);
@@ -254,7 +254,17 @@ export default function Navbar() {
           --theme-btn-bg: rgba(255, 255, 255, 0.06);
           --theme-btn-hover: rgba(255, 255, 255, 0.12);
           --theme-btn-color: #ffffff;
-          --menu-page-bg: #01071e;
+          --menu-page-bg: #050b2f;
+        }
+
+        .tl-navbar-root {
+          background-color: transparent;
+          border-bottom: 1px solid var(--border);
+          transition: background-color .2s ease, border-color .2s ease;
+        }
+
+        .tl-navbar-root.dark-theme {
+          background-color: #050b2f;
         }
 
         .tl-nav {

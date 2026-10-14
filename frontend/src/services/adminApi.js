@@ -315,7 +315,10 @@ export const adminAPI = {
     const query = new URLSearchParams(params);
     return request(`/admin/students/search?${query.toString()}`);
   },
-  getStudent: (studentId) => request(`/admin/students/${studentId}`),
+  getStudent: (studentId, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/admin/students/${studentId}${query ? `?${query}` : ''}`, { noCache: true });
+  },
   createStudent: (body) => request('/admin/students', { method: 'POST', body: JSON.stringify(body) }),
   updateStudent: (studentId, body) => request(`/admin/students/${studentId}`, { method: 'PUT', body: JSON.stringify(body) }),
   updateStudentPayment: (studentId, payment) => request(`/admin/students/${studentId}/payment`, { method: 'PATCH', body: JSON.stringify({ payment }) }),

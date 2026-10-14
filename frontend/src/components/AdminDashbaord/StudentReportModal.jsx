@@ -12,7 +12,7 @@ const formatDateValue = (value) => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-export default function StudentReportModal({ studentId, batchId, studentBasic, onClose, isOpen, context }) {
+export default function StudentReportModal({ studentId, batchId, programId, studentBasic, onClose, isOpen, context, onUpdate }) {
   const [activeTab, setActiveTab] = useState('Overview');
   const [loading, setLoading] = useState(true);
   const [studentDetails, setStudentDetails] = useState(null);
@@ -32,6 +32,12 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
   const [selectedDay, setSelectedDay] = useState(1);
   const [expandedMcqId, setExpandedMcqId] = useState(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const effectiveProgramId = programId
+    || studentBasic?.programId
+    || studentBasic?.activeProgramId
+    || studentBasic?.enrollment?.programId?._id
+    || studentBasic?.enrollment?.programId;
 
   const handleViewCode = async (sub) => {
     setLoadingCode(true);
@@ -57,7 +63,10 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
       setError('');
       try {
         // Fetch basic student info
-        const studentRes = await adminAPI.getStudent(studentId);
+        const studentRes = await adminAPI.getStudent(
+          studentId,
+          effectiveProgramId ? { programId: effectiveProgramId } : {}
+        );
         setStudentDetails(studentRes);
 
         // Fetch submissions
@@ -107,7 +116,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
     }
 
     loadData();
-  }, [isOpen, studentId, batchId, studentBasic]);
+  }, [isOpen, studentId, batchId, effectiveProgramId, studentBasic]);
 
   if (!isOpen) return null;
 
@@ -180,9 +189,25 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
   const profileGoals = canonicalProfile.goals || {};
   const effectiveProgramName = profileEnrollment.program?.name
     || studentDetails?.programName
+    || studentBasic?.programName
+    || studentBasic?.currentProgram
     || studentDetails?.programSelection
     || 'Not assigned';
   const profileSkills = canonicalProfile.skills || {};
+
+  const authoritativePaymentStatus = studentDetails?.paymentStatus
+    || studentDetails?.payment
+    || studentBasic?.paymentStatus
+    || studentBasic?.payment
+    || (studentBasic?.access === 'Paid' ? 'Paid' : 'Pending');
+
+  const enrollmentStartDate = studentDetails?.enrollmentStartDate
+    || studentDetails?.scheduleStartDate
+    || profileEnrollment.startDate
+    || studentBasic?.scheduleStartDate
+    || studentBasic?.startDate
+    || studentBasic?.enrolledOn
+    || null;
 
   // Compute strong & weak topics from dayWiseHistoryTasksDetail
   const strongTopics = [];
@@ -244,6 +269,9 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
       setBatchStudentData(prev => prev ? { ...prev, totalXp: 0 } : prev);
       if (studentBasic) studentBasic.score = 0;
       setShowResetConfirm(false);
+      if (typeof onUpdate === 'function') {
+        onUpdate();
+      }
     } catch (err) {
       alert("Failed to reset student XP: " + err.message);
     } finally {
@@ -376,21 +404,27 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                           <span className="font-semibold">{effectiveProgramName}</span>
                         </div>
                         <div className="flex justify-between text-xs py-1 border-b border-black/5 dark:border-white/5">
+                          <span className="text-slate-400">Enrollment Start Date:</span>
+                          <span className="font-semibold">{formatDateValue(enrollmentStartDate)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs py-1 border-b border-black/5 dark:border-white/5">
                           <span className="text-slate-400">Joined Date:</span>
-                          <span className="font-semibold">{formatDateValue(studentDetails?.joined || studentDetails?.createdAt)}</span>
+                          <span className="font-semibold">{formatDateValue(studentDetails?.joined || studentDetails?.createdAt || studentBasic?.createdAt)}</span>
                         </div>
                         <div className="flex justify-between text-xs py-1 border-b border-black/5 dark:border-white/5">
                           <span className="text-slate-400">Last Active:</span>
-                          <span className="font-semibold">{formatDateValue(studentDetails?.lastActive || studentDetails?.lastActiveAt)}</span>
+                          <span className="font-semibold">{formatDateValue(studentDetails?.lastActive || studentDetails?.lastActiveAt || studentBasic?.lastActive)}</span>
                         </div>
                         <div className="flex justify-between text-xs py-1 border-b border-black/5 dark:border-white/5">
                           <span className="text-slate-400">Payment Status:</span>
                           <span className={`font-bold px-2 py-0.5 rounded text-[11px] ${
-                            (studentBasic?.payment === 'Paid' || studentDetails?.payment === 'Paid' || studentBasic?.access === 'Paid')
+                            authoritativePaymentStatus === 'Paid'
                               ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                              : authoritativePaymentStatus === 'Pending'
+                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                : 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
                           }`}>
-                            {studentBasic?.payment || studentDetails?.payment || (studentBasic?.access === 'Paid' ? 'Paid' : 'Pending')}
+                            {authoritativePaymentStatus}
                           </span>
                         </div>
                         <div className="flex justify-between text-xs py-1 border-b border-black/5 dark:border-white/5">
@@ -475,29 +509,37 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                   {/* Enrollment & Payment Section */}
                   <div className="space-y-3">
                     <h3 className="text-xs uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">Enrollment & Payment Info</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Batch</span>
                         <span className="font-semibold mt-0.5 block truncate">{profileEnrollment.batch?.name || legacyProfile.batch || batch}</span>
                       </div>
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Program</span>
-                        <span className="font-bold text-blue-600 dark:text-blue-400 mt-0.5 block truncate">{profileEnrollment.program?.name || legacyProfile.program || track}</span>
+                        <span className="font-bold text-blue-600 dark:text-blue-400 mt-0.5 block truncate">{effectiveProgramName}</span>
+                      </div>
+                      <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Enrollment Starts</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5 block truncate">
+                          {formatDateValue(enrollmentStartDate)}
+                        </span>
                       </div>
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Payment Status</span>
                         <span className={`font-bold mt-0.5 inline-flex items-center px-2 py-0.5 rounded-md text-[11px] ${
-                          (studentBasic?.payment === 'Paid' || studentDetails?.payment === 'Paid' || studentBasic?.access === 'Paid')
+                          authoritativePaymentStatus === 'Paid'
                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                            : authoritativePaymentStatus === 'Pending'
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                              : 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
                         }`}>
-                          {studentBasic?.payment || studentDetails?.payment || (studentBasic?.access === 'Paid' ? 'Paid' : 'Pending')}
+                          {authoritativePaymentStatus}
                         </span>
                       </div>
                       <div className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Access Tier</span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5 block">
-                          {studentBasic?.access || studentDetails?.access || 'Free'}
+                          {authoritativePaymentStatus === 'Paid' || studentBasic?.access === 'Paid' || studentDetails?.access === 'Paid' ? 'Member' : (profileEnrollment.accessTier || studentBasic?.access || studentDetails?.access || 'Free')}
                         </span>
                       </div>
                     </div>
