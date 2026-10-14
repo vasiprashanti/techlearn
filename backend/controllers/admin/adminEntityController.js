@@ -3620,11 +3620,6 @@ export const getStudentDetailAdmin = async (req, res) => {
         programId: enrollmentProgId,
       }).sort({ createdAt: -1 }).lean();
     }
-    if (!paymentRecord && paymentIdentifiers.length) {
-      paymentRecord = await Payment.findOne({
-        $or: paymentIdentifiers,
-      }).sort({ createdAt: -1 }).lean();
-    }
 
     if (enrollment?.accessTier === "Member" || enrollment?.pricingPlanSnapshot?.price > 0) {
       if (paymentRecord) {
