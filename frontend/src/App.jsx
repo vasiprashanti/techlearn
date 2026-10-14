@@ -41,6 +41,7 @@ const DailyChallengeTest = lazy(() => import('./pages/DailyChallenge/DailyChalle
 const DailyChallengeResult = lazy(() => import('./pages/DailyChallenge/DailyChallengeResult'))
 
 const LearnMain = lazy(() => import('./pages/Learn/LearnMain'))
+const WaitlistPage = lazy(() => import('./pages/Learn/WaitlistPage'))
 const CourseDetails = lazy(() => import('./pages/Learn/CourseDetails'))
 const CourseQuiz = lazy(() => import('./pages/Learn/CourseQuiz'))
 const CourseTopics = lazy(() => import('./pages/Learn/CourseTopics'))
@@ -352,6 +353,8 @@ function LayoutWrapper() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/learn" element={<LearnMain />} />
+          <Route path="/waitlist" element={<WaitlistPage />} />
+          <Route path="/waitlist/:programId" element={<WaitlistPage />} />
           <Route path="/learn/courses" element={<Navigate to="/learn" replace />} />
           <Route path="/learn/courses/all" element={<Navigate to="/learn" replace />} />
           <Route path="/learn/courses/:courseId" element={<CourseDetails />} />
