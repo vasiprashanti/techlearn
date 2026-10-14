@@ -154,11 +154,15 @@ export default function Students() {
       loadGlobalStudents();
     }
   };
-  const [monthFilter, setMonthFilter] = useState('all'); // YYYY-MM or 'all'
-  const [accessFilter, setAccessFilter] = useState('all'); // all | paid | college | free
-  const [statusFilter, setStatusFilter] = useState('all'); // all | active | completed | expired
+  // Filter & Sort states
+  const [sortBy, setSortBy] = useState('newest_enrolled');
+  const [enrolledDatePreset, setEnrolledDatePreset] = useState('all');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [programFilter, setProgramFilter] = useState('');
-  const [collegeFilter, setCollegeFilter] = useState('');
+  const [programStatusFilter, setProgramStatusFilter] = useState('all');
+  const [accountStatusFilter, setAccountStatusFilter] = useState('all');
   const [tableSearch, setTableSearch] = useState('');
 
   // Selection & Bulk Actions
@@ -194,15 +198,21 @@ export default function Students() {
   const loadGlobalStudents = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await adminAPI.getGlobalStudents({
+      const queryParams = {
         tab: activeTab,
-        month: monthFilter,
-        access: accessFilter,
-        status: statusFilter,
+        sort: sortBy,
+        datePreset: enrolledDatePreset,
+        payment: paymentStatusFilter,
         programId: programFilter,
-        collegeId: collegeFilter,
+        programStatus: programStatusFilter,
+        accountStatus: accountStatusFilter,
         search: tableSearch,
-      });
+      };
+      if (enrolledDatePreset === 'custom') {
+        if (customStartDate) queryParams.startDate = customStartDate;
+        if (customEndDate) queryParams.endDate = customEndDate;
+      }
+      const response = await adminAPI.getGlobalStudents(queryParams);
       if (response) {
         setStudentsData({ items: response.items || [], total: response.total || 0 });
         if (response.stats) setStats(response.stats);
@@ -213,7 +223,7 @@ export default function Students() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab, monthFilter, accessFilter, statusFilter, programFilter, collegeFilter, tableSearch]);
+  }, [activeTab, sortBy, enrolledDatePreset, customStartDate, customEndDate, paymentStatusFilter, programFilter, programStatusFilter, accountStatusFilter, tableSearch]);
 
   useEffect(() => {
     loadGlobalStudents();
@@ -781,31 +791,52 @@ export default function Students() {
               ))}
             </div>
 
-            {/* Navigation Tabs (All Students, Enrolled, Placement, Skill, Leads, Exploring, Completed, Waitlist) */}
-            <div className="flex border-b border-black/10 dark:border-white/10 gap-1 overflow-x-auto">
-              {[
-                { id: 'all', label: 'All Students', icon: FiUsers },
-                { id: 'enrolled', label: 'Enrolled', icon: FiUserCheck },
-                { id: 'placement', label: 'Placement', icon: FiTarget },
-                { id: 'skill', label: 'Skill', icon: FiAward },
-                { id: 'leads', label: 'Leads', icon: FiUsers },
-                { id: 'exploring', label: 'Exploring', icon: FiCompass },
-                { id: 'completed', label: 'Completed', icon: FiCheckCircle },
-                { id: 'waitlist', label: 'Waitlist', icon: FiClock },
-              ].map(({ id, label, icon: TabIcon }) => (
+            {/* Navigation Tabs + Action Buttons Row */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-black/10 dark:border-white/10 pb-1">
+              {/* Reduced size tabs */}
+              <div className="flex items-center gap-1 overflow-x-auto py-0.5">
+                {[
+                  { id: 'all', label: 'All Students', icon: FiUsers },
+                  { id: 'enrolled', label: 'Enrolled', icon: FiUserCheck },
+                  { id: 'placement', label: 'Placement', icon: FiTarget },
+                  { id: 'skill', label: 'Skill', icon: FiAward },
+                  { id: 'leads', label: 'Leads', icon: FiUsers },
+                  { id: 'exploring', label: 'Exploring', icon: FiCompass },
+                  { id: 'completed', label: 'Completed', icon: FiCheckCircle },
+                  { id: 'waitlist', label: 'Waitlist', icon: FiClock },
+                ].map(({ id, label, icon: TabIcon }) => (
+                  <button
+                    key={id}
+                    onClick={() => setActiveTab(id)}
+                    className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                      activeTab === id
+                        ? 'bg-[#3C83F6]/10 text-[#3C83F6] dark:text-[#7fb1ff] font-bold'
+                        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    <TabIcon className="w-3 h-3" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Bulk Import and Add Student buttons placed to the right of section selection */}
+              <div className="flex items-center gap-2 shrink-0 self-end md:self-auto">
                 <button
-                  key={id}
-                  onClick={() => setActiveTab(id)}
-                  className={`px-3 py-2 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap ${
-                    activeTab === id
-                      ? 'border-[#3C83F6] text-[#3C83F6] dark:text-[#7fb1ff]'
-                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
+                  onClick={openBulkImport}
+                  className="h-8 px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors whitespace-nowrap shadow-sm"
                 >
-                  <TabIcon className="w-3.5 h-3.5" />
-                  {label}
+                  <FiUpload className="w-3.5 h-3.5" />
+                  Bulk Import
                 </button>
-              ))}
+                <button
+                  onClick={openAddStudent}
+                  className="h-8 px-3.5 rounded-xl bg-[#3C83F6] text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-[#2f73e0] transition-colors whitespace-nowrap shadow-sm"
+                >
+                  <FiPlus className="w-3.5 h-3.5" />
+                  Add Student
+                </button>
+              </div>
             </div>
 
             {activeTab === 'leads' && stats.leadFeedbackReasonCounts?.length > 0 && (
@@ -819,97 +850,100 @@ export default function Students() {
               </div>
             )}
 
-            {/* Filter controls row */}
+            {/* Filter controls container */}
             <div className="flex flex-col gap-2.5">
-              {/* Row 1: Select All, Search, Add Student */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2 flex-1 w-full">
-                  {/* Select All */}
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl h-8 shrink-0">
-                    <input
-                      type="checkbox"
-                      checked={studentsData.items.length > 0 && studentsData.items.every(s => selectedStudentIds.includes(s.id))}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          const newSelections = new Set([...selectedStudentIds, ...studentsData.items.map(s => s.id)]);
-                          setSelectedStudentIds(Array.from(newSelections));
-                        } else {
-                          setSelectedStudentIds(selectedStudentIds.filter(id => !studentsData.items.some(s => s.id === id)));
-                        }
-                      }}
-                      className="w-3 h-3 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
-                    />
-                    <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">Select All</span>
-                  </div>
-
-                  {/* Search Input */}
-                  <div className="relative flex-1 min-w-0">
-                    <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
-                    <input
-                      value={tableSearch}
-                      onChange={(e) => setTableSearch(e.target.value)}
-                      placeholder="Search students..."
-                      className="w-full h-8 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-8 pr-3 text-xs text-black/80 dark:text-white placeholder:text-black/35 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 w-full sm:w-auto shrink-0">
-                  <button
-                    onClick={openBulkImport}
-                    className="h-8 px-3.5 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors whitespace-nowrap"
-                  >
-                    <FiUpload className="w-3.5 h-3.5" />
-                    Bulk Import
-                  </button>
-                  <button
-                    onClick={openAddStudent}
-                    className="h-8 px-3.5 rounded-xl bg-[#3C83F6] text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-[#2f73e0] transition-colors whitespace-nowrap"
-                  >
-                    <FiPlus className="w-3.5 h-3.5" />
-                    Add Student
-                  </button>
+              {/* Row 1: Search bar (about half of the page horizontal width) */}
+              <div className="w-full">
+                <div className="relative w-full sm:w-1/2 min-w-[280px] max-w-xl">
+                  <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
+                  <input
+                    value={tableSearch}
+                    onChange={(e) => setTableSearch(e.target.value)}
+                    placeholder="Search by student name, email, or student ID..."
+                    className="w-full h-8 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] pl-8 pr-3 text-xs text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-1 focus:ring-[#3C83F6]"
+                  />
                 </div>
               </div>
 
-              {/* Row 2: Secondary Dropdown Filters */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                {/* Month Filter */}
-                <div className="relative min-w-0">
+              {/* Row 2: Secondary Dropdown Filters (Single line, full horizontal width) */}
+              <div className="flex items-center gap-2 w-full overflow-x-auto pb-1 flex-nowrap">
+                {/* Sort By Filter */}
+                <div className="relative flex-1 min-w-[130px]">
                   <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43]">
                     <select
-                      value={monthFilter}
-                      onChange={(e) => setMonthFilter(e.target.value)}
-                      className="appearance-none w-full h-8 rounded-xl bg-transparent px-2.5 pr-7 text-xs font-semibold text-slate-800 dark:text-white outline-none cursor-pointer"
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="appearance-none w-full h-8 rounded-xl bg-transparent px-2.5 pr-7 text-xs font-semibold text-slate-800 dark:text-white outline-none cursor-pointer truncate"
                     >
-                      <option className={dropdownOptionClass} value="all">All Time</option>
-                      {getRecentMonthOptions().map((month) => (
-                        <option className={dropdownOptionClass} key={month.value} value={month.value}>{month.label}</option>
-                      ))}
+                      <option className={dropdownOptionClass} value="newest_enrolled">Newest Enrolled</option>
+                      <option className={dropdownOptionClass} value="oldest_enrolled">Oldest Enrolled</option>
+                      <option className={dropdownOptionClass} value="recently_updated">Recently Updated</option>
+                      <option className={dropdownOptionClass} value="name_asc">Name: A–Z</option>
+                      <option className={dropdownOptionClass} value="name_desc">Name: Z–A</option>
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
                   </div>
                 </div>
 
-                {/* Payment Filter Dropdown */}
-                <div className="relative min-w-0">
+                {/* Enrolled Date Filter */}
+                <div className="relative flex-1 min-w-[125px]">
                   <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43]">
                     <select
-                      value={accessFilter}
-                      onChange={(e) => setAccessFilter(e.target.value)}
-                      className="appearance-none w-full h-8 rounded-xl bg-transparent px-2.5 pr-7 text-xs font-semibold text-slate-800 dark:text-white outline-none cursor-pointer"
+                      value={enrolledDatePreset}
+                      onChange={(e) => setEnrolledDatePreset(e.target.value)}
+                      className="appearance-none w-full h-8 rounded-xl bg-transparent px-2.5 pr-7 text-xs font-semibold text-slate-800 dark:text-white outline-none cursor-pointer truncate"
+                    >
+                      <option className={dropdownOptionClass} value="all">All Time</option>
+                      <option className={dropdownOptionClass} value="today">Today</option>
+                      <option className={dropdownOptionClass} value="7days">Last 7 Days</option>
+                      <option className={dropdownOptionClass} value="30days">Last 30 Days</option>
+                      <option className={dropdownOptionClass} value="custom">Custom Date Range</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+
+                {/* Custom Date Range pickers if selected */}
+                {enrolledDatePreset === 'custom' && (
+                  <div className="flex items-center gap-1.5 bg-white/80 dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 rounded-xl px-2 h-8 shrink-0">
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      className="bg-transparent text-[11px] text-slate-800 dark:text-white outline-none cursor-pointer"
+                      title="Start Date"
+                    />
+                    <span className="text-[10px] text-slate-400">to</span>
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      className="bg-transparent text-[11px] text-slate-800 dark:text-white outline-none cursor-pointer"
+                      title="End Date"
+                    />
+                  </div>
+                )}
+
+                {/* Payment Status Filter */}
+                <div className="relative flex-1 min-w-[125px]">
+                  <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43]">
+                    <select
+                      value={paymentStatusFilter}
+                      onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                      className="appearance-none w-full h-8 rounded-xl bg-transparent px-2.5 pr-7 text-xs font-semibold text-slate-800 dark:text-white outline-none cursor-pointer truncate"
                     >
                       <option className={dropdownOptionClass} value="all">Payment: All</option>
                       <option className={dropdownOptionClass} value="paid">Paid</option>
                       <option className={dropdownOptionClass} value="pending">Pending</option>
                       <option className={dropdownOptionClass} value="failed">Failed</option>
+                      <option className={dropdownOptionClass} value="free">Free / Batch</option>
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
                   </div>
                 </div>
 
                 {/* Program Filter */}
-                <div className="relative min-w-0">
+                <div className="relative flex-[1.4] min-w-[140px]">
                   <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43]">
                     <select
                       value={programFilter}
@@ -925,37 +959,35 @@ export default function Students() {
                   </div>
                 </div>
 
-                {/* Status Filter */}
-                <div className="relative min-w-0">
+                {/* Program Status Filter */}
+                <div className="relative flex-1 min-w-[120px]">
                   <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43]">
                     <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="appearance-none w-full h-8 rounded-xl bg-transparent px-2.5 pr-7 text-xs font-semibold text-slate-800 dark:text-white outline-none cursor-pointer"
+                      value={programStatusFilter}
+                      onChange={(e) => setProgramStatusFilter(e.target.value)}
+                      className="appearance-none w-full h-8 rounded-xl bg-transparent px-2.5 pr-7 text-xs font-semibold text-slate-800 dark:text-white outline-none cursor-pointer truncate"
                     >
-                      <option className={dropdownOptionClass} value="all">Status: All</option>
+                      <option className={dropdownOptionClass} value="all">Program: All</option>
                       <option className={dropdownOptionClass} value="active">Active</option>
                       <option className={dropdownOptionClass} value="completed">Completed</option>
                       <option className={dropdownOptionClass} value="paused">Paused</option>
-                      <option className={dropdownOptionClass} value="expired">Expired</option>
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
                   </div>
                 </div>
 
-                {/* College Filter */}
-                <div className="relative min-w-0">
+                {/* Account Status Filter */}
+                <div className="relative flex-1 min-w-[120px]">
                   <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43]">
                     <select
-                      value={collegeFilter}
-                      onChange={(e) => setCollegeFilter(e.target.value)}
+                      value={accountStatusFilter}
+                      onChange={(e) => setAccountStatusFilter(e.target.value)}
                       className="appearance-none w-full h-8 rounded-xl bg-transparent px-2.5 pr-7 text-xs font-semibold text-slate-800 dark:text-white outline-none cursor-pointer truncate"
                     >
-                      <option className={dropdownOptionClass} value="">All Colleges</option>
-                      <option className={dropdownOptionClass} value="other">Other / no college</option>
-                      {filterOptions.colleges.map((c) => (
-                        <option className={dropdownOptionClass} key={c._id} value={c._id}>{c.name}</option>
-                      ))}
+                      <option className={dropdownOptionClass} value="all">Account: All</option>
+                      <option className={dropdownOptionClass} value="active">Active</option>
+                      <option className={dropdownOptionClass} value="expired">Expired</option>
+                      <option className={dropdownOptionClass} value="inactive">Inactive</option>
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
                   </div>
@@ -979,7 +1011,22 @@ export default function Students() {
                     {(['all', 'enrolled', 'placement', 'completed', 'waitlist'].includes(activeTab)) && (
                       <thead className="sticky top-0 z-10 bg-slate-100/90 dark:bg-[#0b1736]/90 backdrop-blur-md">
                         <tr className="border-b border-black/10 dark:border-white/10 text-[10px] font-bold text-black/40 dark:text-white/40 uppercase tracking-wider whitespace-nowrap">
-                          <th className="py-2 px-2 w-7"></th>
+                          <th className="py-2 px-2 w-7">
+                            <input
+                              type="checkbox"
+                              checked={studentsData.items.length > 0 && studentsData.items.every(s => selectedStudentIds.includes(s.id))}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  const newSelections = new Set([...selectedStudentIds, ...studentsData.items.map(s => s.id)]);
+                                  setSelectedStudentIds(Array.from(newSelections));
+                                } else {
+                                  setSelectedStudentIds(selectedStudentIds.filter(id => !studentsData.items.some(s => s.id === id)));
+                                }
+                              }}
+                              className="w-3 h-3 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
+                              title="Select All"
+                            />
+                          </th>
                           <th className="py-2 px-1.5 w-7 text-center">#</th>
                           <th className="py-2 px-2.5 max-w-[200px]">Student</th>
                           <th className="py-2 px-2.5 max-w-[170px]">Program</th>
@@ -994,7 +1041,22 @@ export default function Students() {
                     {activeTab === 'leads' && (
                       <thead className="sticky top-0 z-10 bg-slate-100/90 dark:bg-[#0b1736]/90 backdrop-blur-md">
                         <tr className="border-b border-black/10 dark:border-white/10 text-[10px] font-bold text-black/40 dark:text-white/40 uppercase tracking-wider whitespace-nowrap">
-                          <th className="py-2 px-2 w-7"></th>
+                          <th className="py-2 px-2 w-7">
+                            <input
+                              type="checkbox"
+                              checked={studentsData.items.length > 0 && studentsData.items.every(s => selectedStudentIds.includes(s.id))}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  const newSelections = new Set([...selectedStudentIds, ...studentsData.items.map(s => s.id)]);
+                                  setSelectedStudentIds(Array.from(newSelections));
+                                } else {
+                                  setSelectedStudentIds(selectedStudentIds.filter(id => !studentsData.items.some(s => s.id === id)));
+                                }
+                              }}
+                              className="w-3 h-3 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
+                              title="Select All"
+                            />
+                          </th>
                           <th className="py-2 px-1.5 w-7 text-center">#</th>
                           <th className="py-2 px-2.5 max-w-[200px]">Student</th>
                           <th className="py-2 px-2.5">Goal / Target Role</th>
@@ -1011,7 +1073,22 @@ export default function Students() {
                     {activeTab === 'skill' && (
                       <thead className="sticky top-0 z-10 bg-slate-100/90 dark:bg-[#0b1736]/90 backdrop-blur-md">
                         <tr className="border-b border-black/10 dark:border-white/10 text-[10px] font-bold text-black/40 dark:text-white/40 uppercase tracking-wider whitespace-nowrap">
-                          <th className="py-2 px-2 w-7"></th>
+                          <th className="py-2 px-2 w-7">
+                            <input
+                              type="checkbox"
+                              checked={studentsData.items.length > 0 && studentsData.items.every(s => selectedStudentIds.includes(s.id))}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  const newSelections = new Set([...selectedStudentIds, ...studentsData.items.map(s => s.id)]);
+                                  setSelectedStudentIds(Array.from(newSelections));
+                                } else {
+                                  setSelectedStudentIds(selectedStudentIds.filter(id => !studentsData.items.some(s => s.id === id)));
+                                }
+                              }}
+                              className="w-3 h-3 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
+                              title="Select All"
+                            />
+                          </th>
                           <th className="py-2 px-1.5 w-7 text-center">#</th>
                           <th className="py-2 px-2.5 max-w-[200px]">Student</th>
                           <th className="py-2 px-2.5 max-w-[170px]">Program</th>
@@ -1026,7 +1103,22 @@ export default function Students() {
                     {activeTab === 'exploring' && (
                       <thead className="sticky top-0 z-10 bg-slate-100/90 dark:bg-[#0b1736]/90 backdrop-blur-md">
                         <tr className="border-b border-black/10 dark:border-white/10 text-[10px] font-bold text-black/40 dark:text-white/40 uppercase tracking-wider whitespace-nowrap">
-                          <th className="py-2 px-2 w-7"></th>
+                          <th className="py-2 px-2 w-7">
+                            <input
+                              type="checkbox"
+                              checked={studentsData.items.length > 0 && studentsData.items.every(s => selectedStudentIds.includes(s.id))}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  const newSelections = new Set([...selectedStudentIds, ...studentsData.items.map(s => s.id)]);
+                                  setSelectedStudentIds(Array.from(newSelections));
+                                } else {
+                                  setSelectedStudentIds(selectedStudentIds.filter(id => !studentsData.items.some(s => s.id === id)));
+                                }
+                              }}
+                              className="w-3 h-3 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
+                              title="Select All"
+                            />
+                          </th>
                           <th className="py-2 px-1.5 w-7 text-center">#</th>
                           <th className="py-2 px-2.5 max-w-[200px]">Student</th>
                           <th className="py-2 px-2.5">Email</th>
@@ -1034,7 +1126,6 @@ export default function Students() {
                           <th className="py-2 px-2.5">Goal</th>
                           <th className="py-2 px-2.5 whitespace-nowrap">Joined On</th>
                           <th className="py-2 px-2.5 whitespace-nowrap">Last Activity</th>
-                          <th className="py-2 px-2.5 text-right">Actions</th>
                         </tr>
                       </thead>
                     )}
