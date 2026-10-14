@@ -77,18 +77,18 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
   const isDarkMode = theme === "dark";
 
   const sectionHeadingClass = isDarkMode
-    ? "text-[10px] uppercase tracking-[0.22em] font-semibold text-white/72 px-4"
-    : "text-[10px] uppercase tracking-[0.22em] font-semibold text-[#17386c]/58 px-4";
+    ? "text-[11px] uppercase tracking-[0.16em] font-semibold text-[#8b9bb4] px-3.5 py-1"
+    : "text-[11px] uppercase tracking-[0.16em] font-semibold text-[#17386c]/65 px-3.5 py-1";
 
   const getNavClass = (isActive) =>
-    `sidebar-button flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm tracking-wide transition-all duration-300 ease-out ${
+    `sidebar-button flex items-center gap-3 px-3.5 py-2 rounded-lg text-[13.5px] font-medium tracking-normal transition-all duration-200 ease-out ${
       isActive
         ? isDarkMode
-          ? "bg-[#122449] hover:bg-[#183766] !text-white font-semibold shadow-lg border border-[#5574c7]/55"
-          : "bg-[#00113b] hover:bg-[#17386c] text-white font-semibold shadow-lg border border-[#00113b]/20"
+          ? "bg-[#0b154a] !text-white font-semibold shadow-sm border border-[#2b3a74]/60"
+          : "bg-[#00113b] text-white font-semibold shadow-sm border border-[#00113b]/20"
         : isDarkMode
-          ? "!text-[#dbeaff] hover:!text-white hover:bg-[#183766] hover:shadow-lg hover:border hover:border-[#5f7fda]/35 font-normal border border-transparent"
-          : "!text-[#00113b] hover:!text-[#2f73e0] hover:bg-white/60 hover:shadow-md hover:border hover:border-[#3C83F6]/18 font-normal border border-transparent"
+          ? "!text-[#94a3b8] hover:!text-white hover:bg-[#121c4b]/50 font-normal border border-transparent"
+          : "!text-[#00113b] hover:!text-[#2f73e0] hover:bg-white/60 font-normal border border-transparent"
     }`;
 
   useEffect(() => {
@@ -111,9 +111,9 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
   };
 
   const renderNavLinks = (onClickAction = () => {}) => (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-5 pb-8 pt-2">
       {menuGroups.map((group, idx) => (
-        <div key={idx} className="space-y-2">
+        <div key={idx} className="space-y-1">
           <h4 className={sectionHeadingClass}>
             {group.title}
           </h4>
@@ -138,25 +138,25 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
 
   return (
     <>
-      <div className={`sidebar-container hidden lg:flex flex-col fixed left-3 top-20 backdrop-blur-xl z-40 h-[calc(100vh-5.75rem)] overflow-hidden w-[15.75rem] pt-6 rounded-[2rem] ${
+      <div className={`sidebar-container hidden lg:flex flex-col fixed left-0 top-[72px] bottom-0 z-40 overflow-hidden w-64 ${
         isDarkMode
-          ? "bg-black/40 border border-white/5 shadow-[0_14px_34px_rgba(0,0,0,0.28)]"
-          : "bg-[#daf0fa]/88 border border-white/35 shadow-[0_18px_45px_rgba(34,119,255,0.12)]"
+          ? "bg-[#070e38] border-r border-[#1a234d]"
+          : "bg-[#daf0fa]/95 border-r border-black/10"
       }`}>
-        <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="flex-1 overflow-y-auto px-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3C83F6 transparent' }}>
+        <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="flex-1 overflow-y-auto px-3.5 py-2 admin-sidebar-scroll" style={{ scrollbarWidth: 'thin', scrollbarColor: isDarkMode ? '#243266 transparent' : '#3C83F6 transparent' }}>
           <style>{`
-            .admin-custom-scrollbar::-webkit-scrollbar {
-              width: 1px;
+            .admin-sidebar-scroll::-webkit-scrollbar {
+              width: 3px;
             }
-            .admin-custom-scrollbar::-webkit-scrollbar-track {
+            .admin-sidebar-scroll::-webkit-scrollbar-track {
               background: transparent;
             }
-            .admin-custom-scrollbar::-webkit-scrollbar-thumb {
-              background: #3C83F6;
-              border-radius: 1px;
+            .admin-sidebar-scroll::-webkit-scrollbar-thumb {
+              background: ${isDarkMode ? '#243266' : '#3C83F6'};
+              border-radius: 3px;
             }
           `}</style>
-          <div className="admin-custom-scrollbar">
+          <div>
             {renderNavLinks()}
           </div>
         </div>
@@ -190,8 +190,8 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
               transition={{ type: "spring", damping: 30, stiffness: 200 }}
               className={`lg:hidden fixed left-0 top-0 bottom-0 w-72 z-50 shadow-2xl flex flex-col ${
                 isDarkMode
-                  ? "bg-black/40 border-r border-white/5"
-                  : "bg-[#daf0fa] border-r border-black/5"
+                  ? "bg-[#070e38] border-r border-[#1a234d]"
+                  : "bg-[#daf0fa] border-r border-black/10"
               }`}
             >
               <div className="flex items-center justify-between px-4 pt-4 pb-2 mb-4">

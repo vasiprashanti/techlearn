@@ -217,6 +217,14 @@ export default function Students() {
 
   useEffect(() => {
     loadGlobalStudents();
+
+    const handleFocus = () => {
+      loadGlobalStudents();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [loadGlobalStudents]);
 
   useEffect(() => {
@@ -1346,7 +1354,7 @@ export default function Students() {
                                   {student.goal}
                                 </td>
                                 <td className="py-2 px-2.5 text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                                  {formatDateValue(student.enrolledOn)}
+                                  {formatDateValue(student.createdAt)}
                                 </td>
                                 <td className="py-2 px-2.5 text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                   {student.lastActivity}
@@ -1434,8 +1442,10 @@ export default function Students() {
         <StudentReportModal
           isOpen={Boolean(selectedReportStudent)}
           studentId={selectedReportStudent.id || selectedReportStudent._id}
+          programId={selectedReportStudent.programId}
           studentBasic={selectedReportStudent}
           onClose={() => setSelectedReportStudent(null)}
+          onUpdate={loadGlobalStudents}
         />
       )}
     </>

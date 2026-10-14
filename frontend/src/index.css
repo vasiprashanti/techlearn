@@ -21,7 +21,7 @@
   }
 
   html.dark {
-    background-color: #020b23;
+    background-color: #050b2f;
   }
 
   body {
@@ -32,7 +32,7 @@
 
   .dark body {
     color: #e0e6f5;
-    background-color: #020b23;
+    background-color: #050b2f;
   }
 
   @media (min-width: 761px) {
@@ -786,7 +786,7 @@
   }
 
   .dark .admin-dashboard-typography .fixed.inset-0.-z-10 {
-    background: #020816 !important;
+    background: #050b2f !important;
   }
 
   .dark .admin-dashboard-typography :is(article, div)[class*="rounded-2xl"][class*="border"][class*="bg-white"],
@@ -795,8 +795,8 @@
   .dark .admin-dashboard-typography section :is(div, article)[class*="rounded-xl"][class*="border"][class*="bg-white"],
   .dark .admin-dashboard-typography :is(article, div)[class*="bg-[#0f1f43]"],
   .dark .admin-dashboard-typography div[class*="bg-[#0f1f43]"] {
-    border-color: rgba(21, 54, 111, 0.45) !important;
-    background: linear-gradient(135deg, #020b23 0%, #001233 50%, #0a1128 100%) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    background: #081138 !important;
     box-shadow: 0 12px 34px rgba(0, 0, 0, 0.24) !important;
   }
 
@@ -811,7 +811,7 @@
   .dark .admin-dashboard-typography section > div[class*="rounded-2xl"][class*="border"][class*="bg-white"]:hover,
   .dark .admin-dashboard-typography :is(article, div)[class*="rounded-xl"][class*="border"][class*="bg-white"]:hover,
   .dark .admin-dashboard-typography section :is(div, article)[class*="rounded-xl"][class*="border"][class*="bg-white"]:hover {
-    background: rgba(10, 31, 77, 0.56) !important;
+    background: #0b154a !important;
   }
 
   .admin-dashboard-typography input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
@@ -820,7 +820,7 @@
     border-color: rgba(134, 196, 255, 0.4) !important;
     background: rgba(242, 250, 255, 0.92) !important;
     color: #001862 !important;
-    border-radius: 1.1rem !important;
+    border-radius: 0.65rem !important;
   }
 
   .admin-dashboard-typography input:not([type="checkbox"]):not([type="radio"]):not([type="range"])::placeholder,
@@ -832,27 +832,28 @@
   .admin-dashboard-typography textarea:focus,
   .admin-dashboard-typography select:focus {
     border-color: rgba(45, 127, 232, 0.7) !important;
-    box-shadow: 0 0 0 4px rgba(118, 199, 255, 0.22) !important;
+    box-shadow: 0 0 0 3px rgba(118, 199, 255, 0.22) !important;
   }
 
   .dark .admin-dashboard-typography input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   .dark .admin-dashboard-typography textarea,
   .dark .admin-dashboard-typography select {
-    border-color: rgba(107, 184, 236, 0.22) !important;
-    background: rgba(10, 47, 111, 0.64) !important;
-    color: #9cd6ff !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    background: #070e38 !important;
+    color: #f1f5f9 !important;
+    border-radius: 0.65rem !important;
   }
 
   .dark .admin-dashboard-typography input:not([type="checkbox"]):not([type="radio"]):not([type="range"])::placeholder,
   .dark .admin-dashboard-typography textarea::placeholder {
-    color: #77afd8 !important;
+    color: #64748b !important;
   }
 
   .dark .admin-dashboard-typography input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
   .dark .admin-dashboard-typography textarea:focus,
   .dark .admin-dashboard-typography select:focus {
-    border-color: rgba(143, 217, 255, 0.72) !important;
-    box-shadow: 0 0 0 4px rgba(76, 143, 208, 0.26) !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
   }
 
   .admin-dashboard-typography :is(button, a).dashboard-primary-btn,
@@ -3944,16 +3945,18 @@ body .admin-dashboard-typography.dark .course-form-modal.course-form-modal.cours
 .dark .dashboard-page-shell,
 .dark .dashboard-page-shell > main,
 .dark .dashboard-page-shell > main > div,
-.dark .dashboard-page-shell > main > div > .fixed.inset-0 {
-  background: #01071e !important;
+.dark .dashboard-page-shell > main > div > .fixed.inset-0,
+.dark .dashboard-page-shell > main > div > div > .fixed.inset-0,
+.dark .dashboard-page-shell .fixed.inset-0.-z-10 {
+  background: #050b2f !important;
   background-image: none !important;
 }
-/* Learn, Hiring and Roadmaps use the dashboard's page colour (#01071e, same as the navbar). */
+/* Learn, Hiring and Roadmaps use the page colour (#050b2f, same as the navbar). */
 .dark .tl-page-bg,
 .dark .tl-page-bg > main,
 .dark .tl-page-bg > main > div,
 .dark .tl-page-bg .fixed.inset-0.-z-10 {
-  background: #01071e !important;
+  background: #050b2f !important;
   background-image: none !important;
 }
 

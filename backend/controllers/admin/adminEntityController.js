@@ -3576,6 +3576,7 @@ export const getStudentDetailAdmin = async (req, res) => {
     }
 
     const submissions = await Submission.find({ studentId }).sort({ submittedAt: -1 }).lean();
+    const targetProgramId = req.query?.programId ? String(req.query.programId) : null;
     const studentEnrollments = await ProgramEnrollment.find({
       $or: [
         student.userId ? { userId: student.userId } : null,
@@ -3584,14 +3585,73 @@ export const getStudentDetailAdmin = async (req, res) => {
       status: { $in: ["Active", "Completed", "Paused"] },
     })
       .sort({ assignedAt: -1, createdAt: -1 })
-      .populate("programId", "name programType")
+      .populate("programId", "name programType pricingType")
       .populate("batchId", "name startDate expiryDate status")
       .lean();
-    const enrollment = studentEnrollments.sort((left, right) => {
-      const statusRank = { Active: 0, Completed: 1, Paused: 2 };
-      return (statusRank[left.status] ?? 3) - (statusRank[right.status] ?? 3)
-        || new Date(right.assignedAt || right.createdAt || 0) - new Date(left.assignedAt || left.createdAt || 0);
-    })[0] || null;
+
+    let enrollment = null;
+    if (targetProgramId) {
+      enrollment = studentEnrollments.find(
+        (e) => String(e.programId?._id || e.programId) === targetProgramId
+      ) || null;
+    }
+    if (!enrollment) {
+      enrollment = studentEnrollments.sort((left, right) => {
+        const statusRank = { Active: 0, Completed: 1, Paused: 2 };
+        return (statusRank[left.status] ?? 3) - (statusRank[right.status] ?? 3)
+          || new Date(right.assignedAt || right.createdAt || 0) - new Date(left.assignedAt || left.createdAt || 0);
+      })[0] || null;
+    }
+
+    // Determine authoritative payment status for this student & enrollment
+    const enrollmentProgId = enrollment?.programId?._id || enrollment?.programId;
+    let paymentStatus = "Free";
+    const paymentIdentifiers = [
+      student._id ? { studentId: student._id } : null,
+      student.userId ? { userId: student.userId } : null,
+      user?._id ? { userId: user._id } : null,
+    ].filter(Boolean);
+
+    let paymentRecord = null;
+    if (paymentIdentifiers.length && enrollmentProgId) {
+      paymentRecord = await Payment.findOne({
+        $or: paymentIdentifiers,
+        programId: enrollmentProgId,
+      }).sort({ createdAt: -1 }).lean();
+    }
+    if (!paymentRecord && paymentIdentifiers.length) {
+      paymentRecord = await Payment.findOne({
+        $or: paymentIdentifiers,
+      }).sort({ createdAt: -1 }).lean();
+    }
+
+    if (enrollment?.accessTier === "Member" || enrollment?.pricingPlanSnapshot?.price > 0) {
+      if (paymentRecord) {
+        paymentStatus = ["captured", "approved"].includes(paymentRecord.status)
+          ? "Paid"
+          : ["pending", "created"].includes(paymentRecord.status)
+            ? "Pending"
+            : "Failed";
+      } else {
+        paymentStatus = enrollment?.paymentStatus || "Paid";
+      }
+    } else if (enrollment?.paymentStatus) {
+      paymentStatus = enrollment.paymentStatus;
+    } else if (enrollment?.accessTier === "Free" || enrollment?.pricingType === "Free") {
+      paymentStatus = "Free";
+    } else if (paymentRecord) {
+      paymentStatus = ["captured", "approved"].includes(paymentRecord.status)
+        ? "Paid"
+        : ["pending", "created"].includes(paymentRecord.status)
+          ? "Pending"
+          : "Failed";
+    }
+
+    const enrollmentStartDate = enrollment?.batchId?.startDate
+      || enrollment?.individualStartDate
+      || enrollment?.assignedAt
+      || null;
+
     const unifiedProfile = buildUnifiedProfile({ user, student, enrollment });
     const score =
       submissions.length > 0
@@ -3611,19 +3671,27 @@ export const getStudentDetailAdmin = async (req, res) => {
         email: student.email,
         college: user?.collegeName || student.collegeId?.name || "Other",
         batch: enrollment?.batchId?.name || "No Batch (Individual)",
+        batchId: enrollment?.batchId?._id || enrollment?.batchId || null,
         track: student.primaryTrack || "General Track",
         programSelection: enrollment?.programId?.programType || "",
         programId: enrollment?.programId?._id || enrollment?.programId || null,
         programName: enrollment?.programId?.name || null,
         programType: enrollment?.programId?.programType || null,
+        payment: paymentStatus,
+        paymentStatus,
+        access: enrollment?.accessTier === "Member" || paymentStatus === "Paid" ? "Paid" : "Free",
+        enrollmentStartDate,
+        scheduleStartDate: enrollmentStartDate,
         profile: unifiedProfile,
         accuracy: score,
         score,
         streak: student.streak || 0,
         testsTaken: submissions.length,
         lastActive: submissions[0]?.submittedAt || student.lastActiveAt,
-        status: student.status,
+        status: enrollment?.status || student.status || "Active",
+        programStatus: enrollment?.status || student.status || "Active",
         joined: student.createdAt,
+        createdAt: student.createdAt,
         userProfile: {
           id: user?._id || student.userId || student._id,
           name: user?.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : student.name,

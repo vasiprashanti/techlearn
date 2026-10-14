@@ -13,6 +13,7 @@ import DailyTaskAttempt from "../../models/DailyTaskAttempt.js";
 import DailyChallengeAttempt from "../../models/DailyChallengeAttempt.js";
 import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import Blueprint from "../../models/Blueprint.js";
+import Payment from "../../models/Payment.js";
 import Questions from "../../models/Questions.js";
 const Question = Questions;
 import Role from "../../models/Role.js";
@@ -24,6 +25,7 @@ import {
   syncPrimaryProgramPointers,
   upsertProgramEnrollment,
 } from "../../utils/programEnrollment.js";
+import { invalidateGlobalStudentsCache } from "./adminEntityController.js";
 import { expireAllActiveBatches } from "../../utils/batchLifecycle.js";
 import { validateAndNormalizeProgramPhases } from "../../utils/programPhases.js";
 import { deleteProgramPerformance } from "../../services/programPerformanceService.js";
@@ -441,6 +443,24 @@ const buildProgramMonitoringData = async ({ program, enrollments, students }) =>
     ? { $and: [challengeIdentityQuery, { $or: scopeQuery }] }
     : null;
 
+  const allPaymentIds = [
+    ...currentStudentIds.map((id) => ({ studentId: id })),
+    ...uniqueUserIds.map((id) => ({ userId: id })),
+  ];
+  const programPayments = allPaymentIds.length
+    ? await Payment.find({ $or: allPaymentIds, programId: program._id }).sort({ createdAt: -1 }).lean()
+    : [];
+
+  const paymentByEntityKey = new Map();
+  programPayments.forEach((p) => {
+    if (p.studentId && !paymentByEntityKey.has(String(p.studentId))) {
+      paymentByEntityKey.set(String(p.studentId), p);
+    }
+    if (p.userId && !paymentByEntityKey.has(String(p.userId))) {
+      paymentByEntityKey.set(String(p.userId), p);
+    }
+  });
+
   const [taskAttempts, challengeAttempts, codingSubmissions] = await Promise.all([
     taskQuery
       ? DailyTaskAttempt.find(taskQuery).select("userId dayNumber tasksProgress updatedAt createdAt").lean()
@@ -559,16 +579,47 @@ const buildProgramMonitoringData = async ({ program, enrollments, students }) =>
       }),
     };
 
+    const studentPayment = (studentId && paymentByEntityKey.get(studentId))
+      || (userId && paymentByEntityKey.get(userId))
+      || null;
+
+    let computedPaymentStatus = "Free";
+    if (enrollment?.accessTier === "Member" || enrollment?.pricingPlanSnapshot?.price > 0) {
+      if (studentPayment) {
+        computedPaymentStatus = ["captured", "approved"].includes(studentPayment.status)
+          ? "Paid"
+          : ["pending", "created"].includes(studentPayment.status)
+            ? "Pending"
+            : "Failed";
+      } else {
+        computedPaymentStatus = enrollment?.paymentStatus || "Paid";
+      }
+    } else if (enrollment?.paymentStatus) {
+      computedPaymentStatus = enrollment.paymentStatus;
+    } else if (enrollment?.accessTier === "Free" || program.pricingType === "Free") {
+      computedPaymentStatus = "Free";
+    } else if (studentPayment) {
+      computedPaymentStatus = ["captured", "approved"].includes(studentPayment.status)
+        ? "Paid"
+        : ["pending", "created"].includes(studentPayment.status)
+          ? "Pending"
+          : "Failed";
+    }
+
+    const isMemberOrPaid = computedPaymentStatus === "Paid" || enrollment?.accessTier === "Member";
+
     return {
       ...student,
       enrollment,
+      payment: computedPaymentStatus,
+      paymentStatus: computedPaymentStatus,
       programStartDate,
       programExpiryDate,
       scheduleStartDate,
       scheduleExpiryDate,
       programDayNumber: dayNumber,
       programStatus: status,
-      programAccess: enrollment?.accessTier === "Member" || program.pricingType === "Paid" ? "Paid" : "Trial",
+      programAccess: isMemberOrPaid ? "Paid" : "Trial",
       programPlan: program.planName || program.plan || null,
       completionAccuracy,
       activeToday: Boolean(taskToday || challengeToday),
@@ -1599,6 +1650,8 @@ export const attachEntities = async (req, res) => {
         .populate(config.fieldKey, config.selectFields)
         .lean();
 
+      invalidateGlobalStudentsCache();
+
       return res.json({
         success: true,
         message: `Successfully enrolled ${existingEntityIds.length} student${existingEntityIds.length === 1 ? "" : "s"} ${selectedBatch ? "on the selected batch schedule" : "on individual program schedules"}.`,
@@ -1628,6 +1681,8 @@ export const attachEntities = async (req, res) => {
       )
         .populate(config.fieldKey, config.selectFields)
         .lean();
+
+      invalidateGlobalStudentsCache();
 
       return res.json({
         success: true,
@@ -1797,6 +1852,10 @@ export const detachEntity = async (req, res) => {
 
     if (["courses", "track-templates"].includes(entityType)) {
       await syncProgramCompatibilityProjections({ programId });
+    }
+
+    if (["students", "batches"].includes(entityType)) {
+      invalidateGlobalStudentsCache();
     }
 
     res.json({

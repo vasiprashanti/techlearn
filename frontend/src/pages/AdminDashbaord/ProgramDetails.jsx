@@ -176,9 +176,14 @@ const buildStudentTableRow = (student, program) => {
     || (started && totalDays
       ? new Date(startOfDay(started).getTime() + ((totalDays - 1) * DAY_IN_MILLISECONDS))
       : null);
-  const isPaid = student?.programAccess
-    ? student.programAccess === 'Paid'
-    : enrollment?.accessTier === 'Member' || program?.pricingType === 'Paid';
+  const paymentStatus = student?.paymentStatus
+    || student?.payment
+    || enrollment?.paymentStatus
+    || (enrollment?.accessTier === 'Member' ? 'Paid' : (program?.pricingType === 'Free' ? 'Free' : 'Pending'));
+  const isPaid = paymentStatus === 'Paid'
+    || student?.programAccess === 'Paid'
+    || enrollment?.accessTier === 'Member';
+
   const paidAmount = Number(
     enrollment?.pricingPlanSnapshot?.price ??
     enrollment?.pricingPlan?.price ??
@@ -200,8 +205,6 @@ const buildStudentTableRow = (student, program) => {
   const planBase = planTitle || (isPaid
     ? 'Paid'
     : (totalDays ? `${totalDays}-Day Trial` : 'Free Access'));
-
-  const paymentStatus = enrollment?.paymentStatus || (isPaid ? 'Paid' : (program?.pricingType === 'Free' ? 'Free' : 'Pending'));
 
   return {
     access: isPaid ? 'Paid' : 'Trial',
@@ -1099,8 +1102,8 @@ const ProgramOverviewPanel = ({ program, onProgramUpdated }) => {
   const [otherRoleDraft, setOtherRoleDraft] = useState('');
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
 
-  const programFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-slate-50 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35 shadow-xs';
-  const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
+  const programFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-lg border border-black/10 dark:border-white/15 bg-white dark:bg-[#070e38] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-blue-500/40 shadow-xs';
+  const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#070e38] dark:text-white';
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -1363,12 +1366,12 @@ const ProgramOverviewPanel = ({ program, onProgramUpdated }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="admin-micro-label text-black/45 dark:text-white/45">Program Type*</label>
-            <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs">
+            <div className="relative mt-1 rounded-lg border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#070e38] shadow-xs">
               <select
                 name="programType"
                 value={formData.programType}
                 onChange={handleFormChange}
-                className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-lg border-0 bg-transparent text-slate-800 dark:text-white outline-none"
               >
                 {PROGRAM_TYPES.map((t) => (
                   <option key={t} className={dropdownOptionClass} value={t}>{t}</option>
@@ -1380,12 +1383,12 @@ const ProgramOverviewPanel = ({ program, onProgramUpdated }) => {
 
           <div>
             <label className="admin-micro-label text-black/45 dark:text-white/45">Status*</label>
-            <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs">
+            <div className="relative mt-1 rounded-lg border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#070e38] shadow-xs">
               <select
                 name="status"
                 value={formData.status}
                 onChange={handleFormChange}
-                className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-lg border-0 bg-transparent text-slate-800 dark:text-white outline-none"
               >
                 <option className={dropdownOptionClass} value="Published">Published</option>
                 <option className={dropdownOptionClass} value="Draft">Draft</option>
@@ -1415,12 +1418,12 @@ const ProgramOverviewPanel = ({ program, onProgramUpdated }) => {
         </div>
         <div>
           <label className="admin-micro-label text-black/45 dark:text-white/45">Duration Unit*</label>
-          <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs">
+          <div className="relative mt-1 rounded-lg border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#070e38] shadow-xs">
             <select
               name="durationUnit"
               value={formData.durationUnit}
               onChange={handleFormChange}
-              className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+              className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-lg border-0 bg-transparent text-slate-800 dark:text-white outline-none"
             >
               <option className={dropdownOptionClass} value="Days">Days</option>
               <option className={dropdownOptionClass} value="Weeks">Weeks</option>
@@ -1435,12 +1438,12 @@ const ProgramOverviewPanel = ({ program, onProgramUpdated }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="admin-micro-label text-black/45 dark:text-white/45">Availability*</label>
-            <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs">
+            <div className="relative mt-1 rounded-lg border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#070e38] shadow-xs">
               <select
                 name="availability"
                 value={formData.availability}
                 onChange={handleFormChange}
-                className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-lg border-0 bg-transparent text-slate-800 dark:text-white outline-none"
               >
                 <option className={dropdownOptionClass} value="Structured">Structured</option>
                 <option className={dropdownOptionClass} value="Trainer-Led">Trainer-Led</option>
@@ -1450,13 +1453,13 @@ const ProgramOverviewPanel = ({ program, onProgramUpdated }) => {
             </div>
           </div>
           <div>
-            <label className="admin-micro-label text-black/45 dark:text-white/45">Pricing*</label>
-            <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs">
+            <label className="admin-micro-label text-black/45 dark:text-white/45">Pricing Type*</label>
+            <div className="relative mt-1 rounded-lg border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#070e38] shadow-xs">
               <select
                 name="pricingType"
                 value={formData.pricingType}
                 onChange={handleFormChange}
-                className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-lg border-0 bg-transparent text-slate-800 dark:text-white outline-none"
               >
                 <option className={dropdownOptionClass} value="Free">Free</option>
                 <option className={dropdownOptionClass} value="Paid">Paid</option>
@@ -1565,12 +1568,12 @@ const ProgramOverviewPanel = ({ program, onProgramUpdated }) => {
       {/* ── VISIBILITY ── */}
       <div>
         <label className="admin-micro-label text-black/45 dark:text-white/45">Visibility*</label>
-        <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs">
+        <div className="relative mt-1 rounded-lg border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#070e38] shadow-xs">
           <select
             name="visibility"
             value={formData.visibility}
             onChange={handleFormChange}
-            className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+            className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-lg border-0 bg-transparent text-slate-800 dark:text-white outline-none"
           >
             <option className={dropdownOptionClass} value="Public">Public</option>
             <option className={dropdownOptionClass} value="Private">Private</option>
@@ -1586,7 +1589,7 @@ const ProgramOverviewPanel = ({ program, onProgramUpdated }) => {
           <button
             type="button"
             onClick={() => setSkillDropdownOpen((prev) => !prev)}
-            className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs text-slate-800 dark:text-white"
+            className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#070e38] shadow-xs text-slate-800 dark:text-white"
           >
             <span className="truncate">
               {formData.skillTags.length === 0
@@ -1599,7 +1602,7 @@ const ProgramOverviewPanel = ({ program, onProgramUpdated }) => {
           {skillDropdownOpen && (
             <div
               className="absolute left-0 right-0 top-full mt-1.5 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-3 shadow-2xl space-y-3"
-              style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
+              style={{ backgroundColor: isDarkMode ? '#070e38' : '#ffffff' }}
             >
               {formData.skillTags.length > 0 && (
                 <div>
@@ -1713,7 +1716,7 @@ const ProgramOverviewPanel = ({ program, onProgramUpdated }) => {
               <button
                 type="button"
                 onClick={() => setCompanyDropdownOpen((prev) => !prev)}
-                className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs text-slate-800 dark:text-white"
+                className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#070e38] shadow-xs text-slate-800 dark:text-white"
               >
                 <span className="truncate">
                   {formData.targetCompanies.length === 0
@@ -1726,7 +1729,7 @@ const ProgramOverviewPanel = ({ program, onProgramUpdated }) => {
               {companyDropdownOpen && (
                 <div
                   className="absolute left-0 right-0 top-full mt-1.5 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-3 shadow-2xl space-y-3"
-                  style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
+                  style={{ backgroundColor: isDarkMode ? '#070e38' : '#ffffff' }}
                 >
                   {formData.targetCompanies.length > 0 && (
                     <div>
@@ -1837,7 +1840,7 @@ const ProgramOverviewPanel = ({ program, onProgramUpdated }) => {
               <button
                 type="button"
                 onClick={() => setRoleDropdownOpen((prev) => !prev)}
-                className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-xs text-slate-800 dark:text-white"
+                className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#070e38] shadow-xs text-slate-800 dark:text-white"
               >
                 <span className="truncate">
                   {(Array.isArray(formData.targetRoles) ? formData.targetRoles : []).length === 0
@@ -1850,7 +1853,7 @@ const ProgramOverviewPanel = ({ program, onProgramUpdated }) => {
               {roleDropdownOpen && (
                 <div
                   className="absolute left-0 right-0 top-full mt-1.5 z-[150] rounded-xl border border-black/10 dark:border-white/15 p-3 shadow-2xl space-y-3"
-                  style={{ backgroundColor: isDarkMode ? '#0f1f43' : '#ffffff' }}
+                  style={{ backgroundColor: isDarkMode ? '#070e38' : '#ffffff' }}
                 >
                   {((Array.isArray(formData.targetRoles) ? formData.targetRoles : [])).length > 0 && (
                     <div>
@@ -2144,6 +2147,14 @@ export default function ProgramDetails() {
 
   useEffect(() => {
     fetchProgramDetail();
+
+    const handleFocus = () => {
+      fetchProgramDetail();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [fetchProgramDetail]);
 
   useEffect(() => {
@@ -2545,7 +2556,7 @@ export default function ProgramDetails() {
   if (loading) {
     return (
       <div className={`flex min-h-screen w-full font-sans antialiased ${isDarkMode ? 'dark' : 'light'}`}>
-        <div className={`fixed inset-0 -z-10 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
+        <div className={`fixed inset-0 -z-10 ${isDarkMode ? 'bg-[#050b2f]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
         <Sidebar />
         <div className="flex-1 flex justify-center items-center">
           <LoadingScreen />
@@ -2558,7 +2569,7 @@ export default function ProgramDetails() {
   if (error || !program) {
     return (
       <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
-        <div className={`fixed inset-0 -z-10 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
+        <div className={`fixed inset-0 -z-10 ${isDarkMode ? 'bg-[#050b2f]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
         <Sidebar />
         <div className="flex-1 lg:ml-64 flex flex-col justify-center items-center gap-4">
           <FiAlertCircle className="w-12 h-12 text-red-500" />
@@ -2622,8 +2633,8 @@ export default function ProgramDetails() {
 
   return (
     <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
-      {/* Background Gradient — identical to Programs / Question Bank */}
-      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
+      {/* Background — matching reference deep navy palette */}
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-[#050b2f]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
 
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
@@ -2633,10 +2644,12 @@ export default function ProgramDetails() {
           || selectedStudent?.enrollment?.batchId
           || selectedStudent?.batchId?._id
           || selectedStudent?.batchId}
+        programId={programId}
         studentBasic={selectedStudent}
         onClose={() => setSelectedStudent(null)}
         isOpen={Boolean(selectedStudent)}
         context="program"
+        onUpdate={fetchProgramDetail}
       />
 
       {startDateEdit && (
