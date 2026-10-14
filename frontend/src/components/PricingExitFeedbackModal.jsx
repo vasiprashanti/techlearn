@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Send, CheckCircle2 } from 'lucide-react';
 import API from '../api/client';
+import { useTheme } from '../context/ThemeContext';
 
 const FEEDBACK_OPTIONS = [
   "Feels Expensive",
@@ -13,6 +14,9 @@ const FEEDBACK_OPTIONS = [
 ];
 
 export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted, programId, selectedPlan }) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
   const [selectedReason, setSelectedReason] = useState('');
   const [customReason, setCustomReason] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,16 +39,18 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
         programId,
         selectedPlan,
         reason: selectedReason,
-        customReason: selectedReason === "Something else" ? customReason : "",
+        customReason: selectedReason === "Something else" ? customReason.trim() : "",
       });
       setSubmitted(true);
       setTimeout(() => {
         setSubmitted(false);
-        onSubmitted ? onSubmitted() : onClose();
+        if (onSubmitted) onSubmitted();
+        else if (onClose) onClose();
       }, 1200);
     } catch (err) {
       console.error('Failed to submit pricing exit feedback:', err);
-      onSubmitted ? onSubmitted() : onClose();
+      if (onSubmitted) onSubmitted();
+      else if (onClose) onClose();
     } finally {
       setLoading(false);
     }
@@ -59,8 +65,9 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
           backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
           zIndex: 9999,
           display: 'flex',
           justifyContent: 'center',
@@ -72,18 +79,30 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
           @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Press+Start+2P&display=swap');
 
           .pe-modal-card {
-            background: #ffffff !important;
             width: 100% !important;
             max-width: 480px !important;
             border-radius: 24px !important;
-            padding: 24px !important;
-            box-shadow: 0 12px 32px rgba(0,0,0,0.3) !important;
+            padding: 26px !important;
             display: flex !important;
             flex-direction: column !important;
             position: relative !important;
             overflow: hidden !important;
-            color: #111111 !important;
             font-family: 'Poppins', sans-serif !important;
+            transition: background-color 0.2s ease, border-color 0.2s ease !important;
+          }
+
+          .pe-modal-card.dark {
+            background: #0a1238 !important;
+            color: #ffffff !important;
+            border: 1px solid #222e55 !important;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.55) !important;
+          }
+
+          .pe-modal-card.light {
+            background: #ffffff !important;
+            color: #111111 !important;
+            border: 1px solid rgba(4,16,61,0.12) !important;
+            box-shadow: 0 12px 32px rgba(4,16,61,0.15) !important;
           }
 
           .pe-pixel-heading {
@@ -91,44 +110,81 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
             font-size: 13px !important;
             font-weight: 400 !important;
             line-height: 1.5 !important;
-            color: #000000 !important;
             text-align: center !important;
             letter-spacing: 0.5px !important;
             margin-bottom: 6px !important;
           }
 
+          .dark .pe-pixel-heading {
+            color: #ffffff !important;
+          }
+
+          .light .pe-pixel-heading {
+            color: #050a3b !important;
+          }
+
           .pe-description {
             font-size: 12px !important;
-            color: #666666 !important;
             text-align: center !important;
             margin-bottom: 16px !important;
+          }
+
+          .dark .pe-description {
+            color: #c0cbe2 !important;
+          }
+
+          .light .pe-description {
+            color: #65708c !important;
           }
 
           .pe-option-card {
             display: flex !important;
             align-items: center !important;
             gap: 10px !important;
-            padding: 9px 12px !important;
+            padding: 10px 14px !important;
             border-radius: 12px !important;
-            border: 1.5px solid #e5e5ea !important;
-            background: #ffffff !important;
             cursor: pointer !important;
             transition: all 0.2s ease !important;
             font-size: 12px !important;
             font-weight: 500 !important;
-            color: #1c1c1e !important;
           }
 
-          .pe-option-card:hover {
-            border-color: #1c1c1e !important;
+          .dark .pe-option-card {
+            border: 1.5px solid #222e55 !important;
+            background: #060e2c !important;
+            color: #f0f6fc !important;
+          }
+
+          .dark .pe-option-card:hover {
+            border-color: #89c638 !important;
             transform: translateY(-1px) !important;
           }
 
-          .pe-option-card.selected {
-            border-color: #a3e635 !important;
-            background-color: #f7fee7 !important;
-            box-shadow: 0 0 0 1px #a3e635 !important;
+          .dark .pe-option-card.selected {
+            border-color: #89c638 !important;
+            background-color: rgba(137, 198, 56, 0.12) !important;
+            box-shadow: 0 0 0 1px #89c638 !important;
+            color: #ffffff !important;
             font-weight: 600 !important;
+          }
+
+          .light .pe-option-card {
+            border: 1.5px solid #e5e5ea !important;
+            background: #ffffff !important;
+            color: #1c1c1e !important;
+          }
+
+          .light .pe-option-card:hover {
+            border-color: #050a3b !important;
+            transform: translateY(-1px) !important;
+          }
+
+          .light .pe-option-card.selected {
+            border-color: #89c638 !important;
+            background-color: #f7fee7 !important;
+            box-shadow: 0 0 0 1px #89c638 !important;
+            font-weight: 600 !important;
+            color: #17230c !important;
           }
 
           .pe-btn-primary {
@@ -136,8 +192,8 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
             height: 44px !important;
             border-radius: 12px !important;
             border: none !important;
-            background-color: #a3e635 !important;
-            color: #000000 !important;
+            background-color: #89c638 !important;
+            color: #17230c !important;
             font-family: 'Press Start 2P', cursive !important;
             font-size: 9px !important;
             font-weight: 400 !important;
@@ -147,20 +203,24 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
             justify-content: center !important;
             gap: 6px !important;
             text-transform: uppercase !important;
-            transition: opacity 0.2s !important;
+            transition: all 0.2s ease !important;
           }
 
-          .pe-btn-primary:hover {
-            opacity: 0.92 !important;
+          .pe-btn-primary:hover:not(:disabled) {
+            background-color: #a2dc59 !important;
+            transform: translateY(-1px) !important;
+          }
+
+          .pe-btn-primary:disabled {
+            opacity: 0.5 !important;
+            cursor: not-allowed !important;
           }
 
           .pe-btn-secondary {
             width: 100% !important;
             height: 44px !important;
             border-radius: 12px !important;
-            border: none !important;
-            background-color: #f2f2f7 !important;
-            color: #1c1c1e !important;
+            border: 1px solid transparent !important;
             font-family: 'Press Start 2P', cursive !important;
             font-size: 9px !important;
             font-weight: 400 !important;
@@ -170,11 +230,29 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
             justify-content: center !important;
             gap: 6px !important;
             text-transform: uppercase !important;
-            transition: opacity 0.2s !important;
+            transition: all 0.2s ease !important;
           }
 
-          .pe-btn-secondary:hover {
-            opacity: 0.9 !important;
+          .dark .pe-btn-secondary {
+            background-color: #18224b !important;
+            color: #ffffff !important;
+            border-color: #2b396b !important;
+          }
+
+          .dark .pe-btn-secondary:hover {
+            background-color: #222e5e !important;
+            transform: translateY(-1px) !important;
+          }
+
+          .light .pe-btn-secondary {
+            background-color: #f2f2f7 !important;
+            color: #1c1c1e !important;
+            border-color: #e5e5ea !important;
+          }
+
+          .light .pe-btn-secondary:hover {
+            background-color: #e5e5ea !important;
+            transform: translateY(-1px) !important;
           }
         `}</style>
 
@@ -182,12 +260,25 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="pe-modal-card"
+          className={`pe-modal-card ${isDark ? 'dark' : 'light'}`}
         >
+          {/* Close button */}
+          <button
+            type="button"
+            onClick={onClose}
+            className={`absolute top-4 right-4 p-1.5 rounded-full transition ${
+              isDark ? 'text-slate-400 hover:text-white hover:bg-white/10' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            <span className="sr-only">Close</span>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
 
           {submitted ? (
             <div className="py-8 text-center space-y-3">
-              <CheckCircle2 className="w-12 h-12 text-[#a3e635] mx-auto" />
+              <CheckCircle2 className="w-12 h-12 text-[#89c638] mx-auto animate-bounce" />
               <h3 className="pe-pixel-heading">Thank you!</h3>
               <p className="pe-description">Your feedback helps us make TechLearn better.</p>
             </div>
@@ -218,7 +309,7 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
                         value={option}
                         checked={isSelected}
                         onChange={() => setSelectedReason(option)}
-                        className="accent-[#a3e635]"
+                        className="accent-[#89c638] w-4 h-4 cursor-pointer"
                       />
                       <span>{option}</span>
                     </label>
@@ -233,12 +324,16 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
                     placeholder="Tell us more..."
                     value={customReason}
                     onChange={(e) => setCustomReason(e.target.value)}
-                    className="w-full rounded-xl border border-[#e5e5ea] bg-white p-3 text-xs text-[#1c1c1e] outline-none focus:border-[#1c1c1e]"
+                    className={`w-full rounded-xl border p-3 text-xs outline-none transition ${
+                      isDark
+                        ? 'border-[#222e55] bg-[#060e2c] text-white placeholder-slate-500 focus:border-[#89c638]'
+                        : 'border-[#e5e5ea] bg-white text-[#1c1c1e] placeholder-slate-400 focus:border-[#050a3b]'
+                    }`}
                   />
                 </div>
               )}
 
-              {/* Action Buttons styled matching Signup/Login */}
+              {/* Action Buttons: Back to Enroll and Submit & Continue */}
               <div className="pt-2 flex flex-col sm:flex-row items-center gap-2.5">
                 <button
                   type="button"
@@ -250,8 +345,8 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
 
                 <button
                   type="submit"
-                  disabled={!selectedReason || loading}
-                  className="pe-btn-primary disabled:opacity-50"
+                  disabled={!selectedReason || (selectedReason === "Something else" && !customReason.trim()) || loading}
+                  className="pe-btn-primary"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>{loading ? 'Submitting...' : 'Submit & Continue'}</span>
@@ -264,3 +359,4 @@ export default function PricingExitFeedbackModal({ isOpen, onClose, onSubmitted,
     </AnimatePresence>
   );
 }
+

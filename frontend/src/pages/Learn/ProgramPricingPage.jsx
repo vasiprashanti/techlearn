@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -8,6 +9,7 @@ import { programLearningAPI } from "../../services/programLearningApi";
 import { courseAPI } from "../../services/api";
 import { initiateRazorpayPayment } from "../../utils/razorpayCheckout";
 import LoadingScreen from "../../components/LoadingScreen";
+import PricingExitFeedbackModal from "../../components/PricingExitFeedbackModal";
 
 export default function ProgramPricingPage() {
   const { programId, courseId } = useParams();
@@ -25,6 +27,7 @@ export default function ProgramPricingPage() {
   const [error, setError] = useState("");
   const [payingPlanKey, setPayingPlanKey] = useState("");
   const [paymentError, setPaymentError] = useState("");
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   const effectiveProgramId = programId || location.state?.programId;
   const effectiveCourseId = courseId || location.state?.courseId;
@@ -76,7 +79,7 @@ export default function ProgramPricingPage() {
 
   if (loading) {
     return (
-      <div className={`min-h-[calc(100vh-64px)] flex items-center justify-center ${isDarkMode ? "bg-[#050a3b] text-white" : "bg-[#dff5ff] text-[#050a3b]"}`}>
+      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? "bg-[#050b2e] text-white" : "bg-[#dff5ff] text-[#050a3b]"}`}>
         <LoadingScreen showMessage={false} size={48} duration={800} />
       </div>
     );
@@ -84,7 +87,7 @@ export default function ProgramPricingPage() {
 
   if (error || !item) {
     return (
-      <div className={`min-h-[calc(100vh-64px)] flex flex-col items-center justify-center p-6 text-center ${isDarkMode ? "bg-[#050a3b] text-white" : "bg-[#dff5ff] text-[#050a3b]"}`}>
+      <div className={`min-h-screen flex flex-col items-center justify-center p-6 text-center ${isDarkMode ? "bg-[#050b2e] text-white" : "bg-[#dff5ff] text-[#050a3b]"}`}>
         <h1 className="text-2xl font-bold mb-3">{error || "Pricing Not Found"}</h1>
         <button
           onClick={() => navigate(-1)}
@@ -149,7 +152,6 @@ export default function ProgramPricingPage() {
         const isFeatured = idx === 1 || isAnnual(plan);
         const periodText = isMonthly(plan) ? "per month" : isAnnual(plan) ? "per year" : (plan.billingPeriod ? `per ${plan.billingPeriod.toLowerCase()}` : "one-time");
 
-        // Use custom benefits if 4 or more configured; otherwise use the rich default set from the HTML reference
         const features = (Array.isArray(plan.benefits) && plan.benefits.length >= 4)
           ? plan.benefits
           : (isFeatured ? defaultFlexibleBenefits : defaultFocusedBenefits);
@@ -261,110 +263,240 @@ export default function ProgramPricingPage() {
     });
   };
 
+  const targetProgramDetailsUrl = itemType === "program" && item?._id
+    ? `/learn/programs/${item._id}`
+    : effectiveProgramId
+    ? `/learn/programs/${effectiveProgramId}`
+    : effectiveCourseId
+    ? `/learn/courses/${effectiveCourseId}`
+    : "/learn";
+
+  const handleBackToProgram = () => {
+    navigate(targetProgramDetailsUrl);
+  };
+
+  const handleBackClick = () => {
+    setIsFeedbackModalOpen(true);
+  };
+
   return (
-    <div className={`w-full min-h-[calc(100vh-64px)] flex flex-col items-center font-sans transition-colors duration-300 ${
-      isDarkMode ? "dark bg-[#03092b] text-[#f0f6fc]" : "light bg-[#dff5ff] text-[#050a3b]"
-    }`}>
+    <div
+      className={`min-h-screen w-full flex flex-col font-sans transition-colors duration-300 ${
+        isDarkMode ? "bg-[#050b2e] text-white" : "bg-[#dff5ff] text-[#050a3b]"
+      }`}
+      style={{
+        "--light-bg": isDarkMode ? "#050b2e" : "#dff5ff",
+        "--card-navy": isDarkMode ? "#0a1238" : "#ffffff",
+        "--featured-bg": isDarkMode ? "#0a1238" : "#050a3b",
+        "--border-color": isDarkMode ? "#222e55" : "rgba(4,16,61,.13)",
+        "--muted-color": isDarkMode ? "#c0cbe2" : "#65708c",
+        "--green-color": isDarkMode ? "#89c638" : "#b5e959",
+      }}
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap');
 
-        .programpricing-pixel {
+        .pp-pixel {
           font-family: "Press Start 2P", monospace;
         }
 
-        .price-card-hover {
+        .pp-price-card {
+          position: relative;
+          min-width: 0;
+          padding: 27px;
+          border-radius: 18px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
           transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
         }
-        .price-card-hover:hover {
+
+        .pp-price-card:hover {
           transform: translateY(-3px);
-          box-shadow: 0 16px 40px rgba(4,16,61,.06);
+          box-shadow: 0 16px 40px ${isDarkMode ? "rgba(0,0,0,.25)" : "rgba(4,16,61,.06)"};
         }
 
-        .feature-item::before {
+        .pp-check::before {
           content: "";
           flex: 0 0 14px;
           width: 14px;
           height: 14px;
           margin-top: 1px;
           border-radius: 50%;
-          background-color: #b5e959;
+          background-color: ${isDarkMode ? "#89c638" : "#b5e959"};
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.2 6.7 10.8 12 5.5' fill='none' stroke='%23050a3b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
           background-size: 10px 10px;
           background-position: center;
           background-repeat: no-repeat;
           display: inline-block;
         }
+
+        @media (max-width: 700px) {
+          .pp-price-card {
+            padding: 22px 19px;
+            border-radius: 15px;
+          }
+        }
       `}</style>
 
+      {/* Back Button Container */}
+      <div className="w-full max-w-[1000px] mx-auto px-4 sm:px-6 pt-6 sm:pt-8 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={handleBackClick}
+          className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+            isDarkMode
+              ? "bg-[#0a1238] border-[#222e55] text-[#c0cbe2] hover:text-white hover:border-[#89c638]"
+              : "bg-white border-[rgba(4,16,61,.13)] text-[#65708c] hover:text-[#050a3b] hover:border-[#050a3b]"
+          }`}
+          title="Back to Program Details"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Program</span>
+        </button>
+      </div>
+
       {/* Main Pricing Section */}
-      <main className="w-full max-w-[1000px] mx-auto px-[14px] pt-[clamp(65px,6.5vw,96px)] pb-[clamp(40px,4.5vw,68px)] flex flex-col">
+      <main className="flex-1 w-full max-w-[1000px] mx-auto px-[14px] pt-4 sm:pt-6 pb-[clamp(52px,5.6vw,74px)] flex flex-col">
         {/* Header from programpricing.html */}
-        <header className="text-center mx-auto mb-7 sm:mb-9 max-w-[610px]">
-          <div className="programpricing-pixel text-[7px] leading-[1.8] tracking-[.3px] uppercase opacity-50 mb-3.5 sm:mb-4 text-[rgba(4,16,61,.48)] dark:text-[#bceaff]">
+        <header className="text-center mx-auto mb-[38px] max-w-[610px]">
+          <div
+            className={`pp-pixel text-[7px] leading-[1.8] tracking-[.3px] uppercase mb-[17px] ${
+              isDarkMode ? "text-white" : "text-[rgba(4,16,61,.48)]"
+            }`}
+          >
             CHOOSE YOUR PLAN
           </div>
 
-          <h1 className="text-[28px] sm:text-[38px] lg:text-[44px] font-extrabold tracking-[-.065em] text-[#050a3b] dark:text-white leading-[1.08] m-0">
+          <h1
+            className={`text-[clamp(28px,5vw,44px)] font-extrabold tracking-[-.065em] leading-[1.08] m-0 ${
+              isDarkMode ? "text-white" : "text-[#050a3b]"
+            }`}
+          >
             One <i>Program.</i> {cards.length > 1 ? "Two ways" : "One goal"}
           </h1>
 
-          <p className="mt-2.5 text-[12px] leading-[1.7] text-[#65708c] dark:text-slate-300 max-w-[500px] mx-auto">
-            Choose a focused timeline or give yourself more room to practise, improve, and build skills.
+          <p
+            className={`mt-[10px] text-[12px] leading-[1.7] max-w-[990px] mx-auto ${
+              isDarkMode ? "text-[#c0cbe2]" : "text-[#65708c]"
+            }`}
+          >
+            Choose a focused timeline or give yourself more room to practise,
+            improve, and build skills.
           </p>
 
           {paymentError && (
-            <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-600 dark:text-red-300">
+            <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-600 dark:text-red-300">
               {paymentError}
             </div>
           )}
         </header>
 
-        {/* Pricing Cards Grid matching exact programpricing.html dimensions */}
-        <div className={`grid gap-4 mx-auto items-stretch w-full ${
-          cards.length === 1
-            ? "grid-cols-1 max-w-[400px]"
-            : "grid-cols-1 md:grid-cols-2 max-w-[800px]"
-        }`}>
+        {/* Pricing Cards Grid */}
+        <div
+          className={`grid gap-4 mx-auto items-stretch w-full ${
+            cards.length === 1
+              ? "grid-cols-1 max-w-[400px]"
+              : "grid-cols-1 md:grid-cols-2 max-w-[800px]"
+          }`}
+        >
           {cards.map((card, idx) => {
             const isPaying = payingPlanKey === (card.planKey || "course");
-            const isFeatured = card.isFeatured;
+            const isRightCard = idx === 1 || card.isFeatured;
+
+            // Card styling
+            // Dark mode:
+            // Left Card (Focused/Blur Card): bg #0a1238, border #222e55, text white
+            // Right Card (Flexible): bg #0a1238, border #222e55, text white
+            // Light mode:
+            // Left Card: bg white, border rgba(4,16,61,.13), text #050a3b
+            // Right Card (Featured): bg #050a3b, border #050a3b, text white
+            const cardBg = isDarkMode
+              ? "bg-[#0a1238] border-[#222e55] text-white"
+              : isRightCard
+              ? "bg-[#050a3b] border-[#050a3b] text-white"
+              : "bg-white border-[rgba(4,16,61,.13)] text-[#050a3b]";
+
+            // Button styling according to explicit instructions:
+            // "keep the right side card's button color as lime in Dark Mode and white button for Blur Card in Dark mode"
+            // In Light Mode:
+            // Left Card button: navy bg (#050a3b) with white text
+            // Right Card button: lime bg (#b5e959) with navy text (#050a3b)
+            let btnStyle = "";
+            if (isDarkMode) {
+              if (isRightCard) {
+                // Right side card: lime button
+                btnStyle = "bg-[#89c638] hover:bg-[#a2dc59] text-[#17230c] border border-[#89c638]";
+              } else {
+                // Left side (Blur Card): white button
+                btnStyle = "bg-white hover:bg-slate-100 text-[#050b2e] border border-white";
+              }
+            } else {
+              if (isRightCard) {
+                btnStyle = "bg-[#b5e959] hover:bg-[#c8f477] text-[#050a3b] border border-[#b5e959]";
+              } else {
+                btnStyle = "bg-[#050a3b] hover:bg-[#111b58] text-white border border-[#050a3b]";
+              }
+            }
 
             return (
               <article
                 key={card.planKey || idx}
-                className={`price-card-hover relative min-w-0 p-[27px] rounded-[18px] border flex flex-col justify-between ${
-                  isFeatured
-                    ? "bg-[#050a3b] text-white border-[#050a3b] dark:border-white/20"
-                    : "bg-white dark:bg-[#071330] text-[#050a3b] dark:text-white border-[rgba(4,16,61,.13)] dark:border-white/10"
-                }`}
+                className={`pp-price-card border ${cardBg}`}
               >
                 <div>
-                  {/* Popular / Feature Pill */}
+                  {/* Badge for right card */}
                   {card.badge && (
-                    <div className="popular absolute top-[18px] right-[18px] px-[8px] py-[6px] rounded-full bg-[#b5e959] text-[#050a3b] programpricing-pixel text-[5px] uppercase tracking-wider font-bold leading-[1.6]">
+                    <div
+                      className="popular absolute top-[18px] right-[18px] px-[8px] py-[6px] rounded-full pp-pixel text-[5px] uppercase tracking-wider font-bold leading-[1.6]"
+                      style={{
+                        backgroundColor: isDarkMode ? "#89c638" : "#b5e959",
+                        color: isDarkMode ? "#17230c" : "#050a3b",
+                      }}
+                    >
                       {card.badge}
                     </div>
                   )}
 
                   {/* Price Label */}
-                  <div className="price-label programpricing-pixel text-[7px] tracking-[.2px] leading-[1.8] uppercase opacity-75 mb-[19px]">
+                  <div
+                    className={`pp-pixel text-[7px] tracking-[.2px] leading-[1.8] uppercase mb-[19px] ${
+                      isDarkMode
+                        ? "text-white"
+                        : isRightCard
+                        ? "text-white"
+                        : "text-[#050a3b]"
+                    }`}
+                  >
                     {card.label}
                   </div>
 
                   {/* Price */}
-                  <div className="price flex items-baseline flex-wrap gap-[6px] text-[34px] sm:text-[42px] lg:text-[45px] font-extrabold tracking-[-.065em] leading-[1.05]">
+                  <div className="flex items-baseline flex-wrap gap-[6px] text-[clamp(34px,4vw,45px)] font-extrabold tracking-[-.065em] leading-[1.05]">
                     ₹{card.price.toLocaleString("en-IN")}{" "}
-                    <small className={`text-[10px] font-medium tracking-normal ${
-                      isFeatured ? "text-white/65" : "text-[#65708c] dark:text-slate-400"
-                    }`}>
+                    <small
+                      className={`text-[10px] font-medium tracking-normal ${
+                        isDarkMode
+                          ? "text-[#c0cbe2]"
+                          : isRightCard
+                          ? "text-white/65"
+                          : "text-[#65708c]"
+                      }`}
+                    >
                       {card.periodText}
                     </small>
                   </div>
 
                   {/* Description */}
-                  <p className={`price-description min-h-[50px] mt-[14px] text-[11px] leading-[1.65] ${
-                    isFeatured ? "text-white/75" : "text-[#65708c] dark:text-slate-400"
-                  }`}>
+                  <p
+                    className={`min-h-[50px] mt-[14px] text-[11px] leading-[1.65] ${
+                      isDarkMode
+                        ? "text-[#c0cbe2]"
+                        : isRightCard
+                        ? "text-white/72"
+                        : "text-[#65708c]"
+                    }`}
+                  >
                     {card.description}
                   </p>
 
@@ -373,11 +505,7 @@ export default function ProgramPricingPage() {
                     type="button"
                     disabled={Boolean(payingPlanKey)}
                     onClick={() => handleSelectPlan(card)}
-                    className={`programpricing-pixel w-full min-h-[40px] mt-[20px] py-[10px] px-[14px] rounded-[8px] text-[10px] tracking-[1px] font-light transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
-                      isFeatured
-                        ? "bg-[#b5e959] hover:bg-[#c8f477] text-[#050a3b] border border-[#b5e959]"
-                        : "bg-[#050a3b] hover:bg-[#111b58] text-white border border-[#050a3b] dark:bg-[#3c83f6] dark:hover:bg-[#2563eb] dark:border-transparent"
-                    }`}
+                    className={`pp-pixel w-full min-h-[40px] mt-[20px] py-[10px] px-[14px] rounded-[8px] text-[10px] tracking-[1px] font-light transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${btnStyle}`}
                   >
                     <span>{isPaying ? "PROCESSING…" : "ENROLL NOW"}</span>
                     <span aria-hidden="true">→</span>
@@ -385,16 +513,24 @@ export default function ProgramPricingPage() {
                 </div>
 
                 {/* Features List */}
-                <ul className={`feature-list p-0 mt-[24px] list-none border-t ${
-                  isFeatured ? "border-white/15" : "border-[rgba(4,16,61,.10)] dark:border-white/10"
-                }`}>
+                <ul
+                  className={`p-0 mt-[24px] list-none border-t ${
+                    isDarkMode
+                      ? "border-white/15"
+                      : isRightCard
+                      ? "border-white/15"
+                      : "border-[rgba(4,16,61,.10)]"
+                  }`}
+                >
                   {card.features.map((feat, fIdx) => (
                     <li
                       key={fIdx}
-                      className={`feature-item flex items-start gap-[8px] py-[10px] border-b text-[10px] leading-[1.6] ${
-                        isFeatured
-                          ? "border-white/15 text-white/85"
-                          : "border-[rgba(4,16,61,.10)] dark:border-white/10 text-[#303c5d] dark:text-slate-300"
+                      className={`pp-check flex items-start gap-[8px] py-[10px] border-b text-[10px] leading-[1.6] ${
+                        isDarkMode
+                          ? "border-white/15 text-white"
+                          : isRightCard
+                          ? "border-white/15 text-white/86"
+                          : "border-[rgba(4,16,61,.10)] text-[#303c5d]"
                       }`}
                     >
                       <span>{feat}</span>
@@ -406,6 +542,21 @@ export default function ProgramPricingPage() {
           })}
         </div>
       </main>
+
+      {/* Pricing Exit Feedback Modal triggered upon clicking arrow back */}
+      <PricingExitFeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => {
+          setIsFeedbackModalOpen(false);
+          handleBackToProgram();
+        }}
+        onSubmitted={() => {
+          setIsFeedbackModalOpen(false);
+          handleBackToProgram();
+        }}
+        programId={item?._id}
+        selectedPlan={cards[0]?.planKey}
+      />
     </div>
   );
 }

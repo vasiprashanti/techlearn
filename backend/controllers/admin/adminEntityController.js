@@ -4325,7 +4325,7 @@ export const loadGlobalStudentsData = async () => {
 
   // Query all students with selective projections
   const allStudents = await Student.find()
-    .select("name email rollNo createdAt status collegeId batchId programId lastActiveAt learningGoal targetRole otherTargetRole targetCompanies testsTaken programSelection userId")
+    .select("name email rollNo createdAt updatedAt status collegeId batchId programId lastActiveAt learningGoal targetRole otherTargetRole targetCompanies testsTaken programSelection userId")
     .populate("collegeId", "name")
     .populate("batchId", "name startDate expiryDate status")
     .populate("programId", "name programType")
@@ -4530,6 +4530,7 @@ export const loadGlobalStudentsData = async () => {
       email: student.email,
       studentIdStr: student.rollNo || String(student._id).slice(-6),
       createdAt: student.createdAt,
+      updatedAt: student.updatedAt || student.createdAt,
       college: collegeName,
       access: accessType,
       payment: primaryPaymentStatus,
@@ -4632,8 +4633,49 @@ export const getGlobalStudentsAdmin = async (req, res) => {
       return true;
     });
 
-    // Apply Month Filter
-    if (month && month !== "all") {
+    // Apply Enrolled Date Filter (supports datePreset or legacy month)
+    const datePreset = String(req.query.datePreset || req.query.dateRange || "").toLowerCase();
+    const startDateParam = req.query.startDate;
+    const endDateParam = req.query.endDate;
+
+    if (datePreset === "today") {
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+      tabStudents = tabStudents.filter((s) => {
+        const d = new Date(s.enrolledOn || s.latestEnrollmentAt || s.createdAt);
+        return !Number.isNaN(d.getTime()) && d >= startOfToday && d <= endOfToday;
+      });
+    } else if (datePreset === "7days" || datePreset === "last7days") {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+      tabStudents = tabStudents.filter((s) => {
+        const d = new Date(s.enrolledOn || s.latestEnrollmentAt || s.createdAt);
+        return !Number.isNaN(d.getTime()) && d >= sevenDaysAgo;
+      });
+    } else if (datePreset === "30days" || datePreset === "last30days") {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      thirtyDaysAgo.setHours(0, 0, 0, 0);
+      tabStudents = tabStudents.filter((s) => {
+        const d = new Date(s.enrolledOn || s.latestEnrollmentAt || s.createdAt);
+        return !Number.isNaN(d.getTime()) && d >= thirtyDaysAgo;
+      });
+    } else if (datePreset === "custom" && (startDateParam || endDateParam)) {
+      const start = startDateParam ? new Date(startDateParam) : null;
+      if (start) start.setHours(0, 0, 0, 0);
+      const end = endDateParam ? new Date(endDateParam) : null;
+      if (end) end.setHours(23, 59, 59, 999);
+      tabStudents = tabStudents.filter((s) => {
+        const d = new Date(s.enrolledOn || s.latestEnrollmentAt || s.createdAt);
+        if (Number.isNaN(d.getTime())) return false;
+        if (start && d < start) return false;
+        if (end && d > end) return false;
+        return true;
+      });
+    } else if (month && month !== "all") {
       tabStudents = tabStudents.filter((s) => {
         if (!s.enrolledOn && !s.createdAt) return false;
         const d = new Date(s.enrolledOn || s.createdAt);
@@ -4643,23 +4685,45 @@ export const getGlobalStudentsAdmin = async (req, res) => {
       });
     }
 
-    // Apply Payment / Access Filter
-    const effectivePaymentFilter = String(req.query.payment || req.query.access || "all").toLowerCase();
-    if (effectivePaymentFilter !== "all") {
+    // Apply Payment Status Filter
+    // Options: all | paid | pending | failed | free
+    const paymentFilter = String(req.query.payment || req.query.paymentStatus || req.query.access || "all").toLowerCase();
+    if (paymentFilter !== "all") {
       tabStudents = tabStudents.filter((s) => {
-        const pay = String(s.payment || s.access || "").toLowerCase();
-        return pay === effectivePaymentFilter || (effectivePaymentFilter === "college" && s.access.toLowerCase() === "college");
+        const pStatus = String(s.paymentStatus || s.payment || "").toLowerCase();
+        const access = String(s.access || "").toLowerCase();
+        if (paymentFilter === "free" || paymentFilter === "free/batch" || paymentFilter === "free/batch enrollment") {
+          return pStatus === "free" || access === "free" || access === "college";
+        }
+        return pStatus === paymentFilter;
       });
     }
 
-    // Apply Status Filter
-    if (statusFilter !== "all") {
-      tabStudents = tabStudents.filter((s) => s.status.toLowerCase() === statusFilter);
+    // Apply Program Status Filter: All, Active, Completed, Paused
+    const programStatusFilter = String(req.query.programStatus || req.query.status || "all").toLowerCase();
+    if (programStatusFilter !== "all") {
+      tabStudents = tabStudents.filter((s) => {
+        const progStatus = String(s.programStatus || s.enrollmentStatus || s.activeEnrollmentStatus || s.status || "").toLowerCase();
+        return progStatus === programStatusFilter;
+      });
+    }
+
+    // Apply Account Status Filter: All, Active, Expired, Inactive
+    const accountStatusFilter = String(req.query.accountStatus || "all").toLowerCase();
+    if (accountStatusFilter !== "all") {
+      tabStudents = tabStudents.filter((s) => {
+        const accStatus = String(s.accountStatus || s.status || "Active").toLowerCase();
+        return accStatus === accountStatusFilter;
+      });
     }
 
     // Apply Program Filter
     if (programIdFilter) {
-      tabStudents = tabStudents.filter((s) => String(s.programId) === String(programIdFilter));
+      tabStudents = tabStudents.filter((s) =>
+        String(s.programId) === String(programIdFilter) ||
+        String(s.activeProgramId) === String(programIdFilter) ||
+        (Array.isArray(s.enrollments) && s.enrollments.some((e) => String(e.programId) === String(programIdFilter)))
+      );
     }
 
     // Apply College Filter
@@ -4669,7 +4733,7 @@ export const getGlobalStudentsAdmin = async (req, res) => {
         : tabStudents.filter((s) => String(s.collegeId) === String(collegeIdFilter));
     }
 
-    // Apply Search Filter
+    // Apply Search Filter (Student name, email, or student ID)
     if (search) {
       const q = search.toLowerCase();
       tabStudents = tabStudents.filter(
@@ -4680,10 +4744,33 @@ export const getGlobalStudentsAdmin = async (req, res) => {
       );
     }
 
-    // Default Sorting: Latest Added / Enrolled First (Newest -> Oldest)
+    // Sorting Options:
+    // "newest" / "newest_enrolled" (default): Newest Enrolled
+    // "oldest" / "oldest_enrolled": Oldest Enrolled
+    // "recently_updated": Recently Updated
+    // "name_asc": Name A-Z
+    // "name_desc": Name Z-A
+    const sortBy = String(req.query.sort || req.query.sortBy || "newest_enrolled").toLowerCase();
     tabStudents.sort((a, b) => {
-      const left = new Date(a.latestEnrollmentAt || 0).getTime();
-      const right = new Date(b.latestEnrollmentAt || 0).getTime();
+      if (sortBy === "oldest" || sortBy === "oldest_enrolled") {
+        const left = new Date(a.enrolledOn || a.latestEnrollmentAt || a.createdAt || 0).getTime();
+        const right = new Date(b.enrolledOn || b.latestEnrollmentAt || b.createdAt || 0).getTime();
+        return (Number.isFinite(left) ? left : 0) - (Number.isFinite(right) ? right : 0);
+      }
+      if (sortBy === "recently_updated") {
+        const left = new Date(a.updatedAt || a.latestEnrollmentAt || a.createdAt || 0).getTime();
+        const right = new Date(b.updatedAt || b.latestEnrollmentAt || b.createdAt || 0).getTime();
+        return (Number.isFinite(right) ? right : 0) - (Number.isFinite(left) ? left : 0);
+      }
+      if (sortBy === "name_asc" || sortBy === "name-asc") {
+        return String(a.name || "").localeCompare(String(b.name || ""), undefined, { sensitivity: "base" });
+      }
+      if (sortBy === "name_desc" || sortBy === "name-desc") {
+        return String(b.name || "").localeCompare(String(a.name || ""), undefined, { sensitivity: "base" });
+      }
+      // Default: Newest Enrolled
+      const left = new Date(a.enrolledOn || a.latestEnrollmentAt || a.createdAt || 0).getTime();
+      const right = new Date(b.enrolledOn || b.latestEnrollmentAt || b.createdAt || 0).getTime();
       return (Number.isFinite(right) ? right : 0) - (Number.isFinite(left) ? left : 0);
     });
 
