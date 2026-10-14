@@ -836,9 +836,9 @@ export default function Students() {
             </div>
 
             {/* Navigation Tabs + Action Buttons Row */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-black/10 dark:border-white/10 pb-1">
-              {/* Reduced size tabs */}
-              <div className="flex items-center gap-1 overflow-x-auto py-0.5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 border-b border-black/10 dark:border-white/10 pb-2">
+              {/* Reduced size tabs with smooth mobile scroll */}
+              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5 flex-nowrap -mx-1 px-1 max-w-full">
                 {[
                   { id: 'all', label: 'All Students', icon: FiUsers },
                   { id: 'enrolled', label: 'Enrolled', icon: FiUserCheck },
@@ -854,13 +854,13 @@ export default function Students() {
                     <button
                       key={id}
                       onClick={() => setActiveTab(id)}
-                      className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                      className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 ${
                         activeTab === id
-                          ? 'bg-[#3C83F6]/10 text-[#3C83F6] dark:text-[#7fb1ff] font-bold'
+                          ? 'bg-[#3C83F6]/10 text-[#3C83F6] dark:text-[#7fb1ff] font-bold shadow-xs'
                           : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5'
                       }`}
                     >
-                      <TabIcon className="w-3 h-3" />
+                      <TabIcon className="w-3 h-3 shrink-0" />
                       <span>{label}</span>
                       {unread > 0 && (
                         <span className="ml-0.5 px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-blue-500 text-white dark:bg-blue-600 shadow-sm">
@@ -872,22 +872,29 @@ export default function Students() {
                 })}
               </div>
 
-              {/* Bulk Import and Add Student buttons placed to the right of section selection */}
-              <div className="flex items-center gap-2 shrink-0 self-end md:self-auto">
-                <button
-                  onClick={openBulkImport}
-                  className="h-8 px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors whitespace-nowrap shadow-sm"
-                >
-                  <FiUpload className="w-3.5 h-3.5" />
-                  Bulk Import
-                </button>
-                <button
-                  onClick={openAddStudent}
-                  className="h-8 px-3.5 rounded-xl bg-[#3C83F6] text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-[#2f73e0] transition-colors whitespace-nowrap shadow-sm"
-                >
-                  <FiPlus className="w-3.5 h-3.5" />
-                  Add Student
-                </button>
+              {/* Differentiator & Action Buttons (Bulk Import and Add Student) */}
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto pt-1 md:pt-0 border-t border-black/5 dark:border-white/5 md:border-t-0">
+                {/* Visual Differentiator on Desktop */}
+                <div className="hidden md:flex items-center h-5 px-1">
+                  <div className="w-[1.5px] h-4 bg-black/15 dark:bg-white/20 rounded-full" />
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={openBulkImport}
+                    className="flex-1 sm:flex-initial h-8 px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors whitespace-nowrap shadow-sm"
+                  >
+                    <FiUpload className="w-3.5 h-3.5" />
+                    <span>Bulk Import</span>
+                  </button>
+                  <button
+                    onClick={openAddStudent}
+                    className="flex-1 sm:flex-initial h-8 px-3.5 rounded-xl bg-[#3C83F6] text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-[#2f73e0] transition-colors whitespace-nowrap shadow-sm"
+                  >
+                    <FiPlus className="w-3.5 h-3.5" />
+                    <span>Add Student</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -904,9 +911,9 @@ export default function Students() {
 
             {/* Filter controls container */}
             <div className="flex flex-col gap-2.5">
-              {/* Row 1: Search bar (about half of the page horizontal width) */}
+              {/* Row 1: Search bar */}
               <div className="w-full">
-                <div className="relative w-full sm:w-1/2 min-w-[280px] max-w-xl">
+                <div className="relative w-full sm:w-1/2 min-w-[260px] max-w-xl">
                   <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
                   <input
                     value={tableSearch}
@@ -917,8 +924,8 @@ export default function Students() {
                 </div>
               </div>
 
-              {/* Row 2: Secondary Dropdown Filters (Single line, full horizontal width) */}
-              <div className="flex items-center gap-2 w-full overflow-x-auto pb-1 flex-nowrap">
+              {/* Row 2: Secondary Dropdown Filters (Single line, full horizontal width with smooth scroll) */}
+              <div className="flex items-center gap-2 w-full overflow-x-auto scrollbar-none pb-1 flex-nowrap -mx-1 px-1">
                 {/* Sort By Filter */}
                 <div className="relative flex-1 min-w-[130px]">
                   <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43]">
@@ -1057,7 +1064,7 @@ export default function Students() {
                 </div>
               ) : (
                 <div className="overflow-x-auto w-full">
-                  <table className="w-full text-left text-xs border-collapse">
+                  <table className="w-full min-w-[760px] text-left text-xs border-collapse">
                     
                     {/* TAB Headers */}
                     {(['all', 'enrolled', 'placement', 'completed', 'waitlist'].includes(activeTab)) && (
