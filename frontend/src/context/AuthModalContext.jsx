@@ -1,10 +1,11 @@
-import { createContext, lazy, Suspense, useContext, useEffect } from 'react';
+import { createContext, Suspense, useContext, useEffect } from 'react';
+import lazyWithRetry from '../utils/lazyWithRetry';
 import { useAuthModals } from '../hooks/useAuthModals';
 import { authEvents } from '../utils/authEvents';
 
 const AuthModalContext = createContext();
-const LoginModal = lazy(() => import('../components/auth/LoginModal'));
-const SignupModal = lazy(() => import('../components/auth/SignupModal'));
+const LoginModal = lazyWithRetry(() => import('../components/auth/LoginModal'));
+const SignupModal = lazyWithRetry(() => import('../components/auth/SignupModal'));
 
 export const useAuthModalContext = () => {
   const context = useContext(AuthModalContext);

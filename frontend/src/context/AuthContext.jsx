@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { navigateUserByProgram } from '../utils/navigation';
+import { SESSION_EXPIRED_EVENT, clearStoredSession, getTokenExpiry, isTokenExpired } from '../utils/session';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -42,7 +43,9 @@ const getInitialAuthState = () => {
   try {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('userData');
-    if (token && userData) {
+    if (token && isTokenExpired(token)) {
+      clearStoredSession();
+    } else if (token && userData) {
       const user = JSON.parse(userData);
       return {
         user,
@@ -165,7 +168,10 @@ export const AuthProvider = ({ children }) => {
         const token = localStorage.getItem('token');
         const userData = localStorage.getItem('userData');
 
-        if (token && userData) {
+        if (token && isTokenExpired(token)) {
+          clearStoredSession();
+          dispatch({ type: AUTH_ACTIONS.LOGOUT });
+        } else if (token && userData) {
           const user = JSON.parse(userData);
           dispatch({
             type: AUTH_ACTIONS.RESTORE_SESSION,
@@ -184,6 +190,40 @@ export const AuthProvider = ({ children }) => {
 
     restoreSession();
   }, []);
+
+  // End the session gracefully when the token expires (timer), when the tab wakes after being
+  // idle, or when any request proves the token is no longer accepted.
+  useEffect(() => {
+    const PROTECTED = /^\/(dashboard|admin|colleges|batches|students|programs|track-templates|certificates|reports|settings|learn\/program|free-assessment|onboarding)/;
+
+    const endSession = () => {
+      clearStoredSession();
+      dispatch({ type: AUTH_ACTIONS.LOGOUT });
+      if (PROTECTED.test(window.location.pathname)) {
+        navigate('/login', { replace: true, state: { sessionExpired: true, from: window.location.pathname } });
+      }
+    };
+
+    const checkNow = () => {
+      const token = localStorage.getItem('token');
+      if (token && isTokenExpired(token)) endSession();
+    };
+
+    const token = localStorage.getItem('token');
+    const expiry = getTokenExpiry(token);
+    const timer = expiry ? setTimeout(endSession, Math.min(Math.max(expiry - Date.now(), 0), 2147483000)) : null;
+    const onVisible = () => { if (document.visibilityState === 'visible') checkNow(); };
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, endSession);
+    window.addEventListener('focus', checkNow);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener(SESSION_EXPIRED_EVENT, endSession);
+      window.removeEventListener('focus', checkNow);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [state.token, navigate]);
 
   // Login function
   const login = async (credentials) => {
