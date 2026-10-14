@@ -68,7 +68,16 @@
   line-height: 1.5;
   color: #020d27;
   text-align: center;
+  opacity: 0;
+  transform: translateX(-40px);
+  transition: opacity 3.2s cubic-bezier(0.16, 1, 0.3, 1), transform 3.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+}
+
+.tl-problem-stats-grid.is-visible .tl-problem-stat-item {
   opacity: 0.85;
+  transform: translateX(0);
+  transition-delay: calc(var(--item-index, 0) * 1.4s);
 }
 
 /* APP CARDS */

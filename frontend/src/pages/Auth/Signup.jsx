@@ -570,8 +570,8 @@ export default function Signup({
         '--muted': isDark ? '#9da7c2' : '#68718b',
         '--lime': isDark ? '#9bd45a' : '#8cbf4a',
         '--lime-hover': isDark ? '#afe56b' : '#a2d354',
-        '--card': isDark ? '#11172d' : '#ffffff',
-        '--border': isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(5, 10, 91, 0.14)',
+        '--card': isDark ? '#071a3e' : 'rgba(255, 255, 255, 0.62)',
+        '--border': isDark ? 'rgba(21, 54, 111, 0.45)' : 'rgba(0, 0, 0, 0.05)',
         background: isModal
           ? 'transparent'
           : isDark
@@ -683,9 +683,16 @@ export default function Signup({
           width: 100%;
           background: var(--card);
           border: 1px solid var(--border);
-          border-radius: 13px;
-          padding: 22px 20px;
-          box-shadow: 0 18px 48px rgba(5, 10, 91, 0.08);
+          border-radius: 16px;
+          padding: 24px 22px;
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          box-shadow: 0 12px 34px rgba(60, 131, 246, 0.08);
+        }
+
+        .dark-mode .tl-auth-card,
+        .dark .tl-auth-card {
+          box-shadow: 0 12px 34px rgba(0, 0, 0, 0.24);
         }
 
         .tl-field {
