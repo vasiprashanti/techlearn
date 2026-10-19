@@ -793,6 +793,7 @@ export default function Programs() {
   }, []);
 
   const [programs, setPrograms] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({ page: 1, limit: 12, total: 0, totalPages: 1 });
@@ -914,6 +915,7 @@ export default function Programs() {
       const res = await adminAPI.getPrograms(params);
       if (res && res.success) {
         setPrograms(res.programs || []);
+        if (res.stats) setStats(res.stats);
         if (res.pagination) setPagination(res.pagination);
       } else {
         setPrograms([]);
@@ -1305,9 +1307,18 @@ export default function Programs() {
 
   const programFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-slate-50 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35 shadow-xs';
 
-  const activeCount = programs.filter(p => p.status === 'Published').length;
-  const draftCount = programs.filter(p => p.status === 'Draft').length;
-  const totalStudents = programs.reduce((sum, p) => sum + (p.studentCount || 0), 0);
+  const activeCount = stats?.published !== undefined
+    ? stats.published
+    : programs.filter(p => p.status === 'Published' || p.status === 'Active').length;
+  const draftCount = stats?.drafts !== undefined
+    ? stats.drafts
+    : programs.filter(p => p.status === 'Draft').length;
+  const totalStudents = stats?.totalStudents !== undefined
+    ? stats.totalStudents
+    : programs.reduce((sum, p) => sum + (p.studentCount || 0), 0);
+  const totalProgramsCount = stats?.total !== undefined
+    ? stats.total
+    : (pagination.total || programs.length);
 
   return (
     <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
@@ -2206,7 +2217,7 @@ export default function Programs() {
                 </div>
                 <div className="min-w-0">
                   <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block font-medium truncate">Total Programs</span>
-                  <span className="text-base sm:text-lg font-bold text-slate-800 dark:text-white">{pagination.total || programs.length}</span>
+                  <span className="text-base sm:text-lg font-bold text-slate-800 dark:text-white">{totalProgramsCount}</span>
                 </div>
               </div>
 

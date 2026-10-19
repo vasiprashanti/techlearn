@@ -134,11 +134,29 @@ const readCompilerDraft = () => {
 
 const OnlineCompiler = () => {
   const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
   const initialDraftRef = useRef(readCompilerDraft());
   const preserveInitialDraftRef = useRef(Boolean(initialDraftRef.current));
   const [selectedLanguage, setSelectedLanguage] = useState(() => initialDraftRef.current?.language || 'html');
   const [previewKey, setPreviewKey] = useState(0);
-  const [code, setCode] = useState(() => initialDraftRef.current?.code || LANGUAGES.html.defaultCode);
+  const [codes, setCodes] = useState(() => {
+    const initial = {};
+    Object.values(LANGUAGES).forEach((lang) => {
+      initial[lang.id] = lang.defaultCode;
+    });
+    if (initialDraftRef.current?.language && initialDraftRef.current?.code) {
+      initial[initialDraftRef.current.language] = initialDraftRef.current.code;
+    }
+    return initial;
+  });
+
+  const code = codes[selectedLanguage] || LANGUAGES[selectedLanguage]?.defaultCode || '';
+  const setCode = (newCode) => {
+    setCodes((prev) => ({
+      ...prev,
+      [selectedLanguage]: typeof newCode === 'function' ? newCode(prev[selectedLanguage] || '') : newCode,
+    }));
+  };
   const [output, setOutput] = useState('');
   const [customInput, setCustomInput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
@@ -240,19 +258,18 @@ const OnlineCompiler = () => {
     });
   };
 
-  // Update code when language changes
+  // Clear draft ref if present on language change
   useEffect(() => {
     if (preserveInitialDraftRef.current) {
       preserveInitialDraftRef.current = false;
       window.sessionStorage.removeItem('techlearn:compiler-draft');
-      return;
     }
-    setCode(LANGUAGES[selectedLanguage].defaultCode);
-    setOutput('');
   }, [selectedLanguage]);
 
   const handleLanguageSelect = (languageId) => {
     setSelectedLanguage(languageId);
+    setOutput('');
+    setPreviewKey((k) => k + 1);
   };
 
   const handleRunCode = async () => {
@@ -434,64 +451,80 @@ const OnlineCompiler = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] online-compiler-container">
       <ScrollProgress />
-      {/* Language navigation: horizontal, scrollable, starts directly below the global navbar */}
-      <div className="fixed left-0 right-0 top-[72px] z-30 border-b border-black/5 bg-[#d8eef5] dark:border-white/10 dark:bg-[#01071e]">
-        <nav aria-label="Languages" className="flex gap-2 overflow-x-auto px-4 py-2 lg:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {Object.values(LANGUAGES).map((language) => (
-            <button
-              key={language.id}
-              type="button"
-              onClick={() => handleLanguageSelect(language.id)}
-              aria-current={selectedLanguage === language.id ? 'true' : undefined}
-              className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                selectedLanguage === language.id
-                  ? 'border-[#8dd035] bg-[#8dd035]/20 text-[#04103d] dark:text-white'
-                  : 'border-transparent text-gray-700 hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/10'
-              }`}
-            >
-              <img src={language.icon} alt="" className="h-5 w-5 object-contain" />
-              {language.name}
-            </button>
-          ))}
+      {/* Language Navigation: Topbar only for Mobiles (hidden on md and above) */}
+      <div className="md:hidden fixed left-0 right-0 top-[72px] z-30 border-b border-black/5 bg-[#d8eef5]/95 backdrop-blur-md dark:border-white/10 dark:bg-[#01071e]/95">
+        <nav aria-label="Languages" className="flex gap-2 overflow-x-auto px-4 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {Object.values(LANGUAGES).map((language) => {
+            const isSelected = selectedLanguage === language.id;
+            return (
+              <button
+                key={language.id}
+                type="button"
+                onClick={() => handleLanguageSelect(language.id)}
+                aria-current={isSelected ? 'true' : undefined}
+                className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold tracking-normal transition-all duration-200 border ${
+                  isSelected
+                    ? isDarkMode
+                      ? 'bg-[#0b154a] !text-white border-[#2b3a74]/60 shadow-sm'
+                      : 'bg-[#00113b] text-white border-[#00113b]/20 shadow-sm'
+                    : isDarkMode
+                      ? '!text-[#94a3b8] hover:!text-white hover:bg-[#121c4b]/50 border-transparent font-normal'
+                      : '!text-[#00113b] hover:!text-[#2f73e0] hover:bg-white/60 border-transparent font-normal'
+                }`}
+              >
+                <img src={language.icon} alt="" className="h-4 w-4 object-contain" />
+                <span>{language.name}</span>
+              </button>
+            );
+          })}
         </nav>
       </div>
 
       <div className="flex min-h-screen overflow-x-hidden">
+        {/* Language Sidebar: Only for Desktops & Tablets (md:flex, hidden on mobile) */}
+        <aside
+          className="hidden md:flex flex-col fixed left-0 top-[72px] bottom-0 z-30 w-40 lg:w-44 border-r border-black/10 dark:border-[#1a234d] bg-[#daf0fa]/95 dark:bg-[#070e38] backdrop-blur-md"
+        >
+          <div className="px-3 pt-3 pb-1.5 border-b border-black/5 dark:border-white/5">
+            <span className="text-[10px] uppercase tracking-[0.16em] font-semibold text-[#17386c]/65 dark:text-[#8b9bb4]">
+              Languages
+            </span>
+          </div>
+          <nav
+            aria-label="Languages Sidebar"
+            className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5"
+            style={{ scrollbarWidth: 'thin', scrollbarColor: isDarkMode ? '#243266 transparent' : '#3C83F6 transparent' }}
+          >
+            {Object.values(LANGUAGES).map((language) => {
+              const isSelected = selectedLanguage === language.id;
+              return (
+                <button
+                  key={language.id}
+                  type="button"
+                  onClick={() => handleLanguageSelect(language.id)}
+                  aria-current={isSelected ? 'true' : undefined}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium tracking-normal transition-all duration-200 text-left border ${
+                    isSelected
+                      ? isDarkMode
+                        ? 'bg-[#0b154a] !text-white font-semibold shadow-sm border-[#2b3a74]/60'
+                        : 'bg-[#00113b] text-white font-semibold shadow-sm border-[#00113b]/20'
+                      : isDarkMode
+                        ? '!text-[#94a3b8] hover:!text-white hover:bg-[#121c4b]/50 font-normal border-transparent'
+                        : '!text-[#00113b] hover:!text-[#2f73e0] hover:bg-white/60 font-normal border-transparent'
+                  }`}
+                >
+                  <img src={language.icon} alt="" className="h-4 w-4 object-contain shrink-0" />
+                  <span className="truncate">{language.name}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+
         {/* Main Content */}
-        <div className="flex-1 relative min-w-0">
-          <div className="relative z-10 pt-[124px] pb-2">
-            <div className="h-[calc(100vh-8rem)] px-4 lg:px-6">
-
-              {/* Header */}
-              <div className="mb-2 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 flex items-center justify-center">
-                      <img
-                        src={currentLanguage.icon}
-                        alt={`${currentLanguage.name} logo`}
-                        className="w-6 h-6 object-contain"
-                      />
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {currentLanguage.name} {currentLanguage.isWebLanguage ? 'Editor' : 'Compiler'}
-                    </h1>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-3">
-                  {/* Daily Allowance Indicator */}
-                  {allowanceInfo && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs font-semibold text-blue-700 dark:text-blue-300">
-                      <span>Daily Runs:</span>
-                      <span className="font-bold text-blue-600 dark:text-blue-400">
-                        {allowanceInfo.remainingCount} / {allowanceInfo.effectiveAllowance}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
+        <div className="flex-1 relative min-w-0 md:ml-40 lg:ml-44">
+          <div className="relative z-10 pt-[124px] md:pt-[84px] pb-2">
+            <div className="h-[calc(100vh-8.5rem)] md:h-[calc(100vh-6rem)] px-4 lg:px-6">
 
               {/* 5 Runs Remaining Alert */}
               <AnimatePresence>
@@ -584,40 +617,38 @@ const OnlineCompiler = () => {
                 )}
               </AnimatePresence>
 
-
-
               {/* Mobile Navigation Tabs */}
-              <div className="lg:hidden mb-2">
+              <div className="md:hidden mb-2">
                 <div className="flex bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/20 p-1">
                   <button
                     onClick={() => setActiveView('editor')}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                       activeView === 'editor'
                         ? 'bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white shadow-sm'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                     }`}
                   >
-                    <Code className="w-4 h-4" />
-                    Editor
+                    <Code className="w-3.5 h-3.5" />
+                    Input
                   </button>
                   <button
                     onClick={() => setActiveView('preview')}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                       activeView === 'preview'
                         ? 'bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white shadow-sm'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                     }`}
                   >
-                    <Eye className="w-4 h-4" />
+                    <Eye className="w-3.5 h-3.5" />
                     {currentLanguage.isWebLanguage ? 'Preview' : 'Output'}
                   </button>
                 </div>
               </div>
 
               {/* Editor and Output Panels */}
-              <div className="h-[calc(100%-7rem)] lg:h-[calc(100%-3rem)]">
+              <div className="h-[calc(100%-3rem)] md:h-full">
                 {/* Desktop Layout - Resizable Split */}
-                <div className="hidden lg:block h-full" ref={containerRef}>
+                <div className="hidden md:block h-full" ref={containerRef}>
                   <div className="relative flex h-full w-full">
                     {isResizing && (
                       <div
@@ -634,33 +665,43 @@ const OnlineCompiler = () => {
                     )}
                     {/* Code Editor Panel */}
                     <div
-                      className="bg-white/50 dark:bg-[#0a1238] rounded-xl border border-black/5 dark:border-white/10 overflow-hidden"
-                      style={{ width: `calc(${splitPos}% - 8px)` }}
+                      className="bg-white/50 dark:bg-[#0a1238] rounded-xl border border-black/5 dark:border-white/10 overflow-hidden flex flex-col"
+                      style={{ width: `calc(${splitPos}% - 6px)` }}
                     >
-                      <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-transparent min-h-[4rem]">
-                        <div className="flex items-center justify-between h-full">
-                          <h3 className="font-medium text-gray-900 dark:text-white">
-                            Code Editor
-                          </h3>
+                      <div className="px-4 py-3 border-b border-white/10 dark:border-gray-700/20 bg-transparent flex items-center justify-between min-h-[3.5rem]">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-none">
+                          Code Editor
+                        </h3>
+
+                        <div className="flex items-center gap-2.5">
+                          {allowanceInfo && (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[11px] font-semibold text-blue-700 dark:text-blue-300 leading-none">
+                              <span className="uppercase tracking-wider opacity-80">Daily Runs:</span>
+                              <span className="font-bold text-blue-600 dark:text-blue-400">
+                                {allowanceInfo.remainingCount} / {allowanceInfo.effectiveAllowance}
+                              </span>
+                            </div>
+                          )}
+
                           {/* Run Button - Only show for non-web languages */}
                           {!currentLanguage.isWebLanguage && (
                             <button
                               onClick={isRunning ? handleStopExecution : handleRunCode}
                               disabled={!code.trim()}
-                              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
                                 isRunning
                                   ? 'bg-red-500/20 hover:bg-red-500/30 text-red-700 dark:text-red-300'
-                                  : 'bg-[#8dd035] hover:bg-[#a2d354] text-[#04103d] font-semibold'
-                              } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                  : 'bg-[#8dd035] hover:bg-[#a2d354] text-[#04103d]'
+                              } disabled:opacity-50 disabled:cursor-not-allowed shadow-xs`}
                             >
                               {isRunning ? (
                                 <>
-                                  <Square className="w-4 h-4" />
+                                  <Square className="w-3.5 h-3.5" />
                                   Stop
                                 </>
                               ) : (
                                 <>
-                                  <Play className="w-4 h-4" />
+                                  <Play className="w-3.5 h-3.5" />
                                   Run
                                 </>
                               )}
@@ -668,7 +709,7 @@ const OnlineCompiler = () => {
                           )}
                         </div>
                       </div>
-                      <div className="h-[calc(100%-4rem)]">
+                      <div className="flex-1 min-h-0">
                         <Editor
                           height="100%"
                           language={currentLanguage.monacoLanguage}
@@ -703,36 +744,33 @@ const OnlineCompiler = () => {
 
                     {/* Drag handle */}
                     <div
-                      className="w-2 mx-2 cursor-col-resize select-none flex items-center justify-center"
+                      className="w-3 cursor-col-resize select-none flex items-center justify-center transition-colors hover:bg-black/5 dark:hover:bg-white/5 rounded"
                       onMouseDown={(e) => {
                         e.preventDefault();
                         setIsResizing(true);
                       }}
                       onMouseUp={() => setIsResizing(false)}
-                    >
-                      <div className="h-3/4 w-[3px] bg-gray-300 dark:bg-gray-600 rounded"></div>
-                    </div>
+                      title="Drag to resize panels"
+                    />
 
                     {/* Output Panel */}
                     <div
-                      className="bg-white/50 dark:bg-[#0a1238] rounded-xl border border-black/5 dark:border-white/10 overflow-hidden flex-1"
-                      style={{ width: `calc(${100 - splitPos}% - 8px)` }}
+                      className="bg-white/50 dark:bg-[#0a1238] rounded-xl border border-black/5 dark:border-white/10 overflow-hidden flex-1 flex flex-col"
+                      style={{ width: `calc(${100 - splitPos}% - 6px)` }}
                     >
-                      <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-transparent min-h-[4rem]">
-                        <div className="flex items-center justify-between h-full">
-                          <h3 className="font-medium text-gray-900 dark:text-white">
-                            {currentLanguage.isWebLanguage ? 'Live Preview' : 'Output'}
-                          </h3>
-                          <button
-                            onClick={handleRefreshOutput}
-                            className="p-1.5 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 text-gray-700 dark:text-gray-300 transition-all duration-200"
-                            title="Refresh output"
-                          >
-                            <RotateCcw className="w-4 h-4" />
-                          </button>
-                        </div>
+                      <div className="px-4 py-3 border-b border-white/10 dark:border-gray-700/20 bg-transparent flex items-center justify-between min-h-[3.5rem]">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-none">
+                          {currentLanguage.isWebLanguage ? 'Live Preview' : 'Output'}
+                        </h3>
+                        <button
+                          onClick={handleRefreshOutput}
+                          className="p-1.5 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 text-gray-700 dark:text-gray-300 transition-all duration-200"
+                          title="Refresh output"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-                      <div className="h-[calc(100%-4rem)] overflow-hidden flex flex-col">
+                      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                         {currentLanguage.isWebLanguage ? (
                           <iframe
                             key={previewKey}
@@ -758,18 +796,24 @@ const OnlineCompiler = () => {
                 </div>
 
                 {/* Mobile Layout - Single Panel with Tabs */}
-                <div className="lg:hidden h-full relative">
+                <div className="md:hidden h-full relative">
                   {activeView === 'editor' ? (
                     /* Code Editor Panel */
-                    <div className="bg-white/50 dark:bg-[#0a1238] rounded-xl border border-black/5 dark:border-white/10 overflow-hidden h-full">
-                      <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-transparent">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium text-gray-900 dark:text-white">
-                            Code Editor
-                          </h3>
-                        </div>
+                    <div className="bg-white/50 dark:bg-[#0a1238] rounded-xl border border-black/5 dark:border-white/10 overflow-hidden h-full flex flex-col">
+                      <div className="px-4 py-3 border-b border-white/10 dark:border-gray-700/20 bg-transparent flex items-center justify-between min-h-[3.25rem]">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-none">
+                          Code Editor
+                        </h3>
+                        {allowanceInfo && (
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[9px] font-semibold text-blue-700 dark:text-blue-300 leading-none">
+                            <span className="uppercase tracking-wider opacity-80">Daily Runs:</span>
+                            <span className="font-bold text-blue-600 dark:text-blue-400">
+                              {allowanceInfo.remainingCount}/{allowanceInfo.effectiveAllowance}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      <div className={`${!currentLanguage.isWebLanguage ? 'h-[calc(100%-7rem)]' : 'h-[calc(100%-3.5rem)]'}`}>
+                      <div className="flex-1 min-h-0">
                         <Editor
                           height="100%"
                           language={currentLanguage.monacoLanguage}
@@ -830,22 +874,20 @@ const OnlineCompiler = () => {
                     </div>
                   ) : (
                     /* Output/Preview Panel */
-                    <div className="bg-white/50 dark:bg-[#0a1238] rounded-xl border border-black/5 dark:border-white/10 overflow-hidden h-full">
-                      <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-transparent">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium text-gray-900 dark:text-white">
-                            {currentLanguage.isWebLanguage ? 'Live Preview' : 'Output'}
-                          </h3>
-                          <button
-                            onClick={handleRefreshOutput}
-                            className="p-1.5 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 text-gray-700 dark:text-gray-300 transition-all duration-200"
-                            title="Refresh output"
-                          >
-                            <RotateCcw className="w-4 h-4" />
-                          </button>
-                        </div>
+                    <div className="bg-white/50 dark:bg-[#0a1238] rounded-xl border border-black/5 dark:border-white/10 overflow-hidden h-full flex flex-col">
+                      <div className="px-4 py-3 border-b border-white/10 dark:border-gray-700/20 bg-transparent flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-none">
+                          {currentLanguage.isWebLanguage ? 'Live Preview' : 'Output'}
+                        </h3>
+                        <button
+                          onClick={handleRefreshOutput}
+                          className="p-1.5 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 text-gray-700 dark:text-gray-300 transition-all duration-200"
+                          title="Refresh output"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </button>
                       </div>
-                      <div className="h-[calc(100%-3.5rem)] overflow-hidden flex flex-col">
+                      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                         {currentLanguage.isWebLanguage ? (
                           <iframe
                             key={previewKey}
@@ -858,18 +900,16 @@ const OnlineCompiler = () => {
                           <>
                             <div className="shrink-0 border-b border-white/10 dark:border-gray-700/20 p-3">
                               <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">Custom Input</label>
-                              <textarea value={customInput} onChange={(event) => setCustomInput(event.target.value)} rows={3} placeholder="Enter stdin values here" className="w-full resize-y rounded-lg border border-gray-300/70 bg-white/70 px-3 py-2 font-mono text-sm text-gray-900 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950/60 dark:text-gray-100" />
+                              <textarea value={customInput} onChange={(event) => setCustomInput(event.target.value)} rows={3} placeholder="Enter stdin values here, one line at a time" className="w-full resize-y rounded-lg border border-gray-300/70 bg-white/70 px-3 py-2 font-mono text-xs text-gray-900 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950/60 dark:text-gray-100" />
                             </div>
                             <div className="min-h-0 flex-1 p-4 overflow-auto">
-                              <pre className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{renderOutput(output)}</pre>
+                              <pre className="text-xs sm:text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{renderOutput(output)}</pre>
                             </div>
                           </>
                         )}
                       </div>
                     </div>
                   )}
-
-
                 </div>
               </div>
             </div>
