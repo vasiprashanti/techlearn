@@ -327,9 +327,15 @@ export const adminAPI = {
     { method: 'PATCH', body: JSON.stringify({ individualStartDate }) },
   ),
   resetStudentXp: (studentId) => request(`/admin/students/${studentId}/reset-xp`, { method: 'POST' }),
-  removeStudentFromBatch: (studentId, batchId) => request(`/admin/students/${studentId}/remove-batch`, { method: 'PATCH', body: JSON.stringify({ batchId }) }),
-  markStudentsRead: (studentIds, category = '') => request('/admin/students/mark-read', { method: 'POST', body: JSON.stringify({ studentIds, category }) }),
-  deleteStudent: (studentId) => request(`/admin/students/${studentId}`, { method: 'DELETE' }),
+  markStudentsRead: (studentIds, category = '', markAll = false) =>
+    request('/admin/students/mark-read', {
+      method: 'POST',
+      body: JSON.stringify(
+        typeof studentIds === 'object' && !Array.isArray(studentIds)
+          ? studentIds
+          : { studentIds, category, markAll }
+      ),
+    }),
   bulkUploadStudents: async (payload) => {
     if (payload instanceof FormData) {
       const response = await adminFetch(`${API_BASE}/admin/students/bulk-upload`, {

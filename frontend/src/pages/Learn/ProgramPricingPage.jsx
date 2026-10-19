@@ -331,7 +331,7 @@ export default function ProgramPricingPage() {
           .tl-unified-onboarding-root {
             --navy: #bceaff;
             --navy-dark: #02052e;
-            --chip-blue: #a5d8f4;
+            --chip-blue: rgba(255, 255, 255, 0.45);
             --lime: #8cbf4a;
             --lime-hover: #a2d354;
             --white: #050a5b;
@@ -345,10 +345,10 @@ export default function ProgramPricingPage() {
             --toggle-bg: rgba(255, 255, 255, .55);
             --toggle-border: rgba(5, 10, 91, .16);
             --toggle-icon: #02052e;
-            --input-bg: rgba(255, 255, 255, .28);
+            --input-bg: rgba(255, 255, 255, .45);
 
             min-height: 100vh;
-            background: #bceaff;
+            background: linear-gradient(135deg, #daf0fa 0%, #bceaff 45%, #bceaff 100%);
             color: var(--white);
             font-family: "Inter", sans-serif;
             transition: background .25s ease, color .25s ease;
@@ -361,10 +361,10 @@ export default function ProgramPricingPage() {
           }
 
           .tl-unified-onboarding-root.dark-mode {
-            background: var(--navy);
+            background: #080d25;
             --navy: #080d25;
             --navy-dark: #020416;
-            --chip-blue: #031553;
+            --chip-blue: rgba(255, 255, 255, 0.05);
             --lime: #8cbf4a;
             --lime-hover: #a2d354;
             --white: #f5f7ff;
@@ -746,13 +746,15 @@ export default function ProgramPricingPage() {
   return (
     <div
       className={`min-h-screen w-full flex flex-col font-sans transition-colors duration-300 ${
-        isDarkMode ? "bg-[#050b2e] text-white" : "bg-[#dff5ff] text-[#050a3b]"
+        isDarkMode
+          ? "bg-[#080d25] text-white"
+          : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] text-[#050a3b]"
       }`}
       style={{
-        "--light-bg": isDarkMode ? "#050b2e" : "#dff5ff",
-        "--card-navy": isDarkMode ? "#0a1238" : "#ffffff",
-        "--featured-bg": isDarkMode ? "#0a1238" : "#050a3b",
-        "--border-color": isDarkMode ? "#222e55" : "rgba(4,16,61,.13)",
+        "--light-bg": isDarkMode ? "#080d25" : "#bceaff",
+        "--card-navy": isDarkMode ? "#0c1438" : "#ffffff",
+        "--featured-bg": isDarkMode ? "#0c1438" : "#050a3b",
+        "--border-color": isDarkMode ? "rgba(255, 255, 255, 0.10)" : "rgba(4,16,61,.13)",
         "--muted-color": isDarkMode ? "#c0cbe2" : "#65708c",
         "--green-color": isDarkMode ? "#89c638" : "#b5e959",
       }}

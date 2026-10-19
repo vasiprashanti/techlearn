@@ -481,6 +481,48 @@ export default function Students() {
     }
   };
 
+  const handleMarkAllAsRead = async () => {
+    const unreadInCurrentTab = unreadCounts[activeTab] || 0;
+    if (unreadInCurrentTab === 0) return;
+
+    setIsMarkingRead(true);
+    try {
+      await adminAPI.markStudentsRead([], activeTab, true);
+      // Optimistically update all items in current view
+      setStudentsData((prev) => ({
+        ...prev,
+        items: prev.items.map((s) => ({ ...s, isRead: true })),
+      }));
+      // Update unread counts
+      setUnreadCounts((prev) => {
+        if (activeTab === 'all') {
+          return {
+            all: 0,
+            enrolled: 0,
+            placement: 0,
+            skill: 0,
+            leads: 0,
+            exploring: 0,
+            completed: 0,
+            waitlist: 0,
+          };
+        }
+        return {
+          ...prev,
+          [activeTab]: 0,
+          all: Math.max(0, (prev.all || 0) - unreadInCurrentTab),
+        };
+      });
+      setSelectedStudentIds([]);
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+      alert(err.message || 'Failed to mark all as read.');
+    } finally {
+      setIsMarkingRead(false);
+      loadGlobalStudents();
+    }
+  };
+
   return (
     <>
       <SearchModal
@@ -1585,10 +1627,22 @@ export default function Students() {
                   onClick={handleMarkAsRead}
                   disabled={isMarkingRead}
                   className="px-3.5 py-1 rounded-full bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50"
+                  title="Mark selected students as read"
                 >
                   <FiCheckCircle className="w-3 h-3" />
                   {isMarkingRead ? 'Marking...' : 'Mark as Read'}
                 </button>
+                {(unreadCounts[activeTab] || 0) > 0 && (
+                  <button
+                    onClick={handleMarkAllAsRead}
+                    disabled={isMarkingRead}
+                    className="px-3.5 py-1 rounded-full bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-[#3C83F6] dark:text-[#7fb1ff] text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50"
+                    title={`Mark all unread in ${activeTab === 'all' ? 'All Students' : activeTab} as read`}
+                  >
+                    <FiCheckCircle className="w-3 h-3" />
+                    <span>{isMarkingRead ? 'Marking...' : 'Mark All as Read'}</span>
+                  </button>
+                )}
                 <button
                   onClick={() => setIsBulkDeleteConfirmOpen(true)}
                   className="px-3.5 py-1 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
