@@ -150,18 +150,43 @@ const OnlineCompiler = () => {
     return initial;
   });
 
-  const code = codes[selectedLanguage] || LANGUAGES[selectedLanguage]?.defaultCode || '';
+  const code = codes[selectedLanguage] !== undefined ? codes[selectedLanguage] : (LANGUAGES[selectedLanguage]?.defaultCode || '');
   const setCode = (newCode) => {
-    setCodes((prev) => ({
-      ...prev,
-      [selectedLanguage]: typeof newCode === 'function' ? newCode(prev[selectedLanguage] || '') : newCode,
-    }));
+    setCodes((prev) => {
+      const currentVal = prev[selectedLanguage] !== undefined ? prev[selectedLanguage] : (LANGUAGES[selectedLanguage]?.defaultCode || '');
+      const nextVal = typeof newCode === 'function' ? newCode(currentVal) : newCode;
+      return {
+        ...prev,
+        [selectedLanguage]: nextVal,
+      };
+    });
   };
-  const [output, setOutput] = useState('');
-  const [customInput, setCustomInput] = useState('');
+  const [terminalHistory, setTerminalHistory] = useState([]);
+  const [terminalInput, setTerminalInput] = useState('');
+  const [sessionStdin, setSessionStdin] = useState('');
+  const [waitingForInput, setWaitingForInput] = useState(false);
+  const [lastPrompt, setLastPrompt] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [editorTheme, setEditorTheme] = useState(theme === 'dark' ? 'vs-dark' : 'light');
   const [activeView, setActiveView] = useState('editor'); // 'editor' or 'preview'
+
+  const terminalInputRef = useRef(null);
+  const terminalEndRef = useRef(null);
+  const terminalScrollContainerRef = useRef(null);
+
+  // Auto-scroll terminal container ONLY (without scrolling the window/page)
+  useEffect(() => {
+    if (terminalScrollContainerRef.current) {
+      terminalScrollContainerRef.current.scrollTop = terminalScrollContainerRef.current.scrollHeight;
+    }
+  }, [terminalHistory, waitingForInput, terminalInput, isRunning]);
+
+  // Focus terminal input when waiting for input without scrolling page
+  useEffect(() => {
+    if (waitingForInput && terminalInputRef.current) {
+      terminalInputRef.current.focus({ preventScroll: true });
+    }
+  }, [waitingForInput]);
 
   // Allowance & Global Queue States
   const [allowanceInfo, setAllowanceInfo] = useState(null);
@@ -268,35 +293,74 @@ const OnlineCompiler = () => {
 
   const handleLanguageSelect = (languageId) => {
     setSelectedLanguage(languageId);
-    setOutput('');
+    setTerminalHistory([]);
+    setTerminalInput('');
+    setSessionStdin('');
+    setWaitingForInput(false);
+    setLastPrompt('');
     setPreviewKey((k) => k + 1);
   };
 
-  const handleRunCode = async () => {
+  // Helper to detect if program output suggests it is waiting for user input
+  const analyzeExecutionResult = (res, currentCode) => {
+    const stdout = res.stdout || '';
+    const stderr = res.stderr || '';
+    const hasInputKeyword = /\b(scanf|cin|input\(|readLine|Scanner|raw_input)\b/.test(currentCode);
+
+    // Common EOF / missing input error signatures
+    const isEofError = 
+      stderr.includes('EOFError') || 
+      stderr.includes('NoSuchElementException') ||
+      stderr.includes('end of file') ||
+      stderr.includes('EOF when reading');
+
+    // If stdout has content and doesn't end with a newline, or has input prompt indicators
+    const hasUnterminatedPrompt = stdout.length > 0 && !stdout.endsWith('\n');
+    const promptPattern = /([:?]\s*|\b(enter|input|value|number|name|choice)\b.*[:?]?\s*)$/i;
+    const matchesPrompt = promptPattern.test(stdout.trimEnd());
+
+    if (isEofError || (hasInputKeyword && (hasUnterminatedPrompt || matchesPrompt))) {
+      // Find the last line as prompt
+      const lines = stdout.split('\n');
+      const lastLine = lines[lines.length - 1] || '> ';
+      return {
+        needsInput: true,
+        prompt: lastLine,
+        cleanStdout: stdout,
+      };
+    }
+
+    return {
+      needsInput: false,
+      prompt: '',
+      cleanStdout: stdout,
+    };
+  };
+
+  const executeCode = async (stdinToUse, isSessionContinuation = false) => {
     const currentLang = LANGUAGES[selectedLanguage];
 
-    // No login required for any language
+    if (currentLang.isWebLanguage) {
+      setTerminalHistory([{ type: 'stdout', text: '✅ Code rendered successfully! Check the preview panel.' }]);
+      if (window.innerWidth < 1024) {
+        setActiveView('preview');
+      }
+      return;
+    }
 
     setIsRunning(true);
+    setWaitingForInput(false);
+
+    if (!isSessionContinuation) {
+      setTerminalHistory([{ type: 'system', text: `Compiling and running ${currentLang.name}...` }]);
+    }
 
     try {
-      // Handle web languages (HTML/CSS) - client-side rendering
-      if (currentLang.isWebLanguage) {
-        setOutput('✅ Code rendered successfully! Check the preview panel.');
-        // Auto-switch to preview on mobile for web languages
-        if (window.innerWidth < 1024) {
-          setActiveView('preview');
-        }
-        return;
-      }
-
-      // Handle server-side languages (Python, Java, C, and SQL)
-      setOutput('Running code...\n');
-
       const result = await compilerAPI.compileCode({
         language: selectedLanguage,
         source_code: code,
-        stdin: customInput,
+        stdin: stdinToUse,
+        isSessionContinuation,
       });
 
       // 1. Check if request was Queued due to high global capacity
@@ -308,7 +372,6 @@ const OnlineCompiler = () => {
           estimatedSeconds: result.estimatedWaitSeconds || 10,
         });
 
-        // Poll queue until completion
         if (queuePollingRef.current) clearInterval(queuePollingRef.current);
         queuePollingRef.current = setInterval(async () => {
           try {
@@ -316,18 +379,15 @@ const OnlineCompiler = () => {
             if (qStatus.status === 'completed') {
               clearInterval(queuePollingRef.current);
               setQueueModal((prev) => ({ ...prev, isOpen: false }));
-              const compRes = qStatus.result || {};
-              let outputText = '';
-              if (compRes.stdout) outputText += compRes.stdout;
-              if (compRes.stderr) outputText += '\n❌ Error:\n' + compRes.stderr;
-              if (compRes.compile_output) outputText += '\n📝 Compilation Output:\n' + compRes.compile_output;
-              if (compRes.status) outputText += `\n\n📊 Status: ${compRes.status.description || 'Completed'}`;
-              if (!outputText.trim()) outputText = '✅ Code executed successfully (no output)';
-              setOutput(outputText);
+              handleExecutionSuccess(qStatus.result || {}, stdinToUse);
             } else if (qStatus.status === 'failed' || qStatus.status === 'expired' || qStatus.status === 'rejected') {
               clearInterval(queuePollingRef.current);
               setQueueModal((prev) => ({ ...prev, isOpen: false }));
-              setOutput(`❌ Execution ${qStatus.status}: ${qStatus.error || qStatus.message || 'Failed'}`);
+              setTerminalHistory((prev) => [
+                ...prev,
+                { type: 'stderr', text: `\n❌ Execution ${qStatus.status}: ${qStatus.error || qStatus.message || 'Failed'}` }
+              ]);
+              setIsRunning(false);
             } else if (qStatus.queuePosition) {
               setQueueModal((prev) => ({
                 ...prev,
@@ -343,42 +403,7 @@ const OnlineCompiler = () => {
         return;
       }
 
-      // 2. Handle Usage Updates & 5 runs alert
-      if (result.usage) {
-        setAllowanceInfo(prev => ({
-          ...(prev || {}),
-          ...result.usage,
-        }));
-
-        if (result.usage.remainingCount === 5) {
-          setShowFiveRunsAlert(true);
-        }
-      }
-
-      // Format the output
-      let outputText = '';
-
-      if (result.stdout) {
-        outputText += result.stdout;
-      }
-
-      if (result.stderr) {
-        outputText += '\n❌ Error:\n' + result.stderr;
-      }
-
-      if (result.compile_output) {
-        outputText += '\n📝 Compilation Output:\n' + result.compile_output;
-      }
-
-      if (result.status) {
-        outputText += `\n\n📊 Status: ${result.status.description || 'Unknown'}`;
-      }
-
-      if (!outputText.trim()) {
-        outputText = '✅ Code executed successfully (no output)';
-      }
-
-      setOutput(outputText);
+      handleExecutionSuccess(result, stdinToUse);
 
     } catch (error) {
       console.error('Code execution error:', error);
@@ -387,51 +412,252 @@ const OnlineCompiler = () => {
       if (errMsg.includes('daily allowance has been reached') || errMsg.includes('coding submissions')) {
         setExhaustionError(errMsg);
       }
-      setOutput(`❌ Execution failed: ${errMsg}`);
-    } finally {
+      setTerminalHistory((prev) => [
+        ...prev,
+        { type: 'stderr', text: `\n❌ Execution failed: ${errMsg}` }
+      ]);
       setIsRunning(false);
     }
   };
 
-  const handleStopExecution = () => {
-    setIsRunning(false);
-    setOutput(prev => prev + '\n\n⚠️ Execution stopped by user');
+  // Helper to extract prompts defined in source code (C printf/scanf, Python input, Java Scanner, C++ cout/cin)
+  const extractCodePrompts = (srcCode, lang) => {
+    const prompts = [];
+    if (!srcCode) return prompts;
+
+    if (lang === 'c') {
+      // Must have actual input function (scanf, getchar, fgets, gets)
+      const hasInput = /\b(scanf|getchar|fgets|gets)\b/.test(srcCode);
+      if (!hasInput) return prompts;
+
+      const cRegex = /(?:printf\s*\(\s*"([^"\\]*(?:\\.[^"\\]*)*)"\s*\)\s*;|std::cout\s*<<\s*"([^"\\]*(?:\\.[^"\\]*)*)"\s*;)[ \t\r\n]*(?:fflush\s*\([^)]*\)\s*;[ \t\r\n]*)?(?:scanf|getchar|fgets)/g;
+      let match;
+      while ((match = cRegex.exec(srcCode)) !== null) {
+        const promptText = (match[1] !== undefined ? match[1] : match[2]) || '';
+        prompts.push(promptText.replace(/\\n/g, '\n').replace(/\\t/g, '\t'));
+      }
+    } else if (lang === 'python') {
+      const pyRegex = /input\s*\(\s*(["'])(.*?)\1\s*\)/g;
+      let match;
+      while ((match = pyRegex.exec(srcCode)) !== null) {
+        prompts.push(match[2] || '');
+      }
+    } else if (lang === 'cpp') {
+      const hasInput = /\b(cin\b|getline|scanf|getchar)\b/.test(srcCode);
+      if (!hasInput) return prompts;
+
+      const cppRegex = /(?:std::cout\s*<<\s*"([^"\\]*(?:\\.[^"\\]*)*)"\s*;|printf\s*\(\s*"([^"\\]*(?:\\.[^"\\]*)*)"\s*\)\s*;)[ \t\r\n]*(?:cin\b|getline|scanf)/g;
+      let match;
+      while ((match = cppRegex.exec(srcCode)) !== null) {
+        const promptText = (match[1] !== undefined ? match[1] : match[2]) || '';
+        prompts.push(promptText.replace(/\\n/g, '\n').replace(/\\t/g, '\t'));
+      }
+    } else if (lang === 'java') {
+      const hasInput = /\b(Scanner|readLine|BufferedReader)\b/.test(srcCode);
+      if (!hasInput) return prompts;
+
+      const javaRegex = /System\.out\.print(?:ln)?\s*\(\s*"([^"\\]*(?:\\.[^"\\]*)*)"\s*\)\s*;[ \t\r\n]*(?:(?:[a-zA-Z0-9_<>[\]]+\s+)+[a-zA-Z0-9_]+\s*=\s*)?(?:(?:[a-zA-Z0-9_]+)\s*\.\s*(?:next[a-zA-Z]*|readLine))/g;
+      let match;
+      while ((match = javaRegex.exec(srcCode)) !== null) {
+        prompts.push((match[1] || '').replace(/\\n/g, '\n').replace(/\\t/g, '\t'));
+      }
+    }
+    return prompts;
   };
 
-  // Refresh touches only the output area: the preview reloads / the terminal clears. The code stays.
-  const handleRefreshOutput = () => {
-    setPreviewKey((key) => key + 1);
-    if (!LANGUAGES[selectedLanguage].isWebLanguage) setOutput('');
-  };
+  const handleExecutionSuccess = (result, stdinUsed) => {
+    // Handle Usage Updates & 5 runs alert
+    if (result.usage) {
+      setAllowanceInfo(prev => ({
+        ...(prev || {}),
+        ...result.usage,
+      }));
 
-  // Function to render output with styled status
-  const renderOutput = (outputText) => {
-    if (!outputText) return 'Click "Run" to execute your code...';
-
-    // Split the output to find status line
-    const lines = outputText.split('\n');
-    const statusLineIndex = lines.findIndex(line => line.includes('📊 Status:'));
-
-    if (statusLineIndex === -1) {
-      return outputText;
+      if (result.usage.remainingCount === 5) {
+        setShowFiveRunsAlert(true);
+      }
     }
 
-    const beforeStatus = lines.slice(0, statusLineIndex).join('\n');
-    const statusLine = lines[statusLineIndex];
-    const afterStatus = lines.slice(statusLineIndex + 1).join('\n');
+    const stdout = result.stdout || '';
+    const stderr = result.stderr || '';
+    const codePrompts = extractCodePrompts(code, selectedLanguage);
+    const inputsProvided = (stdinUsed !== undefined && stdinUsed !== null && stdinUsed !== '') 
+      ? String(stdinUsed).split('\n') 
+      : [];
+    const currentInputStep = inputsProvided.length;
 
-    return (
-      <span>
-        {beforeStatus && beforeStatus}
-        {beforeStatus && statusLine && '\n\n'}
-        {statusLine && (
-          <span className="text-gray-500 dark:text-gray-400">
-            {statusLine}
-          </span>
-        )}
-        {afterStatus && afterStatus}
-      </span>
-    );
+    let displayStdout = stdout;
+    let nextPrompt = '';
+    let isWaiting = false;
+
+    // Helper: fuzzy search for prompt in text (tries exact, trimmed, and unquoted)
+    const findPromptIndex = (text, pText) => {
+      if (!pText) return -1;
+      let idx = text.indexOf(pText);
+      if (idx !== -1) return idx;
+      const trimmed = pText.trim();
+      if (trimmed) {
+        idx = text.indexOf(trimmed);
+        if (idx !== -1) return idx;
+      }
+      return -1;
+    };
+
+    // If there are sequential prompts in the code, slice stdout appropriately
+    if (codePrompts.length > 0 && currentInputStep < codePrompts.length) {
+      isWaiting = true;
+      nextPrompt = codePrompts[currentInputStep];
+
+      // Step 0: waiting for 1st input. Only display output BEFORE the 1st prompt.
+      // Next prompt text will be displayed at the interactive terminal prompt line.
+      if (currentInputStep === 0) {
+        const p0Idx = findPromptIndex(stdout, codePrompts[0]);
+        if (p0Idx !== -1) {
+          displayStdout = stdout.substring(0, p0Idx);
+        } else {
+          displayStdout = '';
+        }
+      } else {
+        // Step k > 0: user has provided k inputs.
+        // We only want to display what was outputted before the current waiting prompt (codePrompts[currentInputStep]).
+        const currPromptIdx = findPromptIndex(stdout, nextPrompt);
+        if (currPromptIdx !== -1) {
+          // Slice everything at and after this waiting prompt to prevent premature execution output
+          displayStdout = stdout.substring(0, currPromptIdx);
+        } else {
+          // Fallback: If this prompt wasn't verbatim found, slice at any subsequent prompt
+          let foundSubsequent = false;
+          for (let s = currentInputStep + 1; s < codePrompts.length; s++) {
+            const sIdx = findPromptIndex(stdout, codePrompts[s]);
+            if (sIdx !== -1) {
+              displayStdout = stdout.substring(0, sIdx);
+              foundSubsequent = true;
+              break;
+            }
+          }
+          if (!foundSubsequent && stdout.includes(inputsProvided[0])) {
+            // Cut off before any trailing output if possible
+            displayStdout = '';
+          }
+        }
+      }
+    } else if (codePrompts.length === 0) {
+      // Only run analyzeExecutionResult for non-prompted / dynamic codes where codePrompts wasn't found
+      const analysis = analyzeExecutionResult(result, code);
+      if (analysis.needsInput) {
+        isWaiting = true;
+        nextPrompt = analysis.prompt;
+        // Trim nextPrompt off displayStdout so it doesn't print both as stdout and as the yellow prompt label
+        const pIdx = displayStdout.lastIndexOf(nextPrompt);
+        if (pIdx !== -1) {
+          displayStdout = displayStdout.substring(0, pIdx);
+        }
+      }
+    } else {
+      // All extracted prompts have been satisfied!
+      isWaiting = false;
+      nextPrompt = '';
+    }
+
+    // Now reconstruct terminalHistory so previous inputs and interleaved outputs are preserved cleanly
+    const historyItems = [];
+
+    if (result.compile_output) {
+      historyItems.push({ type: 'compile_output', text: result.compile_output });
+    }
+
+    if (codePrompts.length > 0 && inputsProvided.length > 0) {
+      // Replay interactive transcript step by step:
+      // For each completed input: [prompt] -> [stdin]
+      let searchOffset = 0;
+      inputsProvided.forEach((inp, idx) => {
+        const pText = codePrompts[idx] || '';
+        const pIdx = findPromptIndex(stdout.substring(searchOffset), pText);
+        let segmentBeforePrompt = '';
+        if (pIdx !== -1) {
+          segmentBeforePrompt = stdout.substring(searchOffset, searchOffset + pIdx);
+          searchOffset = searchOffset + pIdx + pText.length;
+        }
+        if (segmentBeforePrompt && segmentBeforePrompt.trim()) {
+          historyItems.push({ type: 'stdout', text: segmentBeforePrompt });
+        }
+        historyItems.push({ type: 'stdin', prompt: pText, text: inp });
+      });
+
+      // Add remaining output for current step
+      if (!isWaiting) {
+        // Program finished completely! Show whatever remains after the last input
+        const remainingOutput = stdout.substring(searchOffset);
+        if (remainingOutput) {
+          historyItems.push({ type: 'stdout', text: remainingOutput });
+        }
+      } else {
+        // Still waiting for another prompt: if there was any stdout between last input and next prompt
+        const remainingSlice = displayStdout.substring(searchOffset);
+        if (remainingSlice && remainingSlice.trim()) {
+          historyItems.push({ type: 'stdout', text: remainingSlice });
+        }
+      }
+    } else {
+      // First step or single non-prompt execution
+      if (displayStdout) {
+        historyItems.push({ type: 'stdout', text: displayStdout });
+      }
+    }
+
+    if (stderr && !isWaiting) {
+      historyItems.push({ type: 'stderr', text: stderr });
+    }
+
+    setTerminalHistory(historyItems);
+    setWaitingForInput(isWaiting);
+    setLastPrompt(nextPrompt);
+    setIsRunning(false);
+  };
+
+  const handleRunCode = () => {
+    setSessionStdin('');
+    setTerminalInput('');
+    setWaitingForInput(false);
+    executeCode('', false);
+  };
+
+  const handleTerminalSubmit = (e) => {
+    if (e) e.preventDefault();
+    const inputLine = terminalInput;
+    const newSessionStdin = sessionStdin ? `${sessionStdin}\n${inputLine}` : inputLine;
+
+    // Echo input into history with prompt
+    setTerminalHistory((prev) => [
+      ...prev,
+      { type: 'stdin', prompt: lastPrompt, text: inputLine }
+    ]);
+
+    setSessionStdin(newSessionStdin);
+    setTerminalInput('');
+    setWaitingForInput(false);
+
+    // Re-execute with accumulated stdin
+    executeCode(newSessionStdin, true);
+  };
+
+  const handleStopExecution = () => {
+    setIsRunning(false);
+    setWaitingForInput(false);
+    setTerminalHistory((prev) => [
+      ...prev,
+      { type: 'system', text: '\n⚠️ Execution stopped by user' }
+    ]);
+  };
+
+  // Refresh output resets the terminal session
+  const handleRefreshOutput = () => {
+    setPreviewKey((key) => key + 1);
+    setTerminalHistory([]);
+    setTerminalInput('');
+    setSessionStdin('');
+    setWaitingForInput(false);
+    setLastPrompt('');
   };
 
   // Generate preview content for web languages
@@ -482,8 +708,9 @@ const OnlineCompiler = () => {
 
       <div className="flex min-h-screen overflow-x-hidden">
         {/* Language Sidebar: Only for Desktops & Tablets (md:flex, hidden on mobile) */}
+        {/* Top: 84px matches the desktop editor padding top; bottom aligns with the editor and preview bottom */}
         <aside
-          className="hidden md:flex flex-col fixed left-0 top-[72px] bottom-0 z-30 w-40 lg:w-44 border-r border-black/10 dark:border-[#1a234d] bg-[#daf0fa]/95 dark:bg-[#070e38] backdrop-blur-md"
+          className="hidden md:flex flex-col fixed left-0 top-[84px] bottom-[1rem] z-30 w-40 lg:w-44 rounded-r-xl border-r border-t border-b border-black/10 dark:border-[#1a234d] bg-[#daf0fa]/95 dark:bg-[#070e38] backdrop-blur-md shadow-sm"
         >
           <div className="px-3 pt-3 pb-1.5 border-b border-black/5 dark:border-white/5">
             <span className="text-[10px] uppercase tracking-[0.16em] font-semibold text-[#17386c]/65 dark:text-[#8b9bb4]">
@@ -523,8 +750,8 @@ const OnlineCompiler = () => {
 
         {/* Main Content */}
         <div className="flex-1 relative min-w-0 md:ml-40 lg:ml-44">
-          <div className="relative z-10 pt-[124px] md:pt-[84px] pb-2">
-            <div className="h-[calc(100vh-8.5rem)] md:h-[calc(100vh-6rem)] px-4 lg:px-6">
+          <div className="relative z-10 pt-[124px] md:pt-[84px] pb-4">
+            <div className="h-[calc(100vh-8.5rem)] md:h-[calc(100vh-6.25rem)] px-4 lg:px-6">
 
               {/* 5 Runs Remaining Alert */}
               <AnimatePresence>
@@ -780,15 +1007,91 @@ const OnlineCompiler = () => {
                             title="Live Preview"
                           />
                         ) : (
-                          <>
-                            <div className="shrink-0 border-b border-white/10 dark:border-gray-700/20 p-3">
-                              <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">Custom Input</label>
-                              <textarea value={customInput} onChange={(event) => setCustomInput(event.target.value)} rows={4} placeholder="Enter stdin values here, one line at a time" className="w-full resize-y rounded-lg border border-gray-300/70 bg-white/70 px-3 py-2 font-mono text-sm text-gray-900 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950/60 dark:text-gray-100" />
-                            </div>
-                            <div className="min-h-0 flex-1 p-4 overflow-auto">
-                              <pre className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{renderOutput(output)}</pre>
-                            </div>
-                          </>
+                          <div
+                            ref={terminalScrollContainerRef}
+                            className="min-h-0 flex-1 p-4 overflow-auto bg-[#04081c] text-gray-100 font-mono text-sm leading-relaxed cursor-text selection:bg-blue-600/40"
+                            onClick={() => terminalInputRef.current?.focus({ preventScroll: true })}
+                          >
+                            {terminalHistory.length === 0 && !isRunning && !waitingForInput && (
+                              <div className="text-gray-500 italic select-none">
+                                Click &quot;Run&quot; to execute.
+                              </div>
+                            )}
+
+                            {terminalHistory.map((item, index) => {
+                              if (item.type === 'stdin') {
+                                return (
+                                  <div key={index} className="text-green-400 font-semibold break-all">
+                                    <span className="text-gray-500 mr-1 select-none">&gt;</span>
+                                    {item.text}
+                                  </div>
+                                );
+                              }
+                              if (item.type === 'stderr') {
+                                return (
+                                  <div key={index} className="text-rose-400 whitespace-pre-wrap break-words">
+                                    {item.text}
+                                  </div>
+                                );
+                              }
+                              if (item.type === 'compile_output') {
+                                return (
+                                  <div key={index} className="text-amber-300 whitespace-pre-wrap break-words">
+                                    {item.text}
+                                  </div>
+                                );
+                              }
+                              if (item.type === 'status') {
+                                return (
+                                  <div key={index} className="text-gray-500 text-xs mt-2 select-none">
+                                    {item.text}
+                                  </div>
+                                );
+                              }
+                              if (item.type === 'system') {
+                                return (
+                                  <div key={index} className="text-blue-400 text-xs my-1 select-none">
+                                    {item.text}
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div key={index} className="whitespace-pre-wrap break-words text-gray-100">
+                                  {item.text}
+                                </div>
+                              );
+                            })}
+
+                            {/* Active interactive prompt line */}
+                            {waitingForInput && (
+                              <form onSubmit={handleTerminalSubmit} className="flex items-center gap-1.5 mt-1">
+                                {lastPrompt && (
+                                  <span className="text-yellow-400 font-semibold select-none whitespace-pre">
+                                    {lastPrompt}
+                                  </span>
+                                )}
+                                <span className="text-emerald-400 font-bold select-none">&gt;</span>
+                                <input
+                                  ref={terminalInputRef}
+                                  type="text"
+                                  value={terminalInput}
+                                  onChange={(e) => setTerminalInput(e.target.value)}
+                                  className="flex-1 bg-transparent border-none outline-none text-emerald-300 font-mono text-sm p-0 m-0 focus:ring-0 focus:outline-none"
+                                  placeholder="Type input and press Enter..."
+                                />
+                                <button type="submit" className="hidden" tabIndex={-1}>Submit</button>
+                              </form>
+                            )}
+
+                            {isRunning && (
+                              <div className="flex items-center gap-2 text-xs text-blue-400 my-1 animate-pulse select-none">
+                                <span className="inline-block w-2 h-2 rounded-full bg-blue-400 animate-ping"></span>
+                                Program is executing...
+                              </div>
+                            )}
+
+                            <div ref={terminalEndRef} />
+                          </div>
                         )}
                       </div>
                     </div>
@@ -897,15 +1200,90 @@ const OnlineCompiler = () => {
                             title="Live Preview"
                           />
                         ) : (
-                          <>
-                            <div className="shrink-0 border-b border-white/10 dark:border-gray-700/20 p-3">
-                              <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">Custom Input</label>
-                              <textarea value={customInput} onChange={(event) => setCustomInput(event.target.value)} rows={3} placeholder="Enter stdin values here, one line at a time" className="w-full resize-y rounded-lg border border-gray-300/70 bg-white/70 px-3 py-2 font-mono text-xs text-gray-900 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950/60 dark:text-gray-100" />
-                            </div>
-                            <div className="min-h-0 flex-1 p-4 overflow-auto">
-                              <pre className="text-xs sm:text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{renderOutput(output)}</pre>
-                            </div>
-                          </>
+                          <div
+                            className="min-h-0 flex-1 p-3 overflow-auto bg-[#04081c] text-gray-100 font-mono text-xs leading-relaxed cursor-text selection:bg-blue-600/40"
+                            onClick={() => terminalInputRef.current?.focus({ preventScroll: true })}
+                          >
+                            {terminalHistory.length === 0 && !isRunning && !waitingForInput && (
+                              <div className="text-gray-500 italic select-none">
+                                Click &quot;Run&quot; to execute.
+                              </div>
+                            )}
+
+                            {terminalHistory.map((item, index) => {
+                              if (item.type === 'stdin') {
+                                return (
+                                  <div key={index} className="text-green-400 font-semibold break-all">
+                                    <span className="text-gray-500 mr-1 select-none">&gt;</span>
+                                    {item.text}
+                                  </div>
+                                );
+                              }
+                              if (item.type === 'stderr') {
+                                return (
+                                  <div key={index} className="text-rose-400 whitespace-pre-wrap break-words">
+                                    {item.text}
+                                  </div>
+                                );
+                              }
+                              if (item.type === 'compile_output') {
+                                return (
+                                  <div key={index} className="text-amber-300 whitespace-pre-wrap break-words">
+                                    {item.text}
+                                  </div>
+                                );
+                              }
+                              if (item.type === 'status') {
+                                return (
+                                  <div key={index} className="text-gray-500 text-[10px] mt-2 select-none">
+                                    {item.text}
+                                  </div>
+                                );
+                              }
+                              if (item.type === 'system') {
+                                return (
+                                  <div key={index} className="text-blue-400 text-[10px] my-1 select-none">
+                                    {item.text}
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div key={index} className="whitespace-pre-wrap break-words text-gray-100">
+                                  {item.text}
+                                </div>
+                              );
+                            })}
+
+                            {/* Active interactive prompt line for mobile */}
+                            {waitingForInput && (
+                              <form onSubmit={handleTerminalSubmit} className="flex items-center gap-1 mt-1">
+                                {lastPrompt && (
+                                  <span className="text-yellow-400 font-semibold select-none whitespace-pre text-xs">
+                                    {lastPrompt}
+                                  </span>
+                                )}
+                                <span className="text-emerald-400 font-bold select-none text-xs">&gt;</span>
+                                <input
+                                  ref={terminalInputRef}
+                                  type="text"
+                                  value={terminalInput}
+                                  onChange={(e) => setTerminalInput(e.target.value)}
+                                  className="flex-1 bg-transparent border-none outline-none text-emerald-300 font-mono text-xs p-0 m-0 focus:ring-0 focus:outline-none"
+                                  placeholder="Type input and tap Enter..."
+                                />
+                                <button type="submit" className="hidden" tabIndex={-1}>Submit</button>
+                              </form>
+                            )}
+
+                            {isRunning && (
+                              <div className="flex items-center gap-2 text-[10px] text-blue-400 my-1 animate-pulse select-none">
+                                <span className="inline-block w-2 h-2 rounded-full bg-blue-400 animate-ping"></span>
+                                Program is executing...
+                              </div>
+                            )}
+
+                            <div ref={terminalEndRef} />
+                          </div>
                         )}
                       </div>
                     </div>

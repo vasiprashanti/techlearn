@@ -108,7 +108,7 @@ export const checkQueueStatus = async (req, res) => {
 };
 
 export const compileCode = async (req, res) => {
-  const { language, source_code, stdin, idempotencyKey } = req.body;
+  const { language, source_code, stdin, idempotencyKey, isSessionContinuation } = req.body;
 
   const language_id = resolveCompilerLanguageId(language);
   if (!language_id)
@@ -124,12 +124,31 @@ export const compileCode = async (req, res) => {
     const ownerId = req.user?._id ? String(req.user._id) : deviceId;
 
     // 2. Personal & Device Allowance Check (Atomic)
-    const allowanceResult = await checkAndConsumePersonalAllowance({
-      user: req.user,
-      deviceId,
-      userTier,
-      count: 1,
-    });
+    // Only consume allowance on the initial run, NOT for interactive session continuations
+    let allowanceResult;
+    if (isSessionContinuation) {
+      const { dateKey, end: resetAt } = getISTDayWindow();
+      const devUsage = await getOrCreateDailyUsage("device", deviceId, "guest", dateKey);
+      let userUsage = null;
+      if (req.user?._id) {
+        userUsage = await getOrCreateDailyUsage("user", String(req.user._id), userTier, dateKey);
+      }
+      const activeRecord = userUsage || devUsage;
+      allowanceResult = {
+        allowed: true,
+        effectiveAllowance: activeRecord.effectiveAllowance,
+        usedCount: activeRecord.usedCount,
+        remainingCount: Math.max(0, activeRecord.effectiveAllowance - activeRecord.usedCount),
+        resetAt,
+      };
+    } else {
+      allowanceResult = await checkAndConsumePersonalAllowance({
+        user: req.user,
+        deviceId,
+        userTier,
+        count: 1,
+      });
+    }
 
     if (!allowanceResult.allowed) {
       return res.status(429).json({
