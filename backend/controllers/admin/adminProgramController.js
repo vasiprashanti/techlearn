@@ -685,9 +685,14 @@ export const listPrograms = async (req, res) => {
       query.programType = programTypeValues.length ? { $in: programTypeValues } : programType.trim();
     }
 
-    // Status filter
+    // Status filter - "Published" matches both "Published" and legacy "Active"
     if (status.trim()) {
-      query.status = status.trim();
+      const trimmedStatus = status.trim();
+      if (trimmedStatus === "Published" || trimmedStatus === "Active") {
+        query.status = { $in: ["Published", "Active"] };
+      } else {
+        query.status = trimmedStatus;
+      }
     }
 
     // Month filter based on createdAt (expected format: YYYY-MM or MM)
@@ -719,13 +724,49 @@ export const listPrograms = async (req, res) => {
     const safeSortBy = allowedSortFields.has(sortBy) ? sortBy : "createdAt";
     sortOptions[safeSortBy] = sortOrder === "asc" ? 1 : -1;
 
-    const totalPrograms = await Program.countDocuments(query);
-    const rawPrograms = await Program.find(query)
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limitNum)
-      .populate("courseIds", ENTITY_CONFIG.courses.selectFields)
-      .lean();
+    // Global counts across all active (non-deleted) programs for stats cards
+    const [
+      totalPrograms,
+      allActivePrograms,
+      rawPrograms,
+      allEnrollmentAgg,
+    ] = await Promise.all([
+      Program.countDocuments(query),
+      Program.find({ deletedAt: null }).select("_id status studentCount").lean(),
+      Program.find(query)
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limitNum)
+        .populate("courseIds", ENTITY_CONFIG.courses.selectFields)
+        .lean(),
+      ProgramEnrollment.aggregate([
+        {
+          $lookup: {
+            from: "students",
+            localField: "studentId",
+            foreignField: "_id",
+            as: "student",
+          },
+        },
+        { $match: { "student.0": { $exists: true } } },
+        { $group: { _id: "$programId", studentIds: { $addToSet: "$studentId" } } },
+      ]),
+    ]);
+
+    const globalEnrollmentCountByProgramId = new Map(
+      allEnrollmentAgg.map((group) => [String(group._id), (group.studentIds || []).filter(Boolean).length])
+    );
+
+    const stats = {
+      total: allActivePrograms.length,
+      published: allActivePrograms.filter((p) => p.status === "Published" || p.status === "Active").length,
+      drafts: allActivePrograms.filter((p) => p.status === "Draft").length,
+      archived: allActivePrograms.filter((p) => p.status === "Archived").length,
+      totalStudents: allActivePrograms.reduce(
+        (sum, p) => sum + (globalEnrollmentCountByProgramId.get(String(p._id)) || 0),
+        0
+      ),
+    };
 
     const enrollmentGroups = rawPrograms.length
       ? await ProgramEnrollment.aggregate([
@@ -789,6 +830,7 @@ export const listPrograms = async (req, res) => {
     res.json({
       success: true,
       programs,
+      stats,
       pagination: {
         total: totalPrograms,
         page: pageNum,

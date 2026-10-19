@@ -8,8 +8,17 @@ import { useAuthModalContext } from "../../context/AuthModalContext";
 import { programLearningAPI } from "../../services/programLearningApi";
 import { courseAPI } from "../../services/api";
 import { initiateRazorpayPayment } from "../../utils/razorpayCheckout";
+import API from "../../api/client";
 import LoadingScreen from "../../components/LoadingScreen";
-import PricingExitFeedbackModal from "../../components/PricingExitFeedbackModal";
+
+const EXIT_FEEDBACK_OPTIONS = [
+  "Fees are too high / Feels expensive",
+  "Looking for free courses first",
+  "Need more details / Want to speak with counselor",
+  "Payment or UPI issue",
+  "Just exploring for now",
+  "Something else",
+];
 
 export default function ProgramPricingPage() {
   const { programId, courseId } = useParams();
@@ -27,7 +36,11 @@ export default function ProgramPricingPage() {
   const [error, setError] = useState("");
   const [payingPlanKey, setPayingPlanKey] = useState("");
   const [paymentError, setPaymentError] = useState("");
-  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [feedbackReason, setFeedbackReason] = useState("");
+  const [customFeedbackReason, setCustomFeedbackReason] = useState("");
+  const [feedbackError, setFeedbackError] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
   const effectiveProgramId = programId || location.state?.programId;
   const effectiveCourseId = courseId || location.state?.courseId;
@@ -276,19 +289,472 @@ export default function ProgramPricingPage() {
   };
 
   const handleBackClick = () => {
-    setIsFeedbackModalOpen(true);
+    setFeedbackError("");
+    setIsFeedbackOpen(true);
   };
+
+  const handleFeedbackSubmit = async () => {
+    if (!feedbackReason) {
+      setFeedbackError("Please select an option before submitting.");
+      return;
+    }
+
+    if (feedbackReason === "Need more details / Want to speak with counselor") {
+      window.open(
+        'https://api.whatsapp.com/send/?phone=919000663666&text=Hey%2C+I+need+more+information+before+joining+the+program.+Can+you+help+me%3F&type=phone_number&app_absent=0',
+        '_blank'
+      );
+    }
+
+    setIsSubmittingFeedback(true);
+    try {
+      await API.post('/api/payments/exit-feedback', {
+        programId: item?._id,
+        selectedPlan: cards[0]?.planKey,
+        reason: feedbackReason,
+        customReason: feedbackReason === "Something else" ? customFeedbackReason.trim() : "",
+      });
+    } catch (err) {
+      console.error("Failed to submit exit feedback:", err);
+    } finally {
+      setIsSubmittingFeedback(false);
+      handleBackToProgram();
+    }
+  };
+
+  if (isFeedbackOpen) {
+    return (
+      <div className={`tl-unified-onboarding-root ${isDarkMode ? "dark-mode" : ""}`}>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap');
+
+          .tl-unified-onboarding-root {
+            --navy: #bceaff;
+            --navy-dark: #02052e;
+            --chip-blue: rgba(255, 255, 255, 0.45);
+            --lime: #8cbf4a;
+            --lime-hover: #a2d354;
+            --white: #050a5b;
+            --muted: #6f7894;
+            --muted-light: #59657d;
+            --border: rgba(5, 10, 91, .14);
+            --border-hover: rgba(5, 10, 91, .30);
+            --card-white: #ffffff;
+            --card-border: #e2e5eb;
+            --danger: #d83b52;
+            --toggle-bg: rgba(255, 255, 255, .55);
+            --toggle-border: rgba(5, 10, 91, .16);
+            --toggle-icon: #02052e;
+            --input-bg: rgba(255, 255, 255, .45);
+
+            min-height: 100vh;
+            background: linear-gradient(135deg, #daf0fa 0%, #bceaff 45%, #bceaff 100%);
+            color: var(--white);
+            font-family: "Inter", sans-serif;
+            transition: background .25s ease, color .25s ease;
+            position: relative;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .tl-unified-onboarding-root.dark-mode {
+            background: #080d25;
+            --navy: #080d25;
+            --navy-dark: #020416;
+            --chip-blue: rgba(255, 255, 255, 0.05);
+            --lime: #8cbf4a;
+            --lime-hover: #a2d354;
+            --white: #f5f7ff;
+            --muted: #9da7c2;
+            --muted-light: #b7bfd4;
+            --border: rgba(255, 255, 255, .12);
+            --border-hover: rgba(255, 255, 255, .25);
+            --card-white: #11172d;
+            --card-border: #252d46;
+            --danger: #ff8f9d;
+            --toggle-bg: rgba(255, 255, 255, .08);
+            --toggle-border: rgba(255, 255, 255, .16);
+            --toggle-icon: #f5f7ff;
+            --input-bg: rgba(255, 255, 255, .05);
+          }
+
+          .tl-unified-onboarding-root * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: "Inter", sans-serif;
+          }
+
+          .tl-unified-page {
+            width: 50vw;
+            max-width: 1100px;
+            height: 100vh;
+            max-height: 100vh;
+            margin: 0 auto;
+            padding: 80px 0 0;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            overflow: hidden;
+            position: relative;
+          }
+
+          .tl-screen {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            min-height: 0;
+            position: relative;
+            overflow: hidden;
+            animation: tlScreenIn .25s ease;
+          }
+
+          .tl-screen-body {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 0;
+            padding-bottom: 110px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+          }
+
+          .tl-screen-body::-webkit-scrollbar {
+            width: 5px;
+          }
+
+          .tl-screen-body::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+          }
+
+          @keyframes tlScreenIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+
+          .tl-eyebrow {
+            font-family: "Press Start 2P", monospace !important;
+            font-size: 8.5px;
+            line-height: 1.4;
+            color: var(--white);
+            letter-spacing: .6px;
+            margin-top: 14px;
+            margin-bottom: 22px;
+            flex-shrink: 0;
+          }
+
+          .tl-title {
+            font-size: clamp(30px, 2.5vw, 46px);
+            line-height: 1.1;
+            letter-spacing: -1.4px;
+            font-weight: 600;
+            color: var(--white);
+            margin-top: 0;
+            margin-bottom: 28px;
+            flex-shrink: 0;
+          }
+
+          .tl-title i,
+          .tl-title em {
+            font-style: italic;
+          }
+
+          .tl-field {
+            margin-bottom: 16px;
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+          }
+
+          .tl-feedback-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+          }
+
+          .tl-chip {
+            appearance: none;
+            width: auto;
+            border: 1px solid var(--border);
+            background: var(--chip-blue);
+            color: var(--white);
+            border-radius: 8px;
+            padding: 8px 16px;
+            min-height: 42px;
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.3;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-family: "Inter", sans-serif;
+            cursor: pointer;
+            transition: background .18s ease, border-color .18s ease, transform .12s ease, color .18s ease;
+            box-sizing: border-box;
+          }
+
+          .tl-chip:hover {
+            background: var(--lime);
+            border-color: var(--lime);
+            color: #000f45;
+          }
+
+          .tl-chip:active {
+            transform: scale(.98);
+          }
+
+          .tl-chip.selected {
+            background: #000f45;
+            border-color: var(--lime);
+            color: var(--navy);
+          }
+
+          .tl-unified-onboarding-root.dark-mode .tl-chip.selected {
+            background: var(--lime);
+            border-color: var(--lime);
+            color: #000f45;
+          }
+
+          .tl-other-wrapper {
+            margin-top: 14px;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+          }
+
+          .tl-other-input {
+            width: 100%;
+            height: 42px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--input-bg);
+            color: var(--white);
+            padding: 0 14px;
+            font-size: 13px;
+            outline: none;
+            transition: background .2s ease, border-color .2s ease;
+            box-sizing: border-box;
+          }
+
+          .tl-other-input::placeholder {
+            color: var(--muted);
+          }
+
+          .tl-other-input:focus {
+            border-color: var(--lime);
+            box-shadow: 0 0 0 3px rgba(140, 191, 74, .12);
+          }
+
+          .tl-error-text {
+            color: var(--danger);
+            background: rgba(255, 80, 100, .08);
+            border: 1px solid rgba(255, 80, 100, .18);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 11.5px;
+            margin-top: 12px;
+          }
+
+          .tl-actions {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50vw;
+            max-width: 1100px;
+            display: flex;
+            gap: 12px;
+            padding: 16px 0 24px;
+            background: var(--navy);
+            z-index: 50;
+            box-sizing: border-box;
+            transition: background .25s ease;
+          }
+
+          .tl-btn {
+            height: 46px;
+            border: none;
+            border-radius: 10px;
+            font-family: "Press Start 2P", monospace !important;
+            font-size: 8px !important;
+            letter-spacing: .02em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: .18s ease;
+            box-sizing: border-box;
+          }
+
+          .tl-btn:hover {
+            transform: translateY(-1px);
+          }
+
+          .tl-btn:active {
+            transform: scale(.99);
+          }
+
+          .tl-btn-back {
+            width: 30%;
+            background: rgba(88, 90, 95, .22) !important;
+            color: var(--white) !important;
+            border: 1px solid var(--border) !important;
+          }
+
+          .tl-btn-back:hover {
+            background: rgba(88, 90, 95, .35) !important;
+          }
+
+          .tl-btn-primary {
+            width: 70%;
+            background: var(--lime) !important;
+            color: #07101b !important;
+          }
+
+          .tl-btn-primary:hover {
+            background: var(--lime-hover) !important;
+          }
+
+          .tl-btn:disabled {
+            opacity: .4 !important;
+            cursor: not-allowed !important;
+            transform: none !important;
+          }
+
+          /* Responsive Breakpoints */
+          @media (min-width: 701px) and (max-width: 1200px) {
+            .tl-unified-page {
+              width: 75vw;
+              max-width: 850px;
+              padding-top: 86px;
+            }
+            .tl-actions {
+              width: 75vw;
+              max-width: 850px;
+            }
+            .tl-title {
+              font-size: clamp(34px, 3.2vw, 48px);
+            }
+          }
+
+          @media (max-width: 700px) {
+            .tl-unified-page {
+              width: 100%;
+              padding: 82px 16px 0;
+            }
+            .tl-actions {
+              width: 100%;
+              left: 0;
+              transform: none;
+              padding: 14px 16px 20px;
+            }
+            .tl-eyebrow { font-size: 8px; }
+            .tl-title { font-size: clamp(26px, 6vw, 32px); letter-spacing: -1.2px; }
+            .tl-chip { font-size: 12px; padding: 8px 12px; min-height: 38px; }
+            .tl-btn { height: 46px; font-size: 8px; }
+          }
+        `}</style>
+
+        <div className="tl-unified-page">
+          <div className="tl-screen">
+            <div className="tl-screen-body">
+              <div className="tl-eyebrow">BEFORE YOU GO...</div>
+              <h1 className="tl-title">
+                What made you want to <i>leave pricing?</i>
+              </h1>
+
+              <div className="tl-field">
+                <div className="tl-feedback-options">
+                  {EXIT_FEEDBACK_OPTIONS.map((itemOption) => (
+                    <button
+                      key={itemOption}
+                      type="button"
+                      className={`tl-chip ${feedbackReason === itemOption ? "selected" : ""}`}
+                      style={{ width: "100%", justifyContent: "center" }}
+                      onClick={() => {
+                        setFeedbackReason(itemOption);
+                        setFeedbackError("");
+                      }}
+                    >
+                      {itemOption}
+                    </button>
+                  ))}
+                </div>
+
+                {feedbackReason === "Something else" && (
+                  <div className="tl-other-wrapper">
+                    <input
+                      type="text"
+                      className="tl-other-input"
+                      placeholder="Please share what made you want to leave..."
+                      value={customFeedbackReason}
+                      onChange={(e) => setCustomFeedbackReason(e.target.value)}
+                      maxLength={150}
+                      autoFocus
+                    />
+                  </div>
+                )}
+
+                {feedbackError && (
+                  <div className="tl-error-text" style={{ textAlign: "center", maxWidth: "500px", margin: "12px auto 0" }}>
+                    {feedbackError}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="tl-actions">
+              <button
+                type="button"
+                className="tl-btn tl-btn-back"
+                disabled={isSubmittingFeedback}
+                onClick={() => {
+                  setFeedbackError("");
+                  setIsFeedbackOpen(false);
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                type="button"
+                className="tl-btn tl-btn-primary"
+                disabled={isSubmittingFeedback}
+                onClick={handleFeedbackSubmit}
+              >
+                {isSubmittingFeedback ? "SUBMITTING..." : "SUBMIT"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
       className={`min-h-screen w-full flex flex-col font-sans transition-colors duration-300 ${
-        isDarkMode ? "bg-[#050b2e] text-white" : "bg-[#dff5ff] text-[#050a3b]"
+        isDarkMode
+          ? "bg-[#080d25] text-white"
+          : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] text-[#050a3b]"
       }`}
       style={{
-        "--light-bg": isDarkMode ? "#050b2e" : "#dff5ff",
-        "--card-navy": isDarkMode ? "#0a1238" : "#ffffff",
-        "--featured-bg": isDarkMode ? "#0a1238" : "#050a3b",
-        "--border-color": isDarkMode ? "#222e55" : "rgba(4,16,61,.13)",
+        "--light-bg": isDarkMode ? "#080d25" : "#bceaff",
+        "--card-navy": isDarkMode ? "#0c1438" : "#ffffff",
+        "--featured-bg": isDarkMode ? "#0c1438" : "#050a3b",
+        "--border-color": isDarkMode ? "rgba(255, 255, 255, 0.10)" : "rgba(4,16,61,.13)",
         "--muted-color": isDarkMode ? "#c0cbe2" : "#65708c",
         "--green-color": isDarkMode ? "#89c638" : "#b5e959",
       }}
@@ -542,21 +1008,6 @@ export default function ProgramPricingPage() {
           })}
         </div>
       </main>
-
-      {/* Pricing Exit Feedback Modal triggered upon clicking arrow back */}
-      <PricingExitFeedbackModal
-        isOpen={isFeedbackModalOpen}
-        onClose={() => {
-          setIsFeedbackModalOpen(false);
-          handleBackToProgram();
-        }}
-        onSubmitted={() => {
-          setIsFeedbackModalOpen(false);
-          handleBackToProgram();
-        }}
-        programId={item?._id}
-        selectedPlan={cards[0]?.planKey}
-      />
     </div>
   );
 }

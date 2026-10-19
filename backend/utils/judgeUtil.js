@@ -31,14 +31,17 @@ const executeCodeWithJudge0 = async ({
   const { url, headers } = getJudge0Config();
   const runAgainstJudge0 = async (judgeUrl, judgeHeaders) => {
     const baseUrl = judgeUrl.replace(/\/+$/, "");
-    const createEndpoint = `${baseUrl}/submissions?base64_encoded=false`;
+    const createEndpoint = `${baseUrl}/submissions?base64_encoded=true`;
+
+    const encodedSource = Buffer.from(sourceCode || "").toString("base64");
+    const encodedStdin = stdin ? Buffer.from(stdin).toString("base64") : "";
 
     const createResponse = await axios.post(
       createEndpoint,
       {
-        source_code: sourceCode,
+        source_code: encodedSource,
         language_id: languageId,
-        stdin,
+        stdin: encodedStdin,
       },
       {
         headers: judgeHeaders,
@@ -46,8 +49,28 @@ const executeCodeWithJudge0 = async ({
       }
     );
 
+    const decodeBase64Safe = (val) => {
+      if (!val) return val;
+      try {
+        return Buffer.from(val, "base64").toString("utf-8");
+      } catch {
+        return val;
+      }
+    };
+
+    const normalizeResultData = (data) => {
+      if (!data) return data;
+      return {
+        ...data,
+        stdout: decodeBase64Safe(data.stdout),
+        stderr: decodeBase64Safe(data.stderr),
+        compile_output: decodeBase64Safe(data.compile_output),
+        message: decodeBase64Safe(data.message),
+      };
+    };
+
     if (createResponse.data?.status?.id) {
-      return createResponse.data;
+      return normalizeResultData(createResponse.data);
     }
 
     const token = createResponse.data?.token;
@@ -55,7 +78,7 @@ const executeCodeWithJudge0 = async ({
       throw new Error("Judge0 did not return a submission token.");
     }
 
-    const resultEndpoint = `${baseUrl}/submissions/${token}?base64_encoded=false`;
+    const resultEndpoint = `${baseUrl}/submissions/${token}?base64_encoded=true`;
     const deadline = Date.now() + timeoutMs;
 
     while (Date.now() < deadline) {
@@ -66,7 +89,7 @@ const executeCodeWithJudge0 = async ({
 
       const statusId = resultResponse.data?.status?.id;
       if (isJudge0TerminalStatus(statusId)) {
-        return resultResponse.data;
+        return normalizeResultData(resultResponse.data);
       }
 
       await sleep(pollIntervalMs);

@@ -30,10 +30,19 @@ const EditTopicForm = () => {
       setImageError("Please select an image file to upload.");
       return;
     }
+    if (imageFile.size > 10 * 1024 * 1024) {
+      setImageError("Image file size must be less than 10MB.");
+      return;
+    }
     setUploadingImage(true);
     setImageError("");
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+      if (!token) {
+        setImageError("Authentication session expired. Please log in again.");
+        setUploadingImage(false);
+        return;
+      }
       const formData = new FormData();
       formData.append("image", imageFile);
       const res = await axios.post(
@@ -42,7 +51,7 @@ const EditTopicForm = () => {
         {
           headers: {
             "Content-Type": "multipart/form-data",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -51,7 +60,7 @@ const EditTopicForm = () => {
       setImageFile(null);
     } catch (err) {
       console.error(err);
-      setImageError(err.response?.data?.message || "Failed to upload image.");
+      setImageError(err.response?.data?.message || err.response?.data?.error || "Failed to upload image. Please check your network and session.");
     } finally {
       setUploadingImage(false);
     }

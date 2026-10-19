@@ -19,7 +19,7 @@ const handleResponse = async (response) => {
       expireSession();
     }
 
-    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP error! status: ${response.status}`);
   }
   return response.json();
 };

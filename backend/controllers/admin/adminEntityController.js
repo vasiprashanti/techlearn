@@ -4887,9 +4887,54 @@ export const markStudentsReadAdmin = async (req, res) => {
       return res.status(401).json({ success: false, message: "Authentication required." });
     }
 
-    const { studentIds, category } = req.body;
+    const { studentIds, category, markAll } = req.body;
+
+    if (markAll) {
+      // Mark all students (or all in a given category) as read
+      const { processedStudents } = await loadGlobalStudentsData();
+      const targetCategory = String(category || "all").toLowerCase();
+
+      const studentsToMark = processedStudents.filter((s) => {
+        if (targetCategory === "all" || targetCategory === "all-students" || targetCategory === "all_students") return true;
+        if (targetCategory === "enrolled") return s.isEnrolled;
+        if (targetCategory === "leads") return s.isLead;
+        if (targetCategory === "skill") return s.hasSkill;
+        if (targetCategory === "placement") return s.hasPlacement;
+        if (targetCategory === "completed") return s.hasCompleted;
+        if (targetCategory === "waitlist") return s.isWaitlisted;
+        if (targetCategory === "exploring") return s.isExploring;
+        return true;
+      });
+
+      const bulkOps = studentsToMark.map((s) => ({
+        updateOne: {
+          filter: { adminId, entityId: String(s.id) },
+          update: {
+            $setOnInsert: {
+              adminId,
+              entityId: String(s.id),
+              entityType: "student",
+              category: targetCategory,
+              readAt: new Date(),
+            },
+          },
+          upsert: true,
+        },
+      }));
+
+      if (bulkOps.length > 0) {
+        await AdminReadState.bulkWrite(bulkOps);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: `All ${studentsToMark.length} items in ${targetCategory} marked as read.`,
+        markedCount: studentsToMark.length,
+      });
+    }
+
     if (!Array.isArray(studentIds) || studentIds.length === 0) {
-      return res.status(400).json({ success: false, message: "studentIds array is required." });
+      return res.status(400).json({ success: false, message: "studentIds array or markAll: true is required." });
     }
 
     const bulkOps = studentIds.map((id) => ({
