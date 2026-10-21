@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import Sidebar from './Sidebar';
+import '../../pages/hiringPage.css';
 
-export default function UserSidebarLayout({ children, maxWidthClass = 'max-w-[1400px]' }) {
+export default function UserSidebarLayout({ children, maxWidthClass = 'max-w-[1400px]', hiringShell = false }) {
   const { theme } = useTheme();
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -39,13 +40,24 @@ export default function UserSidebarLayout({ children, maxWidthClass = 'max-w-[14
 
       {showSidebar ? <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} /> : null}
 
-      <main
-        className={`flex flex-col items-center flex-1 transition-all duration-700 ease-in-out z-10 ${
-          showSidebar ? 'md:ml-[90px]' : ''
-        } pt-28 pb-12 px-6 md:px-12 lg:px-16 overflow-auto`}
-      >
-        <div className={`w-full mx-auto ${maxWidthClass}`}>{children}</div>
-      </main>
+      {hiringShell ? (
+        <main className="flex-1 min-w-0 z-10 overflow-auto">
+          <div
+            className={`hiring-page-container ${showSidebar ? 'has-sidebar' : ''}`}
+            style={{ background: 'transparent', minHeight: 0, color: 'inherit' }}
+          >
+            <div className="page">{children}</div>
+          </div>
+        </main>
+      ) : (
+        <main
+          className={`flex flex-col items-center flex-1 transition-all duration-700 ease-in-out z-10 ${
+            showSidebar ? 'md:ml-[90px]' : ''
+          } pt-28 pb-12 px-6 md:px-12 lg:px-16 overflow-auto`}
+        >
+          <div className={`w-full mx-auto ${maxWidthClass}`}>{children}</div>
+        </main>
+      )}
     </div>
   );
 }

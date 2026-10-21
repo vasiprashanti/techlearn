@@ -10,6 +10,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import '../hiringPage.css';
 import Sidebar from '../../components/Dashboard/Sidebar';
 import ScrollProgress from '../../components/ScrollProgress';
 import leaderboardApi from '../../services/leaderboardApi';
@@ -167,19 +168,18 @@ const Leaderboard = () => {
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
       <main
-        className={`flex flex-col items-center flex-1 transition-all duration-700 ease-in-out z-10 md:ml-[90px] pt-24 pb-8 px-4 sm:px-6 md:px-10 lg:px-14 overflow-auto ${
+        className={`flex-1 min-w-0 transition-all duration-700 ease-in-out z-10 overflow-auto ${
           mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}
       >
-        <div className="w-full max-w-[1400px] space-y-4 md:space-y-5">
-          <header className="user-page-header">
-            <h1 className="user-page-title">
-              LEADERBOARD
-            </h1>
-            <p className="user-page-subtitle">
-              {leaderboardData.personalized ? "A benchmark based on your learning direction." : "Global all-time benchmark."}
-            </p>
-          </header>
+        <div className="hiring-page-container has-sidebar" style={{ background: 'transparent', minHeight: 0, color: 'inherit' }}>
+        <div className="page">
+        <div className="space-y-4 md:space-y-5">
+          <header className="hiring-header">
+          <div className="eyebrow">TECHLEARN</div>
+          <h1 className="hiring-title">LEADERBOARD</h1>
+          <p className="hiring-subtitle">{leaderboardData.personalized ? "A benchmark based on your learning direction." : "Global all-time benchmark."}</p>
+        </header>
 
           <div className="grid gap-4 pt-1 lg:grid-cols-2 lg:items-stretch">
             <MotionDiv
@@ -298,6 +298,8 @@ const Leaderboard = () => {
               </MotionDiv>
             </div>
           </div>
+        </div>
+        </div>
         </div>
       </main>
     </div>

@@ -194,16 +194,13 @@ export default function Performance() {
   const practiceRows = useMemo(() => data.practice?.snapshot?.tracks || [], [data.practice]);
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
-      <div className="space-y-8 px-1 py-2">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]" hiringShell>
+      <div className="space-y-8">
         {/* Brand Page Heading (Shared Standard) */}
-        <header className="user-page-header">
-          <h1 className="user-page-title">
-            PERFORMANCE
-          </h1>
-          <p className="user-page-subtitle">
-            Review program progress, practice accuracy, assessment results, and improvement over time.
-          </p>
+        <header className="hiring-header">
+          <div className="eyebrow">TECHLEARN</div>
+          <h1 className="hiring-title">PERFORMANCE</h1>
+          <p className="hiring-subtitle">Review program progress, practice accuracy, assessment results, and improvement over time.</p>
         </header>
 
         {/* Jobs-style tabs keep the performance sections easy to scan. */}

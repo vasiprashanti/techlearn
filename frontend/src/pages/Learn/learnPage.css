@@ -1262,3 +1262,7 @@
   .learn-page-container .description { font-size: 8.5px; line-height: 1.5; }
   .learn-page-container .start-link { font-size: 8.5px; }
 }
+
+/* card footer: just the View link, left aligned (no price) */
+.learn-page-container .card-footer { justify-content: flex-start !important; }
+.learn-page-container .start-link { margin-right: auto; justify-content: flex-start; }

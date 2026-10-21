@@ -705,7 +705,12 @@ export default function Navbar() {
             padding: 12px 20px 32px;
             border: none;
             border-radius: 0;
-            background: var(--menu-page-bg);
+            /* paint exactly like the top navbar so the two always match */
+            background-color: var(--navbar-bg, var(--menu-page-bg));
+            background-image: var(--navbar-bg-image, none);
+            background-size: 100vw 100vh;
+            background-position: 0 0;
+            background-attachment: fixed;
             backdrop-filter: none;
             box-shadow: none;
             overflow-y: auto;
@@ -740,6 +745,21 @@ export default function Navbar() {
           }
           .tl-mobile-links a:last-child {
             border-bottom: 1px solid var(--border);
+          }
+          .tl-mobile-menu .tl-mobile-links .tl-mobile-theme {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 8px;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            background: transparent;
+            color: var(--text);
+            font-size: 18px;
+            font-weight: 400;
+            text-align: left;
+            cursor: pointer;
           }
           .tl-mobile-links a.active {
             font-weight: 700;
@@ -1000,6 +1020,10 @@ export default function Navbar() {
                       <Link key={to} to={to} className={isActive ? 'active' : ''}>{label}</Link>
                     );
                   })}
+                  <button type="button" className="tl-mobile-theme" onClick={toggleTheme}>
+                    <span>{isDarkMode ? 'Light mode' : 'Dark mode'}</span>
+                    {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                  </button>
                 </div>
                 <div className="tl-mobile-footer">
                   <button type="button" className="tl-mobile-logout" onClick={handleLogout}>Logout</button>
@@ -1018,6 +1042,10 @@ export default function Navbar() {
                   {[['Dashboard', '/dashboard'], ['Learn', '/learn'], ['Roadmaps', '/roadmaps'], ['Hiring', '/jobs']].map(([label, to]) => (
                     <Link key={to} to={to} className={location.pathname.startsWith(to) ? 'active' : ''}>{label}</Link>
                   ))}
+                  <button type="button" className="tl-mobile-theme" onClick={toggleTheme}>
+                    <span>{isDarkMode ? 'Light mode' : 'Dark mode'}</span>
+                    {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                  </button>
                 </div>
                 <div className="tl-mobile-footer guest">
                   <button type="button" className="tl-mobile-cta" onClick={handleGetStartedClick}>

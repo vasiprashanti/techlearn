@@ -496,9 +496,6 @@ const LearnMain = () => {
   );
 
   const renderCourseCard = (course) => {
-    const isFree = isFreeCourseItem(course);
-    const rawPrice = course.price;
-    const displayPrice = isFree ? 'FREE' : String(rawPrice).startsWith('₹') ? rawPrice : `₹${rawPrice}`;
     const categoryLabel = getCourseCategory(course) === 'placement' ? 'Placement' : 'Skill';
     return (
       <article
@@ -528,7 +525,6 @@ const LearnMain = () => {
           <div className="card-bottom">
             <div className="content-divider" />
             <div className="card-footer">
-              {isFree ? <div className="free-label">FREE</div> : <div className="price">{displayPrice}</div>}
               <span className="start-link">{isTrainerLedCourse(course) ? 'Join Waitlist' : 'View Course'}<span className="arrow">→</span></span>
             </div>
           </div>
@@ -538,8 +534,6 @@ const LearnMain = () => {
   };
 
   const renderProgramCard = (program) => {
-    const isFree = isFreeProgramItem(program);
-    const displayPrice = getProgramPriceLabel(program);
     const enrolled = isProgramEnrolled(program);
     const currentDay = placementLearning?.batch?.currentDay || placementLearning?.todayTopic?.day || 1;
     const metaItems = program.metaTags || [
@@ -578,7 +572,6 @@ const LearnMain = () => {
           <div className="card-bottom">
             <div className="content-divider" />
             <div className="card-footer">
-              {enrolled ? <div className="free-label enrolled-label">ENROLLED</div> : isFree ? <div className="free-label">FREE</div> : <div className="price">{displayPrice}</div>}
               <span className="start-link">
                 {enrolled ? (currentDay <= 1 ? 'Start Learning' : 'Resume Learning') : isTrainerLedProgram(program) ? 'Join Waitlist' : 'View Program'}
                 <span className="arrow">→</span>
