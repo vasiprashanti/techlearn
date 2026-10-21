@@ -32,8 +32,9 @@ export default function FreeAssessmentSetup() {
   const [customRole, setCustomRole] = useState(ROLE_OPTIONS.includes(initialRole) ? '' : initialRole);
   const [company, setCompany] = useState(initialCompany);
   const [level, setLevel] = useState(initialLevel);
-  const [step, setStep] = useState(initialRole ? (initialCompany ? 2 : 1) : 0);
-  const [confirmed, setConfirmed] = useState(false);
+  const alreadyAnswered = Boolean(location.state?.answered && initialRole && initialCompany && initialLevel);
+  const [step, setStep] = useState(alreadyAnswered ? 2 : 0);
+  const [confirmed, setConfirmed] = useState(alreadyAnswered);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [unavailable, setUnavailable] = useState(false);
@@ -61,11 +62,25 @@ export default function FreeAssessmentSetup() {
     return '';
   };
 
+  // Remember the answers, then continue on our own sign-up / login page.
+  const goToAuth = () => {
+    sessionStorage.setItem('pending_assessment', JSON.stringify({
+      intent: 'assessment',
+      requiresSetup: true,
+      programId: location.state?.programId || null,
+      targetRole: finalRole,
+      targetCompany: finalCompany,
+      level,
+    }));
+    navigate('/signup');
+  };
+
   const goNext = () => {
     const problem = validateStep(step);
     if (problem) return setError(problem);
     setError('');
     if (step < 2) setStep(step + 1);
+    else if (!user) goToAuth();
     else setConfirmed(true);
   };
 
@@ -103,12 +118,7 @@ export default function FreeAssessmentSetup() {
     };
 
     if (!user) {
-      sessionStorage.setItem('pending_assessment', JSON.stringify({
-        intent: 'assessment',
-        programId: payload.programId,
-        requiresSetup: true,
-      }));
-      navigate('/signup/contextual?intent=assessment');
+      goToAuth();
       return;
     }
 
@@ -137,41 +147,10 @@ export default function FreeAssessmentSetup() {
     }
   };
 
-  const handleGuestContinue = (destination) => {
-    sessionStorage.setItem('pending_assessment', JSON.stringify({
-      intent: 'assessment',
-      programId: location.state?.programId || null,
-      requiresSetup: true,
-    }));
-    navigate(destination);
-  };
-
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#c0e9ff] text-sm text-[#050a5b] dark:bg-[#080d25] dark:text-[#f5f7ff]">
         Preparing your assessment...
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="relative flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] px-4 py-6 font-sans text-slate-900 dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:text-slate-100">
-        <main className="dashboard-surface w-full max-w-lg p-6 text-center sm:p-10">
-          <span className="font-['Press_Start_2P'] text-[8.5px] uppercase tracking-wider text-blue-600 dark:text-[#8fd9ff]">FREE ASSESSMENT</span>
-          <h1 className="mt-4 text-2xl font-black tracking-tight sm:text-4xl">Create your account first</h1>
-          <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Sign up or log in, then choose your target role and company before starting the diagnostic.
-          </p>
-          <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-            <button type="button" onClick={() => handleGuestContinue('/login')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-black/10 px-5 py-3 text-sm font-bold dark:border-white/10">
-              Log in
-            </button>
-            <button type="button" onClick={() => handleGuestContinue('/signup/contextual?intent=assessment')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#3c83f6] px-5 py-3 text-sm font-bold text-white">
-              Create account <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </main>
       </div>
     );
   }
@@ -742,9 +721,11 @@ export default function FreeAssessmentSetup() {
         {/* =========================
              INTRO
         ========================= */}
-        <div className="eyebrow">
-          ASSESSMENT OVERVIEW
-        </div>
+        {confirmed && (
+          <div className="eyebrow">
+            ASSESSMENT OVERVIEW
+          </div>
+        )}
 
         {confirmed && (
           <h1 className="page-title">
@@ -762,6 +743,7 @@ export default function FreeAssessmentSetup() {
              CONTENT
         ========================= */}
         {!confirmed ? (
+          <>
           <section className="setup-step" key={step}>
             {step === 0 && (
               <>
@@ -808,11 +790,12 @@ export default function FreeAssessmentSetup() {
 
             {error && <div className="setup-error">{error}</div>}
 
-            <div className="setup-actions">
-              {step > 0 && <button type="button" className="setup-back" onClick={goBack}>BACK</button>}
-              <button type="button" className="start-button setup-next" onClick={goNext}>{step === 2 ? 'CONTINUE →' : 'NEXT →'}</button>
-            </div>
           </section>
+          <div className="setup-actions">
+            {step > 0 && <button type="button" className="setup-back" onClick={goBack}>BACK</button>}
+            <button type="button" className="start-button setup-next" onClick={goNext}>{step === 2 ? 'CONTINUE →' : 'NEXT →'}</button>
+          </div>
+          </>
         ) : (
         <div className="content-layout">
           {/* =========================

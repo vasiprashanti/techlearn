@@ -35,12 +35,16 @@ export default function Pricing() {
     finally { setSaving(false); }
   }
   const inputClass = 'w-full rounded-xl border border-white/20 bg-[#101c36] px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#b2e96a]';
-  return <div className="admin-dashboard-typography min-h-screen text-white pt-32 lg:pt-24 pb-12 px-4 lg:pl-[18rem] lg:pr-8">
+  return <div className="admin-dashboard-typography min-h-screen text-white">
     <Sidebar />
-    <h1 className="text-3xl font-semibold mb-2">Pricing</h1>
-    <p className="text-slate-300 mb-6">Homepage display cards only. Program plans and checkout prices are managed separately.</p>
-    <div role="tablist" aria-label="Pricing sections" className="flex gap-3 mb-6">
-      {['Homepage', 'Learn'].map(name => <button key={name} id={`pricing-tab-${name}`} role="tab" aria-selected={tab === name} aria-controls={`pricing-panel-${name}`} type="button" className={`px-5 py-3 rounded-xl ${tab === name ? 'bg-[#b2e96a] text-[#01071e]' : 'bg-white/10'}`} onClick={() => setTab(name)}>{name}</button>)}
+    <main className="lg:ml-64 pt-20 sm:pt-24 md:pt-28 pb-12 px-3 sm:px-6 md:px-10 lg:px-14 xl:px-16">
+    <div className="max-w-[1600px] mx-auto space-y-6">
+    <div>
+      <h1 className="admin-page-title text-xl sm:text-2xl md:text-3xl font-bold text-white">Pricing</h1>
+      <p className="text-xs sm:text-sm text-slate-400 mt-0.5 sm:mt-1">Homepage display cards only. Program plans and checkout prices are managed separately.</p>
+    </div>
+    <div role="tablist" aria-label="Pricing sections" className="flex border-b border-white/10 gap-2 overflow-x-auto max-w-full pb-0.5">
+      {['Homepage', 'Learn'].map(name => <button key={name} id={`pricing-tab-${name}`} role="tab" aria-selected={tab === name} aria-controls={`pricing-panel-${name}`} type="button" className={`px-3 sm:px-4 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${tab === name ? 'border-[#3C83F6] text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`} onClick={() => setTab(name)}>{name}</button>)}
     </div>
     <section role="tabpanel" id={`pricing-panel-${tab}`} aria-labelledby={`pricing-tab-${tab}`}>
       {tab === 'Learn' ? <p className="rounded-2xl bg-white/5 p-8 text-slate-300">Learn pricing management is not part of this release.</p>
@@ -62,5 +66,7 @@ export default function Pricing() {
           {cards.length > 0 && <button disabled={saving} type="submit" className="mt-6 rounded-xl bg-[#b2e96a] text-[#01071e] font-semibold px-6 py-3 disabled:opacity-60">{saving ? 'Saving…' : 'Save homepage pricing'}</button>}
         </form>}
     </section>
+    </div>
+    </main>
   </div>;
 }

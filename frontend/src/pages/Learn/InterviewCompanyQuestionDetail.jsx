@@ -9,9 +9,9 @@ import { practiceAPI } from '../../services/practiceApi';
 import { useTheme } from '../../context/ThemeContext';
 
 const difficultyPillClass = {
-  Easy: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800',
-  Medium: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800',
-  Hard: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-300 dark:border-rose-800',
+  Easy: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-white dark:border-emerald-800',
+  Medium: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-white dark:border-amber-800',
+  Hard: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-white dark:border-rose-800',
 };
 
 const LANGUAGES = {
@@ -338,7 +338,7 @@ export default function InterviewCompanyQuestionDetail() {
                   type="button"
                   disabled={selectedOption === null}
                   onClick={handleMcqSubmit}
-                  className="inline-flex w-44 justify-center items-center gap-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-5 py-3 text-sm font-bold text-white shadow-md hover:shadow-lg transition-all duration-200"
+                  className="inline-flex w-44 justify-center items-center gap-2 rounded-xl bg-[#8dd035] hover:bg-[#a2d354] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-5 py-3 text-sm font-bold text-[#04103d] shadow-md hover:shadow-lg transition-all duration-200"
                 >
                   Submit Answer
                 </button>
@@ -448,7 +448,7 @@ export default function InterviewCompanyQuestionDetail() {
                       type="button"
                       disabled={isRunning}
                       onClick={handleCodeSubmit}
-                      className="flex-grow sm:flex-initial sm:w-32 justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-3 py-1.5 sm:py-1 text-xs font-semibold text-white"
+                      className="flex-grow sm:flex-initial sm:w-32 justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#8dd035] hover:bg-[#a2d354] px-3 py-1.5 sm:py-1 text-xs font-semibold text-[#04103d]"
                     >
                       Submit Code
                     </button>

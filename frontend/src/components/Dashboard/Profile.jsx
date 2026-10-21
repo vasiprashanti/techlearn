@@ -515,8 +515,8 @@ const Profile = () => {
   const shell = (children) => (
     <>
       <ScrollProgress />
-      <UserSidebarLayout maxWidthClass="max-w-[1080px]">
-        <div className={`tl-profile ${isLight ? "is-light" : ""}`}>{children}</div>
+      <UserSidebarLayout maxWidthClass="max-w-[1080px]" hiringShell>
+        <div className={`tl-profile ${isLight ? "is-light" : ""}`} style={{ maxWidth: 1080 }}>{children}</div>
       </UserSidebarLayout>
     </>
   );
@@ -574,7 +574,7 @@ const Profile = () => {
 
   return shell(
     <>
-      <header className="user-page-header"><h1 className="user-page-title">PROFILE</h1></header>
+      <header className="hiring-header"><div className="eyebrow">TECHLEARN</div><h1 className="hiring-title">PROFILE</h1></header>
       {hero}
 
       {view === "overview" && (

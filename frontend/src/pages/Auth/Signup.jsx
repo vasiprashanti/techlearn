@@ -163,6 +163,8 @@ export default function Signup({
               targetRole: pending.targetRole || '',
               targetCompany: pending.targetCompany || '',
               placementType: pending.placementCategory || pending.placementType || '',
+              level: pending.level || '',
+              answered: Boolean(pending.targetRole && pending.targetCompany && pending.level),
             },
           });
           return true;

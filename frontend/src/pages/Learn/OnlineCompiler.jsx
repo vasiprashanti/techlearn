@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
+  ChevronLeft,
+  ChevronRight,
   Play,
   Square,
   RotateCcw,
@@ -139,6 +141,14 @@ const OnlineCompiler = () => {
   const preserveInitialDraftRef = useRef(Boolean(initialDraftRef.current));
   const [selectedLanguage, setSelectedLanguage] = useState(() => initialDraftRef.current?.language || 'html');
   const [previewKey, setPreviewKey] = useState(0);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem('techlearn:compiler-sidebar-collapsed') === '1'; } catch { return false; }
+  });
+  const toggleSidebar = () => setSidebarCollapsed((collapsed) => {
+    const next = !collapsed;
+    try { localStorage.setItem('techlearn:compiler-sidebar-collapsed', next ? '1' : '0'); } catch { /* storage unavailable */ }
+    return next;
+  });
   const [codes, setCodes] = useState(() => {
     const initial = {};
     Object.values(LANGUAGES).forEach((lang) => {
@@ -710,12 +720,22 @@ const OnlineCompiler = () => {
         {/* Language Sidebar: Only for Desktops & Tablets (md:flex, hidden on mobile) */}
         {/* Top: 84px matches the desktop editor padding top; bottom aligns with the editor and preview bottom */}
         <aside
-          className="hidden md:flex flex-col fixed left-0 top-[84px] bottom-[1rem] z-30 w-40 lg:w-44 rounded-r-xl border-r border-t border-b border-black/10 dark:border-[#1a234d] bg-[#daf0fa]/95 dark:bg-[#070e38] backdrop-blur-md shadow-sm"
+          className={`hidden md:flex flex-col fixed left-0 top-[72px] bottom-0 z-30 ${sidebarCollapsed ? 'w-[60px]' : 'w-40 lg:w-44'} border-r border-black/10 dark:border-[#1a234d] bg-[#daf0fa] dark:bg-[#070e38] transition-[width] duration-200`}
         >
-          <div className="px-3 pt-3 pb-1.5 border-b border-black/5 dark:border-white/5">
-            <span className="text-[10px] uppercase tracking-[0.16em] font-semibold text-[#17386c]/65 dark:text-[#8b9bb4]">
-              Languages
-            </span>
+          <div className={`px-3 pt-3 pb-1.5 border-b border-black/5 dark:border-white/5 flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+            {!sidebarCollapsed && (
+              <span className="text-[10px] uppercase tracking-[0.16em] font-semibold text-[#17386c]/65 dark:text-[#8b9bb4]">
+                Languages
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              aria-label={sidebarCollapsed ? 'Expand languages sidebar' : 'Collapse languages sidebar'}
+              className="p-1 rounded-md text-[#17386c]/70 hover:bg-black/5 dark:text-[#8b9bb4] dark:hover:bg-white/10"
+            >
+              {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </button>
           </div>
           <nav
             aria-label="Languages Sidebar"
@@ -730,7 +750,8 @@ const OnlineCompiler = () => {
                   type="button"
                   onClick={() => handleLanguageSelect(language.id)}
                   aria-current={isSelected ? 'true' : undefined}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium tracking-normal transition-all duration-200 text-left border ${
+                  title={language.name}
+                  className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-0' : 'gap-2.5 px-3'} py-2 rounded-lg text-xs font-medium tracking-normal transition-all duration-200 text-left border ${
                     isSelected
                       ? isDarkMode
                         ? 'bg-[#0b154a] !text-white font-semibold shadow-sm border-[#2b3a74]/60'
@@ -741,7 +762,7 @@ const OnlineCompiler = () => {
                   }`}
                 >
                   <img src={language.icon} alt="" className="h-4 w-4 object-contain shrink-0" />
-                  <span className="truncate">{language.name}</span>
+                  {!sidebarCollapsed && <span className="truncate">{language.name}</span>}
                 </button>
               );
             })}
@@ -749,7 +770,7 @@ const OnlineCompiler = () => {
         </aside>
 
         {/* Main Content */}
-        <div className="flex-1 relative min-w-0 md:ml-40 lg:ml-44">
+        <div className={`flex-1 relative min-w-0 ${sidebarCollapsed ? 'md:ml-[60px]' : 'md:ml-40 lg:ml-44'}`}>
           <div className="relative z-10 pt-[124px] md:pt-[84px] pb-4">
             <div className="h-[calc(100vh-8.5rem)] md:h-[calc(100vh-6.25rem)] px-4 lg:px-6">
 

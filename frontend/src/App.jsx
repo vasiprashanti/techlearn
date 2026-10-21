@@ -42,6 +42,7 @@ const DailyChallengeTest = lazyWithRetry(() => import('./pages/DailyChallenge/Da
 const DailyChallengeResult = lazyWithRetry(() => import('./pages/DailyChallenge/DailyChallengeResult'))
 
 const LearnMain = lazyWithRetry(() => import('./pages/Learn/LearnMain'))
+const NotFound = lazyWithRetry(() => import('./pages/NotFound'))
 const WaitlistPage = lazyWithRetry(() => import('./pages/Learn/WaitlistPage'))
 const CourseDetails = lazyWithRetry(() => import('./pages/Learn/CourseDetails'))
 const CourseQuiz = lazyWithRetry(() => import('./pages/Learn/CourseQuiz'))
@@ -463,6 +464,7 @@ function LayoutWrapper() {
           </Route>
           
           <Route path="/about" element={<About />} />
+                    <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
         </ErrorBoundary>

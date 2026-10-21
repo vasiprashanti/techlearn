@@ -204,8 +204,8 @@ export default function Performance() {
         </header>
 
         {/* Jobs-style tabs keep the performance sections easy to scan. */}
-        <div className="border-b border-black/10 dark:border-white/10">
-          <div className="flex items-center gap-5 overflow-x-auto">
+        <div>
+          <div className="tl-tabs">
             {reportTabs.map(({ key, label }) => {
               const isActive = activeTab === key;
               return (
@@ -213,11 +213,7 @@ export default function Performance() {
                   key={key}
                   type="button"
                   onClick={() => setActiveTab(key)}
-                  className={`relative inline-flex shrink-0 items-center gap-2 border-b-2 px-1 pb-3 pt-1 text-xs sm:text-sm font-bold transition-all duration-300 ${
-                    isActive
-                      ? "border-[#3c83f6] text-[#2563eb] dark:text-[#bceaff]"
-                      : "border-transparent text-[#00113b]/65 hover:border-[#3c83f6]/45 hover:text-[#00113b] dark:text-[#afcff1]/70 dark:hover:text-white"
-                  }`}
+                  className={`tl-tab ${isActive ? "active" : ""}`}
                 >
                   {label}
                 </button>

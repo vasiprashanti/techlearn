@@ -6,9 +6,9 @@ import { coreCsMcqs } from '../../data/coreCsMcqs';
 import { practiceAPI } from '../../services/practiceApi';
 
 const difficultyPillClass = {
-  Easy: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800',
-  Medium: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800',
-  Hard: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-300 dark:border-rose-800',
+  Easy: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-white dark:border-emerald-800',
+  Medium: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-white dark:border-amber-800',
+  Hard: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-white dark:border-rose-800',
 };
 
 export default function InterviewCoreCsQuestionDetail() {
@@ -336,7 +336,7 @@ export default function InterviewCoreCsQuestionDetail() {
 
           <div className="relative w-full border border-[#2563eb]/20 dark:border-white/10 bg-[#e5f3ff]/45 dark:bg-[#091b40]/75 rounded-xl p-6 shadow-md shadow-[#2563eb]/5 text-left mb-6 mt-3">
             {isDailyMode && (
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#2563eb] text-white px-4 py-1.5 rounded-full text-xs font-semibold shadow-md whitespace-nowrap">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#2563eb] dark:bg-white/10 dark:border dark:border-white/30 text-white px-4 py-1.5 rounded-full text-xs font-semibold shadow-md whitespace-nowrap">
                 Question {currentTaskIndex + 1} of {dailySequence.length}
               </div>
             )}
@@ -431,7 +431,7 @@ export default function InterviewCoreCsQuestionDetail() {
                     type="button"
                     disabled={selectedOption === null}
                     onClick={handleMarkSolved}
-                    className="inline-flex w-36 justify-center items-center gap-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
+                    className="inline-flex w-36 justify-center items-center gap-2 rounded-xl bg-[#8dd035] hover:bg-[#a2d354] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-4 py-2.5 text-sm font-semibold text-[#04103d] shadow-md hover:shadow-lg transition-all duration-200"
                   >
                     Submit Answer
                   </button>
@@ -440,7 +440,7 @@ export default function InterviewCoreCsQuestionDetail() {
                     <button
                       type="button"
                       onClick={handleNext}
-                      className="inline-flex w-36 justify-center items-center gap-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
+                      className="inline-flex w-36 justify-center items-center gap-2 rounded-xl bg-[#8dd035] hover:bg-[#a2d354] active:scale-[0.98] px-4 py-2.5 text-sm font-semibold text-[#04103d] shadow-md hover:shadow-lg transition-all duration-200"
                     >
                       Next
                     </button>
@@ -460,7 +460,7 @@ export default function InterviewCoreCsQuestionDetail() {
                 type="button"
                 disabled={selectedOption === null}
                 onClick={handleMarkSolved}
-                className="inline-flex w-44 justify-center items-center gap-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
+                className="inline-flex w-44 justify-center items-center gap-2 rounded-xl bg-[#8dd035] hover:bg-[#a2d354] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-4 py-2.5 text-sm font-semibold text-[#04103d] shadow-md hover:shadow-lg transition-all duration-200"
               >
                 Submit Answer
               </button>

@@ -271,7 +271,7 @@ function RoadmapRow({ roadmap, isDarkMode, onOpen }) {
     <div className={`grid min-h-[128px] grid-cols-1 items-start sm:items-center gap-4 sm:gap-5 rounded-[16px] border-0 p-4 sm:px-[26px] sm:py-[22px] transition-all duration-200 lg:grid-cols-[366px_minmax(0,1fr)_250px_172px] lg:gap-0 ${
       isDarkMode
         ? "bg-[#0a1238] text-slate-100 hover:bg-[#101b47] hover:-translate-y-[2px] shadow-sm hover:shadow-md"
-        : "bg-white/80 text-[#00113b] hover:bg-white hover:-translate-y-[2px] shadow-sm hover:shadow-md"
+        : "bg-[#e2f7ff] text-[#00113b] hover:bg-[#d3f1ff] hover:-translate-y-[2px] shadow-sm hover:shadow-md"
     }`}
     >
       <div className="min-w-0 pr-2">
@@ -781,7 +781,7 @@ export default function Roadmaps() {
       </header>
 
       {/* SEARCH, SORTING AND FILTERS IN A SINGLE ROW (same size and colours as Hiring) */}
-      <div className="hiring-controls-container">
+      <div className="hiring-controls-container" style={{ marginBottom: 16 }}>
         <div className="hiring-controls-row">
           <div className="search-wrapper">
             <span className="search-icon" aria-hidden="true"><Search className="w-4 h-4" /></span>
@@ -824,17 +824,13 @@ export default function Roadmaps() {
 
       {/* FOR YOU / ALL ROADMAPS TOGGLE & CATEGORIES */}
       <div className="mb-5 sm:mb-6 space-y-3">
-        <div className={`flex items-center gap-[7px] border-b ${isDarkMode ? "border-white/10" : "border-[#00113b]/15"}`}>
+        <div className="tl-tabs">
           {[{ id: "for-you", label: "For You" }, { id: "all", label: "All Roadmaps" }].map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`-mb-[1px] cursor-pointer border-b-2 px-3 sm:px-[14px] py-2 sm:py-[11px] text-[11px] font-bold transition-colors ${
-                activeTab === tab.id
-                  ? isDarkMode ? "border-white text-white" : "border-[#00113b] text-[#00113b]"
-                  : isDarkMode ? "border-transparent text-slate-400 hover:text-white" : "border-transparent text-slate-500 hover:text-[#00113b]"
-              }`}
+              className={`tl-tab ${activeTab === tab.id ? "active" : ""}`}
             >
               {tab.label}
             </button>
